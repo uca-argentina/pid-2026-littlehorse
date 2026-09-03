@@ -29,8 +29,8 @@
   "dotnet.server.useOmnisharp": false,
   "dotnet.inlayHints.enableInlayHintsForParameters": true,
 
-  // Los analizadores reportan sobre TODA la solucion, no solo los archivos abiertos:
-  // vemos las violaciones antes que la CI, no despues del push.
+  // Analyzers report across the WHOLE solution, not just open files:
+  // we see violations before CI does, not after the push.
   "dotnet.backgroundAnalysis.analyzerDiagnosticsScope": "fullSolution",
   "dotnet.backgroundAnalysis.compilerDiagnosticsScope": "fullSolution",
 

@@ -1,9 +1,9 @@
-# Hook PostToolUse de drink.it.
-# Formatea automaticamente el archivo que Claude acaba de editar, para que el diff del PR
-# no tenga ruido de formato y nadie discuta llaves en la revision.
+# drink.it PostToolUse hook.
+# Formats whatever file Claude just edited, so PR diffs carry no formatting
+# noise and nobody argues about braces during review.
 #
-# Recibe por stdin el JSON del hook de Claude Code. No falla nunca: si la herramienta no
-# esta instalada todavia, sale en silencio con codigo 0.
+# Reads the Claude Code hook payload as JSON on stdin. Never fails: if the
+# toolchain is not installed yet, it exits quietly with code 0.
 
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -27,8 +27,8 @@ switch ($ext) {
         if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { exit 0 }
         $sln = Join-Path $root 'backend/DrinkIt.sln'
         if (-not (Test-Path $sln)) { exit 0 }
-        # --include acota el formateo a este archivo: correr dotnet format sobre toda la
-        # solucion en cada edicion es inusablemente lento.
+        # --include narrows formatting to this one file: running dotnet format
+        # over the whole solution on every edit is unusably slow.
         dotnet format $sln --include $file --no-restore 2>&1 | Out-Null
     }
 

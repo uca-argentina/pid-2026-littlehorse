@@ -1,9 +1,9 @@
-# Normaliza los finales de linea en el repositorio.
-# Sin esto, un integrante en Windows y otro en Mac generan diffs de archivos
-# enteros cada vez que guardan, y la revision de PRs se vuelve inutil.
+# Normalises line endings across the repository.
+# Without this, one teammate on Windows and another on macOS produce whole-file
+# diffs every time they save, which makes PR review useless.
 * text=auto eol=lf
 
-# Codigo fuente y configuracion: siempre LF.
+# Source code and configuration: always LF.
 *.cs      text eol=lf diff=csharp
 *.csproj  text eol=lf
 *.props   text eol=lf
@@ -20,13 +20,13 @@
 *.bicep   text eol=lf
 *.sh      text eol=lf
 
-# Herramientas nativas de Windows que esperan CRLF.
+# Windows-native tooling that expects CRLF.
 *.sln     text eol=crlf
 *.ps1     text eol=crlf
 *.bat     text eol=crlf
 *.cmd     text eol=crlf
 
-# Binarios: git no los toca.
+# Binaries: git leaves them alone.
 *.pdf     binary
 *.png     binary
 *.jpg     binary

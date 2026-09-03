@@ -151,8 +151,12 @@ Nombres de test: `Method_Scenario_ExpectedResult`
 ## Convenciones
 
 - **Todo el código en inglés, sin excepciones.** Clases, métodos, variables, nombres de
-  tabla y columna, ramas, commits, mensajes de log. Los docs de `docs/` y los comentarios
-  explicativos van en español; los **identificadores** nunca.
+  tabla y columna, **nombres de archivo**, ramas, commits, mensajes de log, y **los
+  comentarios dentro de archivos de código y configuración** (`.cs`, `.ts`, `.props`,
+  `.csproj`, `.ps1`, `.json`, `.gitignore`, `.gitattributes`, workflows de CI).
+- **Sólo se escribe en español la documentación**: `docs/`, `README.md`, `CLAUDE.md` y los
+  archivos de `.claude/`. Si un archivo lo lee el compilador o una herramienta, va en inglés;
+  si lo lee una persona para entender el proyecto, va en español.
 - Los documentos de diseño están en español, así que usá **siempre** el glosario de abajo
   para traducir. No inventes sinónimos: si el glosario dice `Order`, no escribas `Purchase`.
 - Commits: Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`).

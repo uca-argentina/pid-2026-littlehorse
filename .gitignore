@@ -34,8 +34,8 @@ test-results/
 blob-report/
 playwright/.cache/
 
-# ---------- Secretos: NUNCA commitear ----------
-# Claves VAPID del push, credenciales de la pasarela de pago, connection strings.
+# ---------- Secrets: NEVER commit these ----------
+# Web Push VAPID keys, payment gateway credentials, connection strings.
 .env
 .env.*
 !.env.example
@@ -54,6 +54,6 @@ secrets.json
 Thumbs.db
 desktop.ini
 
-# .vscode se versiona a proposito (settings y extensions compartidos del equipo),
-# pero no la config personal de cada uno.
+# .vscode is versioned on purpose (shared team settings and extensions),
+# but each person's own overrides are not.
 .vscode/*.local.json
