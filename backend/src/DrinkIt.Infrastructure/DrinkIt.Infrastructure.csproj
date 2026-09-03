@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Infrastructure implements the ports Application declares, so the arrow
+    points this way. Application must never reference Infrastructure back.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../DrinkIt.Application/DrinkIt.Application.csproj" />
+  </ItemGroup>
+
+</Project>

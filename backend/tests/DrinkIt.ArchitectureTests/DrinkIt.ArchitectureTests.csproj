@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    References all four production projects because it inspects their compiled
+    assemblies to assert the dependency rule. This is the one project that is
+    allowed to see everything.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/DrinkIt.Domain/DrinkIt.Domain.csproj" />
+    <ProjectReference Include="../../src/DrinkIt.Application/DrinkIt.Application.csproj" />
+    <ProjectReference Include="../../src/DrinkIt.Infrastructure/DrinkIt.Infrastructure.csproj" />
+    <ProjectReference Include="../../src/DrinkIt.Api/DrinkIt.Api.csproj" />
+  </ItemGroup>
+
+</Project>

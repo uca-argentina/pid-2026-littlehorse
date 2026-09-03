@@ -25,7 +25,7 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
 
-  "dotnet.defaultSolution": "backend/DrinkIt.sln",
+  "dotnet.defaultSolution": "backend/DrinkIt.slnx",
   "dotnet.server.useOmnisharp": false,
   "dotnet.inlayHints.enableInlayHintsForParameters": true,
 

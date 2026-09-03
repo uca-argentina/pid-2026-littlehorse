@@ -62,8 +62,8 @@ Playwright que recorra el camino feliz completo desde el navegador.
 
 ## Antes de decir "listo"
 
-    dotnet test backend/DrinkIt.sln
-    dotnet format backend/DrinkIt.sln --verify-no-changes
+    dotnet test backend/DrinkIt.slnx
+    dotnet format backend/DrinkIt.slnx --verify-no-changes
     npm --prefix frontend run lint
     npm --prefix frontend run test
 

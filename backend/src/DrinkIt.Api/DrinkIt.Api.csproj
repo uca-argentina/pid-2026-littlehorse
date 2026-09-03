@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    The composition root: the only project allowed to see Infrastructure, and
+    only so that Program.cs can wire the implementations into the container.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="../DrinkIt.Application/DrinkIt.Application.csproj" />
+    <ProjectReference Include="../DrinkIt.Infrastructure/DrinkIt.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

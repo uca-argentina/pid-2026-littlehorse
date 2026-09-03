@@ -50,9 +50,9 @@ docs/
 
 ```bash
 # Backend
-dotnet test backend/DrinkIt.sln                    # todos los tests
+dotnet test backend/DrinkIt.slnx                    # todos los tests
 dotnet test backend/tests/DrinkIt.Domain.Tests     # loop rápido de TDD
-dotnet format backend/DrinkIt.sln --verify-no-changes
+dotnet format backend/DrinkIt.slnx --verify-no-changes
 dotnet run --project backend/src/DrinkIt.Api
 
 # Frontend

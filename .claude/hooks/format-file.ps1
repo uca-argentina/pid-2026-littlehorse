@@ -25,7 +25,7 @@ switch ($ext) {
 
     '.cs' {
         if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { exit 0 }
-        $sln = Join-Path $root 'backend/DrinkIt.sln'
+        $sln = Join-Path $root 'backend/DrinkIt.slnx'
         if (-not (Test-Path $sln)) { exit 0 }
         # --include narrows formatting to this one file: running dotnet format
         # over the whole solution on every edit is unusably slow.

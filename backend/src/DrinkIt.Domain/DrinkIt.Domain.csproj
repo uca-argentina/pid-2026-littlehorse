@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Deliberately empty: the domain references NOTHING. No EF Core, no ASP.NET,
+    not even another project in this solution. DrinkIt.ArchitectureTests fails
+    the build if that ever changes.
+  -->
+
+</Project>
