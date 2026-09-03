@@ -160,7 +160,6 @@ Nombres de test: `Method_Scenario_ExpectedResult`
 - Los documentos de diseño están en español, así que usá **siempre** el glosario de abajo
   para traducir. No inventes sinónimos: si el glosario dice `Order`, no escribas `Purchase`.
 - Commits: Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`).
-- Ramas: `feat/<issue>-descripcion-corta`. Nunca commitear directo a `main`.
 - Angular: componentes `standalone`, `signal()` para estado, `inject()` en vez de constructor
   injection, control flow nuevo (`@if`, `@for`). Nada de `NgModule` nuevo, nada de `any`,
   nada de `subscribe()` sin `takeUntilDestroyed`.
@@ -215,6 +214,37 @@ Trampas concretas de este stack (populares en tutoriales, ya no libres o con con
   Application Insights.
 
 Verde para nosotros: MIT, Apache-2.0, BSD. Ante cualquier duda, proponelo y esperá el OK.
+
+## Flujo de ramas
+
+```
+feature  ──PR──►  dev  ──PR──►  main
+```
+
+- `main` — siempre desplegable, es lo que corre en producción. **Sólo recibe merges desde
+  `dev`**, nunca un feature directo.
+- `dev` — rama de integración, es lo que corre en staging. Es la **rama por defecto** del
+  repo en GitHub, así ningún PR apunta a `main` por descuido.
+- `<prefijo>/<issue>-descripcion-corta` — sale de `dev` y vuelve a `dev` por PR.
+
+Prefijos: `feat/`, `fix/`, `chore/`, `refactor/`, `test/`.
+
+Estrategia de merge, y no es un detalle:
+
+- feature → `dev`: **squash**. Un commit por feature; la historia de `dev` se lee como una
+  lista de features, no como 40 commits de "wip".
+- `dev` → `main`: **merge commit**. Preserva los features individuales que entraron al release.
+
+La rama se borra después del merge.
+
+**Hotfix:** `hotfix/` sale de `main`, vuelve a `main` y **se mergea de vuelta a `dev` en el
+acto**. Si eso se saltea, el arreglo desaparece en el próximo merge de `dev` a `main` y el
+bug vuelve a producción.
+
+> **Fase actual — bootstrap.** Todavía no existen `dev` ni los workflows de CI, así que se
+> trabaja **directo en `main`**. Un PR que ningún check puede gatear no aporta nada. El corte
+> es explícito: cuando el walking skeleton y la CI estén verdes en `main`, se crea `dev`, se
+> la marca como default en GitHub, y desde ahí rige todo lo de arriba.
 
 ## Definition of Done
 

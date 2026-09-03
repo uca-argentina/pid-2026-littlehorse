@@ -85,7 +85,9 @@ Antes de tu primer PR, leé:
 Lo esencial:
 
 - **TDD estricto.** El test que falla va primero. Nada de implementación sin un test que la exija.
-- **Nunca se commitea directo a `main`.** Rama `feat/<issue>-descripcion-corta` y PR con una aprobación.
+- **Flujo de ramas:** `feature` → PR a `dev` → PR a `main`. Nunca un feature directo a `main`.
+  Squash al mergear a `dev`, merge commit de `dev` a `main`. Detalle completo en `CLAUDE.md`.
+  *(Durante el bootstrap se trabaja en `main`; el corte es cuando la CI esté verde.)*
 - **Conventional Commits** (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`).
 - **Código en inglés, documentación en español.** El glosario de traducción está en `CLAUDE.md`.
 - **Sólo dependencias gratuitas y open source.** Se proponen con la licencia verificada.
