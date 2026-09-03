@@ -1,0 +1,38 @@
+<Project>
+
+  <!--
+    Properties shared by EVERY project under backend/ (both src and tests).
+    MSBuild picks this file up automatically; no .csproj needs to import it.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+      A warning is a bug that has not blown up yet. This goes in on day one:
+      switching it on once 5,000 lines exist produces hundreds of warnings and
+      somebody turns it off "for now".
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <!-- Style rules from .editorconfig break the build too, not just the IDE. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- No project in this repository ships as a NuGet package. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <!-- Reproducible CI builds: normalises the paths embedded in the PDBs. -->
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>
