@@ -1,0 +1,59 @@
+# ---------- Claude Code ----------
+.claude/settings.local.json
+.claude/*.local.json
+
+# ---------- .NET ----------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Tt]est[Rr]esults/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+project.lock.json
+artifacts/
+coverage/
+*.coverage
+*.cobertura.xml
+BenchmarkDotNet.Artifacts/
+
+# ---------- Node / Angular ----------
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.tsbuildinfo
+
+# ---------- Playwright ----------
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# ---------- Secretos: NUNCA commitear ----------
+# Claves VAPID del push, credenciales de la pasarela de pago, connection strings.
+.env
+.env.*
+!.env.example
+appsettings.Development.json
+appsettings.*.Local.json
+*.pfx
+*.p12
+*.key
+secrets.json
+
+# ---------- IDE / OS ----------
+.vs/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# .vscode se versiona a proposito (settings y extensions compartidos del equipo),
+# pero no la config personal de cada uno.
+.vscode/*.local.json

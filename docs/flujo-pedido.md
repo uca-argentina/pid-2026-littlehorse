@@ -1,0 +1,51 @@
+# Flujo de Pedido
+
+```mermaid
+sequenceDiagram
+    actor Cliente
+    participant App as App/Sistema (PWA)
+    participant Caja
+    participant Bartender
+    actor Mozo
+
+    Cliente->>App: Arma el pedido (carrito)
+    App-->>Cliente: Checkout - elegir método de pago
+
+    alt Pago digital
+        Cliente->>App: Paga (tarjeta / MP / etc.)
+        App->>App: Confirma pago (webhook) → "Pagado"
+    else Efectivo
+        App-->>Cliente: Genera código/QR "Pendiente de pago"
+        Cliente->>Caja: Se acerca y muestra el código
+        Caja->>App: Busca el código y confirma el cobro
+        App->>App: → "Pagado"
+    else Saldo de mesa VIP
+        Cliente->>App: Pedido asociado a cuenta de mesa
+        App->>App: Descuenta del saldo de la cuenta → "Pagado"
+    end
+
+    App-->>Cliente: Sugiere instalar la PWA y activar notificaciones push
+    Note over Cliente,App: iOS necesita "agregar a inicio" para que el push funcione, Android no lo requiere
+
+    App->>Bartender: Pedido visible en cola "Nuevos" (tablet)
+    Bartender->>App: Selecciona pedido(s) e imprime ticket(s)
+    App-->>Bartender: Ticket impreso con detalle + QR
+    Note over Bartender: Prepara el trago
+    Bartender->>App: Escanea QR del ticket → "Listo"
+
+    alt Retiro en barra
+        alt Push habilitado (Android, o iOS con PWA instalada)
+            App--)Cliente: Notificación push "Tu pedido está listo"
+        else Push no disponible (ej. iOS sin instalar, o permiso denegado)
+            Note over Cliente,App: Cliente ve "Listo" en tiempo real en su pantalla de estado del pedido (WebSocket/polling)
+        end
+        Cliente->>Bartender: Vuelve y muestra su propio QR (pantalla de estado del pedido)
+        Bartender->>App: Escanea QR del cliente → "Entregado"
+    else Mesa VIP
+        App-->>Caja: Pedido "Listo" tipo Mesa, sin mozo asignado
+        Caja->>Mozo: Coordina quién lo lleva
+        App-->>Mozo: Pedido visible en su vista (celular propio)
+        Mozo->>Mozo: Retira ticket y lo lleva a la mesa
+        Mozo->>App: Marca "Entregado" (tap, sin escaneo)
+    end
+```
