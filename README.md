@@ -99,11 +99,10 @@ Lo esencial:
 `docs/historico/` guarda versiones superadas del diseño. **No las uses como referencia.**
 
 ## Equipo
-- Pablo Lamela - [@usuario](https://github.com/lamelapablo)
-- Eugenia Quadro [@usuario](https://github.com/eugeqq)
-- Nicolas Coloritto
 
-<!-- TODO: completar con los tres integrantes -->
+- Pablo Lamela — [@lamelapablo](https://github.com/lamelapablo)
+- Eugenia Quadro — [@eugeqq](https://github.com/eugeqq)
+- Nicolás Coloritto
 
 ## Licencia
 
