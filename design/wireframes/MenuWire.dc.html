@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
+.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
+.frame{background:#f4f2ee}
+.scr{display:flex;flex-direction:column;gap:14px;padding:20px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px;border-bottom:2px solid #2b2b2b}
+.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
+.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:12px}
+.btn{border:1.8px solid #2b2b2b;border-radius:6px;padding:13px 14px;text-align:center;font-weight:700;background:#fff;font-family:inherit;font-size:14px}
+.btn.p{background:#3f6ea5;color:#fff;border-color:#3f6ea5}
+.row{display:flex;gap:10px;align-items:center}
+.col{display:flex;flex-direction:column;gap:10px}
+.muted{color:#6b6b6b;font-size:13px}
+.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13.5px;line-height:1.4}
+.hatch{background:repeating-linear-gradient(45deg,#dcd8d1,#dcd8d1 6px,#eae7e1 6px,#eae7e1 12px)}
+.grow{flex-grow:1}
+.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:6px 12px;font-size:12.5px;background:#fff;white-space:nowrap}
+a{color:#3f6ea5}a:hover{color:#2c4c73}
+</style>
+</helmet>
+<div class="frame" style="width:390px;min-height:860px">
+  <div class="scr">
+    <div class="bar">
+      <div>
+        <div class="hand" style="font-size:20px;font-weight:700">drink.it</div>
+        <div class="muted">Boliche [NOMBRE]</div>
+      </div>
+      <div class="pill">Menú</div>
+    </div>
+
+    <div class="box hatch row">
+      <div class="grow">
+        <div class="muted">Saldo mesa VIP</div>
+        <div class="hand" style="font-size:20px;font-weight:700">$ [SALDO]</div>
+      </div>
+      <div class="note" style="max-width:140px">solo si entrás desde el QR de una mesa VIP</div>
+    </div>
+
+    <div class="box" style="color:#6b6b6b">Buscar trago…</div>
+
+    <div class="row">
+      <div class="pill" style="background:#2b2b2b;color:#fff">Tragos</div>
+      <div class="pill">Cervezas</div>
+      <div class="pill">Sin alcohol</div>
+    </div>
+
+    <div class="col">
+      <div class="box row">
+        <div class="hatch" style="width:54px;height:54px;border-radius:6px"></div>
+        <div class="grow">
+          <div style="font-weight:700">Gin Tonic</div>
+          <div class="muted">$ [PRECIO]</div>
+        </div>
+        <div class="btn" style="padding:9px 12px">Agregar</div>
+      </div>
+      <div class="box row">
+        <div class="hatch" style="width:54px;height:54px;border-radius:6px"></div>
+        <div class="grow">
+          <div style="font-weight:700">Fernet con Coca</div>
+          <div class="muted">$ [PRECIO]</div>
+        </div>
+        <div class="btn" style="padding:9px 12px">Agregar</div>
+      </div>
+      <div class="box row" style="opacity:.5">
+        <div class="hatch" style="width:54px;height:54px;border-radius:6px"></div>
+        <div class="grow">
+          <div style="font-weight:700">Aperol Spritz</div>
+          <div class="muted">Sin stock</div>
+        </div>
+        <div class="btn" style="padding:9px 12px">—</div>
+      </div>
+    </div>
+
+    <div class="grow"></div>
+
+    <div class="btn p">Ver carrito (2) · $ [TOTAL]</div>
+    <div class="note">Ruta /{venueSlug}/menu · el tenant sale del slug del QR: nunca hay pantalla de "elegí tu boliche". Disponibilidad por Drink (§14).</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

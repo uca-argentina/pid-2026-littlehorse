@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
+.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
+.frame{background:#f4f2ee}
+.scr{display:flex;flex-direction:column;gap:14px;padding:20px;min-height:860px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px;border-bottom:2px solid #2b2b2b}
+.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
+.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:12px}
+.row{display:flex;gap:10px;align-items:center}
+.col{display:flex;flex-direction:column;gap:10px}
+.muted{color:#6b6b6b;font-size:13px}
+.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13.5px;line-height:1.4}
+.hatch{background:repeating-linear-gradient(45deg,#dcd8d1,#dcd8d1 6px,#eae7e1 6px,#eae7e1 12px)}
+.grow{flex-grow:1}
+.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:6px 12px;font-size:12.5px;background:#fff}
+.dot{width:16px;height:16px;border-radius:999px;border:1.8px solid #2b2b2b;flex-shrink:0;background:#fff}
+a{color:#3f6ea5}a:hover{color:#2c4c73}
+</style>
+</helmet>
+<div class="frame">
+  <div class="scr">
+    <div class="bar">
+      <div class="row">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2b2b2b" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        <div class="h">Pedido P-4F2K</div>
+      </div>
+      <div class="pill">● en vivo</div>
+    </div>
+
+    <div class="box col">
+      <div class="row"><div class="dot" style="background:#2b2b2b"></div><div class="grow">En cola</div><div class="muted">hace 8 min</div></div>
+      <div class="row"><div class="dot" style="background:#3f6ea5;border-color:#3f6ea5"></div><div class="grow" style="font-weight:700">En preparación</div><div class="muted">hace 2 min</div></div>
+      <div class="row" style="opacity:.5"><div class="dot"></div><div class="grow">Listo</div><div class="muted">—</div></div>
+      <div class="row" style="opacity:.5"><div class="dot"></div><div class="grow">Entregado</div><div class="muted">—</div></div>
+    </div>
+
+    <div class="box hatch col" style="align-items:center;text-align:center">
+      <div class="muted">Tu QR de retiro</div>
+      <div class="hatch" style="width:150px;height:150px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#6b6b6b;background:#fff;border:1.6px dashed #8a8a8a">QR</div>
+      <div class="muted">Se activa cuando el pedido esté Listo. Mostralo en la barra para retirar.</div>
+    </div>
+
+    <div class="box row"><div class="grow">2 ítems</div><a href="#">Ver detalle</a></div>
+
+    <div class="grow"></div>
+    <div class="note">§9.3 red de respaldo si no llega el push: se actualiza sola por SignalR (con reconexión + re-sync completo contra la API). §10 doble QR = mismo id; este es el del cliente. NUNCA se sirve desde el cache del service worker.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

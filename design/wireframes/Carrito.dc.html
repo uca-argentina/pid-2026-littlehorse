@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:860px}
+.serif{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400}
+.num{font-variant-numeric:tabular-nums}
+.grow{flex-grow:1}
+
+.hdr{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #3A322A}
+.back{width:42px;height:42px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#F7F2EA}
+.ttl{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.vchip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#B0A69B}
+.markmini{width:28px;height:28px;border-radius:9px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+.body{flex-grow:1;display:flex;flex-direction:column;gap:12px;padding:16px 20px 8px}
+
+.item{display:flex;flex-direction:column;gap:12px;padding:13px;border-radius:15px;background:#1E1A16;border:1px solid #332C24}
+.top{display:flex;align-items:flex-start;gap:13px}
+.thumb{width:58px;height:58px;border-radius:11px;background:#272219;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;color:#6B5F51;flex-shrink:0}
+.nm{font-family:'Instrument Serif',Georgia,serif;font-size:20px;line-height:1.15}
+.note{font-size:13px;color:#B0A69B;margin-top:2px}
+.lp{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+.bot{display:flex;align-items:center;gap:9px}
+.sbtn{width:42px;height:42px;border-radius:12px;border:1px solid #3A322A;background:#272219;display:flex;align-items:center;justify-content:center;color:#F7F2EA;flex-shrink:0}
+.qty{min-width:38px;text-align:center;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.rm{font-size:13.5px;color:#B0A69B}
+
+.ghost{display:flex;align-items:center;justify-content:center;gap:9px;min-height:50px;border-radius:14px;border:1px dashed #4A4034;color:#B0A69B;font-size:14.5px;font-weight:600}
+
+.sum{display:flex;flex-direction:column;gap:10px;padding:15px;border-radius:15px;background:#191612;border:1px solid #332C24}
+.srow{display:flex;align-items:baseline;gap:10px;font-size:14.5px}
+.mu{color:#B0A69B}
+.tot{font-size:21px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.015em}
+
+.foot{padding:14px 20px 20px;border-top:1px solid #3A322A;display:flex;flex-direction:column;gap:11px}
+.cta{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:0 20px;border-radius:15px;background:#E0B65C;color:#12100E;font-weight:700;font-size:16.5px}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;font-size:12px;color:#8A8078}
+a{color:#E0B65C}a:hover{color:#EFCE8A}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="ttl grow">Tu pedido</div>
+    <div class="vchip">
+      <div class="markmini"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+      <span>[Boliche]</span>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="item">
+      <div class="top">
+        <div class="thumb"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+        <div class="grow">
+          <div class="nm">Gin Tonic</div>
+          <div class="note">sin hielo</div>
+        </div>
+        <div class="lp">$ [ ]</div>
+      </div>
+      <div class="bot">
+        <div class="sbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg></div>
+        <div class="qty">2</div>
+        <div class="sbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="grow"></div>
+        <div class="rm">Quitar</div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="top">
+        <div class="thumb"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l-1 18H9z"/><path d="M8 9h8"/></svg></div>
+        <div class="grow">
+          <div class="nm">Fernet con Coca</div>
+          <div class="note">sin nota</div>
+        </div>
+        <div class="lp">$ [ ]</div>
+      </div>
+      <div class="bot">
+        <div class="sbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg></div>
+        <div class="qty">1</div>
+        <div class="sbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+        <div class="grow"></div>
+        <div class="rm">Quitar</div>
+      </div>
+    </div>
+
+    <div class="ghost">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Agregar más tragos</span>
+    </div>
+
+    <div class="grow"></div>
+
+    <div class="sum">
+      <div class="srow"><span class="grow mu">Subtotal</span><span class="num mu">$ [ ]</span></div>
+      <div class="srow"><span class="grow tot">Total</span><span class="tot">$ [TOTAL]</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="cta">
+      <span>Ir a pagar</span>
+      <span class="num">$ [TOTAL]</span>
+    </div>
+    <div class="safe">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+      <span>Pago protegido · [Nombre del boliche]</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

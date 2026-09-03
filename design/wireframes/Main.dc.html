@@ -1,0 +1,127 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:860px}
+.serif{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400}
+.num{font-variant-numeric:tabular-nums}
+.grow{flex-grow:1}
+
+.hdr{display:flex;align-items:center;gap:13px;padding:18px 20px 16px;border-bottom:1px solid #3A322A}
+.mark{width:46px;height:46px;border-radius:14px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:25px;line-height:1.08;letter-spacing:.005em}
+.sub{font-size:12px;color:#B0A69B;letter-spacing:.06em;text-transform:uppercase;margin-top:3px}
+.iconbtn{width:42px;height:42px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;color:#B0A69B;flex-shrink:0}
+
+.body{flex-grow:1;display:flex;flex-direction:column;gap:15px;padding:16px 20px 8px}
+
+.vip{display:flex;align-items:center;gap:12px;padding:13px 15px;border-radius:14px;background:#1E1A16;border:1px solid #3A322A}
+.viplab{font-size:12px;color:#B0A69B;letter-spacing:.06em;text-transform:uppercase}
+.vipval{font-size:23px;font-weight:700;line-height:1.1;color:#E0B65C;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:3px}
+
+.search{display:flex;align-items:center;gap:10px;padding:14px 15px;border-radius:14px;background:#1E1A16;border:1px solid #332C24;color:#9C9187;font-size:14.5px}
+
+.tabs{display:flex;gap:24px;border-bottom:1px solid #3A322A}
+.tab{font-size:14.5px;color:#B0A69B;padding-bottom:11px;font-weight:500}
+.tab.on{color:#F7F2EA;font-weight:700;box-shadow:inset 0 -2px 0 #E0B65C}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.card{display:flex;align-items:center;gap:14px;padding:12px;border-radius:14px;background:#1E1A16;border:1px solid #332C24}
+.thumb{width:64px;height:64px;border-radius:11px;background:#272219;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;color:#6B5F51;flex-shrink:0}
+.nm{font-family:'Instrument Serif',Georgia,serif;font-size:21px;line-height:1.12}
+.dsc{font-size:13px;color:#B0A69B;margin-top:1px}
+.pr{font-size:15px;font-weight:700;color:#E0B65C;margin-top:4px;font-variant-numeric:tabular-nums}
+.add{width:44px;height:44px;border-radius:13px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.out{opacity:.42}
+
+.foot{padding:14px 20px 20px;border-top:1px solid #3A322A;display:flex;flex-direction:column;gap:11px}
+.cta{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:0 20px;border-radius:15px;background:#E0B65C;color:#12100E;font-weight:700;font-size:16.5px}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;font-size:12px;color:#8A8078}
+a{color:#E0B65C}a:hover{color:#EFCE8A}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="mark">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg>
+    </div>
+    <div class="grow">
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="sub">Barra principal</div>
+    </div>
+    <div class="iconbtn">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="vip">
+      <div class="grow">
+        <div class="viplab">Mesa 5 · saldo disponible</div>
+        <div class="vipval">$ [SALDO]</div>
+      </div>
+    </div>
+
+    <div class="search">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
+      <div>Buscar trago</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab on">Tragos</div>
+      <div class="tab">Cervezas</div>
+      <div class="tab">Sin alcohol</div>
+    </div>
+
+    <div class="list">
+      <div class="card">
+        <div class="thumb"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+        <div class="grow">
+          <div class="nm">Gin Tonic</div>
+          <div class="dsc">Gin, tónica, lima</div>
+          <div class="pr">$ [PRECIO]</div>
+        </div>
+        <div class="add"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+      <div class="card">
+        <div class="thumb"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l-1 18H9z"/><path d="M8 9h8"/></svg></div>
+        <div class="grow">
+          <div class="nm">Fernet con Coca</div>
+          <div class="dsc">Medida doble</div>
+          <div class="pr">$ [PRECIO]</div>
+        </div>
+        <div class="add"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+      <div class="card out">
+        <div class="thumb"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12l-2 14H8z"/><path d="M9 9h6"/></svg></div>
+        <div class="grow">
+          <div class="nm">Aperol Spritz</div>
+          <div class="dsc">Sin stock por ahora</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="cta">
+      <span>Ver pedido · 2 ítems</span>
+      <span class="num">$ [TOTAL]</span>
+    </div>
+    <div class="safe">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+      <span>Pago protegido · [Nombre del boliche]</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

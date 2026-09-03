@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
+.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
+.frame{background:#f4f2ee;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:2px solid #2b2b2b}
+.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:20px;margin:0}
+.grow{flex-grow:1}
+.scan{border:1.8px solid #3f6ea5;border-radius:6px;background:#fff;padding:10px 14px;color:#6b6b6b;font-size:13px;min-width:260px}
+.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:6px 12px;font-size:12px;background:#fff}
+.cols{flex-grow:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px 20px}
+.col{display:flex;flex-direction:column;gap:10px}
+.colh{font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:#6b6b6b}
+.card{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:12px;display:flex;flex-direction:column;gap:6px}
+.row{display:flex;gap:8px;align-items:center}
+.dot{width:12px;height:12px;border-radius:999px;flex-shrink:0}
+.muted{color:#6b6b6b;font-size:12px}
+.chk{width:16px;height:16px;border:1.6px solid #2b2b2b;border-radius:3px;flex-shrink:0}
+.bottom{padding:14px 20px;border-top:2px solid #2b2b2b;display:flex;gap:14px;align-items:center}
+.btn{border:1.8px solid #3f6ea5;border-radius:6px;padding:12px 20px;text-align:center;font-weight:700;background:#3f6ea5;color:#fff;font-family:inherit;font-size:14px}
+.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:12.5px;line-height:1.4;max-width:720px}
+</style>
+</helmet>
+<div class="frame" style="width:1280px;min-height:820px">
+  <div class="top">
+    <div class="h">Barra principal · KDS</div>
+    <div class="grow"></div>
+    <div class="scan">Escanear ticket → marca "Listo"</div>
+    <div class="pill">3 en cola</div>
+  </div>
+  <div class="cols">
+    <div class="col">
+      <div class="colh">Nuevos · FIFO por antigüedad</div>
+      <div class="card">
+        <div class="row"><div class="chk"></div><div style="font-weight:700">Pedido #128</div><div class="grow"></div><div class="dot" style="background:#6f9f6f"></div><div class="muted">2 min</div></div>
+        <div>2× Gin Tonic <span class="muted">— sin hielo</span></div>
+        <div>1× Fernet con Coca</div>
+        <div class="row"><div class="pill">Retiro en barra</div></div>
+      </div>
+      <div class="card">
+        <div class="row"><div class="chk"></div><div style="font-weight:700">Pedido #129</div><div class="grow"></div><div class="dot" style="background:#d9b24a"></div><div class="muted">6 min</div></div>
+        <div>1× Aperol Spritz <span class="muted">— con mucho hielo</span></div>
+        <div class="row"><div class="pill">MESA 5</div></div>
+      </div>
+      <div class="card">
+        <div class="row"><div class="chk"></div><div style="font-weight:700">Pedido #130</div><div class="grow"></div><div class="dot" style="background:#c46a5a"></div><div class="muted">11 min — demorado</div></div>
+        <div>3× Cerveza</div>
+        <div class="row"><div class="pill">Retiro en barra</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="colh">En preparación</div>
+      <div class="card" style="opacity:.85">
+        <div class="row"><div style="font-weight:700">Pedido #126</div><div class="grow"></div><div class="muted">impreso hace 3 min</div></div>
+        <div>1× Gin Tonic</div>
+        <div class="row"><div class="pill">Retiro en barra</div></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="colh">Listos (hoy)</div>
+      <div class="card" style="opacity:.55">
+        <div class="row"><div style="font-weight:700">Pedido #124</div><div class="grow"></div><div class="muted">entregado</div></div>
+        <div>2× Cerveza</div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="btn">Imprimir 2 tickets seleccionados</div>
+    <div class="note">§11: FIFO no estricto — elegís entre los próximos 10 para agrupar el mismo trago. Al imprimir, el pedido sale de "Nuevos" (= tomar el pedido, nadie más lo agarra). Semáforo de antigüedad: color + texto + posición, nunca solo color.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

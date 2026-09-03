@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
+.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
+.frame{background:#f4f2ee;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:2px solid #2b2b2b}
+.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
+.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:8px 16px;font-size:13px;background:#fff}
+.body{flex-grow:1;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{border:1.6px dashed #8a8a8a;border-radius:8px;background:#eae7e1;padding:22px;width:560px;display:flex;flex-direction:column;gap:14px}
+.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:10px;align-items:center}
+.grow{flex-grow:1}
+.btn{border:1.8px solid #2b2b2b;border-radius:6px;padding:14px;text-align:center;font-weight:700;background:#fff;font-family:inherit;font-size:15px}
+.btn.p{background:#3f6ea5;color:#fff;border-color:#3f6ea5}
+.muted{color:#6b6b6b;font-size:13px}
+.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13px;line-height:1.4;padding:14px 24px;border-top:1.6px dashed #8a8a8a}
+</style>
+</helmet>
+<div class="frame" style="width:1440px;min-height:860px">
+  <div class="top">
+    <div class="h">Caja · Cobro en efectivo</div>
+    <div class="pill">Caja 1 · Laura</div>
+  </div>
+  <div class="body">
+    <div class="card">
+      <div class="row">
+        <div class="hand grow" style="font-size:20px;font-weight:700">Pedido P-4F2K</div>
+        <div class="pill">Pendiente de pago</div>
+      </div>
+      <div class="box">
+        <div class="row"><div class="grow">2× Gin Tonic <span class="muted">— sin hielo</span></div><div>$ [ ]</div></div>
+        <div class="row"><div class="grow">1× Fernet con Coca</div><div>$ [ ]</div></div>
+      </div>
+      <div class="row"><div class="hand grow" style="font-size:18px;font-weight:700">Total</div><div class="hand" style="font-size:20px;font-weight:700">$ [TOTAL]</div></div>
+      <div class="row"><div class="muted">Entrega:</div><div class="pill">Retiro en barra</div></div>
+      <div class="btn p">Confirmar cobro en efectivo</div>
+      <div class="btn">Volver a buscar</div>
+    </div>
+  </div>
+  <div class="note">Idempotente: si el cajero toca dos veces (o hay reintento de red), la segunda llamada devuelve el mismo resultado, no cobra de nuevo (skill endpoint-api). Al confirmar, el Order pasa Paid → Queued y aparece en el KDS.</div>
+</div>
+</x-dc>
+</body>
+</html>

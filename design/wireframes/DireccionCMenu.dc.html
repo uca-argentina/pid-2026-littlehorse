@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0D0D0D;color:#FFFFFF;font-family:'Barlow',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#0D0D0D;display:flex;flex-direction:column;min-height:860px}
+.cond{font-family:'Barlow Condensed',ui-sans-serif,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.grow{flex-grow:1}
+.hdr{background:#FF5A1F;color:#0D0D0D;padding:14px 18px;display:flex;align-items:center;gap:12px}
+.mark{width:42px;height:42px;background:#0D0D0D;color:#FF5A1F;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;line-height:1;text-transform:uppercase;letter-spacing:.01em}
+.sub{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
+.perf{height:10px;background:#FF5A1F;-webkit-mask-image:radial-gradient(circle 6px at 10px 0,transparent 98%,#000 100%);mask-image:radial-gradient(circle 6px at 10px 0,transparent 98%,#000 100%);-webkit-mask-size:20px 10px;mask-size:20px 10px;-webkit-mask-repeat:repeat-x;mask-repeat:repeat-x}
+.body{flex-grow:1;display:flex;flex-direction:column;gap:14px;padding:16px 18px 8px}
+.vip{display:flex;align-items:center;gap:12px;padding:12px 14px;border:2px solid #FF5A1F}
+.viplab{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#8F8F8F}
+.vipval{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;line-height:1;color:#FF5A1F;font-variant-numeric:tabular-nums}
+.search{display:flex;align-items:center;gap:10px;padding:13px 14px;background:#181818;color:#8F8F8F;font-size:14px}
+.chips{display:flex;gap:0;border-bottom:2px solid #2E2E2E}
+.chip{font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;font-size:15px;letter-spacing:.05em;color:#8F8F8F;padding:8px 14px 9px}
+.chip.on{color:#0D0D0D;background:#FF5A1F}
+.list{display:flex;flex-direction:column;gap:2px}
+.card{display:flex;align-items:center;gap:14px;padding:14px;background:#181818}
+.idx{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#5E5E5E;flex-shrink:0}
+.nm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:21px;line-height:1.05;text-transform:uppercase}
+.dsc{font-size:12.5px;color:#8F8F8F}
+.pr{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:#FF5A1F;font-variant-numeric:tabular-nums}
+.add{width:44px;height:44px;background:#FF5A1F;color:#0D0D0D;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.out{opacity:.35}
+.foot{padding:14px 18px 20px;border-top:2px solid #2E2E2E;display:flex;flex-direction:column;gap:10px}
+.cta{display:flex;align-items:center;justify-content:space-between;min-height:58px;padding:0 20px;background:#FF5A1F;color:#0D0D0D;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.04em}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6E6E6E;letter-spacing:.06em;text-transform:uppercase}
+a{color:#FF5A1F}a:hover{color:#FF7F4F}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg>
+    </div>
+    <div class="grow">
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="sub">Barra principal · Mesa 5</div>
+    </div>
+  </div>
+  <div class="perf"></div>
+
+  <div class="body">
+    <div class="vip">
+      <div class="grow">
+        <div class="viplab">Saldo de la mesa</div>
+        <div class="vipval">$ [SALDO]</div>
+      </div>
+    </div>
+
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg>
+      <div>Buscar trago</div>
+    </div>
+
+    <div class="chips">
+      <div class="chip on">Tragos</div>
+      <div class="chip">Cervezas</div>
+      <div class="chip">Sin alcohol</div>
+    </div>
+
+    <div class="list">
+      <div class="card">
+        <div class="idx">01</div>
+        <div class="grow">
+          <div class="nm">Gin Tonic</div>
+          <div class="dsc">Gin, tónica, lima</div>
+          <div class="pr">$ [PRECIO]</div>
+        </div>
+        <div class="add"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+      <div class="card">
+        <div class="idx">02</div>
+        <div class="grow">
+          <div class="nm">Fernet con Coca</div>
+          <div class="dsc">Medida doble</div>
+          <div class="pr">$ [PRECIO]</div>
+        </div>
+        <div class="add"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+      <div class="card out">
+        <div class="idx">03</div>
+        <div class="grow">
+          <div class="nm">Aperol Spritz</div>
+          <div class="dsc">Sin stock por ahora</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="cta">
+      <span>Ver pedido · 2</span>
+      <span class="mono" style="font-size:16px">$ [TOTAL]</span>
+    </div>
+    <div class="safe">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+      <span>Pago protegido · [Boliche]</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

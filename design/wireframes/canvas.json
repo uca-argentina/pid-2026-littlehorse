@@ -1,0 +1,60 @@
+{
+  "pages": [
+    { "id": "propuesta", "name": "Propuesta · Cliente" },
+    { "id": "direcciones", "name": "Direcciones exploradas" },
+    { "id": "cliente", "name": "Wireframes de contenido" },
+    { "id": "cajero", "name": "Cajero (web)" },
+    { "id": "kds", "name": "Bartender KDS" },
+    { "id": "mozo", "name": "Mozo" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "page": "propuesta", "title": "1 · Menú", "x": 0, "y": 0, "w": 390, "h": 860 },
+    { "file": "Carrito.dc.html", "page": "propuesta", "title": "2 · Carrito", "x": 480, "y": 0, "w": 390, "h": 860 },
+    { "file": "Pago.dc.html", "page": "propuesta", "title": "3 · Pago", "x": 960, "y": 0, "w": 390, "h": 860 },
+    { "file": "Efectivo.dc.html", "page": "propuesta", "title": "4a · Efectivo — código para la caja", "x": 0, "y": 1000, "w": 390, "h": 860 },
+    { "file": "PostPago.dc.html", "page": "propuesta", "title": "4b · Pago confirmado — instalar + push", "x": 480, "y": 1000, "w": 390, "h": 860 },
+    { "file": "EstadoPedido.dc.html", "page": "propuesta", "title": "5 · Estado en vivo + QR de retiro", "x": 960, "y": 1000, "w": 390, "h": 860 },
+
+    { "file": "DireccionAMenu.dc.html", "page": "direcciones", "title": "A · Neón sobrio — Menú", "x": 0, "y": 3200, "w": 390, "h": 860 },
+    { "file": "DireccionAPago.dc.html", "page": "direcciones", "title": "A · Neón sobrio — Pago", "x": 0, "y": 4200, "w": 390, "h": 860 },
+    { "file": "DireccionBMenu.dc.html", "page": "direcciones", "title": "B · Cóctel editorial — Menú", "x": 480, "y": 3200, "w": 390, "h": 860 },
+    { "file": "DireccionBPago.dc.html", "page": "direcciones", "title": "B · Cóctel editorial — Pago", "x": 480, "y": 4200, "w": 390, "h": 860 },
+    { "file": "DireccionCMenu.dc.html", "page": "direcciones", "title": "C · Ticket — Menú", "x": 960, "y": 3200, "w": 390, "h": 860 },
+    { "file": "DireccionCPago.dc.html", "page": "direcciones", "title": "C · Ticket — Pago", "x": 960, "y": 4200, "w": 390, "h": 860 },
+
+    { "file": "MenuWire.dc.html", "page": "cliente", "title": "Menú", "x": 0, "y": 5900, "w": 390, "h": 900 },
+    { "file": "CarritoWire.dc.html", "page": "cliente", "title": "Carrito", "x": 480, "y": 5900, "w": 390, "h": 900 },
+    { "file": "CheckoutWire.dc.html", "page": "cliente", "title": "Checkout", "x": 960, "y": 5900, "w": 390, "h": 900 },
+    { "file": "EfectivoWire.dc.html", "page": "cliente", "title": "Efectivo", "x": 0, "y": 6940, "w": 390, "h": 900 },
+    { "file": "PostPagoWire.dc.html", "page": "cliente", "title": "Post-pago", "x": 480, "y": 6940, "w": 390, "h": 900 },
+    { "file": "EstadoWire.dc.html", "page": "cliente", "title": "Estado del pedido", "x": 960, "y": 6940, "w": 390, "h": 900 },
+
+    { "file": "CajeroLogin.dc.html", "page": "cajero", "x": 0, "y": 8300, "w": 1440, "h": 900 },
+    { "file": "CajeroBuscar.dc.html", "page": "cajero", "x": 1560, "y": 8300, "w": 1440, "h": 900 },
+    { "file": "CajeroConfirmar.dc.html", "page": "cajero", "x": 3120, "y": 8300, "w": 1440, "h": 900 },
+    { "file": "CajeroVip.dc.html", "page": "cajero", "x": 4680, "y": 8300, "w": 1440, "h": 900 },
+
+    { "file": "KdsBoard.dc.html", "page": "kds", "x": 0, "y": 9500, "w": 1280, "h": 860 },
+    { "file": "KdsDetalle.dc.html", "page": "kds", "x": 1400, "y": 9500, "w": 1280, "h": 860 },
+    { "file": "KdsEscanear.dc.html", "page": "kds", "x": 2800, "y": 9500, "w": 1280, "h": 860 },
+
+    { "file": "MozoEntregas.dc.html", "page": "mozo", "x": 0, "y": 10600, "w": 390, "h": 900 }
+  ],
+  "annotations": [
+    { "id": "n-propuesta", "page": "propuesta", "x": 0, "y": -250, "w": 1350, "text": "PWA DEL CLIENTE — el recorrido completo con la piel definitiva.\nMenú → Carrito → Pago → (4a efectivo / 4b pagado) → Estado en vivo. El boliche está identificado en las seis pantallas: marca en el header, chip junto al título, y la línea de pie de pago protegido. La copita es un PLACEHOLDER del logo real: como la plataforma es multi-tenant, el logo y el color de acento son datos del Venue, no constantes de CSS." },
+    { "id": "n-propuesta-tipo", "page": "propuesta", "x": 0, "y": 1920, "w": 660, "text": "REGLA TIPOGRÁFICA — dos familias y un criterio para elegir:\n\nSERIF (Instrument Serif) = IDENTIDAD. Solo el nombre del boliche y los nombres de los tragos.\n\nSANS (Karla) = TODO LO OPERATIVO. Precios, saldo, total, títulos de pantallas de pago, botones, estados. NINGÚN NÚMERO va en serif: Instrument Serif tiene mucho contraste de trazo y a un dígito lo deja frágil, justo en lo único que el cliente necesita leer sin dudar.\n\nMONO (IBM Plex Mono) = SOLO CÓDIGOS DE PEDIDO. Es la tercera familia y está justificada: en mono, 0/O y 1/l no se confunden, y al cajero le puede tocar tipear el código a mano si el lector falla.\n\nSi dudás: ¿es el nombre de algo que se elige, o un dato que se lee para decidir? Lo primero, serif. Lo segundo, sans." },
+    { "id": "n-propuesta-papel", "page": "propuesta", "x": 700, "y": 1920, "w": 650, "text": "EL BLOQUE DE PAPEL (4a y 5) — la idea que sobrevivió de la dirección C, y no es estética:\n\nUn lector de QR necesita FONDO CLARO para leer la pantalla de un celular. Un QR blanco sobre negro no lo lee la mayoría de los lectores 2D. Por eso el bloque del código se invierte a papel claro dentro de una app oscura: es la única parte de la interfaz que no la lee el cliente, la lee una máquina o el cajero.\n\nRegla derivada: todo código destinado a otros ojos (o a un escáner) va sobre papel claro. Todo lo que lee el cliente, sobre fondo oscuro.\n\nPendiente para la implementación: al mostrar esta pantalla hay que subir el brillo al máximo por código; en un boliche oscuro el celular está siempre al mínimo y así no lo lee el lector." },
+
+    { "id": "n-dir", "page": "direcciones", "x": 0, "y": 3010, "w": 1350, "text": "Las tres direcciones que exploramos, guardadas como referencia. La propuesta final sale de mezclar A y B — ver la página Propuesta." },
+    { "id": "n-dir-a", "page": "direcciones", "x": 0, "y": 5100, "w": 390, "text": "A · NEÓN SOBRIO\nEje: energía contenida. Casi todo gris sobre negro; el acento solo en la marca y la acción principal.\nAportó: los contenedores del menú y la estructura del pago." },
+    { "id": "n-dir-b", "page": "direcciones", "x": 480, "y": 5100, "w": 390, "text": "B · CÓCTEL EDITORIAL\nEje: sofisticación. Negro cálido, bronce, serif de display y mucho aire.\nAportó: la paleta, la serif de identidad y el filtro de pestañas subrayadas." },
+    { "id": "n-dir-c", "page": "direcciones", "x": 960, "y": 5100, "w": 390, "text": "C · TICKET\nEje: el objeto físico — condensada en mayúsculas, mono para los códigos, naranja señal.\nAportó: el mono para los códigos de pedido y la inversión a papel claro del bloque del QR." },
+
+    { "id": "n-cliente", "page": "cliente", "x": 0, "y": 5730, "w": 1350, "text": "WIREFRAMES DE CONTENIDO — la versión lo-fi que validaste. Queda como referencia de QUÉ tiene que mostrar cada pantalla y de las decisiones del diseño funcional que la sostienen; el CÓMO se ve está en la página Propuesta." },
+    { "id": "n-cliente-q", "page": "cliente", "x": 0, "y": 7890, "w": 1350, "text": "§15 · preguntas abiertas que tocan estas pantallas y todavía no están resueltas en el diseño: saldo VIP insuficiente (¿bloquear / cubrir la diferencia con otro medio / permitir negativo?); timeout de cancelación de un pedido en efectivo nunca pagado; qué hacer con un pedido 'Listo' que nadie retira." },
+    { "id": "n-cajero", "page": "cajero", "x": 0, "y": 8120, "w": 1400, "text": "CAJERO · web de escritorio. Login por rol del claim del token (nunca de la URL). Dos funciones (§12): cobro en efectivo buscando el pedido por código, y coordinación de entregas VIP 'Listas' sin mozo. No arma pedidos. Falta pasarlo a la piel definitiva." },
+    { "id": "n-kds", "page": "kds", "x": 0, "y": 9330, "w": 1400, "text": "BARTENDER KDS · tablet horizontal por estación de barra, no por persona (§11). Cola FIFO por antigüedad desde el pago; se puede elegir entre los próximos 10 para agrupar. Imprimir = tomar el pedido (sale de 'Nuevos'). Semáforo de antigüedad: color + texto, nunca solo color. Falta pasarlo a la piel definitiva." },
+    { "id": "n-mozo", "page": "mozo", "x": 480, "y": 10600, "w": 720, "text": "MOZO · su propio celular, login usuario/PIN (el mismo que la caja). Solo ve mesas 'Listas'. 'Entregado' con un tap y confirmación — sin escaneo, es un movimiento interno entre empleados (§8.3). Falta pasarlo a la piel definitiva." }
+  ],
+  "launch": { "view": "canvas", "page": "propuesta" }
+}
