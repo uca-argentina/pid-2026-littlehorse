@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:844px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.grow{flex-grow:1}
+.hdr{display:flex;align-items:center;gap:11px;padding:15px 20px;border-bottom:1px solid #3A322A}
+.markmini{width:30px;height:30px;border-radius:9px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:19px;line-height:1.1}
+.body{flex-grow:1;display:flex;flex-direction:column;gap:16px;padding:20px 20px 8px}
+.hero{display:flex;flex-direction:column;align-items:center;gap:11px;text-align:center;padding:14px 0 2px}
+.ring{width:72px;height:72px;border-radius:99px;border:2px solid #5A4E42;color:#8A8078;display:flex;align-items:center;justify-content:center}
+.h1{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.sub{font-size:14.5px;color:#B0A69B;line-height:1.5;max-width:290px}
+.code{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;letter-spacing:.11em;color:#8A8078;border:1px solid #332C24;border-radius:99px;padding:7px 15px}
+.card{display:flex;gap:12px;padding:16px;border-radius:16px;background:#1E1A16;border:1px solid #3A322A}
+.ct{font-size:15.5px;font-weight:700}
+.cd{font-size:14px;color:#B0A69B;line-height:1.5;margin-top:3px}
+.foot{padding:14px 20px 20px;border-top:1px solid #3A322A;display:flex;flex-direction:column;gap:11px}
+.cta{display:flex;align-items:center;justify-content:center;min-height:58px;border-radius:15px;background:#E0B65C;color:#12100E;font-weight:700;font-size:16.5px}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;font-size:12px;color:#8A8078}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="markmini"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div class="venue grow">[Nombre del boliche]</div>
+  </div>
+
+  <div class="body">
+    <div class="hero">
+      <div class="ring"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10M17 7L7 17"/></svg></div>
+      <div class="h1">Pedido cancelado</div>
+      <div class="sub">El código quedó anulado y no se preparó nada.</div>
+      <div class="code">P-4F2K</div>
+    </div>
+
+    <div class="card">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#6E9E7F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+      <div>
+        <div class="ct">No se te cobró nada</div>
+        <div class="cd">Cancelaste antes de pagar, así que no hay ningún movimiento de plata.</div>
+      </div>
+    </div>
+
+    <div class="grow"></div>
+  </div>
+
+  <div class="foot">
+    <div class="cta">Volver al menú</div>
+    <div class="safe">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+      <span>Podés volver a pedir cuando quieras desde el mismo QR</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

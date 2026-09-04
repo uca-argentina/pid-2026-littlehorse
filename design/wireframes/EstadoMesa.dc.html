@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:920px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace}
+.grow{flex-grow:1}
+
+.hdr{display:flex;align-items:center;gap:11px;padding:15px 20px;border-bottom:1px solid #3A322A}
+.back{width:42px;height:42px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#F7F2EA}
+.ttl{font-size:19px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.tcode{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12.5px;letter-spacing:.09em;color:#B0A69B}
+.live{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;border:1px solid #3A322A;font-size:12px;color:#B0A69B;white-space:nowrap}
+.livedot{width:7px;height:7px;border-radius:99px;background:#E0B65C;flex-shrink:0}
+
+.body{flex-grow:1;display:flex;flex-direction:column;gap:13px;padding:15px 20px 8px}
+
+.banner{display:flex;align-items:center;gap:13px;padding:15px 16px;border-radius:16px;background:#E0B65C;color:#12100E}
+.bt{font-size:18px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.bd{font-size:13.5px;margin-top:2px;opacity:.82}
+
+.steps{display:flex;flex-direction:column;padding:15px 16px;border-radius:16px;background:#1E1A16;border:1px solid #3A322A}
+.step{display:flex;gap:13px}
+.rail{display:flex;flex-direction:column;align-items:center;width:16px;flex-shrink:0}
+.dot{width:13px;height:13px;border-radius:99px;flex-shrink:0;margin-top:4px}
+.d-done{background:#8A7448}
+.d-now{background:#E0B65C;box-shadow:0 0 0 4px rgba(224,182,92,.18)}
+.d-next{border:2px solid #4A4034}
+.ln{width:2px;flex-grow:1;min-height:16px;margin:3px 0}
+.l-done{background:#8A7448}
+.l-next{background:#332C24}
+.sc{display:flex;align-items:baseline;gap:10px;flex-grow:1;padding-bottom:15px}
+.sl{font-size:14.5px;color:#B0A69B}
+.sl.now{color:#F7F2EA;font-weight:700;font-size:15.5px}
+.sl.next{color:#8A8078}
+.stime{font-size:12.5px;color:#8A8078;font-variant-numeric:tabular-nums}
+
+.paper{background:#F7F4ED;color:#12100E;border-radius:16px;padding:22px 17px;display:flex;flex-direction:column;align-items:center;gap:9px}
+.plab{font-size:18px;font-weight:700;color:#12100E;letter-spacing:-.01em;line-height:1.25;text-align:center}
+.pmsg{font-size:15px;color:#3E3A34;text-align:center;line-height:1.5;max-width:270px}
+.carry{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:15px;background:#241E14;border:1.5px solid #E0B65C}
+.cavatar{width:38px;height:38px;border-radius:99px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ct{font-size:15.5px;font-weight:700}
+.cd{font-size:12.5px;color:#B0A69B;margin-top:1px}
+
+.recap{display:flex;align-items:center;gap:10px;padding:13px 15px;border-radius:14px;background:#191612;border:1px solid #332C24;font-size:14.5px}
+.mu{color:#B0A69B}
+
+.acct{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:15px;background:#1E1A16;border:1px solid #3A322A;color:#F7F2EA;text-decoration:none}
+.acct:hover{border-color:#4A4034}
+.aicon{width:38px;height:38px;border-radius:11px;background:#272219;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;color:#E0B65C;flex-shrink:0}
+.at{font-size:15px;font-weight:700}
+.ad{font-size:12.5px;color:#B0A69B;line-height:1.4;margin-top:1px}
+.foot{padding:13px 20px 18px;border-top:1px solid #3A322A}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;text-align:center;font-size:12px;color:#8A8078;line-height:1.5}
+a{color:#E0B65C}a:hover{color:#EFCE8A}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="grow">
+      <div class="ttl">Mesa 5</div>
+      <div class="tcode">P-4F2K</div>
+    </div>
+    <div class="live"><div class="livedot"></div><span>En vivo</span></div>
+  </div>
+
+  <div class="body">
+    <div class="banner">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg>
+      <div class="grow">
+        <div class="bt">Tu pedido está listo</div>
+        <div class="bd">Ya sale para tu mesa.</div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="rail"><div class="dot d-done"></div><div class="ln l-done"></div></div>
+        <div class="sc"><div class="sl grow">En cola</div><div class="stime">23:41</div></div>
+      </div>
+      <div class="step">
+        <div class="rail"><div class="dot d-done"></div><div class="ln l-done"></div></div>
+        <div class="sc"><div class="sl grow">En preparación</div><div class="stime">23:46</div></div>
+      </div>
+      <div class="step">
+        <div class="rail"><div class="dot d-now"></div><div class="ln l-next"></div></div>
+        <div class="sc"><div class="sl now grow">Listo · en camino</div><div class="stime">23:49</div></div>
+      </div>
+      <div class="step">
+        <div class="rail"><div class="dot d-next"></div></div>
+        <div class="sc" style="padding-bottom:0"><div class="sl next grow">En tu mesa</div><div class="stime">—</div></div>
+      </div>
+    </div>
+
+    <div class="paper">
+      <div class="plab">No hace falta que hagas nada</div>
+      <div class="pmsg">Te lo llevan a la <b>Mesa 5</b>. Quedate donde estás.</div>
+    </div>
+
+    <div class="carry">
+      <div class="cavatar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg></div>
+      <div class="grow">
+        <div class="ct">Martín lo está llevando</div>
+        <div class="cd">Salió de la barra hace 40 seg</div>
+      </div>
+    </div>
+
+    <div class="recap">
+      <span class="grow">2× Gin Tonic · 1× Fernet</span>
+      <a href="#">Ver detalle</a>
+    </div>
+
+    <a class="acct" href="#">
+      <div class="aicon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg></div>
+      <div class="grow">
+        <div class="at">Guardá este pedido</div>
+        <div class="ad">Con una cuenta seguís tus pedidos de la noche desde cualquier celular.</div>
+      </div>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B0A69B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+  </div>
+
+  <div class="foot">
+    <div class="safe">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>
+      <span>En mesa no hace falta QR: te lo entrega el mozo en mano</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

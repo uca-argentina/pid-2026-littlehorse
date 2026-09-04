@@ -7,48 +7,90 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
-.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
-.frame{background:#f4f2ee;display:flex;flex-direction:column}
-.top{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:2px solid #2b2b2b}
-.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
-.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:8px 16px;font-size:13px;background:#fff}
-.body{flex-grow:1;display:flex;align-items:center;justify-content:center;padding:24px}
-.card{border:1.6px dashed #8a8a8a;border-radius:8px;background:#eae7e1;padding:22px;width:560px;display:flex;flex-direction:column;gap:14px}
-.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:8px}
-.row{display:flex;gap:10px;align-items:center}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.4;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:900px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .grow{flex-grow:1}
-.btn{border:1.8px solid #2b2b2b;border-radius:6px;padding:14px;text-align:center;font-weight:700;background:#fff;font-family:inherit;font-size:15px}
-.btn.p{background:#3f6ea5;color:#fff;border-color:#3f6ea5}
-.muted{color:#6b6b6b;font-size:13px}
-.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13px;line-height:1.4;padding:14px 24px;border-top:1.6px dashed #8a8a8a}
+.hdr{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid #3A322A}
+.mark{width:40px;height:40px;border-radius:12px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:21px;line-height:1.1}
+.station{font-size:13px;color:#B0A69B;letter-spacing:.05em;text-transform:uppercase}
+.user{display:flex;align-items:center;gap:10px;padding:9px 15px;border-radius:99px;border:1px solid #3A322A;font-size:14.5px;color:#B0A69B}
+.tabs{display:flex;gap:10px;padding:14px 24px 0}
+.tab{padding:11px 20px;border-radius:11px;font-size:15.5px;font-weight:600;color:#B0A69B;border:1px solid #3A322A}
+.tab.on{background:#F7F2EA;color:#12100E;border-color:#F7F2EA;font-weight:700}
+.lab{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#B0A69B}
+
+.body{flex-grow:1;display:flex;gap:22px;padding:20px 24px}
+.left{flex-grow:1;display:flex;flex-direction:column;gap:16px}
+.who{display:flex;align-items:center;gap:16px}
+.code{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:22px;letter-spacing:.14em;color:#E0B65C;padding:9px 16px;border-radius:11px;border:1px solid #3A322A}
+.name{font-size:32px;font-weight:700;letter-spacing:-.02em}
+.pend{padding:8px 15px;border-radius:99px;border:1.5px solid #D98A3F;color:#D98A3F;font-size:14px;font-weight:700;letter-spacing:.04em}
+.lines{display:flex;flex-direction:column;gap:11px;padding:20px;border-radius:16px;background:#1E1A16;border:1px solid #3A322A}
+.it{display:flex;gap:14px;align-items:baseline;font-size:21px}
+.q{font-weight:700;color:#E0B65C;min-width:40px;font-variant-numeric:tabular-nums}
+.mu{color:#B0A69B;font-size:15px}
+.chip{font-size:14px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:6px 13px;border-radius:99px;border:1.5px solid #5A4E42;color:#B0A69B}
+.side{width:440px;flex-shrink:0;display:flex;flex-direction:column;gap:14px}
+.amount{display:flex;flex-direction:column;align-items:center;gap:4px;padding:30px 24px;border-radius:20px;background:#1E1A16;border:2px solid #E0B65C}
+.alab{font-size:14px;color:#B0A69B;letter-spacing:.09em;text-transform:uppercase;font-weight:700}
+.aval{font-size:64px;font-weight:700;line-height:1.05;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.cta{display:flex;align-items:center;justify-content:center;gap:11px;min-height:76px;border-radius:16px;background:#E0B65C;color:#12100E;font-weight:700;font-size:20px}
+.ghost{display:flex;align-items:center;justify-content:center;min-height:56px;border-radius:14px;border:1px solid #3A322A;background:#1E1A16;color:#F7F2EA;font-size:16px;font-weight:600}
+.safe{display:flex;gap:11px;padding:15px 16px;border-radius:14px;background:#191612;border:1px solid #332C24;font-size:14px;color:#8A8078;line-height:1.55}
+
 </style>
 </helmet>
-<div class="frame" style="width:1440px;min-height:860px">
-  <div class="top">
-    <div class="h">Caja · Cobro en efectivo</div>
-    <div class="pill">Caja 1 · Laura</div>
+<div class="frame">
+  <div class="hdr">
+    <div class="mark"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div>
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="station">Caja 1</div>
+    </div>
+    <div class="grow"></div>
+    <div class="user"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg><span>Laura · cajera</span></div>
+  </div>
+  <div class="tabs">
+    <div class="tab on">Cobro en efectivo</div>
+    <div class="tab">Entregas VIP</div>
   </div>
   <div class="body">
-    <div class="card">
-      <div class="row">
-        <div class="hand grow" style="font-size:20px;font-weight:700">Pedido P-4F2K</div>
-        <div class="pill">Pendiente de pago</div>
+    <div class="left">
+      <div class="who">
+        <div class="code">P-4F2K</div>
+        <div class="name">Pablo</div>
+        <div class="grow"></div>
+        <div class="pend">PENDIENTE DE PAGO</div>
       </div>
-      <div class="box">
-        <div class="row"><div class="grow">2× Gin Tonic <span class="muted">— sin hielo</span></div><div>$ [ ]</div></div>
-        <div class="row"><div class="grow">1× Fernet con Coca</div><div>$ [ ]</div></div>
+      <div class="lines">
+        <div class="it"><span class="q">2×</span><span>Gin Tonic</span><span class="grow"></span><span class="mono">$ [ ]</span></div>
+        <div class="it"><span class="mu" style="padding-left:54px">sin hielo</span></div>
+        <div class="it"><span class="q">1×</span><span>Fernet con Coca</span><span class="grow"></span><span class="mono">$ [ ]</span></div>
       </div>
-      <div class="row"><div class="hand grow" style="font-size:18px;font-weight:700">Total</div><div class="hand" style="font-size:20px;font-weight:700">$ [TOTAL]</div></div>
-      <div class="row"><div class="muted">Entrega:</div><div class="pill">Retiro en barra</div></div>
-      <div class="btn p">Confirmar cobro en efectivo</div>
-      <div class="btn">Volver a buscar</div>
+      <div class="who"><div class="mu">Entrega</div><div class="chip">Retiro en barra</div><div class="grow"></div><div class="mu">Pedido hecho 01:12</div></div>
+      <div class="grow"></div>
+      <div class="safe">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6E9E7F" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+        <span>Si tocás dos veces, o si el lector lee el mismo código de nuevo, no se cobra dos veces: la pantalla te va a decir <b style="color:#F7F2EA">"ya cobrado"</b> con la hora. Cobrar es una sola vez por pedido.</span>
+      </div>
+    </div>
+    <div class="side">
+      <div class="amount">
+        <div class="alab">Cobrale</div>
+        <div class="aval">$ [TOTAL]</div>
+      </div>
+      <div class="cta">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        <span>Confirmar cobro</span>
+      </div>
+      <div class="ghost">Cancelar y volver a escanear</div>
     </div>
   </div>
-  <div class="note">Idempotente: si el cajero toca dos veces (o hay reintento de red), la segunda llamada devuelve el mismo resultado, no cobra de nuevo (skill endpoint-api). Al confirmar, el Order pasa Paid → Queued y aparece en el KDS.</div>
 </div>
 </x-dc>
 </body>

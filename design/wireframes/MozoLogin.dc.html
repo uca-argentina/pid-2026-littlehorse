@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:844px;padding:24px 20px}
+.grow{flex-grow:1}
+.brand{display:flex;align-items:center;gap:12px}
+.markmini{width:44px;height:44px;border-radius:13px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:22px;line-height:1.1}
+.station{font-size:12px;color:#B0A69B;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+.h1{font-size:27px;font-weight:700;letter-spacing:-.02em}
+.sub{font-size:14.5px;color:#B0A69B;margin-top:6px;line-height:1.5}
+.field{display:flex;flex-direction:column;gap:7px}
+.lab{font-size:12.5px;font-weight:600;color:#B0A69B;letter-spacing:.03em}
+.in{min-height:56px;display:flex;align-items:center;padding:0 16px;border-radius:14px;background:#1E1A16;border:1px solid #3A322A;font-size:16px}
+.in.on{border-color:#E0B65C}
+.ph{color:#8A8078}
+.dots{letter-spacing:.3em;font-size:19px}
+.cta{display:flex;align-items:center;justify-content:center;min-height:58px;border-radius:15px;background:#E0B65C;color:#12100E;font-weight:700;font-size:16.5px}
+.note{font-size:13px;color:#8A8078;line-height:1.55;padding-top:14px;border-top:1px solid #332C24}
+.push{display:flex;gap:12px;padding:15px;border-radius:15px;background:#241E14;border:1.5px solid #E0B65C}
+.pico{width:38px;height:38px;border-radius:11px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pt{font-size:15.5px;font-weight:700}
+.pd{font-size:13.5px;color:#B0A69B;line-height:1.5;margin-top:3px}
+</style>
+</helmet>
+<div class="frame">
+  <div class="brand">
+    <div class="markmini"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div>
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="station">Personal</div>
+    </div>
+  </div>
+
+  <div style="height:26px"></div>
+  <div>
+    <div class="h1">Iniciá tu turno</div>
+    <div class="sub">Entrá desde tu celular. No hace falta instalar nada.</div>
+  </div>
+
+  <div style="height:22px"></div>
+  <div class="field"><div class="lab">Usuario</div><div class="in on"><span>martin.p</span></div></div>
+  <div style="height:14px"></div>
+  <div class="field"><div class="lab">PIN</div><div class="in"><span class="dots ph">••••</span></div></div>
+  <div style="height:20px"></div>
+  <div class="cta">Entrar</div>
+
+  <div style="height:20px"></div>
+  <div class="push">
+    <div class="pico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.5 21a2 2 0 003 0"/></svg></div>
+    <div>
+      <div class="pt">Te vamos a avisar</div>
+      <div class="pd">Al entrar te pedimos permiso para notificarte cada vez que una mesa quede lista. Es el mismo aviso que le llega al cliente.</div>
+    </div>
+  </div>
+
+  <div class="grow"></div>
+  <div class="note">Tu rol sale del token, no de la dirección: vas a ver solo las mesas de este boliche y solo las que están listas. El mismo login que usa la caja.</div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -7,45 +7,100 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
-.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
-.frame{background:#f4f2ee;display:flex;flex-direction:column}
-.top{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:2px solid #2b2b2b}
-.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:20px;margin:0}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.4;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:800px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .grow{flex-grow:1}
-.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:6px 12px;font-size:12px;background:#fff}
-.body{flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
-.box{border:1.6px dashed #8a8a8a;border-radius:8px;background:#eae7e1;padding:24px;width:620px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center}
-.in{border:1.8px solid #3f6ea5;border-radius:6px;background:#fff;padding:18px;font-size:22px;font-weight:700;letter-spacing:.2em;width:100%;text-align:center;color:#6b6b6b}
-.small{border:1.6px solid #8a8a8a;border-radius:6px;background:#fff;padding:10px 12px;font-size:13px;color:#6b6b6b}
-.row{display:flex;gap:10px;align-items:center}
-.muted{color:#6b6b6b;font-size:13px}
-.ok{border:1.6px dashed #6f9f6f;border-radius:8px;background:#eef3ec;padding:16px;width:620px;text-align:center}
-.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13px;line-height:1.4;padding:14px 20px;border-top:1.6px dashed #8a8a8a}
+
+.hdr{display:flex;align-items:center;gap:16px;padding:13px 18px;border-bottom:1px solid #3A322A}
+.mark{width:40px;height:40px;border-radius:12px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:21px;line-height:1.1}
+.station{font-size:13px;color:#B0A69B;letter-spacing:.05em;text-transform:uppercase}
+.back{width:46px;height:46px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+.body{flex-grow:1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px 24px}
+.w{width:840px}
+
+.target{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;border-radius:20px;background:#1E1A16;border:2px solid #E0B65C;text-align:center}
+.tico{color:#E0B65C}
+.tt{font-size:28px;font-weight:700;letter-spacing:-.02em}
+.rules{display:flex;gap:12px;margin-top:2px}
+.rule{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:12px;background:#191612;border:1px solid #3A322A;font-size:15.5px}
+.tag{padding:4px 11px;border-radius:99px;font-size:13.5px;font-weight:700;letter-spacing:.05em;white-space:nowrap}
+.tag.listo{background:#E0B65C;color:#12100E}
+.tag.entregado{background:#6E9E7F;color:#12100E}
+.td{font-size:15px;color:#B0A69B;max-width:600px;line-height:1.5}
+.wait{display:flex;align-items:center;justify-content:center;gap:12px;min-height:50px;width:100%;border-radius:13px;background:#12100E;border:1px dashed #6B5F51;color:#8A8078;font-size:15.5px;margin-top:2px}
+
+.lab{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#B0A69B;align-self:flex-start}
+.feed{display:flex;flex-direction:column;gap:2px;border-radius:14px;overflow:hidden;border:1px solid #3A322A}
+.row{display:flex;align-items:center;gap:16px;padding:13px 18px;background:#1E1A16;font-size:17px}
+.rid{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;min-width:170px}
+.src{font-size:14.5px;color:#B0A69B}
+.when{font-size:14px;color:#8A8078;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.fall{display:flex;flex-direction:column;gap:11px;padding:16px;border-radius:16px;background:#191612;border:1px dashed #4A4034}
+.ft{font-size:16.5px;font-weight:700}
+.fd{font-size:14.5px;color:#8A8078;line-height:1.5}
+.frow{display:flex;gap:12px}
+.in{flex-grow:1;min-height:56px;display:flex;align-items:center;gap:11px;padding:0 16px;border-radius:13px;background:#1E1A16;border:1px solid #3A322A;font-size:16px;color:#8A8078}
 </style>
 </helmet>
-<div class="frame" style="width:1280px;min-height:820px">
-  <div class="top">
-    <div class="h">Barra principal · KDS</div>
-    <div class="grow"></div>
-    <div class="pill">marcar "Listo"</div>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="mark"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div>
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="station">Barra principal · escaneo</div>
+    </div>
   </div>
+
   <div class="body">
-    <div class="box">
-      <div style="font-weight:700;font-size:18px">Escaneá el QR del ticket</div>
-      <div class="in">▌ | | | ▌ |</div>
-      <div class="muted">El lector tipea el código y manda Enter — no hace falta cámara ni drivers.</div>
-      <div class="row"><div class="muted">o buscá por número:</div><div class="small">#_ _ _</div></div>
+    <div class="target w">
+      <div class="tico"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5.5A1.5 1.5 0 015.5 4H8M16 4h2.5A1.5 1.5 0 0120 5.5V8M20 16v2.5a1.5 1.5 0 01-1.5 1.5H16M8 20H5.5A1.5 1.5 0 014 18.5V16"/><path d="M4 12h16"/></svg></div>
+      <div class="tt">Escaneá cualquier QR</div>
+      <div class="rules">
+        <div class="rule"><span>Ticket de barra</span><span class="tag listo">LISTO</span></div>
+        <div class="rule"><span>QR del cliente</span><span class="tag entregado">ENTREGADO</span></div>
+      </div>
+      <div class="td">No elegís nada ni entrás al pedido: el sistema sabe en qué estado está y lo avanza al siguiente. Escaneás y listo.</div>
+      <div class="wait"><span class="mono" style="color:#E0B65C;letter-spacing:.25em">▌|▌</span><span>Esperando lectura…</span></div>
     </div>
-    <div class="ok">
-      <div style="font-weight:700">Pedido #128 → LISTO ✓</div>
-      <div class="muted">Retiro en barra: se notificó al cliente por push. Si no le llega (iOS sin instalar), lo ve como "Listo" en vivo en su pantalla.</div>
+
+    <div class="lab" style="width:840px">Últimos escaneos</div>
+    <div class="feed w">
+      <div class="row">
+        <div class="rid">#128 · Pablo</div>
+        <div class="src">QR del cliente</div>
+        <div class="grow"></div>
+        <div class="tag entregado">ENTREGADO</div>
+        <div class="when">hace 5 seg</div>
+      </div>
+      <div class="row">
+        <div class="rid">#131 · Sofi</div>
+        <div class="src">Ticket de barra</div>
+        <div class="grow"></div>
+        <div class="tag listo">LISTO</div>
+        <div class="when">hace 40 seg</div>
+      </div>
+    </div>
+
+    <div class="fall w">
+      <div class="ft">¿El lector no lo toma?</div>
+      <div class="fd">Pasa cuando el ticket se moja o se rompe, o cuando la pantalla del cliente está rayada o con poco brillo. Buscá el pedido a mano — por número o por el nombre del cliente.</div>
+      <div class="frow">
+        <div class="in"><span class="mono">#___</span></div>
+        <div class="in">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg>
+          <span>Nombre del cliente</span>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="note">§10: lector 2D (QR + códigos de barra 1D) como teclado HID. Mantener SIEMPRE la búsqueda manual como respaldo por si el ticket se moja o se rompe.</div>
 </div>
 </x-dc>
 </body>

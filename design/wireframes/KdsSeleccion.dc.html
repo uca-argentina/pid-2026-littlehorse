@@ -51,6 +51,13 @@ body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif
 .chip{font-size:13px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:99px;border:1.5px solid #5A4E42;color:#B0A69B;white-space:nowrap}
 .chip.mesa{border-color:#E0B65C;color:#12100E;background:#E0B65C}
 .plain{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex-grow:1}
+.card.sel{border-color:#E0B65C;background:#241E14}
+.print.sel{background:#E0B65C;color:#12100E;border-left-color:#E0B65C}
+.bar{display:flex;align-items:center;gap:14px;flex-grow:1}
+.barT{font-size:17px;font-weight:700}
+.barD{font-size:14px;color:#B0A69B;margin-top:2px}
+.ghostB{display:flex;align-items:center;justify-content:center;min-height:52px;padding:0 22px;border-radius:12px;border:1px solid #3A322A;background:#1E1A16;color:#F7F2EA;font-size:15.5px;font-weight:600;white-space:nowrap}
+.ctaB{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 24px;border-radius:12px;background:#E0B65C;color:#12100E;font-weight:700;font-size:16.5px;white-space:nowrap}
 
 .foot{display:flex;align-items:center;gap:16px;padding:12px 18px;border-top:1px solid #3A322A}
 .sug{display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:13px;background:#241E14;border:1px solid #6B4F2E;flex-grow:1}
@@ -80,7 +87,7 @@ body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif
 
   <div class="cols">
     <div class="col">
-      <div class="colh"><div class="colt">Nuevos</div><div class="cnt">4</div><div class="grow"></div><div class="station">tocá la tarjeta para elegir varias</div></div>
+      <div class="colh"><div class="colt">Nuevos</div><div class="cnt">4</div><div class="grow"></div><div class="station">tocá otra tarjeta para sumarla</div></div>
       <div class="stack">
         <div class="card urg">
           <div class="cbody">
@@ -105,7 +112,7 @@ body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif
           </div>
         </div>
 
-        <div class="card">
+        <div class="card sel">
           <div class="cbody">
             <div class="top"><div class="onum">#128</div><div class="who">Pablo</div><div class="grow"></div><div class="chip">Barra</div><div class="age ok">2 min</div></div>
             <div class="items">
@@ -114,20 +121,20 @@ body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif
             </div>
             <div class="note"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg><span>sin hielo</span></div>
           </div>
-          <div class="print">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v4H7z"/></svg>
-            <span>Imprimir</span>
+          <div class="print sel">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            <span>Elegido</span>
           </div>
         </div>
 
-        <div class="card">
+        <div class="card sel">
           <div class="cbody">
             <div class="top"><div class="onum">#129</div><div class="who">Sofi</div><div class="grow"></div><div class="chip">Barra</div><div class="age ok">1 min</div></div>
             <div class="items"><div class="it"><span class="q">2×</span><span>Gin Tonic</span></div></div>
           </div>
-          <div class="print">
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v4H7z"/></svg>
-            <span>Imprimir</span>
+          <div class="print sel">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            <span>Elegido</span>
           </div>
         </div>
       </div>
@@ -148,33 +155,28 @@ body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif
     </div>
 
     <div class="col">
-      <div class="colh"><div class="colt">Listos en la barra</div><div class="cnt">2</div></div>
+      <div class="colh"><div class="colt">Listos sin retirar</div><div class="cnt">1</div></div>
       <div class="stack">
         <div class="card warn"><div class="plain">
           <div class="top"><div class="onum">#118</div><div class="who">Caro</div><div class="grow"></div><div class="chip">Barra</div><div class="age warn">esperando 7 min</div></div>
           <div class="items"><div class="it"><span class="q">1×</span><span>Fernet con Coca</span></div></div>
-        </div></div>
-        <div class="card"><div class="plain">
-          <div class="top"><div class="onum">#120</div><div class="who">Martín lleva</div><div class="grow"></div><div class="chip mesa">Mesa 3</div><div class="age ok">esperando 1 min</div></div>
-          <div class="items"><div class="it"><span class="q">2×</span><span>Cerveza</span></div></div>
         </div></div>
       </div>
     </div>
   </div>
 
   <div class="foot">
-    <div class="sug">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E0B65C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
-      <div class="sugT grow"><b>2 pedidos con Gin Tonic</b> entre los próximos de la cola — preparalos juntos</div>
-      <div class="sugB">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v4H7z"/></svg>
-        <span>Imprimir los 2</span>
+    <div class="bar">
+      <div>
+        <div class="barT">2 pedidos elegidos · 3× Gin Tonic en total</div>
+        <div class="barD">Sale un ticket por pedido, no uno combinado — cada uno mantiene su QR.</div>
       </div>
-    </div>
-    <div class="undo">
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6E9E7F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-      <span>Se imprimió <b style="color:#F7F2EA">#123</b></span>
-      <span class="undoB">Devolver a la cola</span>
+      <div class="grow"></div>
+      <div class="ghostB">Cancelar</div>
+      <div class="ctaB">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v4H7z"/></svg>
+        <span>Imprimir 2 tickets</span>
+      </div>
     </div>
   </div>
 </div>

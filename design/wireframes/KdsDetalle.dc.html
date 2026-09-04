@@ -7,48 +7,83 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
-.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
-.frame{background:#f4f2ee;display:flex;flex-direction:column}
-.top{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:2px solid #2b2b2b}
-.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:20px;margin:0}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.4;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:800px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .grow{flex-grow:1}
-.row{display:flex;gap:12px;align-items:center}
-.dot{width:12px;height:12px;border-radius:999px;flex-shrink:0}
-.muted{color:#6b6b6b;font-size:13px}
-.body{flex-grow:1;padding:24px;display:flex;flex-direction:column;gap:18px;max-width:760px}
-.badge{border:2px solid #2b2b2b;border-radius:8px;padding:12px 22px;font-family:'Kalam',cursive;font-weight:700;font-size:22px;background:#fff;align-self:flex-start}
-.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:16px;display:flex;flex-direction:column;gap:10px}
-.btn{border:1.8px solid #2b2b2b;border-radius:6px;padding:14px 22px;text-align:center;font-weight:700;background:#fff;font-family:inherit;font-size:15px}
-.btn.p{background:#3f6ea5;color:#fff;border-color:#3f6ea5}
-.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13px;line-height:1.4;padding:14px 20px;border-top:1.6px dashed #8a8a8a}
+
+.hdr{display:flex;align-items:center;gap:16px;padding:13px 18px;border-bottom:1px solid #3A322A}
+.back{width:46px;height:46px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:21px;line-height:1.1}
+.station{font-size:13px;color:#B0A69B;letter-spacing:.05em;text-transform:uppercase}
+.age{font-size:16px;font-weight:700;color:#D98A3F;font-variant-numeric:tabular-nums}
+
+.body{flex-grow:1;display:flex;gap:20px;padding:22px 24px}
+.main{flex-grow:1;display:flex;flex-direction:column;gap:18px;max-width:720px}
+.idrow{display:flex;align-items:center;gap:18px}
+.onum{font-size:52px;font-weight:700;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.who{font-size:30px;font-weight:600}
+.badge{padding:11px 20px;border-radius:12px;background:#E0B65C;color:#12100E;font-size:22px;font-weight:700;letter-spacing:.02em}
+
+.items{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:15px;background:#1E1A16;border:1px solid #3A322A}
+.it{display:flex;gap:16px;align-items:baseline;font-size:26px}
+.q{font-weight:700;color:#E0B65C;min-width:46px;font-variant-numeric:tabular-nums}
+.note{display:flex;align-items:center;gap:10px;padding:11px 15px;border-radius:10px;background:#2E2318;border:1px solid #6B4F2E;font-size:19px;font-weight:600;color:#EFCE8A}
+
+.meta{display:flex;gap:28px;padding:15px 18px;border-radius:14px;background:#191612;border:1px solid #332C24;font-size:16px}
+.ml{color:#B0A69B;font-size:13px;letter-spacing:.05em;text-transform:uppercase}
+.mv{font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+
+.side{width:300px;display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+.cta{display:flex;align-items:center;justify-content:center;gap:11px;min-height:70px;border-radius:14px;background:#E0B65C;color:#12100E;font-weight:700;font-size:19px}
+.ghost{display:flex;align-items:center;justify-content:center;min-height:58px;border-radius:14px;border:1px solid #3A322A;background:#1E1A16;color:#F7F2EA;font-size:16px;font-weight:600}
+.hint{font-size:14px;color:#8A8078;line-height:1.5;padding:14px;border-radius:12px;background:#191612;border:1px solid #332C24}
 </style>
 </helmet>
-<div class="frame" style="width:1280px;min-height:820px">
-  <div class="top">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2b2b2b" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-    <div class="h">Pedido #129</div>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div>
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="station">Barra principal</div>
+    </div>
     <div class="grow"></div>
-    <div class="row"><div class="dot" style="background:#d9b24a"></div><div class="muted">en cola hace 6 min</div></div>
+    <div class="age">En cola hace 6 min</div>
   </div>
+
   <div class="body">
-    <div class="badge">MESA 5</div>
-    <div class="box">
-      <div style="font-size:20px;font-weight:700">1× Aperol Spritz</div>
-      <div class="muted">Nota: con mucho hielo</div>
+    <div class="main">
+      <div class="idrow">
+        <div class="onum">#127</div>
+        <div class="who">Nico</div>
+        <div class="grow"></div>
+        <div class="badge">MESA 5</div>
+      </div>
+
+      <div class="items">
+        <div class="it"><span class="q">1×</span><span>Aperol Spritz</span></div>
+        <div class="note"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg><span>con mucho hielo</span></div>
+      </div>
+
+      <div class="meta">
+        <div><div class="ml">Pagado</div><div class="mv">23:41</div></div>
+        <div><div class="ml">Método</div><div class="mv">Saldo de mesa</div></div>
+        <div><div class="ml">Código</div><div class="mv mono">P-7C1M</div></div>
+      </div>
     </div>
-    <div class="box" style="background:#fff">
-      <div class="row"><div class="muted">Pagado:</div><div>23:41</div><div class="grow"></div><div class="muted">Método:</div><div>Saldo VIP</div></div>
-    </div>
-    <div class="row">
-      <div class="btn p">Imprimir ticket</div>
-      <div class="btn">Volver a la cola</div>
+
+    <div class="side">
+      <div class="cta">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V4h12v5"/><rect x="4" y="9" width="16" height="7" rx="1.5"/><path d="M7 16h10v4H7z"/></svg>
+        <span>Imprimir ticket</span>
+      </div>
+      <div class="ghost">Volver</div>
+      <div class="hint">Si preparás varios pedidos juntos, se imprime <b>un ticket por pedido</b>, no uno combinado: cada uno mantiene su propio QR. El ticket sale por la térmica con el QR en ESC/POS.</div>
     </div>
   </div>
-  <div class="note">§11: al agrupar varios pedidos se imprime UN ticket individual por pedido (no combinado); cada uno mantiene su propio QR. El ticket sale por impresora térmica con el QR en comandos ESC/POS (§10).</div>
 </div>
 </x-dc>
 </body>

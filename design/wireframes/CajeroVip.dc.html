@@ -7,55 +7,96 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
-.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
-.frame{background:#f4f2ee;display:flex;flex-direction:column}
-.top{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:2px solid #2b2b2b}
-.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
-.tabs{display:flex;gap:10px;padding:16px 24px}
-.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:8px 16px;font-size:13px;background:#fff}
-.pill.on{background:#2b2b2b;color:#fff}
-.body{flex-grow:1;padding:0 24px;display:flex;flex-direction:column;gap:12px}
-.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:14px;display:flex;gap:14px;align-items:center}
-.row{display:flex;gap:10px;align-items:center}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.4;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:900px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
 .grow{flex-grow:1}
-.dot{width:14px;height:14px;border-radius:999px;border:1.5px solid #2b2b2b;flex-shrink:0}
-.btn{border:1.8px solid #2b2b2b;border-radius:6px;padding:10px 16px;text-align:center;font-weight:700;background:#fff;font-family:inherit;font-size:13px}
-.muted{color:#6b6b6b;font-size:13px}
-.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13px;line-height:1.4;padding:14px 24px;border-top:1.6px dashed #8a8a8a;margin-top:12px}
+.hdr{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid #3A322A}
+.mark{width:40px;height:40px;border-radius:12px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:21px;line-height:1.1}
+.station{font-size:13px;color:#B0A69B;letter-spacing:.05em;text-transform:uppercase}
+.user{display:flex;align-items:center;gap:10px;padding:9px 15px;border-radius:99px;border:1px solid #3A322A;font-size:14.5px;color:#B0A69B}
+.tabs{display:flex;gap:10px;padding:14px 24px 0}
+.tab{padding:11px 20px;border-radius:11px;font-size:15.5px;font-weight:600;color:#B0A69B;border:1px solid #3A322A}
+.tab.on{background:#F7F2EA;color:#12100E;border-color:#F7F2EA;font-weight:700}
+.lab{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#B0A69B}
+
+.body{flex-grow:1;display:flex;flex-direction:column;gap:14px;padding:20px 24px}
+.card{display:flex;align-items:center;gap:20px;padding:18px 20px;border-radius:16px;background:#1E1A16;border:1.5px solid #3A322A}
+.card.warn{border-color:#D98A3F}
+.card.urg{border-color:#C85A4A;background:#231714}
+.mesa{font-size:30px;font-weight:700;letter-spacing:-.02em;min-width:145px}
+.det{font-size:18px}
+.mu{color:#B0A69B;font-size:14.5px;margin-top:2px}
+.wait{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wait.ok{color:#B0A69B}
+.wait.warn{color:#D98A3F}
+.wait.urg{color:#C85A4A}
+.act{display:flex;align-items:center;justify-content:center;gap:9px;min-height:56px;padding:0 22px;border-radius:13px;border:1.5px solid #E0B65C;color:#E0B65C;font-size:16px;font-weight:700;white-space:nowrap}
+.hint{display:flex;gap:11px;padding:16px 18px;border-radius:14px;background:#191612;border:1px solid #332C24;font-size:14.5px;color:#8A8078;line-height:1.55}
+.empty{font-size:15px;color:#8A8078;text-align:center;padding:10px}
+.taken{display:flex;align-items:center;gap:16px;padding:15px 20px;border-radius:16px;background:#191612;border:1px solid #332C24;opacity:.8}
+.tmesa{font-size:22px;font-weight:700;min-width:145px}
+.by{display:flex;align-items:center;gap:9px;font-size:16px;color:#B0A69B;white-space:nowrap}
+.free{padding:7px 14px;border-radius:99px;border:1.5px solid #C85A4A;color:#C85A4A;font-size:13.5px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.free.ok{border-color:#5A4E42;color:#B0A69B}
+
 </style>
 </helmet>
-<div class="frame" style="width:1440px;min-height:860px">
-  <div class="top">
-    <div class="h">Caja · Coordinación de entregas VIP</div>
-    <div class="pill">Caja 1 · Laura</div>
+<div class="frame">
+  <div class="hdr">
+    <div class="mark"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div>
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="station">Caja 1</div>
+    </div>
+    <div class="grow"></div>
+    <div class="user"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg><span>Laura · cajera</span></div>
   </div>
   <div class="tabs">
-    <div class="pill">Cobro efectivo</div>
-    <div class="pill on">Entregas VIP</div>
+    <div class="tab">Cobro en efectivo</div>
+    <div class="tab on">Entregas VIP</div>
   </div>
   <div class="body">
-    <div class="muted">Pedidos de mesa "Listos" sin mozo asignado</div>
-    <div class="box">
-      <div style="font-weight:700;font-size:16px">MESA 5</div>
-      <div class="muted">2× Gin Tonic · 1× Fernet</div>
+    <div class="lab">Mesas listas que todavía no tomó ningún mozo</div>
+    <div class="card urg">
+      <div class="mesa">MESA 12</div>
+      <div><div class="det">1× Aperol Spritz</div><div class="mu">Sofi · listo desde 01:05</div></div>
       <div class="grow"></div>
-      <div class="row"><div class="dot" style="background:#6f9f6f"></div><div class="muted">Listo hace 2 min</div></div>
-      <div class="btn">Marcar avisado</div>
+      <div class="wait urg">9 min esperando</div>
+      <div class="free">NADIE LA TOMÓ</div>
     </div>
-    <div class="box">
-      <div style="font-weight:700;font-size:16px">MESA 12</div>
-      <div class="muted">1× Aperol Spritz</div>
+    <div class="card warn">
+      <div class="mesa">MESA 5</div>
+      <div><div class="det">2× Gin Tonic · 1× Fernet</div><div class="mu">Nico · listo desde 01:12</div></div>
       <div class="grow"></div>
-      <div class="row"><div class="dot" style="background:#c46a5a"></div><div class="muted">Listo hace 9 min — demorado</div></div>
-      <div class="btn">Marcar avisado</div>
+      <div class="wait warn">5 min esperando</div>
+      <div class="free">NADIE LA TOMÓ</div>
     </div>
-    <div class="muted">El cajero coordina de palabra / por radio quién lleva cada mesa.</div>
+    <div class="card">
+      <div class="mesa">MESA 8</div>
+      <div><div class="det">3× Cerveza</div><div class="mu">Juan · listo desde 01:16</div></div>
+      <div class="grow"></div>
+      <div class="wait ok">1 min esperando</div>
+      <div class="free ok">NADIE LA TOMÓ</div>
+    </div>
+    <div class="lab" style="margin-top:8px">Ya las tomó un mozo</div>
+    <div class="taken">
+      <div class="tmesa">MESA 3</div>
+      <div class="det">2× Cerveza</div>
+      <div class="grow"></div>
+      <div class="by"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg><span>Martín · la tomó hace 40 seg</span></div>
+    </div>
+    <div class="empty">No hay más mesas esperando.</div>
+    <div class="grow"></div>
+    <div class="hint">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B0A69B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.6"/></svg>
+      <span>Nadie asigna mesas: cada mozo toma la que va a llevar desde su celular, y acá lo ves en el momento. Tu trabajo es mirar las que <b style="color:#F7F2EA">no tomó nadie y se están poniendo viejas</b> y gritar por radio. Si una figura tomada hace rato y el trago sigue en la barra, ese mozo se colgó: volvé a coordinar a mano.</span>
+    </div>
   </div>
-  <div class="note">§8.3 + §12: el sistema solo expone la información, no asigna mozos con un algoritmo. El reparto de mesas entre mozos (zonas fijas vs. cola compartida) queda sin definir a nivel de diseño (§15).</div>
 </div>
 </x-dc>
 </body>

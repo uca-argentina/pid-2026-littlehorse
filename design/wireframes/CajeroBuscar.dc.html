@@ -7,43 +7,85 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
-.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
-.frame{background:#f4f2ee;display:flex;flex-direction:column}
-.top{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:2px solid #2b2b2b}
-.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
-.tabs{display:flex;gap:10px;padding:16px 24px}
-.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:8px 16px;font-size:13px;background:#fff}
-.pill.on{background:#2b2b2b;color:#fff}
-.body{flex-grow:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px}
-.box{border:1.6px dashed #8a8a8a;border-radius:8px;background:#eae7e1;padding:22px;width:640px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
-.in{border:1.8px solid #3f6ea5;border-radius:6px;background:#fff;padding:16px;color:#2b2b2b;font-size:22px;font-weight:700;letter-spacing:.15em;width:100%;text-align:center}
-.muted{color:#6b6b6b;font-size:13px}
-.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13px;line-height:1.4;padding:14px 24px;border-top:1.6px dashed #8a8a8a}
-a{color:#3f6ea5}a:hover{color:#2c4c73}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.4;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:900px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.grow{flex-grow:1}
+.hdr{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid #3A322A}
+.mark{width:40px;height:40px;border-radius:12px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:21px;line-height:1.1}
+.station{font-size:13px;color:#B0A69B;letter-spacing:.05em;text-transform:uppercase}
+.user{display:flex;align-items:center;gap:10px;padding:9px 15px;border-radius:99px;border:1px solid #3A322A;font-size:14.5px;color:#B0A69B}
+.tabs{display:flex;gap:10px;padding:14px 24px 0}
+.tab{padding:11px 20px;border-radius:11px;font-size:15.5px;font-weight:600;color:#B0A69B;border:1px solid #3A322A}
+.tab.on{background:#F7F2EA;color:#12100E;border-color:#F7F2EA;font-weight:700}
+.lab{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#B0A69B}
+
+.body{flex-grow:1;display:flex;gap:22px;padding:20px 24px}
+.left{flex-grow:1;display:flex;flex-direction:column;gap:18px}
+.target{display:flex;flex-direction:column;align-items:center;gap:14px;padding:44px 30px;border-radius:22px;background:#1E1A16;border:2px solid #E0B65C;text-align:center}
+.tt{font-size:32px;font-weight:700;letter-spacing:-.02em}
+.td{font-size:16px;color:#B0A69B;max-width:520px;line-height:1.5}
+.wait{display:flex;align-items:center;justify-content:center;gap:13px;min-height:64px;width:100%;max-width:520px;border-radius:14px;background:#12100E;border:1px dashed #6B5F51;color:#8A8078;font-size:16px}
+.fall{display:flex;flex-direction:column;gap:13px;padding:20px;border-radius:16px;background:#191612;border:1px dashed #4A4034}
+.ft{font-size:16.5px;font-weight:700}
+.fd{font-size:14.5px;color:#8A8078;line-height:1.5}
+.frow{display:flex;gap:12px}
+.in{flex-grow:1;min-height:58px;display:flex;align-items:center;gap:11px;padding:0 17px;border-radius:13px;background:#1E1A16;border:1px solid #3A322A;font-size:16px;color:#8A8078}
+.side{width:380px;flex-shrink:0;display:flex;flex-direction:column;gap:12px}
+.feed{display:flex;flex-direction:column;gap:2px;border-radius:14px;overflow:hidden;border:1px solid #3A322A}
+.row{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#1E1A16}
+.rid{font-size:16px;font-weight:700}
+.ramt{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.rw{font-size:13px;color:#8A8078;font-variant-numeric:tabular-nums}
+.tag{padding:4px 10px;border-radius:99px;background:#6E9E7F;color:#12100E;font-size:12px;font-weight:700;letter-spacing:.04em}
+
 </style>
 </helmet>
-<div class="frame" style="width:1440px;min-height:860px">
-  <div class="top">
-    <div class="h">Caja · Cobro en efectivo</div>
-    <div class="pill">Caja 1 · Laura ▾</div>
+<div class="frame">
+  <div class="hdr">
+    <div class="mark"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div>
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="station">Caja 1</div>
+    </div>
+    <div class="grow"></div>
+    <div class="user"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg><span>Laura · cajera</span></div>
   </div>
   <div class="tabs">
-    <div class="pill on">Cobro efectivo</div>
-    <div class="pill">Entregas VIP</div>
+    <div class="tab on">Cobro en efectivo</div>
+    <div class="tab">Entregas VIP</div>
   </div>
   <div class="body">
-    <div class="box">
-      <div style="font-weight:700;font-size:16px">Escaneá o tipeá el código del pedido</div>
-      <div class="in">P- _ _ _ _</div>
-      <div class="muted">El lector de QR funciona como teclado (HID): tipea el código y manda Enter. La búsqueda manual queda siempre como respaldo.</div>
+    <div class="left">
+      <div class="target">
+        <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="#E0B65C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5.5A1.5 1.5 0 015.5 4H8M16 4h2.5A1.5 1.5 0 0120 5.5V8M20 16v2.5a1.5 1.5 0 01-1.5 1.5H16M8 20H5.5A1.5 1.5 0 014 18.5V16"/><path d="M4 12h16"/></svg>
+        <div class="tt">Escaneá el código del cliente</div>
+        <div class="td">El pedido ya viene armado desde el celular. Vos solo cobrás: no cargás nada.</div>
+        <div class="wait"><span class="mono" style="color:#E0B65C;letter-spacing:.3em">▌|▌</span><span>Esperando lectura…</span></div>
+      </div>
+      <div class="fall">
+        <div class="ft">¿No lee la pantalla del cliente?</div>
+        <div class="fd">Pasa con el brillo bajo o la pantalla rayada. Buscá a mano — por el código que le aparece o por su nombre.</div>
+        <div class="frow">
+          <div class="in"><span class="mono">P-____</span></div>
+          <div class="in"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg><span>Nombre del cliente</span></div>
+        </div>
+      </div>
     </div>
-    <div class="muted">Esperando código…</div>
+    <div class="side">
+      <div class="lab">Cobros de tu turno</div>
+      <div class="feed">
+        <div class="row"><div class="rid">P-9K3T · Mica</div><div class="grow"></div><div class="ramt">$ [ ]</div><div class="rw">01:11</div></div>
+        <div class="row"><div class="rid">P-2B8L · Juan</div><div class="grow"></div><div class="ramt">$ [ ]</div><div class="rw">01:07</div></div>
+        <div class="row"><div class="rid">P-5R1D · Caro</div><div class="grow"></div><div class="ramt">$ [ ]</div><div class="rw">00:58</div></div>
+      </div>
+      <div class="row" style="border-radius:14px;border:1px solid #3A322A"><div class="lab grow">Total cobrado</div><div class="ramt" style="font-size:20px">$ [TOTAL]</div></div>
+    </div>
   </div>
-  <div class="note">§12: la caja no arma pedidos, solo cobra. Se busca por código — no se tipea el pedido de cero. Esto es lo que baja el tiempo en caja respecto del modelo actual.</div>
 </div>
 </x-dc>
 </body>
