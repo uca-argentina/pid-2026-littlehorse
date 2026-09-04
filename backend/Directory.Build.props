@@ -24,6 +24,17 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!--
+      Roslyn only runs IDE0005 (unused usings) during a build when the XML
+      documentation file is generated. Turning that on also turns on CS1591,
+      which demands an XML comment on every public member, so it is suppressed.
+      See https://github.com/dotnet/roslyn/issues/41640
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <!-- Deterministic builds: replaces the absolute source paths in the PDBs. -->
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
