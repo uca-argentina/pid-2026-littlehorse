@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:844px}
+.grow{flex-grow:1}
+
+.hdr{display:flex;align-items:center;gap:11px;padding:15px 20px;border-bottom:1px solid #3A322A}
+.back{width:42px;height:42px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#F7F2EA}
+.markmini{width:28px;height:28px;border-radius:9px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:18px;line-height:1.1}
+
+.body{flex-grow:1;display:flex;flex-direction:column;gap:15px;padding:22px 20px 8px}
+.h1{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.sub{font-size:14.5px;color:#B0A69B;margin-top:6px;line-height:1.5}
+
+.field{display:flex;flex-direction:column;gap:7px}
+.lb{font-size:12.5px;font-weight:600;color:#B0A69B;letter-spacing:.03em}
+.in{min-height:54px;display:flex;align-items:center;gap:10px;padding:0 15px;border-radius:14px;background:#1E1A16;border:1px solid #3A322A;font-size:15.5px}
+.in.on{border-color:#E0B65C}
+.ph{color:#8A8078}
+.dots{letter-spacing:.22em;font-size:17px}
+
+.right{text-align:right;font-size:13.5px;font-weight:600}
+.cta{display:flex;align-items:center;justify-content:center;min-height:58px;border-radius:15px;background:#E0B65C;color:#12100E;font-weight:700;font-size:16.5px;margin-top:2px}
+
+.or{display:flex;align-items:center;gap:14px;color:#8A8078;font-size:12.5px}
+.rule{flex-grow:1;height:1px;background:#3A322A}
+
+.ghost{display:flex;align-items:center;justify-content:center;gap:9px;min-height:56px;border-radius:14px;border:1px solid #3A322A;background:#191612;color:#F7F2EA;font-size:16px;font-weight:600;text-decoration:none}
+.ghost:hover{color:#EFCE8A;border-color:#4A4034}
+.hint{font-size:13px;color:#8A8078;text-align:center;line-height:1.5}
+
+.foot{padding:15px 20px 20px;border-top:1px solid #3A322A;text-align:center;font-size:14.5px;color:#B0A69B}
+a{color:#E0B65C}a:hover{color:#EFCE8A}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="grow"></div>
+    <div class="markmini"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div class="venue">[Nombre del boliche]</div>
+  </div>
+
+  <div class="body">
+    <div>
+      <div class="h1">Entrá a tu cuenta</div>
+      <div class="sub">Guardá tus pedidos y no cargues tus datos de nuevo cada noche.</div>
+    </div>
+
+    <div class="field">
+      <div class="lb">Email</div>
+      <div class="in on"><span>vos@email.com</span></div>
+    </div>
+
+    <div class="field">
+      <div class="lb">Contraseña</div>
+      <div class="in">
+        <span class="dots grow">••••••••</span>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B0A69B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>
+      </div>
+    </div>
+
+    <div class="right"><a href="#">Olvidé mi contraseña</a></div>
+
+    <div class="cta">Entrar</div>
+
+    <div class="or"><div class="rule"></div><span>o</span><div class="rule"></div></div>
+
+    <a class="ghost" href="#">
+      <span>Seguir sin cuenta</span>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
+    <div class="hint">No hace falta cuenta para pedir ni para pagar. Es solo para no recargar tus datos.</div>
+
+    <div class="grow"></div>
+  </div>
+
+  <div class="foot">¿No tenés cuenta? <a href="#">Creá una</a></div>
+</div>
+</x-dc>
+</body>
+</html>

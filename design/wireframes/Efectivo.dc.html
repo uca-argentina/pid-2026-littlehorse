@@ -11,7 +11,7 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
-.frame{background:#12100E;display:flex;flex-direction:column;min-height:860px}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:844px}
 .mono{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;font-variant-numeric:tabular-nums}
 .grow{flex-grow:1}
 
@@ -19,23 +19,38 @@ body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif
 .back{width:42px;height:42px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#F7F2EA}
 .ttl{font-size:21px;font-weight:700;letter-spacing:-.01em}
 .vchip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#B0A69B}
+.acctbtn{width:40px;height:40px;border-radius:12px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;color:#B0A69B;flex-shrink:0}
 .markmini{width:28px;height:28px;border-radius:9px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
-.body{flex-grow:1;display:flex;flex-direction:column;gap:14px;padding:18px 20px 8px}
+.body{flex-grow:1;display:flex;flex-direction:column;gap:12px;padding:16px 20px 8px}
 
-.paper{background:#F7F4ED;color:#12100E;border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.paper{background:#F7F4ED;color:#12100E;border-radius:16px;padding:17px;display:flex;flex-direction:column;align-items:center;gap:11px}
 .plab{font-size:12.5px;font-weight:600;color:#5E5A54;letter-spacing:.05em;text-transform:uppercase;text-align:center}
-.qr{width:186px;height:186px}
+.qr{width:158px;height:158px}
 .pdiv{width:100%;border-top:2px dashed #C9C4BA}
 .pcode{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:31px;letter-spacing:.14em;line-height:1}
 .pfoot{font-size:12.5px;color:#5E5A54;text-align:center}
 
-.st{display:flex;align-items:center;gap:12px;padding:14px 15px;border-radius:15px;background:#1E1A16;border:1px solid #3A322A}
+.st{display:flex;flex-direction:column;gap:9px;padding:14px 15px;border-radius:15px;background:#1E1A16;border:1px solid #3A322A}
+.step{display:flex;align-items:center;gap:11px}
+.dot{width:11px;height:11px;border-radius:99px;flex-shrink:0;border:2px solid #4A4034}
+.dot.now{background:#E0B65C;border-color:#E0B65C;box-shadow:0 0 0 3px rgba(224,182,92,.18)}
+.sl{font-size:14px;color:#8A8078}
+.sl.now{color:#F7F2EA;font-weight:700;font-size:15px}
+.after{font-size:13px;color:#8A8078;padding-left:22px}
 .stlab{font-size:14.5px;color:#B0A69B}
 .pill{padding:7px 13px;border-radius:99px;border:1px solid #E0B65C;color:#E0B65C;font-size:13px;font-weight:600;white-space:nowrap}
 
-.help{font-size:13.5px;color:#B0A69B;line-height:1.5}
-.ghost{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:14px;border:1px solid #3A322A;background:#1E1A16;color:#F7F2EA;font-size:15px;font-weight:600}
+.push{display:flex;flex-direction:column;gap:9px;padding:13px;border-radius:16px;background:#241E14;border:1.5px solid #E0B65C}
+.prow{display:flex;gap:12px;align-items:flex-start}
+.pico{width:36px;height:36px;border-radius:11px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pt{font-size:16px;font-weight:700}
+.pd{font-size:13.5px;color:#B0A69B;line-height:1.4;margin-top:2px}
+.pcta{display:flex;align-items:center;justify-content:center;gap:9px;min-height:52px;border-radius:13px;background:#E0B65C;color:#12100E;font-weight:700;font-size:15.5px}
+.pios{font-size:12px;color:#8A8078;text-align:center}
+.brow{display:flex;gap:11px}
+.ghost{flex-grow:1;display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:14px;border:1px solid #3A322A;background:#1E1A16;color:#F7F2EA;font-size:15px;font-weight:600}
+.cancel{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:14px;border:1px solid #6B3A33;background:#1E1A16;color:#C85A4A;font-size:15px;font-weight:600;white-space:nowrap}
 
 .foot{padding:14px 20px 20px;border-top:1px solid #3A322A}
 .safe{display:flex;align-items:center;gap:8px;justify-content:center;text-align:center;font-size:12px;color:#8A8078;line-height:1.5}
@@ -46,10 +61,8 @@ a{color:#E0B65C}a:hover{color:#EFCE8A}
   <div class="hdr">
     <div class="back"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
     <div class="ttl grow">Pendiente de pago</div>
-    <div class="vchip">
-      <div class="markmini"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
-      <span>[Boliche]</span>
-    </div>
+    <div class="markmini"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div class="acctbtn"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg></div>
   </div>
 
   <div class="body">
@@ -94,14 +107,24 @@ a{color:#E0B65C}a:hover{color:#EFCE8A}
     </div>
 
     <div class="st">
-      <div class="stlab grow">Estado del pedido</div>
-      <div class="pill">Pendiente de pago</div>
+      <div class="step"><div class="dot now"></div><div class="sl now grow">Pendiente de pago en caja</div><div class="pill">ahora</div></div>
+      <div class="after">Después: en cola → preparación → listo</div>
     </div>
 
-    <div class="help">Todavía no está en la barra: recién entra a la cola cuando el cajero confirma que pagaste.</div>
+    <div class="push">
+      <div class="prow">
+        <div class="pico"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.5 21a2 2 0 003 0"/></svg></div>
+        <div>
+          <div class="pt">Mientras vas a la caja</div>
+          <div class="pd">Te avisamos cuando esté listo, sin que mires el celular.</div>
+        </div>
+      </div>
+      <div class="pcta">Activar aviso</div>
+      <div class="pios">En iPhone hay que agregar la app a inicio primero.</div>
+    </div>
 
     <div class="grow"></div>
-    <div class="ghost">Ver estado del pedido</div>
+    <div class="cancel">Cancelar pedido</div>
   </div>
 
   <div class="foot">

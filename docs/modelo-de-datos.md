@@ -93,13 +93,30 @@ stateDiagram-v2
 
     Cart --> Canceled
     AwaitingPayment --> Canceled
-    Queued --> Canceled
     Canceled --> [*]
 ```
 
 En el Sprint 1 los pagos se simulan con un cambio de estado, como habilita la consigna.
 La máquina de estados es la misma del diseño funcional §5, así que no hay que rehacerla
 cuando entre la pasarela real.
+
+**`Canceled` sólo se alcanza desde `Cart` y `AwaitingPayment`.** Es una regla de negocio:
+los pedidos pagos **no se devuelven**, en ningún método de pago. Como `Queued`,
+`InPreparation` y `Ready` exigen haber pasado por `Paid`, la única ventana de cancelación
+queda antes del pago — y conviene que la máquina de estados lo haga imposible por
+construcción, en vez de dejarlo librado a un `if` en la capa de aplicación que alguien
+puede olvidar.
+
+El corte además elimina trabajo que no vamos a hacer: sin devoluciones no hace falta una
+pantalla de reintegro en la caja, ni integrar *refunds* con la pasarela (que cobra comisión
+por devolver), ni un reintegro al saldo de la mesa VIP cuando esa parte entre.
+
+La cancelación automática por *timeout* de un pedido en efectivo nunca pagado usa esta
+misma transición desde `AwaitingPayment`; falta definir a los cuántos minutos (§15).
+
+Queda **sin modelar** el caso inverso: que el local no pueda entregar un pedido ya pagado
+(se acabó el trago, cierra la estación). No es una cancelación del cliente, la plata ya se
+cobró, y necesita su propia decisión de producto.
 
 ## Decisiones de modelado
 

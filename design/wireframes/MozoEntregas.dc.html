@@ -7,55 +7,105 @@
 <body>
 <x-dc>
 <helmet>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
-.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
-.frame{background:#f4f2ee}
-.scr{display:flex;flex-direction:column;gap:14px;padding:20px;min-height:860px}
-.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px;border-bottom:2px solid #2b2b2b}
-.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
-.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:6px 12px;font-size:12.5px;background:#fff}
-.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:14px;display:flex;flex-direction:column;gap:10px}
-.row{display:flex;gap:10px;align-items:center}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:844px}
 .grow{flex-grow:1}
-.dot{width:12px;height:12px;border-radius:999px;flex-shrink:0}
-.muted{color:#6b6b6b;font-size:13px}
-.btn{border:1.8px solid #3f6ea5;border-radius:6px;padding:14px;text-align:center;font-weight:700;background:#3f6ea5;color:#fff;font-family:inherit;font-size:15px}
-.btn.ghost{background:#fff;color:#2b2b2b;border-color:#2b2b2b}
-.hatch{background:repeating-linear-gradient(45deg,#dcd8d1,#dcd8d1 6px,#eae7e1 6px,#eae7e1 12px)}
-.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13.5px;line-height:1.4}
+
+.hdr{display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid #3A322A}
+.markmini{width:30px;height:30px;border-radius:9px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:18px;line-height:1.1}
+.user{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:99px;border:1px solid #3A322A;font-size:12.5px;color:#B0A69B;white-space:nowrap}
+
+.body{flex-grow:1;display:flex;flex-direction:column;gap:8px;padding:12px 20px 6px}
+.lab{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#B0A69B;margin-top:2px}
+.cnt{font-size:11.5px;font-weight:700;color:#12100E;background:#B0A69B;border-radius:99px;padding:1px 8px}
+
+.card{display:flex;flex-direction:column;gap:9px;padding:12px;border-radius:16px;background:#1E1A16;border:1.5px solid #3A322A}
+.card.mine{border-color:#E0B65C;background:#241E14}
+.card.urg{border-color:#C85A4A;background:#231714}
+.top{display:flex;align-items:baseline;gap:11px}
+.mesa{font-size:23px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.wait{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wait.ok{color:#B0A69B}
+.wait.urg{color:#C85A4A}
+.items{font-size:15.5px}
+.mu{font-size:13px;color:#B0A69B;margin-top:2px}
+.act{display:flex;align-items:center;justify-content:center;gap:9px;min-height:54px;border-radius:13px;font-weight:700;font-size:16.5px}
+.act.take{border:1.5px solid #E0B65C;color:#E0B65C}
+.act.done{background:#E0B65C;color:#12100E}
+
+.other{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:13px;background:#191612;border:1px solid #332C24;opacity:.75}
+.omesa{font-size:16px;font-weight:700}
+.owho{font-size:13.5px;color:#B0A69B}
+
+.empty{font-size:13.5px;color:#8A8078;text-align:center;padding:4px}
+.foot{padding:12px 20px 18px;border-top:1px solid #3A322A}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;text-align:center;font-size:12px;color:#8A8078;line-height:1.5}
 </style>
 </helmet>
-<div class="frame" style="width:390px">
-  <div class="scr">
-    <div class="bar">
-      <div class="h">Mesas listas</div>
-      <div class="pill">Mozo: [NOMBRE]</div>
+<div class="frame">
+  <div class="hdr">
+    <div class="markmini"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div class="venue grow">[Nombre del boliche]</div>
+    <div class="user"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg><span>Mozo · [NOMBRE]</span></div>
+  </div>
+
+  <div class="body">
+    <div class="lab" style="margin-top:0">Las que tomaste<div class="cnt">1</div></div>
+    <div class="card mine">
+      <div class="top"><div class="mesa grow">MESA 5</div><div class="wait ok">la tomaste hace 40 seg</div></div>
+      <div>
+        <div class="items">2× Gin Tonic · 1× Fernet</div>
+        <div class="mu">Nico · sin hielo</div>
+      </div>
+      <div class="act done">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        <span>Entregado</span>
+      </div>
     </div>
 
-    <div class="box">
-      <div class="row"><div style="font-weight:700;font-size:17px">MESA 5</div><div class="grow"></div><div class="dot" style="background:#6f9f6f"></div><div class="muted">2 min</div></div>
-      <div class="muted">2× Gin Tonic · 1× Fernet con Coca</div>
-      <div class="btn">Marcar entregado</div>
+    <div class="lab">Libres — todavía no las tomó nadie<div class="cnt">2</div></div>
+    <div class="card urg">
+      <div class="top"><div class="mesa grow">MESA 12</div><div class="wait urg">esperando 9 min</div></div>
+      <div>
+        <div class="items">1× Aperol Spritz</div>
+        <div class="mu">Sofi · con mucho hielo</div>
+      </div>
+      <div class="act take">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span>La llevo yo</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="top"><div class="mesa grow">MESA 8</div><div class="wait ok">esperando 1 min</div></div>
+      <div>
+        <div class="items">3× Cerveza</div>
+        <div class="mu">Juan</div>
+      </div>
+      <div class="act take">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span>La llevo yo</span>
+      </div>
     </div>
 
-    <div class="box">
-      <div class="row"><div style="font-weight:700;font-size:17px">MESA 12</div><div class="grow"></div><div class="dot" style="background:#c46a5a"></div><div class="muted">9 min</div></div>
-      <div class="muted">1× Aperol Spritz</div>
-      <div class="btn">Marcar entregado</div>
+    <div class="lab">Las lleva otro</div>
+    <div class="other">
+      <div class="omesa">MESA 3</div>
+      <div class="grow"></div>
+      <div class="owho">Martín · hace 40 seg</div>
     </div>
 
-    <div class="muted" style="text-align:center">No hay más mesas listas.</div>
+    <div class="grow"></div>
+  </div>
 
-    <div class="box hatch">
-      <div style="font-weight:700">Confirmar entrega — Mesa 5</div>
-      <div class="muted">Esta acción no se puede deshacer.</div>
-      <div class="row"><div class="btn ghost grow">Cancelar</div><div class="btn grow">Sí, entregado</div></div>
+  <div class="foot">
+    <div class="safe">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>
+      <span>Nadie te asigna mesas: las tomás vos. "Entregado" pide confirmación.</span>
     </div>
-
-    <div class="note">§8.3: su propio celular, login usuario/PIN (el mismo que la caja). "Entregado" con un tap + confirmación — sin escaneo, es un movimiento interno entre empleados. Áreas táctiles ≥ 44px, se usa con una mano.</div>
   </div>
 </div>
 </x-dc>

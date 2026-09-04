@@ -11,7 +11,7 @@
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
-.frame{background:#12100E;display:flex;flex-direction:column;min-height:860px}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:844px}
 .serif{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400}
 .num{font-variant-numeric:tabular-nums}
 .grow{flex-grow:1}
@@ -22,19 +22,24 @@ body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif
 .vchip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#B0A69B}
 .markmini{width:28px;height:28px;border-radius:9px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 
-.body{flex-grow:1;display:flex;flex-direction:column;gap:16px;padding:18px 20px 8px}
+.body{flex-grow:1;display:flex;flex-direction:column;gap:13px;padding:16px 20px 8px}
 
-.total{display:flex;flex-direction:column;align-items:center;gap:2px;padding:22px;border-radius:16px;background:#1E1A16;border:1px solid #3A322A}
+.total{display:flex;flex-direction:column;align-items:center;gap:2px;padding:18px;border-radius:16px;background:#1E1A16;border:1px solid #3A322A}
 .tlab{font-size:12px;color:#B0A69B;letter-spacing:.06em;text-transform:uppercase}
-.tval{font-size:44px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.025em;margin-top:2px}
+.tval{font-size:40px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-.025em;margin-top:2px}
 
-.lines{display:flex;flex-direction:column;gap:9px;padding:15px;border-radius:14px;background:#191612;border:1px solid #332C24}
+.lines{display:flex;flex-direction:column;gap:8px;padding:13px;border-radius:14px;background:#191612;border:1px solid #332C24}
 .line{display:flex;gap:10px;font-size:14.5px;align-items:baseline}
 .mu{color:#B0A69B}
 
+.field{display:flex;flex-direction:column;gap:6px}
+.in{min-height:54px;display:flex;align-items:center;gap:10px;padding:0 15px;border-radius:14px;background:#1E1A16;border:1px solid #3A322A;font-size:15.5px}
+.in.on{border-color:#E0B65C}
+.ph{color:#8A8078}
+.fhelp{font-size:12.5px;color:#8A8078;line-height:1.5}
 .lab{font-size:12px;color:#B0A69B;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
-.opts{display:flex;flex-direction:column;gap:10px}
-.opt{display:flex;align-items:center;gap:13px;min-height:66px;padding:12px 15px;border-radius:15px;background:#1E1A16;border:1px solid #3A322A}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;align-items:center;gap:13px;min-height:60px;padding:8px 15px;border-radius:15px;background:#1E1A16;border:1px solid #3A322A}
 .opt.on{border-color:#E0B65C;background:#241E14}
 .rad{width:21px;height:21px;border-radius:99px;border:2px solid #5A4E42;flex-shrink:0}
 .opt.on .rad{border-color:#E0B65C;background:#E0B65C;display:flex;align-items:center;justify-content:center;color:#12100E}
@@ -67,6 +72,15 @@ a{color:#E0B65C}a:hover{color:#EFCE8A}
       <div class="line"><span class="grow">2× Gin Tonic</span><span class="num mu">$ [ ]</span></div>
       <div class="line"><span class="grow mu" style="font-size:13px;padding-left:14px">sin hielo</span></div>
       <div class="line"><span class="grow">1× Fernet con Coca</span><span class="num mu">$ [ ]</span></div>
+    </div>
+
+    <div class="field">
+      <div class="lab">¿A nombre de quién?</div>
+      <div class="in on">
+        <span class="ph grow">Tu nombre</span>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#8A8078" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg>
+      </div>
+      <div class="fhelp">Para que te lo entreguen aunque falle el lector del QR. <a href="#">Entrá a tu cuenta</a> y lo completamos solo.</div>
     </div>
 
     <div class="lab">Método de pago</div>
