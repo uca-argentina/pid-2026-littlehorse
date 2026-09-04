@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
+.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
+.frame{background:#f4f2ee;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:2px solid #2b2b2b}
+.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:20px;margin:0}
+.grow{flex-grow:1}
+.row{display:flex;gap:12px;align-items:center}
+.dot{width:12px;height:12px;border-radius:999px;flex-shrink:0}
+.muted{color:#6b6b6b;font-size:13px}
+.body{flex-grow:1;padding:24px;display:flex;flex-direction:column;gap:18px;max-width:760px}
+.badge{border:2px solid #2b2b2b;border-radius:8px;padding:12px 22px;font-family:'Kalam',cursive;font-weight:700;font-size:22px;background:#fff;align-self:flex-start}
+.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:16px;display:flex;flex-direction:column;gap:10px}
+.btn{border:1.8px solid #2b2b2b;border-radius:6px;padding:14px 22px;text-align:center;font-weight:700;background:#fff;font-family:inherit;font-size:15px}
+.btn.p{background:#3f6ea5;color:#fff;border-color:#3f6ea5}
+.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13px;line-height:1.4;padding:14px 20px;border-top:1.6px dashed #8a8a8a}
+</style>
+</helmet>
+<div class="frame" style="width:1280px;min-height:820px">
+  <div class="top">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2b2b2b" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+    <div class="h">Pedido #129</div>
+    <div class="grow"></div>
+    <div class="row"><div class="dot" style="background:#d9b24a"></div><div class="muted">en cola hace 6 min</div></div>
+  </div>
+  <div class="body">
+    <div class="badge">MESA 5</div>
+    <div class="box">
+      <div style="font-size:20px;font-weight:700">1× Aperol Spritz</div>
+      <div class="muted">Nota: con mucho hielo</div>
+    </div>
+    <div class="box" style="background:#fff">
+      <div class="row"><div class="muted">Pagado:</div><div>23:41</div><div class="grow"></div><div class="muted">Método:</div><div>Saldo VIP</div></div>
+    </div>
+    <div class="row">
+      <div class="btn p">Imprimir ticket</div>
+      <div class="btn">Volver a la cola</div>
+    </div>
+  </div>
+  <div class="note">§11: al agrupar varios pedidos se imprime UN ticket individual por pedido (no combinado); cada uno mantiene su propio QR. El ticket sale por impresora térmica con el QR en comandos ESC/POS (§10).</div>
+</div>
+</x-dc>
+</body>
+</html>

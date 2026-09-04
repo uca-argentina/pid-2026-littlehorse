@@ -1,0 +1,151 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:860px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace}
+.grow{flex-grow:1}
+
+.hdr{display:flex;align-items:center;gap:11px;padding:15px 20px;border-bottom:1px solid #3A322A}
+.back{width:42px;height:42px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#F7F2EA}
+.ttl{font-size:19px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.tcode{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12.5px;letter-spacing:.09em;color:#B0A69B}
+.live{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:99px;border:1px solid #3A322A;font-size:12px;color:#B0A69B;white-space:nowrap}
+.livedot{width:7px;height:7px;border-radius:99px;background:#E0B65C;flex-shrink:0}
+
+.body{flex-grow:1;display:flex;flex-direction:column;gap:13px;padding:15px 20px 8px}
+
+.banner{display:flex;align-items:center;gap:13px;padding:15px 16px;border-radius:16px;background:#E0B65C;color:#12100E}
+.bt{font-size:18px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.bd{font-size:13.5px;margin-top:2px;opacity:.82}
+
+.steps{display:flex;flex-direction:column;padding:15px 16px;border-radius:16px;background:#1E1A16;border:1px solid #3A322A}
+.step{display:flex;gap:13px}
+.rail{display:flex;flex-direction:column;align-items:center;width:16px;flex-shrink:0}
+.dot{width:13px;height:13px;border-radius:99px;flex-shrink:0;margin-top:4px}
+.d-done{background:#8A7448}
+.d-now{background:#E0B65C;box-shadow:0 0 0 4px rgba(224,182,92,.18)}
+.d-next{border:2px solid #4A4034}
+.ln{width:2px;flex-grow:1;min-height:16px;margin:3px 0}
+.l-done{background:#8A7448}
+.l-next{background:#332C24}
+.sc{display:flex;align-items:baseline;gap:10px;flex-grow:1;padding-bottom:15px}
+.sl{font-size:14.5px;color:#B0A69B}
+.sl.now{color:#F7F2EA;font-weight:700;font-size:15.5px}
+.sl.next{color:#8A8078}
+.stime{font-size:12.5px;color:#8A8078;font-variant-numeric:tabular-nums}
+
+.paper{background:#F7F4ED;color:#12100E;border-radius:16px;padding:17px;display:flex;flex-direction:column;align-items:center;gap:11px}
+.plab{font-size:18px;font-weight:700;color:#12100E;letter-spacing:-.01em;line-height:1.25;text-align:center}
+.qr{width:230px;height:230px}
+.pcode{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:17px;letter-spacing:.13em;line-height:1}
+
+.recap{display:flex;align-items:center;gap:10px;padding:13px 15px;border-radius:14px;background:#191612;border:1px solid #332C24;font-size:14.5px}
+.mu{color:#B0A69B}
+
+.foot{padding:13px 20px 18px;border-top:1px solid #3A322A}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;text-align:center;font-size:12px;color:#8A8078;line-height:1.5}
+a{color:#E0B65C}a:hover{color:#EFCE8A}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="grow">
+      <div class="ttl">Tu pedido</div>
+      <div class="tcode">P-4F2K</div>
+    </div>
+    <div class="live"><div class="livedot"></div><span>En vivo</span></div>
+  </div>
+
+  <div class="body">
+    <div class="banner">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg>
+      <div class="grow">
+        <div class="bt">Tu pedido está listo</div>
+        <div class="bd">Acercate a la barra principal a retirarlo.</div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="rail"><div class="dot d-done"></div><div class="ln l-done"></div></div>
+        <div class="sc"><div class="sl grow">En cola</div><div class="stime">23:41</div></div>
+      </div>
+      <div class="step">
+        <div class="rail"><div class="dot d-done"></div><div class="ln l-done"></div></div>
+        <div class="sc"><div class="sl grow">En preparación</div><div class="stime">23:46</div></div>
+      </div>
+      <div class="step">
+        <div class="rail"><div class="dot d-now"></div><div class="ln l-next"></div></div>
+        <div class="sc"><div class="sl now grow">Listo para retirar</div><div class="stime">23:49</div></div>
+      </div>
+      <div class="step">
+        <div class="rail"><div class="dot d-next"></div></div>
+        <div class="sc" style="padding-bottom:0"><div class="sl next grow">Entregado</div><div class="stime">—</div></div>
+      </div>
+    </div>
+
+    <div class="paper">
+      <div class="plab">Mostrá este QR en la barra</div>
+      <svg class="qr" viewBox="0 0 29 29" shape-rendering="crispEdges" aria-label="Código QR del pedido">
+        <rect width="29" height="29" fill="#F7F4ED"/>
+        <g fill="#12100E">
+          <rect x="0" y="0" width="7" height="7"/><rect x="22" y="0" width="7" height="7"/><rect x="0" y="22" width="7" height="7"/>
+        </g>
+        <g fill="#F7F4ED">
+          <rect x="1" y="1" width="5" height="5"/><rect x="23" y="1" width="5" height="5"/><rect x="1" y="23" width="5" height="5"/>
+        </g>
+        <g fill="#12100E">
+          <rect x="2" y="2" width="3" height="3"/><rect x="24" y="2" width="3" height="3"/><rect x="2" y="24" width="3" height="3"/>
+          <rect x="8" y="6" width="1" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="12" y="6" width="1" height="1"/><rect x="14" y="6" width="1" height="1"/><rect x="16" y="6" width="1" height="1"/><rect x="18" y="6" width="1" height="1"/><rect x="20" y="6" width="1" height="1"/>
+          <rect x="6" y="8" width="1" height="1"/><rect x="6" y="10" width="1" height="1"/><rect x="6" y="12" width="1" height="1"/><rect x="6" y="14" width="1" height="1"/><rect x="6" y="16" width="1" height="1"/><rect x="6" y="18" width="1" height="1"/><rect x="6" y="20" width="1" height="1"/>
+          <rect x="8" y="8" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="16" y="8" width="1" height="1"/><rect x="18" y="8" width="1" height="1"/><rect x="20" y="8" width="1" height="1"/><rect x="24" y="8" width="1" height="1"/><rect x="26" y="8" width="1" height="1"/>
+          <rect x="9" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="14" y="9" width="1" height="1"/><rect x="15" y="9" width="1" height="1"/><rect x="19" y="9" width="1" height="1"/><rect x="22" y="9" width="1" height="1"/><rect x="25" y="9" width="1" height="1"/>
+          <rect x="8" y="10" width="1" height="1"/><rect x="10" y="10" width="1" height="1"/><rect x="13" y="10" width="1" height="1"/><rect x="17" y="10" width="1" height="1"/><rect x="20" y="10" width="1" height="1"/><rect x="23" y="10" width="1" height="1"/><rect x="27" y="10" width="1" height="1"/>
+          <rect x="9" y="11" width="1" height="1"/><rect x="11" y="11" width="1" height="1"/><rect x="12" y="11" width="1" height="1"/><rect x="16" y="11" width="1" height="1"/><rect x="18" y="11" width="1" height="1"/><rect x="24" y="11" width="1" height="1"/><rect x="26" y="11" width="1" height="1"/>
+          <rect x="8" y="12" width="1" height="1"/><rect x="13" y="12" width="1" height="1"/><rect x="15" y="12" width="1" height="1"/><rect x="19" y="12" width="1" height="1"/><rect x="20" y="12" width="1" height="1"/><rect x="22" y="12" width="1" height="1"/><rect x="25" y="12" width="1" height="1"/>
+          <rect x="10" y="13" width="1" height="1"/><rect x="11" y="13" width="1" height="1"/><rect x="14" y="13" width="1" height="1"/><rect x="17" y="13" width="1" height="1"/><rect x="18" y="13" width="1" height="1"/><rect x="23" y="13" width="1" height="1"/><rect x="27" y="13" width="1" height="1"/>
+          <rect x="8" y="14" width="1" height="1"/><rect x="9" y="14" width="1" height="1"/><rect x="12" y="14" width="1" height="1"/><rect x="16" y="14" width="1" height="1"/><rect x="20" y="14" width="1" height="1"/><rect x="24" y="14" width="1" height="1"/><rect x="26" y="14" width="1" height="1"/>
+          <rect x="11" y="15" width="1" height="1"/><rect x="13" y="15" width="1" height="1"/><rect x="15" y="15" width="1" height="1"/><rect x="18" y="15" width="1" height="1"/><rect x="19" y="15" width="1" height="1"/><rect x="22" y="15" width="1" height="1"/><rect x="25" y="15" width="1" height="1"/>
+          <rect x="8" y="16" width="1" height="1"/><rect x="10" y="16" width="1" height="1"/><rect x="14" y="16" width="1" height="1"/><rect x="17" y="16" width="1" height="1"/><rect x="20" y="16" width="1" height="1"/><rect x="23" y="16" width="1" height="1"/><rect x="27" y="16" width="1" height="1"/>
+          <rect x="9" y="17" width="1" height="1"/><rect x="12" y="17" width="1" height="1"/><rect x="13" y="17" width="1" height="1"/><rect x="16" y="17" width="1" height="1"/><rect x="18" y="17" width="1" height="1"/><rect x="24" y="17" width="1" height="1"/><rect x="26" y="17" width="1" height="1"/>
+          <rect x="8" y="18" width="1" height="1"/><rect x="11" y="18" width="1" height="1"/><rect x="15" y="18" width="1" height="1"/><rect x="19" y="18" width="1" height="1"/><rect x="20" y="18" width="1" height="1"/><rect x="22" y="18" width="1" height="1"/><rect x="25" y="18" width="1" height="1"/>
+          <rect x="10" y="19" width="1" height="1"/><rect x="13" y="19" width="1" height="1"/><rect x="14" y="19" width="1" height="1"/><rect x="17" y="19" width="1" height="1"/><rect x="23" y="19" width="1" height="1"/><rect x="27" y="19" width="1" height="1"/>
+          <rect x="9" y="20" width="1" height="1"/><rect x="11" y="20" width="1" height="1"/><rect x="16" y="20" width="1" height="1"/><rect x="18" y="20" width="1" height="1"/><rect x="20" y="20" width="1" height="1"/><rect x="24" y="20" width="1" height="1"/><rect x="26" y="20" width="1" height="1"/>
+          <rect x="8" y="22" width="1" height="1"/><rect x="10" y="22" width="1" height="1"/><rect x="13" y="22" width="1" height="1"/><rect x="16" y="22" width="1" height="1"/><rect x="19" y="22" width="1" height="1"/><rect x="22" y="22" width="1" height="1"/><rect x="25" y="22" width="1" height="1"/><rect x="27" y="22" width="1" height="1"/>
+          <rect x="9" y="23" width="1" height="1"/><rect x="12" y="23" width="1" height="1"/><rect x="15" y="23" width="1" height="1"/><rect x="18" y="23" width="1" height="1"/><rect x="20" y="23" width="1" height="1"/><rect x="24" y="23" width="1" height="1"/><rect x="26" y="23" width="1" height="1"/>
+          <rect x="8" y="24" width="1" height="1"/><rect x="11" y="24" width="1" height="1"/><rect x="14" y="24" width="1" height="1"/><rect x="17" y="24" width="1" height="1"/><rect x="21" y="24" width="1" height="1"/><rect x="23" y="24" width="1" height="1"/><rect x="27" y="24" width="1" height="1"/>
+          <rect x="10" y="25" width="1" height="1"/><rect x="13" y="25" width="1" height="1"/><rect x="16" y="25" width="1" height="1"/><rect x="19" y="25" width="1" height="1"/><rect x="22" y="25" width="1" height="1"/><rect x="25" y="25" width="1" height="1"/>
+          <rect x="9" y="26" width="1" height="1"/><rect x="12" y="26" width="1" height="1"/><rect x="15" y="26" width="1" height="1"/><rect x="18" y="26" width="1" height="1"/><rect x="20" y="26" width="1" height="1"/><rect x="24" y="26" width="1" height="1"/><rect x="26" y="26" width="1" height="1"/>
+          <rect x="8" y="27" width="1" height="1"/><rect x="11" y="27" width="1" height="1"/><rect x="14" y="27" width="1" height="1"/><rect x="17" y="27" width="1" height="1"/><rect x="21" y="27" width="1" height="1"/><rect x="23" y="27" width="1" height="1"/><rect x="27" y="27" width="1" height="1"/>
+        </g>
+      </svg>
+      <div class="pcode">P-4F2K</div>
+    </div>
+
+    <div class="recap">
+      <span class="grow">2× Gin Tonic · 1× Fernet</span>
+      <a href="#">Ver detalle</a>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="safe">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/></svg>
+      <span>Esta pantalla se actualiza sola, aunque no te llegue la notificación</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

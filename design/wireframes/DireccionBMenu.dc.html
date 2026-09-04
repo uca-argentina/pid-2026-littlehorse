@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F5F0E8;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:860px}
+.serif{font-family:'Instrument Serif',Georgia,'Times New Roman',serif;font-weight:400}
+.num{font-variant-numeric:tabular-nums}
+.hdr{padding:22px 22px 18px;border-bottom:1px solid #2B2419;display:flex;align-items:center;gap:14px}
+.mark{width:46px;height:46px;border-radius:99px;border:1.5px solid #D4A94E;color:#D4A94E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:24px;line-height:1.1;letter-spacing:.01em}
+.sub{font-size:11.5px;color:#9A9088;letter-spacing:.14em;text-transform:uppercase;margin-top:3px}
+.grow{flex-grow:1}
+.body{flex-grow:1;display:flex;flex-direction:column;gap:20px;padding:20px 22px 8px}
+.vip{display:flex;align-items:baseline;gap:10px;padding-bottom:14px;border-bottom:1px solid #2B2419}
+.viplab{font-size:11px;color:#9A9088;letter-spacing:.14em;text-transform:uppercase}
+.vipval{font-family:'Instrument Serif',Georgia,serif;font-size:22px;color:#D4A94E}
+.tabs{display:flex;gap:20px;border-bottom:1px solid #2B2419;padding-bottom:2px}
+.tab{font-size:13px;color:#9A9088;padding-bottom:10px;letter-spacing:.03em}
+.tab.on{color:#F5F0E8;font-weight:700;box-shadow:inset 0 -2px 0 #D4A94E}
+.list{display:flex;flex-direction:column;gap:18px}
+.item{display:flex;gap:14px;align-items:flex-start}
+.thumb{width:58px;height:74px;border-radius:4px;background:#1C1916;border:1px solid #2B2419;display:flex;align-items:center;justify-content:center;color:#4A4034;flex-shrink:0}
+.nm{font-family:'Instrument Serif',Georgia,serif;font-size:21px;line-height:1.15}
+.dsc{font-size:12.5px;color:#9A9088;margin-top:3px}
+.pr{font-size:15px;color:#D4A94E;margin-top:6px;letter-spacing:.02em}
+.addb{min-width:44px;min-height:44px;padding:0 16px;border-radius:2px;border:1px solid #D4A94E;color:#D4A94E;display:flex;align-items:center;justify-content:center;font-size:12px;letter-spacing:.1em;text-transform:uppercase;flex-shrink:0;align-self:center}
+.out{opacity:.38}
+.foot{padding:16px 22px 22px;border-top:1px solid #2B2419;display:flex;flex-direction:column;gap:12px}
+.cta{display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 22px;border-radius:2px;background:#D4A94E;color:#12100E;font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;font-size:11px;color:#7D746B;letter-spacing:.05em}
+a{color:#D4A94E}a:hover{color:#E4C077}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="mark">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg>
+    </div>
+    <div class="grow">
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="sub">Barra principal</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="vip">
+      <div class="viplab grow">Mesa 5 · saldo</div>
+      <div class="vipval num">$ [SALDO]</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab on">Tragos</div>
+      <div class="tab">Cervezas</div>
+      <div class="tab">Sin alcohol</div>
+    </div>
+
+    <div class="list">
+      <div class="item">
+        <div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+        <div class="grow">
+          <div class="nm">Gin Tonic</div>
+          <div class="dsc">Gin, tónica, lima</div>
+          <div class="pr num">$ [PRECIO]</div>
+        </div>
+        <div class="addb">Pedir</div>
+      </div>
+      <div class="item">
+        <div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l-1 18H9z"/><path d="M8 9h8"/></svg></div>
+        <div class="grow">
+          <div class="nm">Fernet con Coca</div>
+          <div class="dsc">Medida doble</div>
+          <div class="pr num">$ [PRECIO]</div>
+        </div>
+        <div class="addb">Pedir</div>
+      </div>
+      <div class="item out">
+        <div class="thumb"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5h12l-2 14H8z"/><path d="M9 9h6"/></svg></div>
+        <div class="grow">
+          <div class="nm">Aperol Spritz</div>
+          <div class="dsc">Sin stock por ahora</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="cta">
+      <span>Ver pedido · 2</span>
+      <span class="num" style="letter-spacing:.02em">$ [TOTAL]</span>
+    </div>
+    <div class="safe">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+      <span>Pago protegido · [Nombre del boliche]</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

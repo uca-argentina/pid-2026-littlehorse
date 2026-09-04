@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:860px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;font-variant-numeric:tabular-nums}
+.grow{flex-grow:1}
+
+.hdr{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #3A322A}
+.back{width:42px;height:42px;border-radius:13px;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#F7F2EA}
+.ttl{font-size:21px;font-weight:700;letter-spacing:-.01em}
+.vchip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#B0A69B}
+.markmini{width:28px;height:28px;border-radius:9px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+.body{flex-grow:1;display:flex;flex-direction:column;gap:14px;padding:18px 20px 8px}
+
+.paper{background:#F7F4ED;color:#12100E;border-radius:16px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.plab{font-size:12.5px;font-weight:600;color:#5E5A54;letter-spacing:.05em;text-transform:uppercase;text-align:center}
+.qr{width:186px;height:186px}
+.pdiv{width:100%;border-top:2px dashed #C9C4BA}
+.pcode{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:31px;letter-spacing:.14em;line-height:1}
+.pfoot{font-size:12.5px;color:#5E5A54;text-align:center}
+
+.st{display:flex;align-items:center;gap:12px;padding:14px 15px;border-radius:15px;background:#1E1A16;border:1px solid #3A322A}
+.stlab{font-size:14.5px;color:#B0A69B}
+.pill{padding:7px 13px;border-radius:99px;border:1px solid #E0B65C;color:#E0B65C;font-size:13px;font-weight:600;white-space:nowrap}
+
+.help{font-size:13.5px;color:#B0A69B;line-height:1.5}
+.ghost{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:14px;border:1px solid #3A322A;background:#1E1A16;color:#F7F2EA;font-size:15px;font-weight:600}
+
+.foot{padding:14px 20px 20px;border-top:1px solid #3A322A}
+.safe{display:flex;align-items:center;gap:8px;justify-content:center;text-align:center;font-size:12px;color:#8A8078;line-height:1.5}
+a{color:#E0B65C}a:hover{color:#EFCE8A}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="ttl grow">Pendiente de pago</div>
+    <div class="vchip">
+      <div class="markmini"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+      <span>[Boliche]</span>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="paper">
+      <div class="plab">Mostrale este código al cajero</div>
+      <svg class="qr" viewBox="0 0 29 29" shape-rendering="crispEdges" aria-label="Código QR del pedido">
+        <rect width="29" height="29" fill="#F7F4ED"/>
+        <g fill="#12100E">
+          <rect x="0" y="0" width="7" height="7"/><rect x="22" y="0" width="7" height="7"/><rect x="0" y="22" width="7" height="7"/>
+        </g>
+        <g fill="#F7F4ED">
+          <rect x="1" y="1" width="5" height="5"/><rect x="23" y="1" width="5" height="5"/><rect x="1" y="23" width="5" height="5"/>
+        </g>
+        <g fill="#12100E">
+          <rect x="2" y="2" width="3" height="3"/><rect x="24" y="2" width="3" height="3"/><rect x="2" y="24" width="3" height="3"/>
+          <rect x="8" y="6" width="1" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="12" y="6" width="1" height="1"/><rect x="14" y="6" width="1" height="1"/><rect x="16" y="6" width="1" height="1"/><rect x="18" y="6" width="1" height="1"/><rect x="20" y="6" width="1" height="1"/>
+          <rect x="6" y="8" width="1" height="1"/><rect x="6" y="10" width="1" height="1"/><rect x="6" y="12" width="1" height="1"/><rect x="6" y="14" width="1" height="1"/><rect x="6" y="16" width="1" height="1"/><rect x="6" y="18" width="1" height="1"/><rect x="6" y="20" width="1" height="1"/>
+          <rect x="8" y="8" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="16" y="8" width="1" height="1"/><rect x="18" y="8" width="1" height="1"/><rect x="20" y="8" width="1" height="1"/><rect x="24" y="8" width="1" height="1"/><rect x="26" y="8" width="1" height="1"/>
+          <rect x="9" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="14" y="9" width="1" height="1"/><rect x="15" y="9" width="1" height="1"/><rect x="19" y="9" width="1" height="1"/><rect x="22" y="9" width="1" height="1"/><rect x="25" y="9" width="1" height="1"/>
+          <rect x="8" y="10" width="1" height="1"/><rect x="10" y="10" width="1" height="1"/><rect x="13" y="10" width="1" height="1"/><rect x="17" y="10" width="1" height="1"/><rect x="20" y="10" width="1" height="1"/><rect x="23" y="10" width="1" height="1"/><rect x="27" y="10" width="1" height="1"/>
+          <rect x="9" y="11" width="1" height="1"/><rect x="11" y="11" width="1" height="1"/><rect x="12" y="11" width="1" height="1"/><rect x="16" y="11" width="1" height="1"/><rect x="18" y="11" width="1" height="1"/><rect x="24" y="11" width="1" height="1"/><rect x="26" y="11" width="1" height="1"/>
+          <rect x="8" y="12" width="1" height="1"/><rect x="13" y="12" width="1" height="1"/><rect x="15" y="12" width="1" height="1"/><rect x="19" y="12" width="1" height="1"/><rect x="20" y="12" width="1" height="1"/><rect x="22" y="12" width="1" height="1"/><rect x="25" y="12" width="1" height="1"/>
+          <rect x="10" y="13" width="1" height="1"/><rect x="11" y="13" width="1" height="1"/><rect x="14" y="13" width="1" height="1"/><rect x="17" y="13" width="1" height="1"/><rect x="18" y="13" width="1" height="1"/><rect x="23" y="13" width="1" height="1"/><rect x="27" y="13" width="1" height="1"/>
+          <rect x="8" y="14" width="1" height="1"/><rect x="9" y="14" width="1" height="1"/><rect x="12" y="14" width="1" height="1"/><rect x="16" y="14" width="1" height="1"/><rect x="20" y="14" width="1" height="1"/><rect x="24" y="14" width="1" height="1"/><rect x="26" y="14" width="1" height="1"/>
+          <rect x="11" y="15" width="1" height="1"/><rect x="13" y="15" width="1" height="1"/><rect x="15" y="15" width="1" height="1"/><rect x="18" y="15" width="1" height="1"/><rect x="19" y="15" width="1" height="1"/><rect x="22" y="15" width="1" height="1"/><rect x="25" y="15" width="1" height="1"/>
+          <rect x="8" y="16" width="1" height="1"/><rect x="10" y="16" width="1" height="1"/><rect x="14" y="16" width="1" height="1"/><rect x="17" y="16" width="1" height="1"/><rect x="20" y="16" width="1" height="1"/><rect x="23" y="16" width="1" height="1"/><rect x="27" y="16" width="1" height="1"/>
+          <rect x="9" y="17" width="1" height="1"/><rect x="12" y="17" width="1" height="1"/><rect x="13" y="17" width="1" height="1"/><rect x="16" y="17" width="1" height="1"/><rect x="18" y="17" width="1" height="1"/><rect x="24" y="17" width="1" height="1"/><rect x="26" y="17" width="1" height="1"/>
+          <rect x="8" y="18" width="1" height="1"/><rect x="11" y="18" width="1" height="1"/><rect x="15" y="18" width="1" height="1"/><rect x="19" y="18" width="1" height="1"/><rect x="20" y="18" width="1" height="1"/><rect x="22" y="18" width="1" height="1"/><rect x="25" y="18" width="1" height="1"/>
+          <rect x="10" y="19" width="1" height="1"/><rect x="13" y="19" width="1" height="1"/><rect x="14" y="19" width="1" height="1"/><rect x="17" y="19" width="1" height="1"/><rect x="23" y="19" width="1" height="1"/><rect x="27" y="19" width="1" height="1"/>
+          <rect x="9" y="20" width="1" height="1"/><rect x="11" y="20" width="1" height="1"/><rect x="16" y="20" width="1" height="1"/><rect x="18" y="20" width="1" height="1"/><rect x="20" y="20" width="1" height="1"/><rect x="24" y="20" width="1" height="1"/><rect x="26" y="20" width="1" height="1"/>
+          <rect x="8" y="22" width="1" height="1"/><rect x="10" y="22" width="1" height="1"/><rect x="13" y="22" width="1" height="1"/><rect x="16" y="22" width="1" height="1"/><rect x="19" y="22" width="1" height="1"/><rect x="22" y="22" width="1" height="1"/><rect x="25" y="22" width="1" height="1"/><rect x="27" y="22" width="1" height="1"/>
+          <rect x="9" y="23" width="1" height="1"/><rect x="12" y="23" width="1" height="1"/><rect x="15" y="23" width="1" height="1"/><rect x="18" y="23" width="1" height="1"/><rect x="20" y="23" width="1" height="1"/><rect x="24" y="23" width="1" height="1"/><rect x="26" y="23" width="1" height="1"/>
+          <rect x="8" y="24" width="1" height="1"/><rect x="11" y="24" width="1" height="1"/><rect x="14" y="24" width="1" height="1"/><rect x="17" y="24" width="1" height="1"/><rect x="21" y="24" width="1" height="1"/><rect x="23" y="24" width="1" height="1"/><rect x="27" y="24" width="1" height="1"/>
+          <rect x="10" y="25" width="1" height="1"/><rect x="13" y="25" width="1" height="1"/><rect x="16" y="25" width="1" height="1"/><rect x="19" y="25" width="1" height="1"/><rect x="22" y="25" width="1" height="1"/><rect x="25" y="25" width="1" height="1"/>
+          <rect x="9" y="26" width="1" height="1"/><rect x="12" y="26" width="1" height="1"/><rect x="15" y="26" width="1" height="1"/><rect x="18" y="26" width="1" height="1"/><rect x="20" y="26" width="1" height="1"/><rect x="24" y="26" width="1" height="1"/><rect x="26" y="26" width="1" height="1"/>
+          <rect x="8" y="27" width="1" height="1"/><rect x="11" y="27" width="1" height="1"/><rect x="14" y="27" width="1" height="1"/><rect x="17" y="27" width="1" height="1"/><rect x="21" y="27" width="1" height="1"/><rect x="23" y="27" width="1" height="1"/><rect x="27" y="27" width="1" height="1"/>
+        </g>
+      </svg>
+      <div class="pdiv"></div>
+      <div class="pcode">P-4F2K</div>
+      <div class="pfoot">El cajero lo busca por este código y confirma el cobro.</div>
+    </div>
+
+    <div class="st">
+      <div class="stlab grow">Estado del pedido</div>
+      <div class="pill">Pendiente de pago</div>
+    </div>
+
+    <div class="help">Todavía no está en la barra: recién entra a la cola cuando el cajero confirma que pagaste.</div>
+
+    <div class="grow"></div>
+    <div class="ghost">Ver estado del pedido</div>
+  </div>
+
+  <div class="foot">
+    <div class="safe">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+      <span>Este código identifica tu pedido en [Nombre del boliche]</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

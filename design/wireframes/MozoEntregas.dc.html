@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
+.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
+.frame{background:#f4f2ee}
+.scr{display:flex;flex-direction:column;gap:14px;padding:20px;min-height:860px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px;border-bottom:2px solid #2b2b2b}
+.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
+.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:6px 12px;font-size:12.5px;background:#fff}
+.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:14px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:10px;align-items:center}
+.grow{flex-grow:1}
+.dot{width:12px;height:12px;border-radius:999px;flex-shrink:0}
+.muted{color:#6b6b6b;font-size:13px}
+.btn{border:1.8px solid #3f6ea5;border-radius:6px;padding:14px;text-align:center;font-weight:700;background:#3f6ea5;color:#fff;font-family:inherit;font-size:15px}
+.btn.ghost{background:#fff;color:#2b2b2b;border-color:#2b2b2b}
+.hatch{background:repeating-linear-gradient(45deg,#dcd8d1,#dcd8d1 6px,#eae7e1 6px,#eae7e1 12px)}
+.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13.5px;line-height:1.4}
+</style>
+</helmet>
+<div class="frame" style="width:390px">
+  <div class="scr">
+    <div class="bar">
+      <div class="h">Mesas listas</div>
+      <div class="pill">Mozo: [NOMBRE]</div>
+    </div>
+
+    <div class="box">
+      <div class="row"><div style="font-weight:700;font-size:17px">MESA 5</div><div class="grow"></div><div class="dot" style="background:#6f9f6f"></div><div class="muted">2 min</div></div>
+      <div class="muted">2× Gin Tonic · 1× Fernet con Coca</div>
+      <div class="btn">Marcar entregado</div>
+    </div>
+
+    <div class="box">
+      <div class="row"><div style="font-weight:700;font-size:17px">MESA 12</div><div class="grow"></div><div class="dot" style="background:#c46a5a"></div><div class="muted">9 min</div></div>
+      <div class="muted">1× Aperol Spritz</div>
+      <div class="btn">Marcar entregado</div>
+    </div>
+
+    <div class="muted" style="text-align:center">No hay más mesas listas.</div>
+
+    <div class="box hatch">
+      <div style="font-weight:700">Confirmar entrega — Mesa 5</div>
+      <div class="muted">Esta acción no se puede deshacer.</div>
+      <div class="row"><div class="btn ghost grow">Cancelar</div><div class="btn grow">Sí, entregado</div></div>
+    </div>
+
+    <div class="note">§8.3: su propio celular, login usuario/PIN (el mismo que la caja). "Entregado" con un tap + confirmación — sin escaneo, es un movimiento interno entre empleados. Áreas táctiles ≥ 44px, se usa con una mano.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

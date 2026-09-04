@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0A0A0F;color:#F2F2F7;font-family:'IBM Plex Sans',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#0A0A0F;display:flex;flex-direction:column;min-height:860px}
+.num{font-variant-numeric:tabular-nums;font-family:'Space Grotesk',ui-sans-serif,sans-serif}
+.hdr{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #23232F}
+.back{width:38px;height:38px;border-radius:12px;border:1px solid #2A2A38;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ttl{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;letter-spacing:-.01em}
+.grow{flex-grow:1}
+.markmini{width:26px;height:26px;border-radius:8px;background:#C8FF3D;color:#0A0A0F;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.body{flex-grow:1;display:flex;flex-direction:column;gap:16px;padding:18px 20px 8px}
+.total{display:flex;flex-direction:column;align-items:center;gap:4px;padding:22px;border-radius:18px;background:#14141C;border:1px solid #23232F}
+.tlab{font-size:12.5px;color:#8B8B9C;letter-spacing:.02em}
+.tval{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:40px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.lines{display:flex;flex-direction:column;gap:9px;padding:14px;border-radius:14px;background:#0F0F16;border:1px solid #1E1E29}
+.line{display:flex;gap:10px;font-size:13.5px}
+.mu{color:#8B8B9C}
+.lab{font-size:12px;color:#8B8B9C;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:13px;min-height:64px;padding:12px 14px;border-radius:16px;background:#14141C;border:1px solid #2A2A38}
+.opt.on{border-color:#C8FF3D;background:#151B0D}
+.rad{width:20px;height:20px;border-radius:99px;border:2px solid #3E3E52;flex-shrink:0}
+.opt.on .rad{border-color:#C8FF3D;background:#C8FF3D;display:flex;align-items:center;justify-content:center;color:#0A0A0F}
+.on-nm{font-weight:600;font-size:14.5px}
+.on-ds{font-size:12.5px;color:#8B8B9C}
+.foot{padding:14px 20px 20px;border-top:1px solid #23232F;display:flex;flex-direction:column;gap:12px}
+.cta{display:flex;align-items:center;justify-content:center;min-height:56px;border-radius:16px;background:#C8FF3D;color:#0A0A0F;font-weight:700;font-size:16px;font-family:'Space Grotesk',sans-serif}
+.trust{display:flex;align-items:center;gap:9px;font-size:11.5px;color:#6E6E80;justify-content:center;text-align:center}
+a{color:#C8FF3D}a:hover{color:#D9FF7A}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="ttl grow">Pagar</div>
+    <div class="markmini"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div style="font-size:12.5px;color:#8B8B9C">[BOLICHE]</div>
+  </div>
+
+  <div class="body">
+    <div class="total">
+      <div class="tlab">Total a pagar</div>
+      <div class="tval">$ [TOTAL]</div>
+    </div>
+
+    <div class="lines">
+      <div class="line"><span class="grow">2× Gin Tonic</span><span class="num mu">$ [ ]</span></div>
+      <div class="line"><span class="grow mu" style="font-size:12.5px;padding-left:14px">sin hielo</span></div>
+      <div class="line"><span class="grow">1× Fernet con Coca</span><span class="num mu">$ [ ]</span></div>
+    </div>
+
+    <div class="lab">Método de pago</div>
+    <div class="opts">
+      <div class="opt on">
+        <div class="rad"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L19 7"/></svg></div>
+        <div class="grow">
+          <div class="on-nm">Pago digital</div>
+          <div class="on-ds">Tarjeta o Mercado Pago</div>
+        </div>
+      </div>
+      <div class="opt">
+        <div class="rad"></div>
+        <div class="grow">
+          <div class="on-nm">Efectivo en caja</div>
+          <div class="on-ds">Te damos un código para mostrar</div>
+        </div>
+      </div>
+      <div class="opt">
+        <div class="rad"></div>
+        <div class="grow">
+          <div class="on-nm">Saldo de la mesa</div>
+          <div class="on-ds">Disponible $ [SALDO]</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="cta">Pagar $ [TOTAL]</div>
+    <div class="trust">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+      <span>Procesado por [PASARELA]. drink.it no guarda los datos de tu tarjeta.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

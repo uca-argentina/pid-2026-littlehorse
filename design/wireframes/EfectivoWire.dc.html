@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;background:#f4f2ee;color:#2b2b2b;line-height:1.4}
+.hand{font-family:'Kalam',ui-sans-serif,system-ui,cursive}
+.frame{background:#f4f2ee}
+.scr{display:flex;flex-direction:column;gap:14px;padding:20px;min-height:860px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px;border-bottom:2px solid #2b2b2b}
+.h{font-family:'Kalam',ui-sans-serif,cursive;font-weight:700;font-size:22px;margin:0}
+.box{border:1.6px dashed #8a8a8a;border-radius:6px;background:#eae7e1;padding:12px}
+.btn{border:1.8px solid #2b2b2b;border-radius:6px;padding:13px 14px;text-align:center;font-weight:700;background:#fff;font-family:inherit;font-size:14px}
+.row{display:flex;gap:10px;align-items:center}
+.col{display:flex;flex-direction:column;gap:12px}
+.muted{color:#6b6b6b;font-size:13px}
+.note{font-family:'Kalam',ui-sans-serif,cursive;color:#3f6ea5;font-size:13.5px;line-height:1.4}
+.hatch{background:repeating-linear-gradient(45deg,#dcd8d1,#dcd8d1 6px,#eae7e1 6px,#eae7e1 12px)}
+.grow{flex-grow:1}
+.pill{border:1.5px solid #2b2b2b;border-radius:999px;padding:6px 12px;font-size:12.5px;background:#fff}
+a{color:#3f6ea5}a:hover{color:#2c4c73}
+</style>
+</helmet>
+<div class="frame">
+  <div class="scr">
+    <div class="bar"><div class="h">Pendiente de pago</div></div>
+
+    <div class="grow"></div>
+
+    <div class="box col" style="align-items:center;text-align:center">
+      <div class="hatch" style="width:180px;height:180px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#6b6b6b">QR</div>
+      <div class="hand" style="font-size:34px;font-weight:700;letter-spacing:.08em">P-4F2K</div>
+      <div class="muted">Mostrá este código en la caja. El cajero lo busca por el código y confirma el cobro — no vuelve a cargar tu pedido.</div>
+    </div>
+
+    <div class="box row"><div class="grow muted">Estado</div><div class="pill">Pendiente de pago</div></div>
+    <div class="btn">Ver estado del pedido</div>
+
+    <div class="grow"></div>
+    <div class="note">§6. El id del pedido es la credencial: GUID/ULID no adivinable (skill endpoint-api). §15: timeout de cancelación automática si nunca se paga — a definir a los cuántos minutos.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0D0D0D;color:#FFFFFF;font-family:'Barlow',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#0D0D0D;display:flex;flex-direction:column;min-height:860px}
+.cond{font-family:'Barlow Condensed',ui-sans-serif,sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.grow{flex-grow:1}
+.hdr{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:2px solid #2E2E2E}
+.back{width:38px;height:38px;border:2px solid #2E2E2E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ttl{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;text-transform:uppercase;letter-spacing:.03em}
+.vchip{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8F8F8F}
+.markmini{width:24px;height:24px;background:#FF5A1F;color:#0D0D0D;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.body{flex-grow:1;display:flex;flex-direction:column;gap:16px;padding:18px 18px 8px}
+.stub{background:#F5F3EE;color:#0D0D0D;padding:18px}
+.stubtop{display:flex;align-items:baseline;gap:10px;padding-bottom:12px;border-bottom:2px dashed #C9C4BA}
+.stublab{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#5E5A54}
+.stubcode{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;letter-spacing:.1em}
+.lines{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:2px dashed #C9C4BA}
+.line{display:flex;gap:10px;font-size:14px;align-items:baseline}
+.tot{display:flex;align-items:baseline;gap:12px;padding-top:14px}
+.totlab{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.04em}
+.totval{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:40px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.lab{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#8F8F8F}
+.opts{display:flex;flex-direction:column;gap:2px}
+.opt{display:flex;align-items:center;gap:13px;min-height:64px;padding:12px 14px;background:#181818;border-left:4px solid #181818}
+.opt.on{border-left-color:#FF5A1F;background:#211812}
+.rad{width:20px;height:20px;border:2px solid #4A4A4A;flex-shrink:0}
+.opt.on .rad{border-color:#FF5A1F;background:#FF5A1F;display:flex;align-items:center;justify-content:center;color:#0D0D0D}
+.on-nm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:19px;text-transform:uppercase;line-height:1.1}
+.on-ds{font-size:12.5px;color:#8F8F8F}
+.foot{padding:14px 18px 20px;border-top:2px solid #2E2E2E;display:flex;flex-direction:column;gap:12px}
+.cta{display:flex;align-items:center;justify-content:center;min-height:58px;background:#FF5A1F;color:#0D0D0D;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:21px;text-transform:uppercase;letter-spacing:.05em}
+.trust{display:flex;align-items:center;gap:9px;justify-content:center;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6E6E6E;letter-spacing:.04em;line-height:1.6}
+a{color:#FF5A1F}a:hover{color:#FF7F4F}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+    <div class="ttl grow">Pagar</div>
+    <div class="vchip">
+      <div class="markmini"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+      <span>[Boliche]</span>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="stub">
+      <div class="stubtop">
+        <div class="stublab grow">Tu pedido</div>
+        <div class="stubcode">P-4F2K</div>
+      </div>
+      <div class="lines">
+        <div class="line"><span class="grow">2× Gin Tonic</span><span class="mono">$ [ ]</span></div>
+        <div class="line"><span class="grow" style="font-size:12.5px;color:#5E5A54;padding-left:14px">sin hielo</span></div>
+        <div class="line"><span class="grow">1× Fernet con Coca</span><span class="mono">$ [ ]</span></div>
+      </div>
+      <div class="tot">
+        <div class="totlab grow">Total</div>
+        <div class="totval">$ [TOTAL]</div>
+      </div>
+    </div>
+
+    <div class="lab">Método de pago</div>
+    <div class="opts">
+      <div class="opt on">
+        <div class="rad"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L19 7"/></svg></div>
+        <div class="grow">
+          <div class="on-nm">Pago digital</div>
+          <div class="on-ds">Tarjeta o Mercado Pago</div>
+        </div>
+      </div>
+      <div class="opt">
+        <div class="rad"></div>
+        <div class="grow">
+          <div class="on-nm">Efectivo en caja</div>
+          <div class="on-ds">Te damos un código para mostrar</div>
+        </div>
+      </div>
+      <div class="opt">
+        <div class="rad"></div>
+        <div class="grow">
+          <div class="on-nm">Saldo de la mesa</div>
+          <div class="on-ds">Disponible $ [SALDO]</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="cta">Pagar $ [TOTAL]</div>
+    <div class="trust">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+      <span>Procesado por [PASARELA] · drink.it no guarda tu tarjeta</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
