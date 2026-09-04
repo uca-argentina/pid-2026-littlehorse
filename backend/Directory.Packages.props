@@ -1,13 +1,11 @@
 <Project>
 
   <!--
-    Central Package Management: every NuGet package version is declared exactly
-    once, here. The .csproj files reference packages by name, with no version.
+    Central Package Management: package versions live here, and only here.
+    A .csproj references a package by name, never with a Version attribute.
 
-    Why from the start: it stops Application from using xUnit 2.9 while Domain
-    uses 2.8 without anyone noticing, and it leaves a single list to audit for
-    licences (see the free-libraries rule in CLAUDE.md). Migrating to it later
-    means editing every .csproj.
+    Every version listed below must be free and open source for commercial
+    use (MIT, Apache-2.0, BSD). See CLAUDE.md.
   -->
 
   <PropertyGroup>
@@ -15,8 +13,8 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
+  <!-- Referenced by tests/Directory.Build.props, not by individual test projects. -->
   <ItemGroup Label="Testing">
-    <!-- All MIT or Apache-2.0. Pulled in by tests/Directory.Build.props. -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />

@@ -3,7 +3,8 @@
 PWA de pedidos de tragos para boliches. El cliente pide y paga desde su celular, el
 bartender prepara con un KDS en tablet, y el retiro es asíncrono (push + estado en
 tiempo real). Diseño funcional completo en `docs/drink.it.v2.md` y `docs/flujo-pedido.md`.
-**Leé esos dos archivos antes de tocar código de dominio.**
+**Leé esos dos archivos antes de tocar código de dominio.** Si hay un sprint en curso,
+leé también su consigna en `docs/sprints/` — define el alcance del sprint.
 
 > `docs/historico/drink.it.v1.md` está **obsoleto**: describe avisos por WhatsApp, que v2
 > reemplazó por push desde la PWA. Nunca lo uses como referencia para implementar.
@@ -43,6 +44,7 @@ docs/
   drink.it.v2.md          # Diseño funcional VIGENTE. Fuente única de verdad.
   flujo-pedido.md         # Diagrama de secuencia del flujo completo.
   adr/                    # Architecture Decision Records.
+  sprints/                # Consignas de la cátedra, una por sprint.
   historico/              # OBSOLETO — NO leerlo para escribir código (ver aviso abajo).
 ```
 
@@ -255,7 +257,11 @@ tests de arquitectura verdes · si es una pantalla del flujo principal, tiene sp
 ## Cosas que NO tenés que hacer sin que te lo pida
 
 - Correr migraciones de EF contra una base que no sea local.
+- **Hacer `git commit`.** Dejá los cambios preparados, mostrame exactamente qué archivos
+  entran y con qué mensaje, y esperá el OK. El commit lo confirmo yo, siempre, aunque
+  antes en la misma conversación haya dicho "vayamos commiteando por paso".
 - `git push`, abrir PRs o mergear.
+- Revertir, resetear o cambiar de rama sin avisar.
 - Agregar dependencias nuevas de NuGet o npm. Proponelas **con la licencia verificada**
   (ver la regla de librerías gratuitas) y esperá el OK — somos 3 y cada dependencia es
   deuda compartida.

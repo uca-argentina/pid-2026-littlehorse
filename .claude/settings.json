@@ -39,6 +39,9 @@
       "Read(./**/appsettings.*.Local.json)"
     ],
     "ask": [
+      "Bash(git commit:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
       "Bash(dotnet add package:*)",
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
