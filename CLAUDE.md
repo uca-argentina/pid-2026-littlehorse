@@ -165,6 +165,10 @@ Nombres de test: `Method_Scenario_ExpectedResult`
 - Angular: componentes `standalone`, `signal()` para estado, `inject()` en vez de constructor
   injection, control flow nuevo (`@if`, `@for`). Nada de `NgModule` nuevo, nada de `any`,
   nada de `subscribe()` sin `takeUntilDestroyed`.
+- **`if` de una sola sentencia va sin llaves**, y en la misma línea:
+  `if (name is null) return false;`. Nunca la variante de dos líneas sin llaves
+  (`if (x)` y abajo la sentencia indentada): esa es la que produce el bug de agregar
+  una segunda línea que parece estar adentro del `if` y no lo está.
 - **No escribas `ChangeDetectionStrategy.OnPush`: desde Angular 22 es el default.** Escribirlo
   es ruido. Lo que sí hay que justificar en la revisión es un `ChangeDetectionStrategy.Eager`
   (la estrategia vieja, antes llamada `Default`): si aparece uno, preguntá por qué.
