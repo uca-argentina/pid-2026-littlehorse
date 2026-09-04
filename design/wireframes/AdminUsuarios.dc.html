@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#12100E;color:#F7F2EA;font-family:'Karla',ui-sans-serif,system-ui,sans-serif;line-height:1.45;-webkit-font-smoothing:antialiased}
+.frame{background:#12100E;display:flex;flex-direction:column;min-height:900px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.grow{flex-grow:1}
+.hdr{display:flex;align-items:center;gap:16px;padding:14px 24px;border-bottom:1px solid #3A322A}
+.mark{width:40px;height:40px;border-radius:12px;background:#E0B65C;color:#12100E;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.venue{font-family:'Instrument Serif',Georgia,serif;font-size:21px;line-height:1.1}
+.station{font-size:13px;color:#B0A69B;letter-spacing:.05em;text-transform:uppercase}
+.user{display:flex;align-items:center;gap:10px;padding:9px 15px;border-radius:99px;border:1px solid #3A322A;font-size:14.5px;color:#B0A69B}
+.tabs{display:flex;gap:10px;padding:14px 24px 0}
+.tab{padding:11px 20px;border-radius:11px;font-size:15.5px;font-weight:600;color:#B0A69B;border:1px solid #3A322A}
+.tab.on{background:#F7F2EA;color:#12100E;border-color:#F7F2EA;font-weight:700}
+.lab{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#B0A69B}
+.body{flex-grow:1;display:flex;flex-direction:column;gap:14px;padding:18px 24px}
+.bar{display:flex;align-items:center;gap:12px}
+.search{display:flex;align-items:center;gap:10px;min-width:320px;padding:12px 15px;border-radius:13px;background:#1E1A16;border:1px solid #3A322A;color:#8A8078;font-size:15px}
+.pill{padding:9px 15px;border-radius:99px;border:1px solid #3A322A;font-size:13.5px;color:#B0A69B;white-space:nowrap}
+.pill.on{background:#2A2318;color:#F7F2EA;border-color:#5A4E42;font-weight:600}
+.new{display:flex;align-items:center;gap:9px;min-height:50px;padding:0 20px;border-radius:13px;background:#E0B65C;color:#12100E;font-weight:700;font-size:15.5px;white-space:nowrap}
+.thead{display:flex;align-items:center;gap:16px;padding:0 16px 8px}
+.tr{display:flex;align-items:center;gap:16px;padding:13px 16px;border-radius:14px;background:#1E1A16;border:1px solid #332C24}
+.tr.off{opacity:.5}
+.th{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8A8078}
+.thumb{width:48px;height:48px;border-radius:10px;background:#272219;border:1px solid #3A322A;display:flex;align-items:center;justify-content:center;color:#6B5F51;flex-shrink:0}
+.pname{font-size:17px;font-weight:600}
+.pdesc{font-size:13.5px;color:#B0A69B;margin-top:1px}
+.price{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.sw{width:52px;height:30px;border-radius:99px;background:#E0B65C;position:relative;flex-shrink:0}
+.sw i{position:absolute;top:3px;left:25px;width:24px;height:24px;border-radius:99px;background:#12100E;display:block}
+.sw.off{background:#3A322A}
+.sw.off i{left:3px;background:#8A8078}
+.swl{font-size:13.5px;color:#B0A69B;min-width:96px}
+.chip{font-size:12.5px;font-weight:700;letter-spacing:.04em;padding:5px 11px;border-radius:99px;white-space:nowrap}
+.chip.stock{border:1.5px solid #D98A3F;color:#D98A3F}
+.chip.baja{border:1.5px solid #5A4E42;color:#8A8078}
+.act{display:flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border-radius:11px;border:1px solid #3A322A;color:#F7F2EA;font-size:14.5px;font-weight:600;white-space:nowrap}
+.hint{display:flex;gap:11px;padding:14px 16px;border-radius:14px;background:#191612;border:1px solid #332C24;font-size:14px;color:#8A8078;line-height:1.55}
+.col2{display:flex;gap:22px}
+.card{display:flex;flex-direction:column;gap:15px;padding:22px;border-radius:18px;background:#1E1A16;border:1px solid #3A322A}
+.field{display:flex;flex-direction:column;gap:7px}
+.in{min-height:54px;display:flex;align-items:center;gap:10px;padding:0 16px;border-radius:13px;background:#12100E;border:1px solid #3A322A;font-size:16px}
+.in.on{border-color:#E0B65C}
+.in.area{min-height:88px;align-items:flex-start;padding:14px 16px}
+.ph{color:#8A8078}
+.help{font-size:12.5px;color:#8A8078;line-height:1.45}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:14px;background:#E0B65C;color:#12100E;font-weight:700;font-size:16.5px}
+.ghost{display:flex;align-items:center;justify-content:center;min-height:52px;border-radius:13px;border:1px solid #3A322A;background:#1E1A16;color:#F7F2EA;font-size:15.5px;font-weight:600}
+.danger{display:flex;flex-direction:column;gap:11px;padding:17px;border-radius:16px;background:#191612;border:1px dashed #6B3A33}
+.dt{font-size:15.5px;font-weight:700;color:#E0A79B}
+.dd{font-size:13.5px;color:#8A8078;line-height:1.5}
+.dbtn{display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:13px;border:1px solid #6B3A33;color:#C85A4A;font-size:15px;font-weight:700}
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;height:190px;border-radius:14px;border:1px dashed #4A4034;background:#12100E;color:#8A8078;font-size:14px;text-align:center}
+.radio{display:flex;align-items:center;gap:13px;min-height:66px;padding:12px 15px;border-radius:14px;background:#12100E;border:1px solid #3A322A}
+.radio.on{border-color:#E0B65C;background:#241E14}
+.rd{width:21px;height:21px;border-radius:99px;border:2px solid #5A4E42;flex-shrink:0}
+.radio.on .rd{border-color:#E0B65C;background:#E0B65C;display:flex;align-items:center;justify-content:center;color:#12100E}
+.rn{font-size:15.5px;font-weight:700}
+.rdsc{font-size:13.5px;color:#B0A69B;margin-top:2px}
+</style>
+</helmet>
+<div class="frame">
+  <div class="hdr">
+    <div class="mark"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14l-7 8z"/><path d="M12 12v7"/><path d="M8.5 19.5h7"/></svg></div>
+    <div>
+      <div class="venue">[Nombre del boliche]</div>
+      <div class="station">Administración</div>
+    </div>
+    <div class="grow"></div>
+    <div class="user"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg><span>Euge · administradora</span></div>
+  </div>
+  <div class="tabs">
+    <div class="tab">Productos</div>
+    <div class="tab on">Usuarios internos</div>
+  </div>
+  <div class="body">
+    <div class="bar">
+      <div class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.2-3.2"/></svg><span>Buscar usuario</span></div>
+      <div class="pill on">Todos · 5</div>
+      <div class="pill">Administradores · 1</div>
+      <div class="pill">Mozos · 3</div>
+      <div class="grow"></div>
+      <div class="new"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span>Nuevo usuario</span></div>
+    </div>
+
+    <div>
+      <div class="thead">
+        <div style="width:48px"></div>
+        <div class="th grow">Usuario</div>
+        <div class="th" style="min-width:200px">Rol</div>
+        <div class="th" style="width:120px">Estado</div>
+        <div style="width:74px"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+      <div class="tr">
+        <div class="thumb"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg></div>
+        <div class="grow" style="min-width:0"><div class="pname mono">euge.q</div></div>
+        <div style="min-width:200px"><div class="chip" style="border:1.5px solid #E0B65C;color:#E0B65C">Administrador</div></div>
+        <div style="width:120px"></div>
+        <div class="act">Editar</div>
+      </div>
+      <div class="tr">
+        <div class="thumb"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg></div>
+        <div class="grow" style="min-width:0"><div class="pname mono">martin.p</div></div>
+        <div style="min-width:200px"><div class="chip" style="border:1.5px solid #5A4E42;color:#B0A69B">Mozo</div></div>
+        <div style="width:120px"></div>
+        <div class="act">Editar</div>
+      </div>
+      <div class="tr">
+        <div class="thumb"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg></div>
+        <div class="grow" style="min-width:0"><div class="pname mono">nico.c</div></div>
+        <div style="min-width:200px"><div class="chip" style="border:1.5px solid #5A4E42;color:#B0A69B">Mozo</div></div>
+        <div style="width:120px"></div>
+        <div class="act">Editar</div>
+      </div>
+      <div class="tr">
+        <div class="thumb"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg></div>
+        <div class="grow" style="min-width:0"><div class="pname mono">sofi.l</div></div>
+        <div style="min-width:200px"><div class="chip" style="border:1.5px solid #5A4E42;color:#B0A69B">Mozo</div></div>
+        <div style="width:120px"></div>
+        <div class="act">Editar</div>
+      </div>
+      <div class="tr off">
+        <div class="thumb"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M6 20a6 6 0 0112 0"/></svg></div>
+        <div class="grow" style="min-width:0"><div class="pname mono">pablo.l</div></div>
+        <div style="min-width:200px"><div class="chip" style="border:1.5px solid #5A4E42;color:#B0A69B">Mozo</div></div>
+        <div class="chip" style="border:1.5px solid #5A4E42;color:#8A8078">Dado de baja</div>
+        <div class="act">Editar</div>
+      </div>
+      </div>
+    </div>
+
+    <div class="grow"></div>
+    <div class="hint">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B0A69B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.6"/></svg>
+      <span>Cuando alguien deja de trabajar acá lo <b style="color:#F7F2EA">das de baja</b>, no lo borrás: los pedidos que preparó siguen apuntando a su usuario. Un usuario dado de baja no puede entrar, pero su historial queda.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

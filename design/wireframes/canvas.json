@@ -17,6 +17,10 @@
       "name": "Cajero (web)"
     },
     {
+      "id": "admin",
+      "name": "Administración"
+    },
+    {
       "id": "kds",
       "name": "Bartender KDS"
     },
@@ -322,6 +326,42 @@
       "y": 11800,
       "w": 390,
       "h": 844
+    },
+    {
+      "file": "AdminProductos.dc.html",
+      "page": "admin",
+      "title": "1 · Productos",
+      "x": 0,
+      "y": 12900,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "AdminProductoEdit.dc.html",
+      "page": "admin",
+      "title": "2 · Editar producto",
+      "x": 1560,
+      "y": 12900,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "AdminUsuarios.dc.html",
+      "page": "admin",
+      "title": "3 · Usuarios internos",
+      "x": 0,
+      "y": 13920,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "AdminUsuarioEdit.dc.html",
+      "page": "admin",
+      "title": "4 · Nuevo usuario",
+      "x": 1560,
+      "y": 13920,
+      "w": 1440,
+      "h": 900
     }
   ],
   "annotations": [
@@ -484,6 +524,14 @@
       "y": 3020,
       "w": 900,
       "text": "TRES DECISIONES CERRADAS:\n\n1. AVISO AL MOZO — la MISMA notificacion push que el cliente, cada vez que una mesa queda lista. No hay canal nuevo: es la Web Push con VAPID de §9, con la suscripcion atada al usuario del mozo en vez de al pedido. El permiso se pide AL INICIAR TURNO, no en medio del servicio: celular en mano y todavia no esta corriendo. Es el 'momento de maxima motivacion' de §9.1 aplicado al personal.\n\n2. EL PEDIDO DE INSTALAR + PUSH SE ADELANTA EN EL CAMINO DE EFECTIVO. Antes vivia solo en la pantalla 4b, que dispara cuando el pedido pasa a Paid — y en efectivo eso ocurre cuando EL CAJERO aprieta el boton, con el cliente dando la plata y el celular guardado: le disparaba al vacio. Ahora esta en la pantalla del codigo (4a), donde el cliente SI esta mirando (necesita el codigo) y tiene tiempo muerto caminando y haciendo la cola. El camino digital no cambia.\n\n3. CANCELAR — REGLA DE NEGOCIO: LOS PEDIDOS PAGOS NO SE DEVUELVEN. Nunca, en ningun metodo.\n\n  De ahi sale toda la regla, en una sola dimension:\n  SE PUEDE CANCELAR: Cart y AwaitingPayment (efectivo todavia impago).\n  NO SE PUEDE: desde Paid en adelante.\n\n  Y notar que la maquina de estados hace el resto sola: un pedido impago NUNCA puede estar en Queued ni InPreparation, porque esos estados exigen Paid. Asi que la condicion 'salvo que un bartender ya lo haya tomado' es innecesaria — no existe el caso. La regla queda en una linea.\n\n  Lo que la pantalla tiene que comunicar no es 'que pasa con tu plata' sino ESTA ES TU ULTIMA CHANCE: una vez que pagas en la caja, el pedido va si o si.\n\n  Lo que esto ELIMINA, y es la razon por la que la regla es buena para un equipo de 3:\n  · Ninguna pantalla de devolucion en la caja.\n  · Ninguna integracion de refunds con la pasarela de pago (que ademas cobra comision por devolver).\n  · Ningun flujo de devolucion al saldo de la mesa VIP.\n  · Ninguna discusion sobre si la cajera puede devolver sola o necesita un encargado.\n\n  CONSECUENCIA: un pedido cancelado nunca llega al KDS, porque nunca estuvo pagado. La columna 'Nuevos' no necesita manejar desapariciones por cancelacion del cliente."
+    },
+    {
+      "id": "n-admin",
+      "page": "admin",
+      "x": 0,
+      "y": 12700,
+      "w": 3000,
+      "text": "ADMINISTRACION · web de escritorio 1440x900. Cubre DOS de los seis puntos del Sprint 1 que no estaban disenados: ABM de productos y ABM de usuarios internos. Campos tomados de docs/modelo-de-datos.md.\n\nLA DECISION QUE ORDENA TODA LA PANTALLA: 'disponible esta noche' (is_available) y 'dar de baja' (is_active) son cosas distintas, y el modelo de datos insiste en eso. El diseno lo resuelve por FRECUENCIA DE USO, no por parecido:\n\n· is_available = un interruptor EN LA FILA de la tabla. Se usa todas las noches, apurado, cuando se acaba algo. Un toque y desaparece del menu del cliente; otro toque y vuelve.\n· is_active = adentro de la edicion, en un bloque aparte y en rojo. Es una accion rara y semipermanente. Ponerla lejos es a proposito: que nadie de de baja un producto a las tres de la manana queriendo decir 'se acabo el gin'.\n\nNinguna de las dos borra: los ORDER_ITEM historicos referencian al producto, y los pedidos preparados referencian al usuario. El texto de la pantalla lo explica en criollo, porque el que lo opera no sabe lo que es una baja logica.\n\nEl login del personal NO se rehizo: es el mismo de escritorio que ya esta en la pagina Cajero. Lo que cambia es que el rol del token decide que ve cada uno — el Sprint 1 solo tiene Administrador y Mozo.\n\nOJO CON EL ALCANCE: la caja, el mozo y las mesas VIP que disenamos estan ADELANTADOS al Sprint 1, que es solo retiro en barra con esos dos roles. Estan bien que existan, pero no son camino critico.\n\nOJO — EL NOMBRE DEL ROL NO COINCIDE CON LOS DOCS. Estas pantallas dicen MOZO, pero docs/sprints/sprint-1.md linea 12 dice 'Administrador y Bartender', docs/modelo-de-datos.md linea 30 declara el enum como 'Administrator | Bartender', y el glosario de CLAUDE.md los trata como actores DISTINTOS: Bartender -> Bartender, Mozo -> Waiter. Si el rol es Mozo, en codigo el enum es Waiter, no Bartender, y hay que corregir los tres documentos. Mientras no se unifique, alguien va a implementar el enum leyendo el modelo y no la pantalla."
     }
   ],
   "launch": {
