@@ -3,6 +3,15 @@
   <!-- Inherit everything from backend/Directory.Build.props. -->
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
 
+  <PropertyGroup>
+    <!--
+      CA1707 forbids underscores in member names. It exists for public API, and
+      test names are not API: they are the failure message you read in the CI log.
+      Our convention is Method_Scenario_ExpectedResult (see CLAUDE.md).
+    -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
   <!--
     Shared by every test project, so each .csproj only declares what makes it
     different: the project under test.
