@@ -1,0 +1,80 @@
+name: CI backend
+
+# Path filters keep this off PRs that only touch docs or the frontend: in a
+# monorepo that is what stops CI from becoming background noise people ignore.
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'backend/**'
+      - '.editorconfig'
+      - 'global.json'
+      - '.github/workflows/ci-backend.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.editorconfig'
+      - 'global.json'
+      - '.github/workflows/ci-backend.yml'
+
+# The workflow only reads the repository. The default token grants more.
+permissions:
+  contents: read
+
+# Three pushes in a row leave one run, not three.
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build, format and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        # dotnet-version is omitted on purpose: the action then reads
+        # global.json, so CI uses exactly the SDK pinned for the team.
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          # Central Package Management means this one file is the fingerprint
+          # of every dependency in the solution.
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore backend/DrinkIt.slnx
+
+      # Release, not Debug: it is what gets deployed, and some analyzers
+      # behave differently. TreatWarningsAsErrors fails the build here.
+      - name: Build
+        run: dotnet build backend/DrinkIt.slnx --configuration Release --no-restore
+
+      # Not redundant with the build: the build enforces analyzer rules, this
+      # catches pure formatting (indentation, spacing, line endings).
+      - name: Verify formatting
+        run: dotnet format backend/DrinkIt.slnx --verify-no-changes --no-restore
+
+      # --no-build runs against the binaries already verified above.
+      - name: Test
+        run: >
+          dotnet test backend/DrinkIt.slnx
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/
+          retention-days: 7
