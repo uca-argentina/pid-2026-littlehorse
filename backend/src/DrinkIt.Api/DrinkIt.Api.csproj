@@ -5,6 +5,14 @@
     only so that Program.cs can wire the implementations into the container.
   -->
   <ItemGroup>
+    <!--
+      Design-time only: this is what "dotnet ef migrations add" loads. PrivateAssets
+      keeps it out of the published output.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../DrinkIt.Application/DrinkIt.Application.csproj" />
     <ProjectReference Include="../DrinkIt.Infrastructure/DrinkIt.Infrastructure.csproj" />
   </ItemGroup>
