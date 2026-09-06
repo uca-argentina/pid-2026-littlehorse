@@ -1,0 +1,72 @@
+name: CI frontend
+
+# Same path-filter reasoning as ci-backend.yml: a PR that only touches docs or
+# the backend must not drag the whole npm install with it.
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'frontend/**'
+      - '.editorconfig'
+      - '.github/workflows/ci-frontend.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.editorconfig'
+      - '.github/workflows/ci-frontend.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Lint, test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Must run before setup-node, which needs pnpm on PATH to resolve its store.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # Reads "packageManager" from frontend/package.json, so the pnpm
+          # version is declared in exactly one place. Same idea as global.json
+          # for the .NET SDK.
+          package_json_file: frontend/package.json
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      # --frozen-lockfile fails instead of silently updating the lockfile, so
+      # CI installs exactly what was committed.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Cheapest checks first: a formatting slip should not wait for a build.
+      - name: Check formatting
+        run: pnpm run format:check
+
+      - name: Lint
+        run: pnpm run lint
+
+      # test:ci is ng test --watch=false. Without it the job hangs in watch
+      # mode until the timeout.
+      - name: Test
+        run: pnpm run test:ci
+
+      - name: Build
+        run: pnpm exec ng build --configuration production

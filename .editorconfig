@@ -22,6 +22,10 @@ max_line_length = 120
 
 [*.{ts,js,mjs,html,scss,css,json,jsonc,yml,yaml}]
 indent_size = 2
+# Prettier is the one that actually reformats these files, and its printWidth
+# is 100. Keeping the same number here means the editor ruler sits exactly
+# where the formatter will wrap. C# stays at 120: it is genuinely more verbose.
+max_line_length = 100
 
 [*.{csproj,props,targets,slnx,config,xml}]
 indent_size = 2
