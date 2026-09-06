@@ -1,5 +1,8 @@
 # drink.it
 
+[![CI backend](https://github.com/lamelapablo/drink-it/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/lamelapablo/drink-it/actions/workflows/ci-backend.yml)
+[![CI frontend](https://github.com/lamelapablo/drink-it/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/lamelapablo/drink-it/actions/workflows/ci-frontend.yml)
+
 **Pedí tu trago desde el celular y retiralo cuando esté listo.** PWA de gestión de pedidos
 para boliches: el cliente pide y paga desde donde esté, el bartender prepara con un KDS en
 tablet, y el retiro es asíncrono.
@@ -21,9 +24,9 @@ mayor motivación y lo que habilita el push.
 
 ## Estado
 
-> **En bootstrap.** El repositorio tiene la configuración del equipo, los estándares y el
-> diseño funcional. Todavía no hay código de aplicación — el scaffold de `backend/` y
-> `frontend/` es el próximo paso.
+> **Bootstrap terminado.** Backend y frontend compilan, pasan lint y corren sus tests en CI.
+> Todavía no hay features del Sprint 1 implementadas: lo que existe es el andamiaje sobre el
+> que se construyen.
 
 ## Stack
 
@@ -46,8 +49,10 @@ vez desde un QR con datos móviles saturados. El razonamiento completo va en `do
 ```
 backend/          # Solución .NET. Domain, Application, Infrastructure, Api + tests.
 frontend/         # PWA Angular y specs de Playwright.
-infra/            # Bicep.
-docs/             # Diseño funcional, flujos y ADRs.
+design/           # Wireframes de las pantallas.
+docs/             # Diseño funcional, modelo de datos, ADRs y consignas.
+infra/            # Bicep (todavía vacío).
+.github/          # Workflows de CI.
 .claude/          # Configuración compartida de Claude Code (ver .claude/README.md).
 .vscode/          # Settings y extensiones recomendadas del equipo.
 ```
@@ -57,7 +62,10 @@ docs/             # Diseño funcional, flujos y ADRs.
 ### Requisitos
 
 - [.NET SDK 10](https://dotnet.microsoft.com/download) (LTS)
-- [Node.js](https://nodejs.org/) `^22.22.3`, `^24.15.0` o `>=26` — lo exige Angular 22, y npm
+- [Node.js](https://nodejs.org/) `^22.22.3`, `^24.15.0` o `>=26` — lo exige Angular 22
+- [pnpm](https://pnpm.io/) — `npm install -g --allow-scripts=pnpm pnpm@latest`. El
+  `--allow-scripts` hace falta: sin él npm bloquea el script que arma el ejecutable de pnpm
+  en Windows. Corepack no sirve, Node dejó de distribuirlo a partir de la v25.
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) — para SQL Server local
   y los tests de integración con Testcontainers
 - VS Code con las extensiones recomendadas (te las ofrece al abrir el workspace, o buscá
@@ -66,11 +74,28 @@ docs/             # Diseño funcional, flujos y ADRs.
 ### Setup
 
 ```bash
-git clone <url-del-repo>
+git clone https://github.com/lamelapablo/drink-it.git
 cd drink-it
+pnpm --prefix frontend install
+dotnet restore backend/DrinkIt.slnx
 ```
 
-> Los comandos de build, test y arranque se agregan acá junto con el scaffold.
+La versión exacta del SDK de .NET sale de `global.json` y la de pnpm del campo
+`packageManager` de `frontend/package.json`. No hace falta elegirlas: las herramientas las
+leen solas, y son las mismas que usa la CI.
+
+### Comandos
+
+| | Backend | Frontend |
+|---|---|---|
+| Arrancar | `dotnet run --project backend/src/DrinkIt.Api` | `pnpm --prefix frontend start` |
+| Tests | `dotnet test backend/DrinkIt.slnx` | `pnpm --prefix frontend test` |
+| Tests (una vez, sin watch) | — | `pnpm --prefix frontend run test:ci` |
+| Lint | `dotnet format backend/DrinkIt.slnx --verify-no-changes` | `pnpm --prefix frontend run lint` |
+| Arreglar formato | `dotnet format backend/DrinkIt.slnx` | `pnpm --prefix frontend run format` |
+| Build de producción | `dotnet build backend/DrinkIt.slnx -c Release` | `pnpm --prefix frontend run build --configuration production` |
+
+Son exactamente los que corre la CI. Si pasan en tu máquina, pasan en el pipeline.
 
 ## Cómo trabajamos
 
@@ -96,6 +121,8 @@ Lo esencial:
 
 - [Diseño funcional](docs/drink.it.v2.md) — la fuente de verdad del comportamiento del sistema.
 - [Flujo del pedido](docs/flujo-pedido.md) — diagrama de secuencia de punta a punta.
+- [Modelo de datos](docs/modelo-de-datos.md) — ERM y máquina de estados del Sprint 1.
+- [Consignas](docs/sprints/) — el enunciado de cada sprint, tal cual lo entregó el cliente.
 - [Decisiones de arquitectura](docs/adr/) — ADRs.
 
 `docs/historico/` guarda versiones superadas del diseño. **No las uses como referencia.**
@@ -104,7 +131,7 @@ Lo esencial:
 
 - Pablo Lamela — [@lamelapablo](https://github.com/lamelapablo)
 - Eugenia Quadro — [@eugeqq](https://github.com/eugeqq)
-- Nicolás Coloritto
+- Nicolás Coloritto [@nicocoloritto](https://github.com/nicocoloritto)
 
 ## Licencia
 
