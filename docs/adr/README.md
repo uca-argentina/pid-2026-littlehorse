@@ -15,6 +15,11 @@ Estas ya se decidieron en conversación y les falta el ADR:
 - **0003** — .NET 10 (LTS) en vez de .NET 9, que sale de soporte el 10/11/2026.
 - **0004** — Multi-tenant desde el día uno, con base compartida y columna discriminadora.
 - **0005** — Licencia propietaria en vez de open source.
+- **0006** — Zoneless: es el default de Angular 22 y lo mantenemos.
+
+## Decisiones ya registradas
+
+- [ADR-0007 — Hosting en Azure a costo cero](0007-hosting-en-azure-a-costo-cero.md)
 
 ## Plantilla
 

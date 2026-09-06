@@ -16,7 +16,7 @@ leé también su consigna en `docs/sprints/` — define el alcance del sprint.
 | Backend | .NET 10 · Minimal APIs · EF Core · SignalR |
 | Frontend | Angular 22 (standalone + signals) · PWA (`@angular/service-worker`) |
 | Base de datos | Azure SQL (SQL Server local vía Docker para dev) |
-| Hosting | Azure App Service (API) + Static Web Apps (PWA) + Azure SignalR |
+| Hosting | Azure Container Apps (API) + Static Web Apps (PWA) — ver ADR-0007 |
 | CI/CD | GitHub Actions · OIDC hacia Azure (sin secretos de larga vida) |
 
 ## Estructura del monorepo
@@ -227,13 +227,17 @@ Verde para nosotros: MIT, Apache-2.0, BSD. Ante cualquier duda, proponelo y espe
 feature  ──PR──►  dev  ──PR──►  main
 ```
 
-- `main` — siempre desplegable, es lo que corre en producción. **Sólo recibe merges desde
-  `dev`**, nunca un feature directo.
-- `dev` — rama de integración, es lo que corre en staging. Es la **rama por defecto** del
+- `main` — **la única rama que despliega.** Es lo que corre en Azure. Sólo recibe merges
+  desde `dev`, nunca un feature directo.
+- `dev` — rama de integración, **sin ambiente desplegado**. Es la **rama por defecto** del
   repo en GitHub, así ningún PR apunta a `main` por descuido.
 - `<prefijo>/<issue>-descripcion-corta` — sale de `dev` y vuelve a `dev` por PR.
 
 Prefijos: `feat/`, `fix/`, `chore/`, `refactor/`, `test/`.
+
+> Hay **un solo ambiente** en Azure, alimentado desde `main`
+> ([ADR-0007](docs/adr/0007-hosting-en-azure-a-costo-cero.md)). Mantener un staging aparte
+> duplicaría el consumo de los tiers gratuitos sin que nadie lo use.
 
 Estrategia de merge, y no es un detalle:
 

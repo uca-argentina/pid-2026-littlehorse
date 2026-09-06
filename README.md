@@ -35,9 +35,9 @@ mayor motivación y lo que habilita el push.
 | Backend | .NET 10 · Minimal APIs · EF Core · SignalR |
 | Frontend | Angular 22 (standalone + signals) · PWA (`@angular/service-worker`) |
 | Base de datos | Azure SQL — SQL Server en Docker para desarrollo local |
-| Tiempo real | SignalR / Azure SignalR Service |
+| Tiempo real | SignalR in-process (sin Azure SignalR Service) |
 | Notificaciones | Web Push (VAPID) desde el Service Worker |
-| Hosting | Azure App Service · Static Web Apps · Key Vault |
+| Hosting | Azure Container Apps · Static Web Apps · Azure SQL — todo en tiers gratuitos |
 | CI/CD | GitHub Actions con OIDC hacia Azure |
 | Testing | xUnit · Testcontainers · Vitest · Playwright |
 
