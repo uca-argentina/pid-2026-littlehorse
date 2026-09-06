@@ -12,7 +12,7 @@ skill, mejora para los tres. Trátenla como código — pasa por PR.
 | `agents/` | Subagentes especializados. Corren en su propio contexto y devuelven una conclusión. |
 | `skills/` | Workflows del equipo. Se activan solos cuando la tarea encaja, o los invocás con `/`. |
 | `hooks/format-archivo.ps1` | Formatea automáticamente cada archivo que Claude edita. |
-| `../.mcp.json` | Servidores MCP del proyecto (Playwright, GitHub, Azure). |
+| `../.mcp.json` | Servidores MCP del proyecto: Playwright (navegador), GitHub (PRs e issues), Azure (recursos) y Angular (docs y schematics al día). |
 
 ## Los agentes
 

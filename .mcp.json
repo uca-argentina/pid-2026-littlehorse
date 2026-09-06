@@ -2,7 +2,10 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ]
     },
     "github": {
       "type": "http",
@@ -10,7 +13,20 @@
     },
     "azure": {
       "command": "npx",
-      "args": ["-y", "@azure/mcp@latest", "server", "start"]
+      "args": [
+        "-y",
+        "@azure/mcp@latest",
+        "server",
+        "start"
+      ]
+    },
+    "angular": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@angular/cli@22",
+        "mcp"
+      ]
     }
   }
 }
