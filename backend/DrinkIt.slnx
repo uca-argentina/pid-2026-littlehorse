@@ -10,5 +10,6 @@
     <Project Path="tests/DrinkIt.Application.Tests/DrinkIt.Application.Tests.csproj" />
     <Project Path="tests/DrinkIt.ArchitectureTests/DrinkIt.ArchitectureTests.csproj" />
     <Project Path="tests/DrinkIt.Domain.Tests/DrinkIt.Domain.Tests.csproj" />
+    <Project Path="tests/DrinkIt.Infrastructure.Tests/DrinkIt.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>

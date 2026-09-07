@@ -5,7 +5,17 @@
     points this way. Application must never reference Infrastructure back.
   -->
   <ItemGroup>
+    <!--
+      Implementations here stay internal so the only way to reach them is
+      through their Application interface, registered in the composition root.
+      Tests are the one exception.
+    -->
+    <InternalsVisibleTo Include="DrinkIt.Infrastructure.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
   </ItemGroup>
 
   <ItemGroup>

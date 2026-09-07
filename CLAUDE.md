@@ -31,6 +31,7 @@ backend/
   tests/
     DrinkIt.Domain.Tests/         # Unitarios puros, sin mocks, rapidísimos.
     DrinkIt.Application.Tests/    # Unitarios con dobles de prueba de los puertos.
+    DrinkIt.Infrastructure.Tests/ # Lógica de infraestructura sin servicios externos.
     DrinkIt.Api.IntegrationTests/ # WebApplicationFactory + Testcontainers.
     DrinkIt.ArchitectureTests/    # NetArchTest: las reglas de abajo son ejecutables.
 frontend/
@@ -153,9 +154,13 @@ Nombres de test: `Method_Scenario_ExpectedResult`
 ## Convenciones
 
 - **Todo el código en inglés, sin excepciones.** Clases, métodos, variables, nombres de
-  tabla y columna, **nombres de archivo**, ramas, commits, mensajes de log, y **los
-  comentarios dentro de archivos de código y configuración** (`.cs`, `.ts`, `.props`,
-  `.csproj`, `.ps1`, `.json`, `.gitignore`, `.gitattributes`, workflows de CI).
+  tabla y columna, **nombres de archivo**, ramas, commits, mensajes de log, **los literales
+  de texto y los datos de prueba**, y **los comentarios dentro de archivos de código y
+  configuración** (`.cs`, `.ts`, `.props`, `.csproj`, `.ps1`, `.json`, `.gitignore`,
+  `.gitattributes`, workflows de CI).
+  - La única excepción son los textos que **ve el usuario final** en la PWA, que van en
+    español porque el cliente está en un boliche argentino. Esos no se escriben sueltos:
+    salen de los archivos de traducción del frontend, no del código del backend.
 - **Sólo se escribe en español la documentación**: `docs/`, `README.md`, `CLAUDE.md` y los
   archivos de `.claude/`. Si un archivo lo lee el compilador o una herramienta, va en inglés;
   si lo lee una persona para entender el proyecto, va en español.
