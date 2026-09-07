@@ -51,7 +51,11 @@ public class DependencyRuleTests
         [
             .. DomainAssembly.GetExportedTypes()
                 .Where(type => type is { IsClass: true, IsAbstract: false })
-                .SelectMany(type => type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                // DeclaredOnly matters: without it every type that inherits from
+                // Exception reports HelpLink, Source and HResult, which are the
+                // BCL's public setters and not ours to fix.
+                .SelectMany(type => type.GetProperties(
+                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
                 .Where(property => property.SetMethod is { IsPublic: true })
                 .Select(property => $"{property.DeclaringType!.Name}.{property.Name}")
         ];

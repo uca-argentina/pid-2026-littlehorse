@@ -195,6 +195,8 @@ falta, preguntá antes de inventar el término.
 | Método de pago | `PaymentMethod` | | Retiro en barra | `BarPickup` |
 | Efectivo | `Cash` | | Entrega en mesa | `TableDelivery` |
 | Pago digital | `DigitalPayment` | | Suscripción push | `PushSubscription` |
+| Usuario interno | `StaffUser` | | Rol | `StaffRole` |
+| Administrador | `Administrator` | | Baja lógica | `IsActive` |
 
 **Estados de `Order`** (§5 del diseño funcional):
 `Cart` · `AwaitingPayment` · `Paid` · `Queued` · `InPreparation` · `Ready` · `Delivered` · `Canceled`

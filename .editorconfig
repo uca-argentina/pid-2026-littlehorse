@@ -160,6 +160,15 @@ dotnet_naming_rule.static_readonly_fields_are_pascal_case.symbols = static_reado
 dotnet_naming_rule.static_readonly_fields_are_pascal_case.style = pascal_case
 dotnet_naming_rule.static_readonly_fields_are_pascal_case.severity = warning
 
+# Constants are fields too, so this has to come before the private-field rule
+# or SlugMaxLength gets asked to become _slugMaxLength.
+dotnet_naming_symbols.constant_symbols.applicable_kinds = field
+dotnet_naming_symbols.constant_symbols.applicable_accessibilities = *
+dotnet_naming_symbols.constant_symbols.required_modifiers = const
+dotnet_naming_rule.constants_are_pascal_case.symbols = constant_symbols
+dotnet_naming_rule.constants_are_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_are_pascal_case.severity = warning
+
 dotnet_naming_symbols.private_field_symbols.applicable_kinds = field
 dotnet_naming_symbols.private_field_symbols.applicable_accessibilities = private
 dotnet_naming_rule.private_fields_are_underscore_camel_case.symbols = private_field_symbols
@@ -170,3 +179,14 @@ dotnet_naming_symbols.parameter_and_local_symbols.applicable_kinds = parameter, 
 dotnet_naming_rule.parameters_and_locals_are_camel_case.symbols = parameter_and_local_symbols
 dotnet_naming_rule.parameters_and_locals_are_camel_case.style = camel_case
 dotnet_naming_rule.parameters_and_locals_are_camel_case.severity = warning
+
+##########################################
+# EF Core migrations
+##########################################
+
+# "dotnet ef migrations add" writes these, and their shape is EF's decision, not
+# ours: file-scoped namespaces, unused usings and inline arrays all come from its
+# templates. Marking them as generated keeps the project's style rules off code
+# nobody writes by hand, without weakening those rules anywhere else.
+[**/Migrations/*.cs]
+generated_code = true
