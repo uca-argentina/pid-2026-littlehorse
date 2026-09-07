@@ -1,16 +1,24 @@
 using DrinkIt.Application.Security;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 
 namespace DrinkIt.Infrastructure.Security;
 
 /// <summary>
-/// Adapts ASP.NET Core Identity's hasher, which is PBKDF2-HMAC-SHA256 with a
+/// Adapts ASP.NET Core Identity's hasher, which is PBKDF2-HMAC-SHA512 with a
 /// per-password salt. Named after the technology so that a future BCrypt or
 /// Argon2 adapter can sit beside it instead of replacing it in place.
 /// </summary>
 internal sealed class IdentityPasswordHasher : IPasswordHasher
 {
-    private static readonly PasswordHasher<HashOnly> Hasher = new();
+    /// <summary>
+    /// What OWASP asks for on PBKDF2-HMAC-SHA512, the PRF below.
+    /// Identity has a default of 100,000. Every login attempt pays this.
+    /// </summary>
+    private const int IterationCount = 210_000;
+
+    private static readonly PasswordHasher<HashOnly> Hasher =
+        new(Options.Create(new PasswordHasherOptions { IterationCount = IterationCount }));
 
     private static readonly HashOnly Unused = new();
 
