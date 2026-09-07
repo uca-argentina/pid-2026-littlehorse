@@ -38,21 +38,16 @@ public sealed partial class Venue
 
     public static Venue Create(string name, string slug)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new DomainException(ErrorCodes.NameRequired, "Venue name is required.");
+        if (string.IsNullOrWhiteSpace(name)) throw new DomainException(ErrorCodes.NameRequired, "Venue name is required.");
 
         string cleanName = name.Trim();
-        if (cleanName.Length > NameMaxLength)
-            throw new DomainException(ErrorCodes.NameTooLong, $"Venue name cannot exceed {NameMaxLength} characters.");
+        if (cleanName.Length > NameMaxLength) throw new DomainException(ErrorCodes.NameTooLong, $"Venue name cannot exceed {NameMaxLength} characters.");
 
-        if (string.IsNullOrWhiteSpace(slug))
-            throw new DomainException(ErrorCodes.SlugRequired, "Venue slug is required.");
+        if (string.IsNullOrWhiteSpace(slug)) throw new DomainException(ErrorCodes.SlugRequired, "Venue slug is required.");
 
         string cleanSlug = slug.Trim();
-        if (cleanSlug.Length is < SlugMinLength or > SlugMaxLength)
-            throw new DomainException(ErrorCodes.SlugLength, $"Venue slug must be between {SlugMinLength} and {SlugMaxLength} characters.");
-        if (!SlugPattern().IsMatch(cleanSlug))
-            throw new DomainException(ErrorCodes.SlugNotUrlSafe, $"Venue slug '{cleanSlug}' is not URL-safe.");
+        if (cleanSlug.Length is < SlugMinLength or > SlugMaxLength) throw new DomainException(ErrorCodes.SlugLength, $"Venue slug must be between {SlugMinLength} and {SlugMaxLength} characters.");
+        if (!SlugPattern().IsMatch(cleanSlug)) throw new DomainException(ErrorCodes.SlugNotUrlSafe, $"Venue slug '{cleanSlug}' is not URL-safe.");
 
         // Version 7 GUIDs are time-ordered, so rows land at the end of the
         // clustered index instead of scattering across it like v4 does.
