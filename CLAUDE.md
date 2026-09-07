@@ -154,19 +154,24 @@ Nombres de test: `Method_Scenario_ExpectedResult`
 ## Convenciones
 
 - **Todo el código en inglés, sin excepciones.** Clases, métodos, variables, nombres de
-  tabla y columna, **nombres de archivo**, ramas, commits, mensajes de log, **los literales
-  de texto y los datos de prueba**, y **los comentarios dentro de archivos de código y
-  configuración** (`.cs`, `.ts`, `.props`, `.csproj`, `.ps1`, `.json`, `.gitignore`,
-  `.gitattributes`, workflows de CI).
+  tabla y columna, **nombres de archivo**, mensajes de log, **los literales de texto y los
+  datos de prueba**, y **los comentarios dentro de archivos de código y configuración**
+  (`.cs`, `.ts`, `.props`, `.csproj`, `.ps1`, `.json`, `.gitignore`, `.gitattributes`,
+  workflows de CI).
   - La única excepción son los textos que **ve el usuario final** en la PWA, que van en
     español porque el cliente está en un boliche argentino. Esos no se escriben sueltos:
     salen de los archivos de traducción del frontend, no del código del backend.
-- **Sólo se escribe en español la documentación**: `docs/`, `README.md`, `CLAUDE.md` y los
-  archivos de `.claude/`. Si un archivo lo lee el compilador o una herramienta, va en inglés;
-  si lo lee una persona para entender el proyecto, va en español.
+- **Sólo se escribe en español la documentación**: `docs/`, `README.md`, `CLAUDE.md`, los
+  archivos de `.claude/`, **los mensajes de commit** y **la descripción de las ramas**. Si
+  un archivo lo lee el compilador o una herramienta, va en inglés; si lo lee una persona
+  para entender el proyecto, va en español.
 - Los documentos de diseño están en español, así que usá **siempre** el glosario de abajo
   para traducir. No inventes sinónimos: si el glosario dice `Order`, no escribas `Purchase`.
-- Commits: Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`).
+- Commits: Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`). El
+  prefijo y el scope son parte del formato y van en inglés; **el título y el cuerpo se
+  escriben en español**. Un commit explica *por qué* se hizo el cambio, y eso lo lee el
+  equipo, no el compilador: vale la misma regla que para `docs/`. El código que el mensaje
+  menciona conserva su nombre real (`LoginHandler`, no "el manejador de login").
 - Angular: componentes `standalone`, `signal()` para estado, `inject()` en vez de constructor
   injection, control flow nuevo (`@if`, `@for`). Nada de `NgModule` nuevo, nada de `any`,
   nada de `subscribe()` sin `takeUntilDestroyed`.
@@ -240,7 +245,11 @@ feature  ──PR──►  dev  ──PR──►  main
   repo en GitHub, así ningún PR apunta a `main` por descuido.
 - `<prefijo>/<issue>-descripcion-corta` — sale de `dev` y vuelve a `dev` por PR.
 
-Prefijos: `feat/`, `fix/`, `chore/`, `refactor/`, `test/`.
+Prefijos: `feat/`, `fix/`, `chore/`, `refactor/`, `test/`. **El prefijo es la parte
+reservada y va siempre en inglés; la descripción que sigue se escribe en español**
+(`feat/12-autenticacion-de-personal`). Sin tildes ni `ñ`: el nombre de una rama viaja por
+URLs, nombres de archivo y consolas de tres sistemas operativos, y ahí un carácter no ASCII
+sólo trae problemas. Escribí `anio`, no `año`.
 
 > Hay **un solo ambiente** en Azure, alimentado desde `main`
 > ([ADR-0007](docs/adr/0007-hosting-en-azure-a-costo-cero.md)). Mantener un staging aparte
