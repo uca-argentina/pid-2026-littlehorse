@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- HttpContext and friends live in the ASP.NET Core shared framework. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/DrinkIt.Api/DrinkIt.Api.csproj" />
+  </ItemGroup>
+
+</Project>
