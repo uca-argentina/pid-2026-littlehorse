@@ -13,7 +13,24 @@ Los endpoints se agrupan por feature vertical, no en un `Controllers/` gigante:
     DrinkIt.Api/Features/Orders/MarkOrderReadyEndpoint.cs
     DrinkIt.Api/Features/Cashier/ConfirmCashPaymentEndpoint.cs
 
-Cada archivo registra su ruta con un método de extensión sobre `IEndpointRouteBuilder`.
+Cada archivo registra su ruta con un método de extensión. Si una feature tiene un solo
+endpoint (como el login), recibe `IEndpointRouteBuilder` directo. Si tiene varios que
+comparten prefijo y protección — el caso típico de un ABM — se agrupan con `MapGroup`
+en el `Program.cs` o en un agregador de la feature, y cada endpoint recibe ese
+`RouteGroupBuilder`:
+
+```csharp
+app.MapGroup("/api/products")
+   .WithTags("Products")
+   .RequireAuthorization()   // una vez acá, no repetido en cada endpoint
+   .MapProductEndpoints();
+```
+
+`RequireAuthorization()` en el grupo, no en cada endpoint: si alguien agrega un
+endpoint al ABM y se olvida de protegerlo, el olvido no existe porque la protección
+no es algo que se pueda olvidar por endpoint. Un endpoint público adentro de un grupo
+protegido (no tenemos ninguno hoy) se marca con `.AllowAnonymous()` explícito, para
+que la excepción sea visible.
 
 ## El endpoint es fino
 
