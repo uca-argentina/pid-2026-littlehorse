@@ -18,17 +18,32 @@ public class LoginHandlerTests
         IsActive: true);
 
     [Fact]
-    public async Task HandleAsync_WhenCredentialsAreValid_ReturnsTheStaffUser()
+    public async Task HandleAsync_WhenCredentialsAreValid_ReturnsASessionForThatUser()
     {
         LoginHandler handler = HandlerFinding(ActiveAdministrator);
 
-        Result<LoggedInStaff> result = await handler.HandleAsync(
+        Result<StaffSession> result = await handler.HandleAsync(
             new LoginCommand("euge", RightPassword), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(ActiveAdministrator.StaffUserId, result.Value.StaffUserId);
-        Assert.Equal(ActiveAdministrator.VenueId, result.Value.VenueId);
+        Assert.Equal(Fake.TokenFor(ActiveAdministrator.StaffUserId), result.Value.Token);
+        Assert.Equal("euge", result.Value.Username);
         Assert.Equal(StaffRole.Administrator, result.Value.Role);
+    }
+
+    // The venue has to reach the token: from here on it is the only source of
+    // the tenant, and the URL stops being trusted.
+    [Fact]
+    public async Task HandleAsync_WhenCredentialsAreValid_IssuesTheTokenForTheUserVenue()
+    {
+        Fake.TokenIssuer issuer = new();
+        LoginHandler handler = new(new Fake.CredentialsQuery(ActiveAdministrator), new Fake.PasswordHasher(), issuer);
+
+        await handler.HandleAsync(new LoginCommand("euge", RightPassword), CancellationToken.None);
+
+        Assert.Equal(ActiveAdministrator.VenueId, issuer.IssuedForVenue);
+        Assert.Equal(ActiveAdministrator.StaffUserId, issuer.IssuedForStaffUser);
+        Assert.Equal(StaffRole.Administrator, issuer.IssuedForRole);
     }
 
     [Fact]
@@ -36,7 +51,7 @@ public class LoginHandlerTests
     {
         LoginHandler handler = HandlerFinding(null);
 
-        Result<LoggedInStaff> result = await handler.HandleAsync(
+        Result<StaffSession> result = await handler.HandleAsync(
             new LoginCommand("nobody", RightPassword), CancellationToken.None);
 
         Assert.Equal(LoginHandler.InvalidCredentials, result.Error);
@@ -47,7 +62,7 @@ public class LoginHandlerTests
     {
         LoginHandler handler = HandlerFinding(ActiveAdministrator with { IsActive = false });
 
-        Result<LoggedInStaff> result = await handler.HandleAsync(
+        Result<StaffSession> result = await handler.HandleAsync(
             new LoginCommand("euge", RightPassword), CancellationToken.None);
 
         Assert.Equal(LoginHandler.InvalidCredentials, result.Error);
@@ -58,7 +73,7 @@ public class LoginHandlerTests
     {
         LoginHandler handler = HandlerFinding(ActiveAdministrator);
 
-        Result<LoggedInStaff> result = await handler.HandleAsync(
+        Result<StaffSession> result = await handler.HandleAsync(
             new LoginCommand("euge", "not the right password"), CancellationToken.None);
 
         Assert.Equal(LoginHandler.InvalidCredentials, result.Error);
@@ -71,7 +86,7 @@ public class LoginHandlerTests
     public async Task HandleAsync_WhenTheUserDoesNotExist_StillSpendsTimeHashing()
     {
         Fake.PasswordHasher hasher = new();
-        LoginHandler handler = new(new Fake.CredentialsQuery(null), hasher);
+        LoginHandler handler = new(new Fake.CredentialsQuery(null), hasher, new Fake.TokenIssuer());
 
         await handler.HandleAsync(
             new LoginCommand("nobody", RightPassword), CancellationToken.None);
@@ -79,17 +94,54 @@ public class LoginHandlerTests
         Assert.True(hasher.WasUsed, "the handler returned without running the key derivation");
     }
 
+    // The stored username is lowercase. Typing it with capitals must still work,
+    // and that must not depend on how the database collates strings.
+    [Theory]
+    [InlineData("EUGE")]
+    [InlineData("  Euge  ")]
+    public async Task HandleAsync_WhenTheUsernameIsTypedWithCapitals_StillFindsTheUser(string typed)
+    {
+        LoginHandler handler = HandlerFinding(ActiveAdministrator);
+
+        Result<StaffSession> result = await handler.HandleAsync(
+            new LoginCommand(typed, RightPassword), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+    }
+
     private static LoginHandler HandlerFinding(StaffCredentials? found) =>
-        new(new Fake.CredentialsQuery(found), new Fake.PasswordHasher());
+        new(new Fake.CredentialsQuery(found), new Fake.PasswordHasher(), new Fake.TokenIssuer());
 
     private static class Fake
     {
         public static string HashOf(string password) => $"hashed:{password}";
 
+        public static string TokenFor(Guid staffUserId) => $"token:{staffUserId}";
+
+        public sealed class TokenIssuer : ITokenIssuer
+        {
+            public Guid IssuedForStaffUser { get; private set; }
+
+            public Guid IssuedForVenue { get; private set; }
+
+            public StaffRole IssuedForRole { get; private set; }
+
+            public AccessToken Issue(Guid staffUserId, Guid venueId, string username, StaffRole role)
+            {
+                IssuedForStaffUser = staffUserId;
+                IssuedForVenue = venueId;
+                IssuedForRole = role;
+
+                return new AccessToken(TokenFor(staffUserId), DateTimeOffset.UtcNow.AddHours(1));
+            }
+        }
+
         public sealed class CredentialsQuery(StaffCredentials? found) : IStaffCredentialsQuery
         {
+            // Only answers to the exact stored form, so the test fails if the
+            // handler forwards the username without normalising it.
             public Task<StaffCredentials?> FindAsync(string username, CancellationToken cancellationToken) =>
-                Task.FromResult(found);
+                Task.FromResult(username == found?.Username ? found : null);
         }
 
         public sealed class PasswordHasher : IPasswordHasher
