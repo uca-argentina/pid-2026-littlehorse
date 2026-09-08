@@ -1,66 +1,84 @@
-using DrinkIt.Application.Common;
+using DrinkIt.Application.Authentication;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
+using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Testcontainers.MsSql;
 
 namespace DrinkIt.Api.IntegrationTests.Persistence;
 
 /// <summary>
-/// This the most important invariant of the data model: an order
-/// or a user from one venue must never be visible from another. Everything else
-/// about multi-tenancy is bookkeeping; this is the part that leaks real data.
+/// CLAUDE.md calls this the most important invariant of the data model: data
+/// from one venue must never be visible from another. Everything else about
+/// multi-tenancy is bookkeeping; this is the part that leaks real data.
 /// </summary>
-public sealed class VenueIsolationTests : IAsyncLifetime
+[Collection(nameof(SqlServerCollection))]
+public sealed class VenueIsolationTests(SqlServerFixture sql)
 {
-    // Same tag as docker-compose.yml so both reuse one pulled image.
-    private readonly MsSqlContainer _sqlServer =
-        new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
-
-    public Task InitializeAsync() => _sqlServer.StartAsync();
-
-    public Task DisposeAsync() => _sqlServer.DisposeAsync().AsTask();
-
     [Fact]
     public async Task StaffUsers_WhenReadFromAnotherVenue_AreNotVisible()
     {
-        Venue alfa = Venue.Create("Bar Alfa", "bar-alfa");
-        Venue beta = Venue.Create("Bar Beta", "bar-beta");
-        StaffUser alfaUser = StaffUser.Create(alfa.Id, "euge", "hash", StaffRole.Administrator);
-        StaffUser betaUser = StaffUser.Create(beta.Id, "nico", "hash", StaffRole.Bartender);
+        (Venue mine, Venue theirs) = await SeedTwoVenuesWithOneUserEach("euge", "nico");
 
-        await using (DrinkItDbContext seed = CreateContext(alfa.Id))
-        {
-            await seed.Database.MigrateAsync();
-            seed.Venues.AddRange(alfa, beta);
-            seed.StaffUsers.AddRange(alfaUser, betaUser);
-            await seed.SaveChangesAsync();
-        }
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
 
-        await using DrinkItDbContext asAlfa = CreateContext(alfa.Id);
+        string[] visible = await asMine.StaffUsers.Select(user => user.Username).ToArrayAsync();
 
-        string[] visible = await asAlfa.StaffUsers.Select(user => user.Username).ToArrayAsync();
-        int storedInTotal = await asAlfa.StaffUsers.IgnoreQueryFilters().CountAsync();
+        // Scoped to the two venues this test just created, not a table-wide
+        // count: the database is shared across every test class in
+        // SqlServerCollection, so other tests' rows are expected to be there.
+        int storedForOurVenues = await asMine.StaffUsers
+            .IgnoreQueryFilters()
+            .CountAsync(u => u.VenueId == mine.Id || u.VenueId == theirs.Id);
 
-        // Both rows exist, so the assertion below is about the filter and not
-        // about the seed having silently failed.
-        Assert.Equal(2, storedInTotal);
+        // Both of our rows exist, so the assertion below is about the filter
+        // and not about the seed having silently failed.
+        Assert.Equal(2, storedForOurVenues);
         Assert.Equal(["euge"], visible);
+        Assert.NotEqual(mine.Id, theirs.Id);
     }
 
-    private DrinkItDbContext CreateContext(Guid venueId)
+    // The query login actually runs. It relies on the global filter rather than
+    // naming the venue itself, so this is what catches somebody adding
+    // IgnoreQueryFilters to it.
+    [Fact]
+    public async Task StaffCredentialsQuery_WhenTheUserBelongsToAnotherVenue_FindsNothing()
     {
-        DbContextOptions<DrinkItDbContext> options =
-            new DbContextOptionsBuilder<DrinkItDbContext>()
-                .UseSqlServer(_sqlServer.GetConnectionString())
-                .Options;
+        (Venue mine, _) = await SeedTwoVenuesWithOneUserEach("ana", "beto");
 
-        return new DrinkItDbContext(options, new FixedVenue(venueId));
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+        StaffCredentialsQuery query = new(asMine);
+
+        StaffCredentials? own = await query.FindAsync("ana", CancellationToken.None);
+        StaffCredentials? foreign = await query.FindAsync("beto", CancellationToken.None);
+
+        Assert.NotNull(own);
+        Assert.Null(foreign);
     }
 
-    private sealed class FixedVenue(Guid id) : ICurrentVenue
+    private async Task<(Venue Mine, Venue Theirs)> SeedTwoVenuesWithOneUserEach(
+        string mineUsername,
+        string theirsUsername)
     {
-        public Guid Id { get; } = id;
+        // Slugs are unique platform-wide, so every test needs its own.
+        Venue mine = Venue.Create("Bar Mine", UniqueSlug());
+        Venue theirs = Venue.Create("Bar Theirs", UniqueSlug());
+
+        await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
+        seed.Venues.AddRange(mine, theirs);
+        seed.StaffUsers.AddRange(
+            StaffUser.Create(mine.Id, mineUsername, "hash", StaffRole.Administrator),
+            StaffUser.Create(theirs.Id, theirsUsername, "hash", StaffRole.Bartender));
+        await seed.SaveChangesAsync();
+
+        return (mine, theirs);
     }
+
+    /// <summary>
+    /// Guid.NewGuid and not CreateVersion7: v7 puts the millisecond timestamp in
+    /// its leading bits, so two of them made in the same millisecond share a
+    /// prefix. Truncating one throws away exactly the part that makes it unique.
+    /// Nothing is truncated here either, since 36 characters fit the slug limit.
+    /// </summary>
+    private static string UniqueSlug() => $"bar-{Guid.NewGuid():N}";
 }
