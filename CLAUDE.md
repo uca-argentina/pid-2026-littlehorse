@@ -267,20 +267,6 @@ La rama se borra después del merge.
 acto**. Si eso se saltea, el arreglo desaparece en el próximo merge de `dev` a `main` y el
 bug vuelve a producción.
 
-> **Fase actual — bootstrap.** Se trabaja **directo en `main`**, por dos razones: un PR que
-> ningún check puede gatear no aporta nada, y el scaffolding de un stack son decenas de
-> archivos generados que nadie revisa de verdad.
->
-> El corte es verificable, no interpretable: **el bootstrap termina cuando los dos workflows
-> de CI están en verde** — `ci-backend.yml` (✅ ya) y `ci-frontend.yml` (pendiente) —, o sea
-> cuando backend y frontend compilan, pasan lint y corren sus tests desde una máquina limpia.
-> Ahí se crea `dev`, se la marca como rama por defecto en GitHub, y desde ese momento rige
-> todo lo de arriba.
->
-> La primera feature vertical —un endpoint real consumido por una pantalla real— **no** es
-> parte del bootstrap: es el primer PR a `dev`. Conviene que sea así: un primer PR chico y
-> revisable instala mejor hábito que uno con cuarenta archivos autogenerados.
-
 ## Definition of Done
 
 Una feature está lista cuando: tests unitarios verdes · test de integración si toca la DB

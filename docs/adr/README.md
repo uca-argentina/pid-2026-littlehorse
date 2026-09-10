@@ -20,6 +20,8 @@ Estas ya se decidieron en conversación y les falta el ADR:
 ## Decisiones ya registradas
 
 - [ADR-0007 — Hosting en Azure a costo cero](0007-hosting-en-azure-a-costo-cero.md)
+- [ADR-0008 — Autenticación con token único, sin refresh token](0008-autenticacion-con-token-unico-sin-refresh-token.md)
+- [ADR-0009 — Los errores de la API viajan como Problem Details (RFC 9457)](0009-errores-de-la-api-como-problem-details.md)
 
 ## Plantilla
 
