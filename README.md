@@ -24,9 +24,12 @@ mayor motivación y lo que habilita el push.
 
 ## Estado
 
-> **Bootstrap terminado.** Backend y frontend compilan, pasan lint y corren sus tests en CI.
-> Todavía no hay features del Sprint 1 implementadas: lo que existe es el andamiaje sobre el
-> que se construyen.
+> **Sprint 1 en curso** — entrega el 17 de septiembre de 2026. El alcance comprometido está
+> en el [backlog](docs/sprints/sprint-1-backlog.md).
+>
+> Listo y con tests: el modelo de local y personal, el aislamiento entre locales, el ingreso
+> del personal (caso de uso y endpoint) y la semilla de desarrollo. Falta todo el frontend:
+> la PWA todavía no tiene ninguna pantalla.
 
 ## Stack
 
@@ -78,7 +81,15 @@ git clone https://github.com/lamelapablo/drink-it.git
 cd drink-it
 pnpm --prefix frontend install
 dotnet restore backend/DrinkIt.slnx
+docker compose up -d                    # SQL Server local, en localhost,1433
 ```
+
+La base tiene que estar levantada **antes** de correr la API: la cadena de conexión apunta a
+ese contenedor. En Development la API se aplica las migraciones y siembra un boliche con un
+administrador sola, así que después de `docker compose up -d` no hay ningún paso manual.
+
+Los tests no usan ese contenedor: los de integración levantan el suyo con Testcontainers y lo
+tiran al terminar. Sólo necesitan Docker corriendo.
 
 La versión exacta del SDK de .NET sale de `global.json` y la de pnpm del campo
 `packageManager` de `frontend/package.json`. No hace falta elegirlas: las herramientas las
@@ -88,6 +99,7 @@ leen solas, y son las mismas que usa la CI.
 
 | | Backend | Frontend |
 |---|---|---|
+| Levantar la base | `docker compose up -d` | — |
 | Arrancar | `dotnet run --project backend/src/DrinkIt.Api` | `pnpm --prefix frontend start` |
 | Tests | `dotnet test backend/DrinkIt.slnx` | `pnpm --prefix frontend test` |
 | Tests (una vez, sin watch) | — | `pnpm --prefix frontend run test:ci` |
@@ -112,7 +124,8 @@ Lo esencial:
 - **TDD estricto.** El test que falla va primero. Nada de implementación sin un test que la exija.
 - **Flujo de ramas:** `feature` → PR a `dev` → PR a `main`. Nunca un feature directo a `main`.
   Squash al mergear a `dev`, merge commit de `dev` a `main`. Detalle completo en `CLAUDE.md`.
-  *(Durante el bootstrap se trabaja en `main`; el corte es cuando la CI esté verde.)*
+  Máximo dos PRs abiertos a la vez y se revisan el mismo día: con tres personas y diez días,
+  un PR esperando cuarenta y ocho horas hace más daño que cualquier problema técnico.
 - **Conventional Commits** (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`).
 - **Código en inglés, documentación en español.** El glosario de traducción está en `CLAUDE.md`.
 - **Sólo dependencias gratuitas y open source.** Se proponen con la licencia verificada.
@@ -138,4 +151,5 @@ Lo esencial:
 Propietario — todos los derechos reservados. Ver [LICENSE](LICENSE).
 
 No es open source **a propósito**: la decisión se puede revertir hacia abrir el código, pero
-no al revés. Ver `docs/adr/` cuando esté escrito el ADR correspondiente.
+no al revés. El ADR-0005 que la registra todavía está pendiente, junto con los otros que
+lista [docs/adr/README.md](docs/adr/README.md).

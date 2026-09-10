@@ -41,22 +41,22 @@ estimada y no depende de nada sin terminar. Si le falta algo, no entra al sprint
 
 ## Resumen
 
-| ID | Story | Prioridad | Puntos | Depende de |
-|---|---|---|---|---|
-| US-01 | Iniciar sesión | Imprescindible | 5 | — |
-| US-02 | Poder entrar la primera vez | Imprescindible | 2 | — |
-| US-03 | Dar de alta al equipo | Imprescindible | 3 | US-01 |
-| US-04 | Ver y corregir al equipo | Imprescindible | 3 | US-03 |
-| US-05 | Dar de baja a quien se fue | Imprescindible | 2 | US-03 |
-| US-06 | Cargar un trago en la carta | Imprescindible | 3 | US-01 |
-| US-07 | Marcar que un trago se acabó | Imprescindible | 2 | US-06 |
-| US-08 | Corregir y sacar tragos | Imprescindible | 3 | US-06 |
-| US-09 | Ver la carta desde el celular | Imprescindible | 3 | US-06 |
-| US-10 | Armar el pedido | Imprescindible | 5 | US-09 |
-| US-11 | Confirmar el pedido | Imprescindible | 5 | US-10 |
-| US-12 | Seguir mi pedido | Imprescindible | 5 | US-11 |
-| US-13 | Ver qué hay para preparar | Debería | 5 | US-11 |
-| US-14 | Avisar que el pedido avanza | Debería | 3 | US-13 |
+| ID | Story | Prioridad | Puntos | Depende de | Estado |
+|---|---|---|---|---|---|
+| US-01 | Iniciar sesión | Imprescindible | 5 | — | **En curso** — backend listo, falta pantalla y roles |
+| US-02 | Poder entrar la primera vez | Imprescindible | 2 | — | **En curso** — semilla lista, falta el listado |
+| US-03 | Dar de alta al equipo | Imprescindible | 3 | US-01 | Pendiente |
+| US-04 | Ver y corregir al equipo | Imprescindible | 3 | US-03 | Pendiente |
+| US-05 | Dar de baja a quien se fue | Imprescindible | 2 | US-03 | Pendiente |
+| US-06 | Cargar un trago en la carta | Imprescindible | 3 | US-01 | Pendiente |
+| US-07 | Marcar que un trago se acabó | Imprescindible | 2 | US-06 | Pendiente |
+| US-08 | Corregir y sacar tragos | Imprescindible | 3 | US-06 | Pendiente |
+| US-09 | Ver la carta desde el celular | Imprescindible | 3 | US-06 | Pendiente |
+| US-10 | Armar el pedido | Imprescindible | 5 | US-09 | Pendiente |
+| US-11 | Confirmar el pedido | Imprescindible | 5 | US-10 | Pendiente |
+| US-12 | Seguir mi pedido | Imprescindible | 5 | US-11 | Pendiente |
+| US-13 | Ver qué hay para preparar | Debería | 5 | US-11 | Pendiente |
+| US-14 | Avisar que el pedido avanza | Debería | 3 | US-13 | Pendiente |
 
 **49 puntos**, de los cuales 8 son `Debería`. Sin velocidad histórica ese número no dice si
 entra: por eso los dos `Debería` están al final y son el margen.
@@ -91,6 +91,22 @@ entra: por eso los dos `Debería` están al final y son el margen.
 > distinga "ese usuario no existe" de "la contraseña está mal" le permite a cualquiera
 > averiguar quién trabaja en el local probando nombres.
 
+**Avance — 3 de 6.** El backend está terminado y con tests; falta la pantalla y la
+autorización por rol.
+
+| Criterio | Estado |
+|---|---|
+| 1. Bartender entra y ve la cola | Falta la pantalla |
+| 2. Administrador entra y ve la gestión | Falta la pantalla |
+| 3. Mismo mensaje para usuario y para contraseña | ✅ `LoginHandlerTests` |
+| 4. Dado de baja no entra | ✅ `LoginHandlerTests` |
+| 5. Bartender no accede a pantallas de administración | Falta autorización por rol |
+| 6. Cambiar el local en la dirección no revela nada | ✅ `VenueIsolationTests` |
+
+> El criterio 5 **no es sólo frontend**: hoy no existe autorización por rol en el backend y
+> ningún endpoint usa `RequireAuthorization`. Esconder un botón no cumple el criterio, porque
+> dice "escribo a mano la dirección".
+
 ### US-02 · Poder entrar la primera vez
 
 > **Como** administrador de un local nuevo
@@ -106,6 +122,10 @@ entra: por eso los dos `Debería` están al final y son el margen.
 
 > **Nota:** es un habilitador, pero tiene valor de usuario propio y por eso es una story y no
 > una tarea escondida: sin ella nadie puede usar el sistema el primer día.
+
+**Avance — 1 de 2.** El criterio 1 está cubierto por `DevelopmentSeederTests`: al arrancar
+existen un local y un administrador. El criterio 2 necesita el listado de personal, que llega
+con US-04.
 
 ---
 
@@ -358,14 +378,16 @@ puerta a la versión definitiva.
 Nadie lo puede "ver funcionando", así que no lleva tarjeta propia: va adentro de la primera
 story que lo necesita.
 
-- La API todavía no está armada: hoy responde `Hello World!`. Se arma dentro de US-01.
 - El frontend no tiene ninguna pantalla ni ruta definida. Empieza con US-01.
 - Playwright no está instalado y el Definition of Done pide una prueba de punta a punta.
+- No existe autorización por rol en el backend. La hace falta el criterio 5 de US-01 y hoy
+  no la usa ningún endpoint.
 
 Ya está hecho y no se rehace: el modelo de local y de personal, el aislamiento entre locales
-con su prueba automatizada, y la base de datos con su primera migración. El ingreso como caso
-de uso está en el PR `feat/autenticacion`, todavía sin mergear: le faltan la pantalla y el
-endpoint, que son parte de US-01.
+con su prueba automatizada, la base de datos con su primera migración, **la API armada**
+(autenticación, OpenAPI, migraciones y semilla de desarrollo) y **el ingreso de punta a punta
+del lado del backend** — caso de uso, emisión del token y endpoint. Todo eso viene en el PR
+`feat/autenticacion`. Lo que le falta a US-01 es la pantalla y la autorización por rol.
 
 ## Calendario
 

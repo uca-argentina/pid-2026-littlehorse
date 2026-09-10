@@ -13,7 +13,24 @@ Los endpoints se agrupan por feature vertical, no en un `Controllers/` gigante:
     DrinkIt.Api/Features/Orders/MarkOrderReadyEndpoint.cs
     DrinkIt.Api/Features/Cashier/ConfirmCashPaymentEndpoint.cs
 
-Cada archivo registra su ruta con un método de extensión sobre `IEndpointRouteBuilder`.
+Cada archivo registra su ruta con un método de extensión. Si una feature tiene un solo
+endpoint (como el login), recibe `IEndpointRouteBuilder` directo. Si tiene varios que
+comparten prefijo y protección — el caso típico de un ABM — se agrupan con `MapGroup`
+en el `Program.cs` o en un agregador de la feature, y cada endpoint recibe ese
+`RouteGroupBuilder`:
+
+```csharp
+app.MapGroup("/api/products")
+   .WithTags("Products")
+   .RequireAuthorization()   // una vez acá, no repetido en cada endpoint
+   .MapProductEndpoints();
+```
+
+`RequireAuthorization()` en el grupo, no en cada endpoint: si alguien agrega un
+endpoint al ABM y se olvida de protegerlo, el olvido no existe porque la protección
+no es algo que se pueda olvidar por endpoint. Un endpoint público adentro de un grupo
+protegido (no tenemos ninguno hoy) se marca con `.AllowAnonymous()` explícito, para
+que la excepción sea visible.
 
 ## El endpoint es fino
 
@@ -37,8 +54,32 @@ Si aparece un `if` sobre una regla del negocio, va al dominio. Si aparece un acc
 - Excepción no manejada → `500` genérico, **sin filtrar detalles internos**, con el
   `traceId` correlacionable en los logs.
 
-Usá siempre `ProblemDetails` (RFC 7807). El front necesita un código estable, no un string
-de mensaje que va a cambiar.
+Usá siempre `ProblemDetails` (RFC 9457, que reemplaza al 7807). El front necesita un código
+estable, no un string de mensaje que va a cambiar.
+
+**El `type` es una URI, no el código pelado.** El RFC lo define como URI reference y resuelve
+las relativas contra la URI base del documento, así que un `auth.invalid_credentials` suelto
+significa una cosa distinta según qué host respondió — justo lo contrario de un identificador
+estable. La conversión la hace `ProblemTypes.For(error.Code)`, que es el único lugar donde se
+decide cómo se ven esos identificadores:
+
+    auth.invalid_credentials  →  urn:drinkit:problem:auth:invalid-credentials
+
+Nunca pases `error.Code` directo al parámetro `type`. El `Error.Code` de `Application` sigue
+siendo el código con puntos: la capa de aplicación no tiene por qué saber qué es una URI.
+
+**Cuando no hay un problema propio del dominio, no pases `type` y listo.** El framework lo
+completa con un link a la sección del RFC 9110 que corresponde al status
+(`https://tools.ietf.org/html/rfc9110#section-15.5.10` para un 409). Eso no agrega nada que
+no esté ya en `status`, así que sirve justo para los casos en los que no hay nada más
+específico que decir: el 500 genérico, el 404 de ruteo, el 415. En cambio, si dos errores
+comparten status — y los 409 del pedido van a ser varios — cada uno necesita su URN, porque
+si no el front termina discriminando por el `detail`, que es el campo que sí va a cambiar.
+
+**Los errores que no nacen en un endpoint ya están cubiertos.** `ProblemDetailsPipeline`
+registra el `GlobalExceptionHandler` y `UseStatusCodePages`, así que la excepción no manejada,
+el 404 de ruteo y el 401 sin token salen en `problem+json` sin que el endpoint haga nada.
+No repitas ese manejo por endpoint, y **nunca** pongas `exception.Message` en el `detail`.
 
 ## Autorización
 

@@ -81,8 +81,7 @@ public class DependencyRuleTests
 
     private static bool IsAllowed(string name, string[] allowed)
     {
-        if (InfrastructureInDisguise.Contains(name, StringComparer.Ordinal))
-            return false;
+        if (InfrastructureInDisguise.Contains(name, StringComparer.Ordinal)) return false;
 
         return name.StartsWith("System.", StringComparison.Ordinal)
             || allowed.Contains(name, StringComparer.Ordinal);

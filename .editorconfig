@@ -128,7 +128,11 @@ csharp_space_after_keywords_in_control_flow_statements = true
 csharp_space_between_method_declaration_parameter_list_parentheses = false
 csharp_space_between_method_call_parameter_list_parentheses = false
 csharp_preserve_single_line_blocks = true
-csharp_preserve_single_line_statements = false
+# CLAUDE.md requires "if (x) return y;" on one line. With this at false,
+# dotnet format splits it into the two-line no-braces form that CLAUDE.md
+# bans outright, so the formatter was rewriting code into the shape the
+# project forbids.
+csharp_preserve_single_line_statements = true
 
 #### Naming ####
 

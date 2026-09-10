@@ -45,6 +45,7 @@ appsettings.*.Local.json
 *.p12
 *.key
 secrets.json
+.mcp.local.json
 
 # ---------- IDE / OS ----------
 .vs/

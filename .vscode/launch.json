@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "DrinkIt.Api",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-api",
+      "program": "${workspaceFolder}/backend/src/DrinkIt.Api/bin/Debug/net10.0/DrinkIt.Api.dll",
+      "cwd": "${workspaceFolder}/backend/src/DrinkIt.Api",
+      // Pulls applicationUrl and ASPNETCORE_ENVIRONMENT from launchSettings.json,
+      // so this file and that one never disagree about how the app starts.
+      "launchSettingsProfile": "https",
+      "launchSettingsFilePath": "${workspaceFolder}/backend/src/DrinkIt.Api/Properties/launchSettings.json",
+      // launchBrowser in launchSettings.json is a Visual Studio / dotnet watch
+      // behaviour. VS Code's debugger needs this to open the browser itself,
+      // once Kestrel actually logs that it is listening.
+      //
+      // Matches only the https line: Kestrel logs one "Now listening on:" per
+      // bound address, and the profile also binds a plain http port purely so
+      // UseHttpsRedirection() has something to bounce. The browser must never
+      // land on that one.
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https://\\S+)",
+        "uriFormat": "%s/scalar"
+      }
+    }
+  ]
+}

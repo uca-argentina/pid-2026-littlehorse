@@ -48,27 +48,31 @@ public sealed class StaffUser : IBelongsToVenue
 
     public static StaffUser Create(Guid venueId, string username, string passwordHash, StaffRole role)
     {
-        if (venueId == Guid.Empty)
-            throw new DomainException(ErrorCodes.VenueRequired, "Staff users must belong to a venue.");
-        if (string.IsNullOrWhiteSpace(username))
-            throw new DomainException(ErrorCodes.UsernameRequired, "Username is required.");
+        if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Staff users must belong to a venue.");
+        if (string.IsNullOrWhiteSpace(username)) throw new DomainException(ErrorCodes.UsernameRequired, "Username is required.");
 
-        // Lowercased so that "Euge" and "euge" cannot become two accounts.
-        // Invariant culture on purpose: ToLower() in a Turkish locale maps 'I'
-        // to a dotless 'ı' and the same input yields a different username.
-        string cleanUsername = username.Trim().ToLowerInvariant();
+        string cleanUsername = NormalizeUsername(username);
 
-        if (cleanUsername.Length is < UsernameMinLength or > UsernameMaxLength)
-            throw new DomainException(ErrorCodes.UsernameLength, $"Username must be {UsernameMinLength}-{UsernameMaxLength} characters.");
-        if (cleanUsername.Any(char.IsWhiteSpace))
-            throw new DomainException(ErrorCodes.UsernameWhitespace, "Username cannot contain whitespace.");
-        if (string.IsNullOrWhiteSpace(passwordHash))
-            throw new DomainException(ErrorCodes.PasswordHashRequired, "Password hash is required.");
-        if (!Enum.IsDefined(role))
-            throw new DomainException(ErrorCodes.RoleInvalid, $"'{role}' is not a valid staff role.");
+        if (cleanUsername.Length is < UsernameMinLength or > UsernameMaxLength) throw new DomainException(ErrorCodes.UsernameLength, $"Username must be {UsernameMinLength}-{UsernameMaxLength} characters.");
+        if (cleanUsername.Any(char.IsWhiteSpace)) throw new DomainException(ErrorCodes.UsernameWhitespace, "Username cannot contain whitespace.");
+        if (string.IsNullOrWhiteSpace(passwordHash)) throw new DomainException(ErrorCodes.PasswordHashRequired, "Password hash is required.");
+        if (!Enum.IsDefined(role)) throw new DomainException(ErrorCodes.RoleInvalid, $"'{role}' is not a valid staff role.");
 
         return new StaffUser(Guid.CreateVersion7(), venueId, cleanUsername, passwordHash, role);
     }
+
+    /// <summary>
+    /// The one place that decides what a username looks like once stored. Login
+    /// normalises the typed username through here too, so matching never
+    /// depends on the database collation.
+    /// </summary>
+    /// <remarks>
+    /// Invariant culture on purpose: ToLower() in a Turkish locale maps 'I' to a
+    /// dotless 'ı', so the same input would yield a different username depending
+    /// on the machine's regional settings.
+    /// </remarks>
+    public static string NormalizeUsername(string username) =>
+        (username ?? string.Empty).Trim().ToLowerInvariant();
 
     public void Deactivate() => IsActive = false;
 
