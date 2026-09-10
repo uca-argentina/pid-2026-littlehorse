@@ -1,3 +1,4 @@
+using DrinkIt.Api.Common;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Common;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -28,7 +29,7 @@ internal static class LoginEndpoint
         return endpoints;
     }
 
-    private static async Task<IResult> HandleAsync(
+    internal static async Task<IResult> HandleAsync(
         LoginRequest request,
         LoginHandler handler,
         CancellationToken cancellationToken)
@@ -49,13 +50,15 @@ internal static class LoginEndpoint
     }
 
     /// <summary>
-    /// The error code travels as the ProblemDetails type so the PWA can branch
-    /// on something stable instead of on a message that will get reworded.
+    /// The error code travels as the problem type so the PWA can branch on
+    /// something stable instead of on a message that will get reworded. It goes
+    /// through ProblemTypes because RFC 9457 requires a URI there, and a bare
+    /// code is a relative one that resolves differently per host.
     /// </summary>
     private static ProblemHttpResult Unauthorized(Error error) =>
         TypedResults.Problem(
             title: "Authentication failed",
             detail: error.Message,
             statusCode: StatusCodes.Status401Unauthorized,
-            type: error.Code);
+            type: ProblemTypes.For(error.Code));
 }

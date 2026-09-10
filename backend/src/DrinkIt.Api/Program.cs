@@ -1,4 +1,5 @@
 using System.Text;
+using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
 using DrinkIt.Api.Tenancy;
@@ -44,10 +45,11 @@ builder.Services
         // Match the short claim names the token is issued with.
         RoleClaimType = JwtClaims.Role,
         NameClaimType = JwtClaims.Name,
-    });
+    })
+    .AddExpiredSessionDetection();
 
 builder.Services.AddAuthorization();
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetailsForEveryError();
 builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
@@ -59,6 +61,16 @@ if (app.Environment.IsDevelopment())
     await app.SeedDevelopmentDataAsync();
     app.MapScalarApiReference();
 }
+
+// First, so it wraps everything below: an exception thrown further down has to
+// come back as problem+json, and so does a status the framework produces on its
+// own (routing's 404, JwtBearer's empty 401). Otherwise the PWA has to cope with
+// two different shapes for the same failure.
+//
+// In Development WebApplication puts the developer exception page ahead of this
+// one, so a crash still shows its stack trace on a dev machine and only the
+// deployed API answers with the generic body.
+app.UseProblemDetailsForEveryError();
 
 // HSTS tells returning browsers to skip http entirely next time, instead of
 // depending on the redirect below every single request. Off in Development:
