@@ -33,7 +33,7 @@ backend/
     DrinkIt.Application.Tests/    # Unitarios con dobles de prueba de los puertos.
     DrinkIt.Infrastructure.Tests/ # Lógica de infraestructura sin servicios externos.
     DrinkIt.Api.IntegrationTests/ # WebApplicationFactory + Testcontainers.
-    DrinkIt.ArchitectureTests/    # NetArchTest: las reglas de abajo son ejecutables.
+    DrinkIt.ArchitectureTests/    # Reflexion sobre los ensamblados; las reglas de abajo son ejecutables.
 frontend/
   src/app/
     core/       # Servicios singleton, interceptors, guards.
@@ -52,19 +52,32 @@ docs/
 ## Comandos
 
 ```bash
+# Base de datos local — ANTES de correr la API
+docker compose up -d                    # SQL Server en localhost,1433
+docker compose down                     # apagarla; el volumen conserva los datos
+
 # Backend
 dotnet test backend/DrinkIt.slnx                    # todos los tests
 dotnet test backend/tests/DrinkIt.Domain.Tests     # loop rápido de TDD
 dotnet format backend/DrinkIt.slnx --verify-no-changes
-dotnet run --project backend/src/DrinkIt.Api
+dotnet run --project backend/src/DrinkIt.Api        # necesita la base levantada
 
-# Frontend
-npm --prefix frontend run test          # Vitest, unitarios
-npm --prefix frontend run test:watch    # loop rápido de TDD
-npm --prefix frontend run lint
-npm --prefix frontend run e2e           # Playwright
-npm --prefix frontend start
+# Frontend — pnpm, no npm: la versión sale de "packageManager" en package.json
+pnpm --prefix frontend test             # Vitest en watch, loop rápido de TDD
+pnpm --prefix frontend run test:ci      # una sola pasada, lo que corre la CI
+pnpm --prefix frontend run lint
+pnpm --prefix frontend run format:check
+pnpm --prefix frontend start
 ```
+
+**La API no arranca sin la base.** La cadena de conexión apunta a `localhost,1433` con las
+credenciales del `docker-compose.yml`. En Development se aplica las migraciones y siembra el
+boliche y el administrador sola: no hay que correr `dotnet ef database update` a mano.
+
+Los tests son otra cosa y **no** usan ese contenedor: los de integración levantan el suyo con
+Testcontainers y lo tiran al terminar, así que sólo necesitan Docker corriendo.
+
+Todavía no hay comando de Playwright: no está instalado (ver el backlog del Sprint 1).
 
 ## Regla de dependencias (verificada por `DrinkIt.ArchitectureTests`)
 
@@ -270,7 +283,7 @@ bug vuelve a producción.
 ## Definition of Done
 
 Una feature está lista cuando: tests unitarios verdes · test de integración si toca la DB
-o un servicio externo · `dotnet format` y `npm run lint` limpios · sin bajar la cobertura ·
+o un servicio externo · `dotnet format` y `pnpm run lint` limpios · sin bajar la cobertura ·
 tests de arquitectura verdes · si es una pantalla del flujo principal, tiene spec de Playwright.
 
 ## Cosas que NO tenés que hacer sin que te lo pida

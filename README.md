@@ -81,7 +81,15 @@ git clone https://github.com/lamelapablo/drink-it.git
 cd drink-it
 pnpm --prefix frontend install
 dotnet restore backend/DrinkIt.slnx
+docker compose up -d                    # SQL Server local, en localhost,1433
 ```
+
+La base tiene que estar levantada **antes** de correr la API: la cadena de conexión apunta a
+ese contenedor. En Development la API se aplica las migraciones y siembra un boliche con un
+administrador sola, así que después de `docker compose up -d` no hay ningún paso manual.
+
+Los tests no usan ese contenedor: los de integración levantan el suyo con Testcontainers y lo
+tiran al terminar. Sólo necesitan Docker corriendo.
 
 La versión exacta del SDK de .NET sale de `global.json` y la de pnpm del campo
 `packageManager` de `frontend/package.json`. No hace falta elegirlas: las herramientas las
@@ -91,6 +99,7 @@ leen solas, y son las mismas que usa la CI.
 
 | | Backend | Frontend |
 |---|---|---|
+| Levantar la base | `docker compose up -d` | — |
 | Arrancar | `dotnet run --project backend/src/DrinkIt.Api` | `pnpm --prefix frontend start` |
 | Tests | `dotnet test backend/DrinkIt.slnx` | `pnpm --prefix frontend test` |
 | Tests (una vez, sin watch) | — | `pnpm --prefix frontend run test:ci` |
