@@ -68,6 +68,12 @@ pnpm --prefix frontend run test:ci      # una sola pasada, lo que corre la CI
 pnpm --prefix frontend run lint
 pnpm --prefix frontend run format:check
 pnpm --prefix frontend start
+
+# Punta a punta — Playwright. Necesita la base levantada y nada más: la API y el
+# ng serve los arranca la prueba, y reutiliza los que ya estén corriendo.
+pnpm --prefix frontend run e2e          # sin ventana, lo que se corre normalmente
+pnpm --prefix frontend run e2e:headed   # viendo el navegador
+pnpm --prefix frontend run e2e:ui       # modo interactivo, para depurar un test
 ```
 
 **La API no arranca sin la base.** La cadena de conexión apunta a `localhost,1433` con las
@@ -77,7 +83,9 @@ boliche y el administrador sola: no hay que correr `dotnet ef database update` a
 Los tests son otra cosa y **no** usan ese contenedor: los de integración levantan el suyo con
 Testcontainers y lo tiran al terminar, así que sólo necesitan Docker corriendo.
 
-Todavía no hay comando de Playwright: no está instalado (ver el backlog del Sprint 1).
+Los de punta a punta sí usan la base local: manejan un navegador contra la API y los datos
+que siembra Development. La primera vez hay que bajar el navegador con
+`pnpm --prefix frontend run e2e:install`. Todavía no corren en la CI.
 
 ## Regla de dependencias (verificada por `DrinkIt.ArchitectureTests`)
 

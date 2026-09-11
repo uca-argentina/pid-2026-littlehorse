@@ -1,0 +1,9 @@
+/* Playwright specs are Node programs, not browser code: they get the Node types
+   that tsconfig.app.json deliberately keeps out of the application. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["e2e/**/*.ts", "playwright.config.ts"]
+}
