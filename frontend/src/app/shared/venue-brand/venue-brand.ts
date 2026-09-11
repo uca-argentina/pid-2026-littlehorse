@@ -7,7 +7,6 @@ import { Component, input } from '@angular/core';
  */
 @Component({
   selector: 'drinkit-venue-brand',
-  standalone: true,
   styleUrl: './venue-brand.scss',
   templateUrl: './venue-brand.html',
 })

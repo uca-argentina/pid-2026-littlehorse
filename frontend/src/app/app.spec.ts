@@ -10,7 +10,7 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('Create_WhenTheShellMounts_RendersTheRoutedOutlet', async () => {
+  it('renders the routed outlet when the shell mounts', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
 

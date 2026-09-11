@@ -17,7 +17,7 @@ class Shell {
 }
 
 describe('focusHeadingOnNavigation', () => {
-  it('Navigate_WhenTheScreenChanges_MovesFocusToTheNewHeading', async () => {
+  it('moves focus to the new heading when the screen changes', async () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([

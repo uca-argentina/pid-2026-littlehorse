@@ -1,5 +1,5 @@
 <div class="frame">
-  <form class="card" (submit)="submit($event)">
+  <form class="card" [formGroup]="form" (ngSubmit)="submit()">
     <drinkit-venue-brand [venue]="venueSlug()" />
 
     @if (store.status() === 'sessionExpired') {
@@ -11,9 +11,7 @@
     }
 
     @if (store.status() === 'invalidCredentials') {
-      <p id="error-de-ingreso" class="alert alert-bad" role="alert">
-        Usuario o contraseña incorrectos.
-      </p>
+      <p id="login-error" class="alert alert-bad" role="alert">Usuario o contraseña incorrectos.</p>
     }
 
     @if (store.status() === 'unreachable') {
@@ -29,48 +27,38 @@
     }
 
     <div class="field">
-      <label class="label" for="usuario">Usuario</label>
+      <label class="label" for="username">Usuario</label>
       <input
-        id="usuario"
+        id="username"
         class="input"
         [class.input-bad]="store.status() === 'invalidCredentials'"
         [attr.aria-invalid]="store.status() === 'invalidCredentials' ? 'true' : null"
-        [attr.aria-describedby]="
-          store.status() === 'invalidCredentials' ? 'error-de-ingreso' : null
-        "
-        name="username"
+        [attr.aria-describedby]="store.status() === 'invalidCredentials' ? 'login-error' : null"
+        formControlName="username"
         type="text"
         autocomplete="username"
         autocapitalize="none"
         spellcheck="false"
-        placeholder="tu.usuario"
-        [value]="store.username()"
-        [disabled]="store.isSending()"
-        (input)="store.username.set(readCurrentValue($event))"
+        placeholder="Tu usuario"
       />
     </div>
 
     <div class="field">
-      <label class="label" for="contrasena">Contraseña</label>
+      <label class="label" for="password">Contraseña</label>
       <input
-        id="contrasena"
+        id="password"
         class="input"
         [class.input-bad]="store.status() === 'invalidCredentials'"
         [attr.aria-invalid]="store.status() === 'invalidCredentials' ? 'true' : null"
-        [attr.aria-describedby]="
-          store.status() === 'invalidCredentials' ? 'error-de-ingreso' : null
-        "
-        name="password"
+        [attr.aria-describedby]="store.status() === 'invalidCredentials' ? 'login-error' : null"
+        formControlName="password"
         type="password"
         autocomplete="current-password"
         placeholder="Tu contraseña"
-        [value]="store.password()"
-        [disabled]="store.isSending()"
-        (input)="store.password.set(readCurrentValue($event))"
       />
     </div>
 
-    <button class="cta" type="submit" [disabled]="!store.canSubmit()">
+    <button class="cta" type="submit" [disabled]="!canSubmit()">
       @if (store.isSending()) {
         <span class="spinner" aria-hidden="true"></span>
         Entrando
@@ -80,10 +68,5 @@
         Entrar
       }
     </button>
-
-    <p class="foot">
-      Tu rol sale del token, nunca de la dirección. Nadie ve los datos de otro boliche cambiando la
-      URL.
-    </p>
   </form>
 </div>

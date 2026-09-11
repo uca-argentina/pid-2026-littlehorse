@@ -37,28 +37,28 @@ describe('authenticatedGuard', () => {
     sessions.forget();
   });
 
-  it('Activate_WhenThereIsASession_LetsThemThrough', () => {
+  it('lets someone through when there is a session', () => {
     sessions.remember(aSession);
 
     expect(run()).toBe(true);
   });
 
-  it('Activate_WhenNobodySignedInOnThisTab_DoesNotClaimTheShiftRanOut', () => {
+  it('does not claim the shift ran out when nobody signed in on this tab', () => {
     const destination = router.serializeUrl(run() as UrlTree);
 
-    expect(destination).toBe('/bar-alfa/personal/ingresar');
+    expect(destination).toBe('/bar-alfa/staff/login');
   });
 
-  it('Activate_WhenTheApiRejectedTheToken_SaysTheShiftRanOut', () => {
+  it('says the shift ran out when the API rejected the token', () => {
     sessions.remember(aSession);
     sessions.forget('expired');
 
     const destination = router.serializeUrl(run() as UrlTree);
 
-    expect(destination).toBe('/bar-alfa/personal/ingresar?vencida=true');
+    expect(destination).toBe('/bar-alfa/staff/login?expired=true');
   });
 
-  it('Activate_WhenTurnedAway_SendsThemBackToTheirOwnVenue', () => {
+  it('sends someone turned away back to their own venue', () => {
     const destination = router.serializeUrl(run('bar-beta') as UrlTree);
 
     expect(destination).toContain('/bar-beta/');

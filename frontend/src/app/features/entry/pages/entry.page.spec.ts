@@ -6,22 +6,22 @@ import { EntryPage } from './entry.page';
 async function openTheApp(lastVenue: string | null) {
   return render(EntryPage, {
     providers: [
-      provideRouter([{ path: ':venueSlug/personal/ingresar', children: [] }]),
+      provideRouter([{ path: ':venueSlug/staff/login', children: [] }]),
       { provide: LastVenue, useValue: { read: () => lastVenue, remember: () => undefined } },
     ],
   });
 }
 
 describe('EntryPage', () => {
-  it('Open_WhenThisDeviceWasUsedAtAVenue_GoesStraightThere', async () => {
+  it('goes straight to the venue this device was last used at', async () => {
     const { fixture } = await openTheApp('bar-alfa');
     const router = fixture.debugElement.injector.get(Router);
     await fixture.whenStable();
 
-    expect(router.url).toBe('/bar-alfa/personal/ingresar');
+    expect(router.url).toBe('/bar-alfa/staff/login');
   });
 
-  it('Open_WhenTheDeviceHasNeverSeenAVenue_ExplainsHowToGetIn', async () => {
+  it('explains how to get in when the device has never seen a venue', async () => {
     await openTheApp(null);
 
     expect(screen.getByRole('heading').textContent).toContain('drink.it');

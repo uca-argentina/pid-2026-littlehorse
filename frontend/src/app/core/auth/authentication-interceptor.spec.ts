@@ -34,7 +34,7 @@ describe('authenticationInterceptor', () => {
 
   afterEach(() => backend.verify());
 
-  it('Intercept_WhenThereIsASession_CarriesTheToken', () => {
+  it('carries the token when there is a session', () => {
     sessions.remember(aSession);
 
     http.get('/api/algo').subscribe();
@@ -44,7 +44,7 @@ describe('authenticationInterceptor', () => {
     );
   });
 
-  it('Intercept_WhenTheRequestMustStayAnonymous_SendsNoToken', () => {
+  it('sends no token when the request must stay anonymous', () => {
     sessions.remember(aSession);
 
     http.post('/api/bar-beta/auth/login', {}, { context: anonymously() }).subscribe();
@@ -54,7 +54,7 @@ describe('authenticationInterceptor', () => {
     expect(sent.request.headers.has('Authorization')).toBe(false);
   });
 
-  it('Intercept_WhenTheTokenExpired_DropsTheSession', () => {
+  it('drops the session when the token expired', () => {
     sessions.remember(aSession);
 
     http.get('/api/algo').subscribe({ error: () => undefined });
@@ -66,7 +66,7 @@ describe('authenticationInterceptor', () => {
     expect(sessions.expired()).toBe(true);
   });
 
-  it('Intercept_WhenTheApiAsksForAuthentication_AlsoDropsTheSession', () => {
+  it('drops the session when the API asks for authentication', () => {
     sessions.remember(aSession);
 
     http.get('/api/algo').subscribe({ error: () => undefined });
@@ -80,7 +80,7 @@ describe('authenticationInterceptor', () => {
     expect(sessions.hasSession()).toBe(false);
   });
 
-  it('Intercept_WhenCredentialsAreWrong_KeepsTheSessionAlone', () => {
+  it('keeps the session alone when credentials are wrong', () => {
     sessions.remember(aSession);
 
     http.get('/api/algo').subscribe({ error: () => undefined });

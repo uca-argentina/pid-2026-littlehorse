@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { SessionStorage } from '../../core/auth/session-storage';
+import type { StaffCredentials } from '../../core/auth/staff-session';
 import { StaffLoginService } from './staff-login.service';
 
 /**
@@ -29,35 +30,22 @@ export class StaffLoginStore {
 
   private readonly state = signal<LoginStatus>('idle');
 
-  readonly username = signal('');
-
-  readonly password = signal('');
-
   readonly status = this.state.asReadonly();
 
   readonly isSending = computed(() => this.state() === 'sending');
-
-  /**
-   * Both fields carry something and nothing is in flight. Deliberately not a
-   * check on the username's shape: the venue decides what a username looks
-   * like, and guessing here would reject people the server accepts.
-   */
-  readonly canSubmit = computed(
-    () => this.username().trim().length > 0 && this.password().length > 0 && !this.isSending(),
-  );
 
   /** The screen was reopened because the shift's token ran out. */
   startAfterExpiry(): void {
     this.state.set('sessionExpired');
   }
 
-  submit(venueSlug: string): void {
-    if (!this.canSubmit()) return;
+  submit(venueSlug: string, credentials: StaffCredentials): void {
+    if (this.isSending()) return;
 
     this.state.set('sending');
 
     this.logins
-      .logIn(venueSlug, { username: this.username().trim(), password: this.password() })
+      .logIn(venueSlug, credentials)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (session) => {
@@ -74,7 +62,7 @@ export class StaffLoginStore {
    * screen with no idea it worked. Better to say the app could not continue.
    */
   private leaveTheLoginScreen(venueSlug: string): void {
-    this.router.navigate([venueSlug, 'personal']).then(
+    this.router.navigate([venueSlug, 'staff']).then(
       (navigated) => {
         if (!navigated) this.state.set('unreachable');
       },
@@ -82,11 +70,9 @@ export class StaffLoginStore {
     );
   }
 
+  // Clearing the password is the screen's job now that the form owns it; the
+  // store only says what went wrong.
   private fail(error: unknown): void {
-    // The password is cleared on every failure: the person retypes it, and it
-    // does not sit in a field on a tablet anyone behind the bar can pick up.
-    this.password.set('');
-
     this.state.set(isInvalidCredentials(error) ? 'invalidCredentials' : 'unreachable');
   }
 }

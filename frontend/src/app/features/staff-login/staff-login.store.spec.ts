@@ -1,7 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { Subject, throwError } from 'rxjs';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { SessionStorage } from '../../core/auth/session-storage';
@@ -42,111 +41,58 @@ describe('StaffLoginStore', () => {
     router = TestBed.inject(Router);
   });
 
-  function typeValidCredentials(): void {
-    store.username.set('euge');
-    store.password.set('una-contrasena');
-  }
+  const credentials = { username: 'euge', password: 'a-password' };
 
-  it('CanSubmit_WhenNothingIsTyped_IsFalse', () => {
-    expect(store.canSubmit()).toBe(false);
-  });
-
-  it('CanSubmit_WhenOnlyTheUsernameIsTyped_IsFalse', () => {
-    store.username.set('euge');
-
-    expect(store.canSubmit()).toBe(false);
-  });
-
-  it('CanSubmit_WhenTheUsernameIsOnlyWhitespace_IsFalse', () => {
-    store.username.set('   ');
-    store.password.set('una-contrasena');
-
-    expect(store.canSubmit()).toBe(false);
-  });
-
-  it('CanSubmit_WhenBothFieldsAreTyped_IsTrue', () => {
-    typeValidCredentials();
-
-    expect(store.canSubmit()).toBe(true);
-  });
-
-  it('Submit_WhileTheRequestIsInFlight_CannotBeSentAgain', () => {
+  // Two taps on a slow connection must not place two logins.
+  it('does not send twice while a request is in flight', () => {
     logIn.mockReturnValue(new Subject<StaffSession>());
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
+    store.submit('bar-alfa', credentials);
 
-    expect(store.canSubmit()).toBe(false);
+    expect(store.isSending()).toBe(true);
     expect(logIn).toHaveBeenCalledTimes(1);
   });
 
-  it('Submit_WhenTheUsernameHasPadding_SendsItTrimmed', () => {
-    logIn.mockReturnValue(new Subject<StaffSession>());
-    store.username.set('  euge  ');
-    store.password.set('una-contrasena');
-
-    store.submit('bar-alfa');
-
-    expect(logIn).toHaveBeenCalledWith('bar-alfa', {
-      username: 'euge',
-      password: 'una-contrasena',
-    });
-  });
-
-  it('Submit_WhenCredentialsAreValid_RemembersTheSession', () => {
+  it('remembers the session when the credentials are valid', () => {
     const response = new Subject<StaffSession>();
     logIn.mockReturnValue(response);
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
     response.next(aSession);
 
     expect(sessions.session()).toEqual(aSession);
     expect(sessions.hasSession()).toBe(true);
   });
 
-  it('Submit_WhenCredentialsAreValid_LeavesTheLoginScreen', () => {
+  it('leaves the login screen when the credentials are valid', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const response = new Subject<StaffSession>();
     logIn.mockReturnValue(response);
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
     response.next(aSession);
 
-    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'personal']);
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff']);
   });
 
-  it('Submit_WhenCredentialsAreWrong_ReportsOneFailureForBothCases', () => {
+  it('reports the same failure whichever field was wrong', () => {
     logIn.mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
 
     expect(store.status()).toBe('invalidCredentials');
   });
 
-  it('Submit_WhenCredentialsAreWrong_ClearsThePasswordAndKeepsTheUsername', () => {
-    logIn.mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
-    typeValidCredentials();
-
-    store.submit('bar-alfa');
-
-    expect(store.password()).toBe('');
-    expect(store.username()).toBe('euge');
-  });
-
-  it('Submit_WhenTheApiCannotBeReached_DoesNotBlameTheCredentials', () => {
+  it('does not blame the credentials when the API cannot be reached', () => {
     logIn.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
 
     expect(store.status()).toBe('unreachable');
   });
 
-  it('StartAfterExpiry_WhenTheShiftTokenRanOut_IsNotTheSameAsAFailedLogin', () => {
+  it('tells an expired shift apart from a failed login', () => {
     store.startAfterExpiry();
 
     expect(store.status()).toBe('sessionExpired');

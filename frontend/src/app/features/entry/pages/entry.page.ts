@@ -13,7 +13,6 @@ import { LastVenue } from '../../../core/venue/last-venue';
  */
 @Component({
   selector: 'drinkit-entry-page',
-  standalone: true,
   styleUrl: './entry.page.scss',
   templateUrl: './entry.page.html',
 })
@@ -23,6 +22,6 @@ export class EntryPage {
   constructor() {
     const slug = inject(LastVenue).read();
 
-    if (slug !== null) void this.router.navigate([slug, 'personal', 'ingresar']);
+    if (slug !== null) void this.router.navigate([slug, 'staff', 'login']);
   }
 }

@@ -18,7 +18,7 @@ async function openScreenAs(role: string) {
     inputs: { venueSlug: 'bar-alfa' },
     // Salir navigates for real: without a route to land on, the router rejects
     // and the rejection surfaces as an unhandled error that can mask a failure.
-    providers: [provideRouter([{ path: ':venueSlug/personal/ingresar', children: [] }])],
+    providers: [provideRouter([{ path: ':venueSlug/staff/login', children: [] }])],
   });
 
   rendered.fixture.debugElement.injector.get(SessionStorage).remember(sessionFor(role));
@@ -28,13 +28,13 @@ async function openScreenAs(role: string) {
 }
 
 describe('StaffHomePage', () => {
-  it('Render_WhenSomeoneSignsIn_GreetsThemByName', async () => {
+  it('greets whoever signed in by name', async () => {
     await openScreenAs('Administrator');
 
     expect(screen.getByRole('heading').textContent).toContain('Hola, euge');
   });
 
-  it('Render_WhenTheRoleHasNoScreensYet_SaysSoInsteadOfShowingNothing', async () => {
+  it('says a role has no screens yet instead of showing nothing', async () => {
     await openScreenAs('Bartender');
 
     expect(screen.getByRole('status').textContent).toContain(
@@ -42,19 +42,19 @@ describe('StaffHomePage', () => {
     );
   });
 
-  it('Render_WhenTheRoleComesFromTheApi_ShowsItInTheLanguageOfTheVenue', async () => {
+  it('shows the role in the language of the venue', async () => {
     await openScreenAs('Bartender');
 
     expect(screen.getByText(/KDS · estación de barra/)).not.toBeNull();
   });
 
-  it('Render_WhenTheAddressNamesAVenue_ShowsThatVenueAndNotAFixedOne', async () => {
+  it('shows the venue named in the address and not a fixed one', async () => {
     await openScreenAs('Administrator');
 
     expect(screen.getByText(/bar-alfa/i)).not.toBeNull();
   });
 
-  it('Salir_WhenPressed_EndsTheSession', async () => {
+  it('ends the session when the person signs out', async () => {
     const rendered = await openScreenAs('Administrator');
     const sessions = rendered.fixture.debugElement.injector.get(SessionStorage);
 
