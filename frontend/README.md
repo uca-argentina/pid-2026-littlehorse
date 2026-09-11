@@ -54,7 +54,8 @@ pnpm run e2e
 
 They drive a browser against the real API and the seeded database, so SQL Server has to be
 running (`docker compose up -d` from the repository root). The API and the dev server are
-started by the test run itself. See the root `README.md` for the full list of commands.
+started by the test run itself. Setup, dependencies and troubleshooting are documented in
+`e2e/README.md`.
 
 ## Additional Resources
 

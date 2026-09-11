@@ -139,6 +139,9 @@ semilla de desarrollo.
 Si la base no está levantada, la prueba falla en dos segundos diciéndolo, en vez de esperar
 tres minutos a una API que nunca iba a arrancar.
 
+La guía completa, con las versiones de cada dependencia, la configuración inicial paso a paso
+y qué mirar cuando algo falla, está en **[frontend/e2e/README.md](frontend/e2e/README.md)**.
+
 ## Cómo trabajamos
 
 Antes de tu primer PR, leé:
@@ -167,6 +170,7 @@ Lo esencial:
 - [Modelo de datos](docs/modelo-de-datos.md) — ERM y máquina de estados del Sprint 1.
 - [Consignas](docs/sprints/) — el enunciado de cada sprint, tal cual lo entregó el cliente.
 - [Decisiones de arquitectura](docs/adr/) — ADRs.
+- [Pruebas de punta a punta](frontend/e2e/README.md) — requisitos, configuración y cómo correrlas.
 
 `docs/historico/` guarda versiones superadas del diseño. **No las uses como referencia.**
 
