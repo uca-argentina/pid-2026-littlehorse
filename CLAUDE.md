@@ -161,8 +161,19 @@ lo permite sin una migración dolorosa después.
 No escribas implementación sin un test que la exija. Si te pido una feature, arrancá por el
 test. Si no tenés claro el comportamiento esperado, preguntá antes de inventar el assert.
 
-Nombres de test: `Method_Scenario_ExpectedResult`
-(`MarkAsReady_WhenOrderIsQueued_ThrowsInvalidTransition`).
+Nombres de test, y son dos convenciones distintas a propósito:
+
+- **Backend (xUnit)**: `Method_Scenario_ExpectedResult` —
+  `MarkAsReady_WhenOrderIsQueued_ThrowsInvalidTransition`. Hay un método bajo prueba y el
+  nombre empieza nombrándolo.
+- **Frontend (Vitest)**: `describe` nombra el sujeto e `it` completa la oración, en minúscula
+  y sin `should` — `it('cannot be submitted while the form is empty')`, que el runner imprime
+  como `StaffLoginPage > cannot be submitted while the form is empty`.
+
+No es inconsistencia: en un test de componente **no hay un método bajo prueba**. Forzar el
+formato de C# obliga a inventar un primer segmento, y lo que sale es el label del botón o un
+`Render_` que no dice nada. La disciplina es la misma en los dos casos — el nombre tiene que
+decir el escenario y el resultado esperado —; lo que cambia es la sintaxis.
 
 ## Convenciones
 
@@ -171,9 +182,15 @@ Nombres de test: `Method_Scenario_ExpectedResult`
   datos de prueba**, y **los comentarios dentro de archivos de código y configuración**
   (`.cs`, `.ts`, `.props`, `.csproj`, `.ps1`, `.json`, `.gitignore`, `.gitattributes`,
   workflows de CI).
+  - **Las rutas también van en inglés** (`/:venueSlug/staff/login`, no `/personal/ingresar`).
+    Una ruta la lee el router, no una persona: es código.
   - La única excepción son los textos que **ve el usuario final** en la PWA, que van en
-    español porque el cliente está en un boliche argentino. Esos no se escriben sueltos:
-    salen de los archivos de traducción del frontend, no del código del backend.
+    español porque el cliente está en un boliche argentino.
+  - **No montamos i18n.** Decidido el 2026-09-11: esos textos van escritos directo en las
+    plantillas de Angular, sin archivos de traducción. La app tiene un solo idioma y un solo
+    país, y la infraestructura de traducción costaría más de lo que resuelve. Si alguna vez
+    hay un segundo idioma, se monta ahí. Lo que **no** cambia: nada de español en `.ts`, `.cs`
+    ni en los `id` del DOM — sólo en el texto que se renderiza.
 - **Sólo se escribe en español la documentación**: `docs/`, `README.md`, `CLAUDE.md`, los
   archivos de `.claude/`, **los mensajes de commit** y **la descripción de las ramas**. Si
   un archivo lo lee el compilador o una herramienta, va en inglés; si lo lee una persona
@@ -192,8 +209,8 @@ Nombres de test: `Method_Scenario_ExpectedResult`
   `if (name is null) return false;`. Nunca la variante de dos líneas sin llaves
   (`if (x)` y abajo la sentencia indentada): esa es la que produce el bug de agregar
   una segunda línea que parece estar adentro del `if` y no lo está.
-- **No escribas `ChangeDetectionStrategy.OnPush`: desde Angular 22 es el default.** Escribirlo
-  es ruido. Lo que sí hay que justificar en la revisión es un `ChangeDetectionStrategy.Eager`
+- **No escribas `standalone: true` ni `ChangeDetectionStrategy.OnPush`: los dos son el default.**
+  Escribirlos es ruido. Lo que sí hay que justificar en la revisión es un `ChangeDetectionStrategy.Eager`
   (la estrategia vieja, antes llamada `Default`): si aparece uno, preguntá por qué.
 - Para traer datos usá la **Resource API** (`httpResource()`, `resource()`, `rxResource()`),
   estable desde v22. Te da los estados de carga y error como signals, que es exactamente lo
