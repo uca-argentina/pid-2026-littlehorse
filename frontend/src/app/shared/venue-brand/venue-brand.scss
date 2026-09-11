@@ -1,0 +1,33 @@
+.brand {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+}
+
+.mark {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.venue {
+  font-size: 21px;
+  line-height: 1.1;
+
+  // The slug arrives lowercase and hyphenated. Until the API hands over a
+  // display name this at least reads as a name and not as a URL fragment.
+  text-transform: capitalize;
+}
+
+.context {
+  color: var(--dk-text-muted);
+  font-size: var(--dk-text-min);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

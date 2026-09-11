@@ -6,6 +6,12 @@ const angular = require('angular-eslint');
 
 module.exports = defineConfig([
   {
+    // Generated from the backend's OpenAPI document by "pnpm run generate:api".
+    // Linting it is pointless: every finding comes back on the next generation,
+    // and the file is not ours to style.
+    ignores: ['src/app/core/api/schema.d.ts'],
+  },
+  {
     files: ['**/*.ts'],
     extends: [
       eslint.configs.recommended,

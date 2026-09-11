@@ -58,3 +58,7 @@ desktop.ini
 # .vscode is versioned on purpose (shared team settings and extensions),
 # but each person's own overrides are not.
 .vscode/*.local.json
+
+# Snapshot of the API contract, fetched by "pnpm run generate:api". Not a second
+# source of truth: the API is, and the types it generates are committed.
+frontend/openapi.json

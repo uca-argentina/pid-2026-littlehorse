@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { focusHeadingOnNavigation } from './core/a11y/focus-on-navigation';
 
 @Component({
   imports: [RouterOutlet],
@@ -8,5 +9,7 @@ import { RouterOutlet } from '@angular/router';
   templateUrl: './app.html',
 })
 export class App {
-  protected readonly title = signal('frontend');
+  constructor() {
+    focusHeadingOnNavigation();
+  }
 }

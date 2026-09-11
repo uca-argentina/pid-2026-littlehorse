@@ -1,0 +1,62 @@
+// The three typefaces of the design system, served from our own origin.
+
+// Not from Google Fonts on purpose. The customer opens this app once, from a
+// QR, on the saturated mobile data of a packed venue: that is the worst moment
+// to depend on a third party answering. Self-hosted they are also cached by the
+// service worker (see the "assets" group in ngsw-config.json), so the second
+// visit needs no network at all, and no visitor's IP address is handed to
+// anyone.
+
+// All three are SIL Open Font License 1.1 — see public/fonts/OFL.txt. Files
+// come from Google's CDN, latin and latin-ext only: the venue is Argentine and
+// nothing here is written in Cyrillic or Vietnamese.
+
+// Karla is a variable font, so one file covers every weight from 400 to 700.
+
+// IBM Plex Mono, the third face of the design system, is not here yet: nothing
+// shows a figure that has to line up in a column until the order screens land.
+
+$latin: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD';
+$latin-ext: 'U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF';
+
+@font-face {
+  font-family: Karla;
+  font-style: normal;
+
+  // The whole range the variable file carries, so no weight falls back.
+  font-weight: 400 700;
+
+  // swap shows the text immediately in the fallback face and re-renders when
+  // the real one lands. A blank screen while a font loads is worse than a
+  // moment of the wrong typeface.
+  font-display: swap;
+  src: url('/fonts/karla-latin.woff2') format('woff2');
+  unicode-range: #{$latin};
+}
+
+@font-face {
+  font-family: Karla;
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/karla-latin-ext.woff2') format('woff2');
+  unicode-range: #{$latin-ext};
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/instrument-serif-latin.woff2') format('woff2');
+  unicode-range: #{$latin};
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/instrument-serif-latin-ext.woff2') format('woff2');
+  unicode-range: #{$latin-ext};
+}

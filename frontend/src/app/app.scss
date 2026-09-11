@@ -1,0 +1,5 @@
+// Angular components are inline by default, so the routed screen would not
+// fill the page. Height is each screen's own business.
+:host {
+  display: block;
+}
