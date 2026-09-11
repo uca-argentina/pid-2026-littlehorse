@@ -1,35 +1,68 @@
 # Backlog del Sprint 1
 
 Lo que nos comprometemos a entregar de la [consigna del Sprint 1](sprint-1.md).
-**Sprint: lunes 7 → jueves 17 de septiembre de 2026.** Equipo de tres, part-time.
+**Entrega: jueves 17 de septiembre de 2026.**
 
 ## Cómo escribimos las stories
 
 Una story describe **qué necesita una persona y para qué le sirve**, nunca cómo se construye.
 El "cómo" es de quien la implementa y no se negocia en la planificación.
 
-Formato:
-
 > **Como** <rol concreto> · **quiero** <capacidad> · **para** <valor que obtiene>
 
-Tres reglas que nos aplicamos:
-
-- **El rol es una persona real** (cliente, administrador, bartender), nunca "usuario".
+- **El rol es una persona real** (cliente, administrador, mozo), nunca "usuario".
 - **El "para" tiene que aportar algo.** Si dice "para poder verlo", está de más: eso ya lo
   dijo el "quiero". El "para" es lo que se pierde si la story no se hace.
-- **Los criterios de aceptación se demuestran apretando botones.** Van en Dado / Cuando /
-  Entonces, son binarios y no mencionan tecnología. Si hace falta abrir la base de datos para
-  verificar uno, está mal escrito.
 
-**Estimación**: puntos de historia en Fibonacci, comparando una story contra otra. Es el
-primer sprint y **no tenemos velocidad histórica**, así que los puntos sirven para ver qué es
-más grande que qué, no para prometer que entra todo. El control real es el hito del domingo 13.
+La narrativa es apenas el título de la conversación. Lo que sigue es lo que importa.
 
-**Prioridad**: `Imprescindible` es lo que pide la consigna textualmente. `Debería` es lo que
-hace que la entrega se sostenga sola, y es lo primero que se recorta si llegamos justos.
+## Los criterios de aceptación
 
-**Lista para tomar** (Definition of Ready): tiene narrativa, criterios de aceptación, está
-estimada y no depende de nada sin terminar. Si le falta algo, no entra al sprint.
+**Es la parte más importante de cada story.** La narrativa dice qué se quiere; los criterios
+de aceptación dicen **cómo sabemos que está cumplido**. Son las condiciones que el sistema
+tiene que satisfacer para que quien pidió la funcionalidad la dé por buena — Mike Cohn los
+llama *conditions of satisfaction*, y son tan definitorios que una story sin ellos no se
+puede aceptar ni discutir, sólo suponer.
+
+Ocho reglas que nos aplicamos:
+
+1. **Se escriben antes de empezar a construir.** Escritos después describen lo que se
+   construyó, no lo que se pedía, y entonces siempre dan verde.
+2. **Cada criterio se responde con sí o con no.** No existe "más o menos cumplido".
+3. **Se verifican usando el sistema**, apretando botones. Si para comprobar uno hay que abrir
+   la base de datos o leer un log, está mal escrito.
+4. **Describen el qué, no el cómo.** Sin nombres de clases, tablas, endpoints ni librerías.
+   Un criterio que nombra la solución le prohíbe a quien implementa encontrar una mejor.
+5. **Nada de términos vagos.** "Rápido" no es un criterio; "en menos de dos segundos" sí.
+   "Intuitivo" y "amigable" no son criterios de nada.
+6. **Cubren también lo que sale mal.** Qué pasa con un dato inválido, con una lista vacía o
+   con un permiso que falta es parte del alcance, y si no está escrito no se construye.
+7. **No son casos de prueba.** Son el índice del plan de pruebas, no el plan: un criterio
+   puede necesitar varios tests.
+8. **No son el Definition of Done.** El DoD es el mismo para todas las stories —tests, lint,
+   cobertura, arquitectura— y vive en [CLAUDE.md](../../CLAUDE.md). Los criterios son propios
+   de cada story. Para darla por terminada tienen que cumplirse **los dos**.
+
+### Los dos formatos que usamos
+
+**Escenario — Dado / Cuando / Entonces.** Viene de BDD; lo propuso Daniel Terhorst-North en
+2003. Es el formato por defecto: sirve siempre que haya un disparador y un resultado
+observable.
+
+> **Dado** <el contexto de partida> · **cuando** <la acción> · **entonces** <lo que se ve>
+
+**Regla — lista de condiciones.** Para lo que vale siempre y no tiene disparador:
+restricciones, límites, requisitos de diseño. Forzarlo al formato de escenario lo vuelve
+ilegible, así que va como lista y se marca como tal.
+
+Referencias: [Acceptance Criteria: Purposes, Formats and Best Practices (AltexSoft)](https://www.altexsoft.com/blog/acceptance-criteria-purposes-formats-and-best-practices/) ·
+[Definition of Done y Conditions of Satisfaction (Mountain Goat Software)](https://www.mountaingoatsoftware.com/blog/clarifying-the-relationship-between-definition-of-done-and-conditions-of-sa) ·
+[Given-When-Then (Product School)](https://productschool.com/blog/product-fundamentals/acceptance-criteria)
+
+### Lista para tomar
+
+Una story entra al sprint cuando tiene narrativa, tiene criterios de aceptación escritos y no
+depende de nada sin terminar. Si le falta algo, no entra.
 
 ## Quiénes usan el sistema en este sprint
 
@@ -37,29 +70,35 @@ estimada y no depende de nada sin terminar. Si le falta algo, no entra al sprint
 |---|---|---|
 | **Cliente** | Pide tragos desde su celular | No. No se registra ni instala nada |
 | **Administrador** | Carga la carta y al personal de su local | Sí |
-| **Bartender** | Prepara los pedidos y avisa cuándo están listos | Sí |
+| **KDS** | La cuenta de la estación de barra. Se le puede crear la cuenta; sus pantallas quedaron fuera de este sprint | Sí |
+| **Mozo** | Se le puede crear la cuenta, pero todavía no tiene pantalla propia | Sí |
 
 ## Resumen
 
-| ID | Story | Prioridad | Puntos | Depende de | Estado |
-|---|---|---|---|---|---|
-| US-01 | Iniciar sesión | Imprescindible | 5 | — | **En curso** — backend listo, falta pantalla y roles |
-| US-02 | Poder entrar la primera vez | Imprescindible | 2 | — | **En curso** — semilla lista, falta el listado |
-| US-03 | Dar de alta al equipo | Imprescindible | 3 | US-01 | Pendiente |
-| US-04 | Ver y corregir al equipo | Imprescindible | 3 | US-03 | Pendiente |
-| US-05 | Dar de baja a quien se fue | Imprescindible | 2 | US-03 | Pendiente |
-| US-06 | Cargar un trago en la carta | Imprescindible | 3 | US-01 | Pendiente |
-| US-07 | Marcar que un trago se acabó | Imprescindible | 2 | US-06 | Pendiente |
-| US-08 | Corregir y sacar tragos | Imprescindible | 3 | US-06 | Pendiente |
-| US-09 | Ver la carta desde el celular | Imprescindible | 3 | US-06 | Pendiente |
-| US-10 | Armar el pedido | Imprescindible | 5 | US-09 | Pendiente |
-| US-11 | Confirmar el pedido | Imprescindible | 5 | US-10 | Pendiente |
-| US-12 | Seguir mi pedido | Imprescindible | 5 | US-11 | Pendiente |
-| US-13 | Ver qué hay para preparar | Debería | 5 | US-11 | Pendiente |
-| US-14 | Avisar que el pedido avanza | Debería | 3 | US-13 | Pendiente |
+| ID | Story | Depende de | Estado |
+|---|---|---|---|
+| US-01 | Iniciar sesión | — | **5 de 6** — sólo falta que existan las pantallas de gestión |
+| US-02 | Poder entrar la primera vez | — | ✅ **Terminada** |
+| US-03 | Dar de alta al equipo | US-01 | Pendiente |
+| US-04 | Ver y corregir al equipo | US-03 | Pendiente |
+| US-05 | Dar de baja a quien se fue | US-03 | Pendiente |
+| US-06 | Cargar un trago en la carta | US-01 | Pendiente |
+| US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
+| US-08 | Corregir y sacar tragos | US-06 | Pendiente |
+| US-09 | Ver la carta desde el celular | US-06 | Pendiente |
+| US-10 | Armar el pedido | US-09 | Pendiente |
+| US-11 | Confirmar el pedido | US-10 | Pendiente |
+| US-12 | Seguir mi pedido | US-11 | Pendiente |
 
-**49 puntos**, de los cuales 8 son `Debería`. Sin velocidad histórica ese número no dice si
-entra: por eso los dos `Debería` están al final y son el margen.
+Las doce son imprescindibles: cubren los seis puntos de la consigna y nada más. Las
+pantallas de la barra quedaron fuera del sprint el 2026-09-10; el motivo y la consecuencia
+están en *Fuera del alcance*.
+
+**Estado al viernes 11 de septiembre.** Una story terminada, una a un criterio de estarlo y
+diez sin empezar. Lo que se ganó en estos días no se ve en esa cuenta: la API está armada y
+el frontend dejó de estar vacío, así que las diez restantes ya no arrancan de cero. Aun así
+son diez en seis días, y el hito del lunes 14 sigue siendo el punto donde se decide qué
+entra.
 
 ---
 
@@ -67,45 +106,49 @@ entra: por eso los dos `Debería` están al final y son el margen.
 
 ### US-01 · Iniciar sesión
 
-> **Como** administrador o bartender de un local
+> **Como** parte del personal de un local
 > **quiero** entrar con mi usuario y contraseña
 > **para** trabajar sobre los datos de mi local sin que nadie pueda operar en mi nombre.
 
-`Imprescindible` · `5 puntos` · sin dependencias
+**Depende de:** nada.
 
-1. **Dado** que soy un bartender activo, **cuando** ingreso mi usuario y contraseña
-   correctos, **entonces** entro y veo la cola de pedidos de mi local.
-2. **Dado** que soy un administrador activo, **cuando** ingreso correctamente, **entonces**
+**Criterios de aceptación**
+
+1. **Dado** que soy un administrador activo, **cuando** ingreso correctamente, **entonces**
    entro y veo las pantallas de gestión.
+2. **Dado** que entro con una cuenta de KDS o de mozo, **cuando** ingreso correctamente,
+   **entonces** el sistema me dice que todavía no hay pantallas para mi rol, en vez de
+   dejarme en una pantalla vacía.
 3. **Dado** que escribo mal el usuario, **y dado** que otra vez escribo mal la contraseña,
    **entonces** en los dos casos recibo exactamente el mismo mensaje, que no revela cuál de
    los dos estaba mal.
 4. **Dado** que me dieron de baja, **cuando** ingreso mi contraseña correcta, **entonces** no
    me deja entrar.
-5. **Dado** que entré como bartender, **cuando** escribo a mano la dirección de una pantalla
-   de administración, **entonces** el sistema no me la muestra.
-6. **Dado** que entré en un local, **cuando** cambio la dirección del navegador apuntando a
+5. **Dado** que entré en un local, **cuando** cambio la dirección del navegador apuntando a
    otro local, **entonces** no veo ni un dato de ese otro local.
+6. **Dado** que mi sesión venció mientras trabajaba, **cuando** intento seguir usando el
+   sistema, **entonces** me lleva de nuevo a la pantalla de ingreso con un mensaje distinto
+   al de credenciales incorrectas.
 
 > **Nota:** los criterios 3 y 4 son deliberados, no una omisión de usabilidad. Un mensaje que
 > distinga "ese usuario no existe" de "la contraseña está mal" le permite a cualquiera
 > averiguar quién trabaja en el local probando nombres.
+>
+> El criterio 6 sale del [ADR-0008](../adr/0008-autenticacion-con-token-unico-sin-refresh-token.md):
+> la sesión dura ocho horas y vencer es un evento normal de fin de turno, no un error.
 
-**Avance — 3 de 6.** El backend está terminado y con tests; falta la pantalla y la
-autorización por rol.
+**Avance — 5 de 6.** La pantalla existe, se entra de verdad contra la API y los criterios
+2, 3, 4, 5 y 6 están cumplidos y con test. Falta sólo el criterio 1, y no por algo del
+ingreso: **las pantallas de gestión todavía no existen**, llegan con US-03 a US-08. Hoy un
+administrador que entra cae en la misma pantalla que un KDS, la que avisa que su rol no
+tiene pantallas.
 
-| Criterio | Estado |
-|---|---|
-| 1. Bartender entra y ve la cola | Falta la pantalla |
-| 2. Administrador entra y ve la gestión | Falta la pantalla |
-| 3. Mismo mensaje para usuario y para contraseña | ✅ `LoginHandlerTests` |
-| 4. Dado de baja no entra | ✅ `LoginHandlerTests` |
-| 5. Bartender no accede a pantallas de administración | Falta autorización por rol |
-| 6. Cambiar el local en la dirección no revela nada | ✅ `VenueIsolationTests` |
-
-> El criterio 5 **no es sólo frontend**: hoy no existe autorización por rol en el backend y
-> ningún endpoint usa `RequireAuthorization`. Esconder un botón no cumple el criterio, porque
-> dice "escribo a mano la dirección".
+> **Ojo con esto al planificar.** El criterio 1 ata US-01 a seis stories posteriores, que es
+> el mismo acoplamiento que ya corregimos moviendo el viejo criterio 5 a US-03. Se puede
+> dejar así y aceptar que US-01 cierre recién con US-03, o mover "veo las pantallas de
+> gestión" a US-03 y dejar acá "entro y el sistema me reconoce como administrador". Lo
+> segundo es más limpio, pero reescribir un criterio después de construir es justo lo que
+> desaconseja la regla 1 de arriba. Decisión del equipo, no la tomé sola.
 
 ### US-02 · Poder entrar la primera vez
 
@@ -113,19 +156,20 @@ autorización por rol.
 > **quiero** que mi cuenta ya exista cuando el sistema se pone en marcha
 > **para** no quedar afuera de un sistema donde las cuentas sólo las crea un administrador.
 
-`Imprescindible` · `2 puntos` · sin dependencias
+**Depende de:** nada.
 
-1. **Dado** un sistema recién puesto en marcha, **cuando** abro la pantalla de ingreso,
-   **entonces** existe un local y un administrador con el que puedo entrar.
-2. **Dado** que entré con esa cuenta, **cuando** miro el listado de personal, **entonces**
-   soy la única persona cargada.
+**Criterios de aceptación**
 
-> **Nota:** es un habilitador, pero tiene valor de usuario propio y por eso es una story y no
-> una tarea escondida: sin ella nadie puede usar el sistema el primer día.
+1. **Dado** un sistema recién puesto en marcha sobre una base vacía, **cuando** abro la
+   pantalla de ingreso, **entonces** existe un local con un administrador con el que puedo
+   entrar.
+2. **Dado** que el sistema ya se puso en marcha antes, **cuando** se reinicia, **entonces**
+   no se crea un segundo administrador ni un segundo local.
+3. **Dado** que nadie definió la contraseña de ese administrador, **cuando** el sistema
+   arranca, **entonces** falla y avisa, en vez de crear una cuenta con una contraseña
+   adivinable.
 
-**Avance — 1 de 2.** El criterio 1 está cubierto por `DevelopmentSeederTests`: al arrancar
-existen un local y un administrador. El criterio 2 necesita el listado de personal, que llega
-con US-04.
+✅ **Terminada.** Los tres criterios están cubiertos por `DevelopmentSeederTests`.
 
 ---
 
@@ -137,16 +181,37 @@ con US-04.
 > **quiero** dar de alta a quienes trabajan conmigo indicando su rol
 > **para** que cada uno acceda solamente a la parte del sistema que necesita.
 
-`Imprescindible` · `3 puntos` · depende de US-01
+**Depende de:** US-01.
+
+**Criterios de aceptación**
 
 1. **Dado** que completo usuario, contraseña y rol, **cuando** guardo, **entonces** la
    persona aparece en el listado y puede iniciar sesión enseguida.
 2. **Dado** que elijo el rol, **cuando** abro las opciones, **entonces** puedo elegir entre
-   administrador y bartender.
+   administrador, KDS y mozo.
 3. **Dado** que ese nombre de usuario ya existe en mi local, **cuando** intento guardar,
    **entonces** me avisa y no se crea un duplicado.
 4. **Dado** que otro boliche tiene un usuario con ese mismo nombre, **cuando** lo cargo en el
    mío, **entonces** se crea sin problema.
+5. **Dado** que dejo un campo vacío o escribo un usuario de menos de tres caracteres,
+   **cuando** intento guardar, **entonces** el formulario me lo señala y no guarda nada.
+6. **Dado** que entré con cualquier rol que no sea administrador, **cuando** escribo a mano
+   la dirección de una pantalla de administración, **entonces** el sistema no me la muestra
+   ni me deja operar sobre ningún recurso de administración.
+
+> **Nota sobre los roles.** No existe un rol "bartender". El KDS es la cuenta de la
+> **estación de barra**, compartida por todos los que preparan ahí, tal como lo describe §11
+> del [diseño funcional](../drink.it.v2.md): la pantalla es por puesto de trabajo y no por
+> persona, que es lo que mantiene baja la inversión en tablets. Los tres roles del sistema
+> son entonces administrador, KDS y mozo.
+>
+> **Nota:** el criterio 6 vivía en US-01 y se movió acá. Allá no se podía verificar, porque
+> hasta esta story no existe ninguna pantalla de administración a la que alguien pueda
+> intentar entrar. Es la primera story que exige autorización por rol.
+>
+> Está escrito por exclusión —"cualquier rol que no sea administrador"— y no rol por rol, a
+> propósito: así sigue valiendo cuando aparezcan el cajero y los demás, sin que haya que
+> reescribir el criterio ni acordarse de agregar el rol nuevo a una lista.
 
 ### US-04 · Ver y corregir al equipo
 
@@ -155,33 +220,47 @@ con US-04.
 > **para** arreglar un rol mal asignado o una contraseña olvidada sin tener que borrar y
 > volver a cargar a la persona.
 
-`Imprescindible` · `3 puntos` · depende de US-03
+**Depende de:** US-03.
+
+**Criterios de aceptación**
 
 1. **Dado** que abro el listado, **cuando** lo miro, **entonces** veo de cada persona su
    usuario, su rol y si está activa.
-2. **Dado** que alguien pasó de bartender a encargado, **cuando** le cambio el rol y guardo,
-   **entonces** la próxima vez que entra ve las pantallas del rol nuevo.
+2. **Dado** que a alguien hay que pasarlo de mozo a administrador, **cuando** le cambio el
+   rol y guardo, **entonces** la próxima vez que entra ve las pantallas del rol nuevo.
 3. **Dado** que alguien olvidó su contraseña, **cuando** le cargo una nueva, **entonces**
    puede entrar con esa y no con la anterior.
 4. **Dado** que hay personal cargado en otro local, **cuando** abro mi listado, **entonces**
    no aparece.
+5. **Dado** que entré con cualquier rol que no sea administrador, **cuando** escribo a mano
+   la dirección del listado, **entonces** el sistema no me lo muestra.
 
 ### US-05 · Dar de baja a quien se fue
 
 > **Como** administrador
 > **quiero** dar de baja a quien dejó de trabajar acá
-> **para** cerrarle el acceso sin perder el registro de los pedidos que preparó.
+> **para** que no pueda volver a entrar, sin perder el registro de los pedidos que preparó.
 
-`Imprescindible` · `2 puntos` · depende de US-03
+**Depende de:** US-03.
 
-1. **Dado** que doy de baja a un bartender, **cuando** intenta iniciar sesión, **entonces**
-   no puede entrar.
+**Criterios de aceptación**
+
+1. **Dado** que doy de baja a alguien, **cuando** intenta iniciar sesión, **entonces** no
+   puede entrar.
 2. **Dado** que lo di de baja, **cuando** miro el listado, **entonces** sigue estando, marcado
    como inactivo.
 3. **Dado** que preparó pedidos antes de la baja, **cuando** consulto esos pedidos,
    **entonces** siguen mostrando quién los preparó.
 4. **Dado** que esa persona vuelve a trabajar, **cuando** la reactivo, **entonces** entra con
    su cuenta de siempre, sin cargarla de nuevo.
+
+> **Limitación conocida, decidida a propósito.** Dar de baja **no corta la sesión que ya está
+> abierta**: si esa persona estaba trabajando, sigue pudiendo hasta que le venza el token, y
+> eso puede tardar hasta ocho horas. Está aceptado en el
+> [ADR-0008](../adr/0008-autenticacion-con-token-unico-sin-refresh-token.md), que también
+> explica cuándo hay que volver sobre esa decisión. Por eso el "para" de esta story dice
+> "que no pueda volver a entrar" y no "cerrarle el acceso": la story promete exactamente lo
+> que el sistema hace.
 
 ---
 
@@ -193,14 +272,20 @@ con US-04.
 > **quiero** cargar un trago con nombre, descripción, foto y precio
 > **para** que el cliente elija sabiendo qué es y cuánto sale, sin preguntarle a nadie.
 
-`Imprescindible` · `3 puntos` · depende de US-01
+**Depende de:** US-01.
+
+**Criterios de aceptación**
 
 1. **Dado** que completo nombre, descripción, foto y precio, **cuando** guardo, **entonces**
    el trago aparece en la carta que ve el cliente.
 2. **Dado** que dejo el precio en cero o en negativo, **cuando** intento guardar,
    **entonces** no me deja y me dice por qué.
-3. **Dado** que cargué una foto, **cuando** el cliente abre la carta, **entonces** la ve junto
+3. **Dado** que dejo el nombre vacío, **cuando** intento guardar, **entonces** el formulario
+   me lo señala y no guarda nada.
+4. **Dado** que cargué una foto, **cuando** el cliente abre la carta, **entonces** la ve junto
    al trago.
+5. **Dado** que la foto que cargué no se puede mostrar, **cuando** el cliente abre la carta,
+   **entonces** ve el trago igual, con un espacio de imagen vacío, y nunca una pantalla rota.
 
 ### US-07 · Marcar que un trago se acabó
 
@@ -208,16 +293,22 @@ con US-04.
 > **quiero** marcar un trago como agotado
 > **para** que nadie lo pida y lo pague cuando no se lo podemos preparar.
 
-`Imprescindible` · `2 puntos` · depende de US-06
+**Depende de:** US-06.
+
+**Criterios de aceptación**
 
 1. **Dado** que marco un trago como agotado, **cuando** el cliente abre la carta,
    **entonces** lo ve indicado como agotado y no lo puede agregar al pedido.
 2. **Dado** que repusimos, **cuando** lo vuelvo a habilitar, **entonces** el cliente puede
    pedirlo otra vez, sin que yo haya tenido que cargarlo de nuevo.
+3. **Dado** que un cliente ya lo tenía en su pedido sin confirmar, **cuando** lo marco
+   agotado, **entonces** al confirmar el cliente se entera y no se le cobra algo que no
+   vamos a preparar.
 
 > **Nota:** el trago agotado se muestra en vez de ocultarse a propósito. Si desapareciera de
 > la carta, el cliente pensaría que se cargó mal e iría a preguntar a la barra, que es
-> exactamente la caminata que el producto quiere evitar.
+> exactamente la caminata que el producto quiere evitar. El diseño ya lo resuelve: la tarjeta
+> aparece atenuada y sin el botón de agregar.
 
 ### US-08 · Corregir y sacar tragos
 
@@ -226,7 +317,9 @@ con US-04.
 > **para** mantenerla fiel a lo que vendemos hoy, sin que se me modifiquen los pedidos que ya
 > se cobraron.
 
-`Imprescindible` · `3 puntos` · depende de US-06
+**Depende de:** US-06.
+
+**Criterios de aceptación**
 
 1. **Dado** que corrijo el nombre, la descripción, la foto o el precio, **cuando** guardo,
    **entonces** la carta del cliente muestra el dato nuevo.
@@ -247,25 +340,38 @@ con US-04.
 > **quiero** ver la carta en mi celular sin instalar ni registrarme
 > **para** decidir qué pedir desde donde estoy, en vez de hacer la fila para leer un cartel.
 
-`Imprescindible` · `3 puntos` · depende de US-06
+**Depende de:** US-06.
+
+**Criterios de aceptación**
 
 1. **Dado** que escaneo el QR del boliche, **cuando** se abre la página, **entonces** veo la
    carta de ese boliche.
 2. **Dado** que entro por primera vez, **cuando** navego la carta, **entonces** en ningún
    momento me pide crear una cuenta, iniciar sesión ni descargar una aplicación.
-3. **Dado** que la abro en un celular, **cuando** la uso con una mano, **entonces** todo lo
-   que necesito tocar me queda al alcance del pulgar.
-4. **Dado** que hay tragos agotados, **cuando** miro la carta, **entonces** se distinguen a
-   simple vista de los disponibles.
+3. **Dado** que la carta está cargando, **cuando** miro la pantalla, **entonces** veo que
+   está cargando, y no una pantalla en blanco.
+4. **Dado** que no hay conexión o el sistema falla, **cuando** intento ver la carta,
+   **entonces** me lo dice y me ofrece reintentar.
+5. **Dado** que el boliche todavía no cargó ningún trago, **cuando** abro la carta,
+   **entonces** me lo dice, en vez de mostrarme una lista vacía sin explicación.
+
+**Reglas**
+
+- Se usa con una mano: todo lo que hay que tocar queda al alcance del pulgar.
+- Se lee de noche, con poca luz y a los tirones: el diseño oscuro aprobado, sin texto por
+  debajo de 13 píxeles.
+- Los tragos agotados se distinguen de los disponibles a simple vista.
 
 ### US-10 · Armar el pedido
 
 > **Como** cliente
 > **quiero** elegir tragos con su cantidad y dejar una aclaración en cada uno
-> **para** recibir exactamente lo que quiero sin tener que gritárselo al bartender por encima
+> **para** recibir exactamente lo que quiero sin tener que gritarlo en la barra por encima
 > de la música.
 
-`Imprescindible` · `5 puntos` · depende de US-09
+**Depende de:** US-09.
+
+**Criterios de aceptación**
 
 1. **Dado** que elijo un trago, **cuando** lo agrego, **entonces** aparece en mi pedido con el
    total actualizado.
@@ -275,6 +381,8 @@ con US-04.
    trago, **entonces** la aclaración queda guardada en ese trago y no en todo el pedido.
 4. **Dado** que me llamó alguien por teléfono y salí de la app, **cuando** vuelvo,
    **entonces** mi pedido sigue armado como lo dejé.
+5. **Dado** que mi pedido está vacío, **cuando** miro la pantalla, **entonces** no puedo
+   avanzar a confirmar.
 
 ### US-11 · Confirmar el pedido
 
@@ -282,7 +390,9 @@ con US-04.
 > **quiero** confirmar mi pedido dejando mi nombre
 > **para** que empiecen a prepararlo y tener un número con el cual reclamarlo en la barra.
 
-`Imprescindible` · `5 puntos` · depende de US-10
+**Depende de:** US-10.
+
+**Criterios de aceptación**
 
 1. **Dado** que tengo tragos en mi pedido, **cuando** escribo mi nombre y confirmo,
    **entonces** el pedido queda registrado para retirar en la barra.
@@ -294,6 +404,8 @@ con US-04.
    su número con el mío, **entonces** son distintos.
 5. **Dado** que confirmé, **cuando** miro el estado, **entonces** el pedido ya figura pago y
    esperando en la barra.
+6. **Dado** que toco confirmar dos veces porque la señal está lenta, **cuando** miro mis
+   pedidos, **entonces** se generó uno solo.
 
 > **Nota:** el pago está simulado en este sprint, como habilita la consigna. Por eso confirmar
 > equivale a pagar.
@@ -304,60 +416,31 @@ con US-04.
 > **quiero** ver en qué estado está mi pedido
 > **para** acercarme a la barra recién cuando está listo, en vez de esperar parado.
 
-`Imprescindible` · `5 puntos` · depende de US-11
+**Depende de:** US-11.
+
+**Criterios de aceptación**
 
 1. **Dado** que confirmé mi pedido, **cuando** miro la pantalla de seguimiento, **entonces**
-   veo mi número y en qué anda: esperando, en preparación, listo o entregado.
-2. **Dado** que el bartender lo marca listo, **cuando** tengo la pantalla abierta,
-   **entonces** el estado cambia solo, sin que yo refresque.
-3. **Dado** que cerré la página, **cuando** vuelvo al mismo enlace más tarde, **entonces**
+   veo mi número de pedido y el estado en el que está.
+2. **Dado** que la pantalla muestra el recorrido completo —esperando, en preparación, listo,
+   entregado—, **cuando** la miro, **entonces** distingo en cuál de esos pasos está el mío.
+3. **Dado** que el estado de mi pedido cambia, **cuando** tengo la pantalla abierta,
+   **entonces** se actualiza sola, sin que yo refresque, en menos de cinco segundos.
+4. **Dado** que cerré la página, **cuando** vuelvo al mismo enlace más tarde, **entonces**
    sigo viendo mi pedido y su estado actual.
-4. **Dado** que alguien conoce mi número de pedido, **cuando** intenta llegar a mi pantalla de
+5. **Dado** que alguien conoce mi número de pedido, **cuando** intenta llegar a mi pantalla de
    seguimiento probando números en la dirección, **entonces** no lo consigue.
+6. **Dado** que me quedé sin señal un momento, **cuando** vuelve la conexión, **entonces** la
+   pantalla se pone al día sola, sin que yo haga nada.
 
----
-
-## La barra
-
-### US-13 · Ver qué hay para preparar
-
-> **Como** bartender
-> **quiero** ver los pedidos que entraron, en orden de llegada
-> **para** preparar primero al que hace más rato que espera.
-
-`Debería` · `5 puntos` · depende de US-11
-
-1. **Dado** que entré con mi usuario, **cuando** abro la pantalla de la barra, **entonces**
-   veo solamente los pedidos de mi local.
-2. **Dado** que miro un pedido, **cuando** lo leo, **entonces** veo su número, el nombre del
-   cliente, cada trago con su cantidad y las aclaraciones.
-3. **Dado** que hay varios esperando, **cuando** miro la lista, **entonces** el que hace más
-   rato que espera está primero.
-4. **Dado** que entra un pedido nuevo, **cuando** tengo la pantalla abierta, **entonces**
-   aparece sin que yo refresque.
-
-### US-14 · Avisar que el pedido avanza
-
-> **Como** bartender
-> **quiero** marcar cuándo tomo un pedido, cuándo lo termino y cuándo lo entrego
-> **para** que el cliente venga a buscarlo en el momento justo y no se me amontone gente en
-> la barra.
-
-`Debería` · `3 puntos` · depende de US-13
-
-1. **Dado** que tomo un pedido, **cuando** lo marco, **entonces** el cliente ve "en
-   preparación" en su pantalla.
-2. **Dado** que terminé de prepararlo, **cuando** lo marco listo, **entonces** el cliente ve
-   "listo".
-3. **Dado** que se lo entregué, **cuando** lo marco entregado, **entonces** desaparece de mi
-   pantalla y el cliente ve "entregado".
-4. **Dado** un pedido que todavía no está listo, **cuando** intento marcarlo entregado,
-   **entonces** el sistema no me deja saltear el paso.
-
-> **Nota:** US-13 y US-14 no figuran en los seis puntos de la consigna, pero la consigna pide
-> el rol Bartender. Sin ellas ese rol no hace nada y el pedido del cliente se queda para
-> siempre en "esperando". Son `Debería` porque son el margen del sprint: si llegamos justos,
-> se recorta acá. Cuesta la demo, no la consigna.
+> **Nota:** "se actualiza sola" se resuelve **consultando cada tres segundos**, no con
+> SignalR. SignalR está en el stack y llega más adelante; construirlo ahora se lleva un día
+> que no tenemos y el criterio se cumple igual.
+>
+> **Sin las pantallas de la barra, en este sprint el pedido no pasa de "esperando".** El
+> criterio 3 se verifica cambiando el estado a mano en la base y viendo que la pantalla se
+> pone al día sola. Es una limitación de la demo, no del diseño: la pantalla ya muestra los
+> cuatro pasos y el mecanismo de actualización queda construido y probado.
 
 ---
 
@@ -369,62 +452,74 @@ puerta a la versión definitiva.
 | Tema | Cómo queda en este sprint | Cómo va a ser después |
 |---|---|---|
 | Foto del trago | El administrador pega el enlace de una imagen | Sube el archivo desde su computadora |
-| Aviso de "listo" | El cliente lo ve en su pantalla, que se actualiza sola | Además le llega una notificación al celular |
+| Aviso de "listo" | La pantalla del cliente consulta cada tres segundos | Notificación al celular, y SignalR en vez de consultar |
 | Pago | Confirmar el pedido equivale a pagarlo | Pago digital, efectivo en caja y saldo de mesa VIP |
-| Ticket de la barra | El bartender trabaja desde la pantalla | Se imprime el ticket y se escanea el QR |
+| Ticket de la barra | Se trabaja desde la pantalla del KDS | Se imprime el ticket y se escanea el QR |
 
 ## Trabajo que no es una story
 
 Nadie lo puede "ver funcionando", así que no lleva tarjeta propia: va adentro de la primera
 story que lo necesita.
 
-- El frontend no tiene ninguna pantalla ni ruta definida. Empieza con US-01.
-- Playwright no está instalado y el Definition of Done pide una prueba de punta a punta.
-- No existe autorización por rol en el backend. La hace falta el criterio 5 de US-01 y hoy
-  no la usa ningún endpoint.
+**Sigue pendiente:**
 
-Ya está hecho y no se rehace: el modelo de local y de personal, el aislamiento entre locales
-con su prueba automatizada, la base de datos con su primera migración, **la API armada**
-(autenticación, OpenAPI, migraciones y semilla de desarrollo) y **el ingreso de punta a punta
-del lado del backend** — caso de uso, emisión del token y endpoint. Todo eso viene en el PR
-`feat/autenticacion`. Lo que le falta a US-01 es la pantalla y la autorización por rol.
+- **Autorización por rol en el backend.** La necesita el criterio 6 de US-03. Hoy el único
+  endpoint que existe es el de ingreso, y ninguno usa `RequireAuthorization`.
+- **Playwright.** No está instalado y el Definition of Done pide una prueba de punta a punta
+  del recorrido principal.
+- **El prefijo `/api` fuera de desarrollo.** Hoy funciona por el proxy del servidor de
+  desarrollo. Para desplegar desde `main` hay que reescribirlo, y todavía no existe ni
+  `infra/` ni la configuración de Static Web Apps donde hacerlo.
+
+**Ya está hecho y no se rehace.** Del backend: el modelo de local y de personal, el
+aislamiento entre locales con su prueba, la base con su migración, la API armada
+(autenticación, OpenAPI, migraciones y semilla de desarrollo) y los errores como problem
+details.
+
+Del frontend, que hasta el miércoles no tenía ni una ruta: el sistema de diseño con los
+tokens de los wireframes, las tipografías servidas desde nuestro propio dominio, el ruteo
+lazy, el guardián de sesión, el interceptor que adjunta y descarta el token, y los tipos
+generados del OpenAPI. Las diez stories que quedan enchufan ahí en vez de empezar de cero.
+
+Y están terminados **los trece diseños de pantalla**, en alta fidelidad y con un único
+sistema visual: no queda ninguna decisión de diseño por tomar.
 
 ## Calendario
 
 | Cuándo | Qué |
 |---|---|
-| **Lun 7 – Mié 9** | Los tres sobre US-01 y US-02. Es el cuello de botella: hasta que no se pueda entrar, ninguna otra story se puede terminar. Quien no esté ahí define el aspecto visual de la app. |
-| **Jue 10 – Dom 13** | Tres carriles en paralelo (abajo). |
-| **Dom 13** | **Hito duro: el recorrido camina entero.** Entrar → cargar un trago → pedirlo desde el celular → verlo listo. Feo, sin estilo, pero de punta a punta. |
-| **Lun 14** | Congelamiento a la noche. Nadie arranca nada nuevo después de este punto. |
+| **Jue 10 – Vie 11** | Cerrar US-01: sistema de diseño, andamiaje de Angular y pantalla de ingreso. Más la autorización por rol, que destraba US-03. |
+| **Sáb 12 – Lun 14** | Tres carriles en paralelo (abajo). |
+| **Lun 14** | **Hito duro: el recorrido camina entero.** Entrar → cargar un trago → pedirlo desde el celular → seguirlo. Congelamiento a la noche: nadie arranca nada nuevo. |
 | **Mar 15 – Mié 16** | Errores, prueba de punta a punta, README y ensayo de la demo. |
 | **Jue 17** | Entrega. |
 
-Si el domingo 13 el recorrido no camina, se recorta **ese día**, empezando por US-13 y US-14.
-Para eso está el hito: para enterarnos con cuatro días de margen y no con uno.
-
-### Carriles del jueves 10 al domingo 13
+### Carriles del sábado 12 al lunes 14
 
 Uno por persona, elegidos para no pisarse en los mismos archivos.
 
-| Carril | Stories | Puntos |
-|---|---|---|
-| Pedidos | Lo que hay detrás de US-11, US-12, US-13 y US-14 | 18 |
-| Administración | US-03, US-04, US-05, US-06, US-07, US-08 | 16 |
-| Cliente | US-09, US-10 y las pantallas de US-11 y US-12 | 13 |
+| Carril | Stories |
+|---|---|
+| Pedidos | Lo que hay detrás de US-11 y US-12 |
+| Administración | US-03, US-04, US-05, US-06, US-07, US-08 |
+| Cliente | US-09, US-10 y las pantallas de US-11 y US-12 |
 
-Las pantallas de la barra las toma quien termine primero su carril.
+Quien termine primero su carril ayuda en el de pedidos, que es el más pesado.
 
-## Cómo nos organizamos estos diez días
+## Cómo nos organizamos lo que queda
 
-1. **Máximo dos PRs abiertos a la vez, y se revisan el mismo día.** Con tres personas y diez
-   días, un PR esperando cuarenta y ocho horas hace más daño que cualquier problema técnico.
-2. **Una story por PR, o menos.** Un PR de cuarenta archivos no se revisa: se aprueba de memoria.
-3. **Dónde gastar el presupuesto de pruebas.** El TDD estricto se sostiene donde se corrige
-   diseño y donde duele el error: las reglas del pedido y el aislamiento entre locales. Las
-   pantallas de carga y listado llevan el camino feliz y la prueba de punta a punta. No es
-   aflojar el Definition of Done: es ponerlo donde rinde.
-4. **Las decisiones de la tabla de arriba están cerradas.** Reabrir una cuesta un día que no hay.
+1. **Máximo dos PRs abiertos a la vez, y se revisan el mismo día.** Un PR esperando cuarenta
+   y ocho horas hace más daño que cualquier problema técnico.
+2. **Una story por PR, o menos.** Un PR de cuarenta archivos no se revisa: se aprueba de
+   memoria.
+3. **Dónde gastar el presupuesto de pruebas.** El estándar que se le aplicó a la
+   autenticación —dos ADR, un pipeline de errores con once tests— es el correcto para
+   autenticación y no entra siete veces más en una semana. De acá en adelante: ningún ADR
+   nuevo, y la profundidad de pruebas reservada a las reglas del pedido, que es lo único que
+   queda con lógica de verdad. Las pantallas de carga y listado llevan el camino feliz y la
+   prueba de punta a punta.
+4. **Las decisiones de la tabla de arriba están cerradas.** Reabrir una cuesta un día que no
+   hay.
 
 ## Fuera del alcance, a propósito
 
@@ -433,10 +528,13 @@ Nada de esto lo pide la consigna del Sprint 1.
 | Qué | Por qué no |
 |---|---|
 | Notificación al celular e instalar la aplicación | La consigna permite simular las notificaciones. |
-| Impresión del ticket y lectura de QR | El bartender trabaja desde la pantalla. |
+| **Las pantallas de la barra (el KDS)** | Recortadas el 2026-09-10 para llegar a la fecha. No están entre los seis puntos de la consigna. Consecuencia asumida: el rol KDS se puede crear pero no tiene pantalla, y el pedido del cliente no avanza más allá de "esperando". |
+| Impresión del ticket y lectura de QR | Llegan con las pantallas de la barra. |
 | Pagar de verdad | La consigna permite simular el pago. |
 | Que el cliente se cree una cuenta | La consigna pide expresamente poder pedir sin cuenta. |
-| Mesas VIP, saldo de mesa, cajero y mozo | Este sprint es sólo retiro en barra, con administrador y bartender. |
+| Mesas VIP, saldo de mesa y cajero | Este sprint es sólo retiro en barra. |
+| Las pantallas del mozo | El rol se puede elegir al dar de alta a alguien, pero la entrega en mesa llega con el sector VIP. |
 | Cancelar un pedido | No está entre los seis puntos de la consigna. |
 | Buscar, filtrar y paginar los listados | Con la cantidad de datos de una demo no se nota. |
+| Límite de intentos de ingreso | Pendiente reconocido en el ADR-0008; se resuelve con lo que ya trae el framework. |
 | Métricas y reportes | No están en la consigna. |
