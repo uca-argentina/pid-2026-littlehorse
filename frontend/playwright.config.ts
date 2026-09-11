@@ -23,7 +23,15 @@ export default defineConfig({
   // other test from the branch. On CI that is a failure, not a warning.
   forbidOnly: isContinuousIntegration,
   retries: isContinuousIntegration ? 2 : 0,
-  workers: isContinuousIntegration ? 1 : undefined,
+
+  // One worker on purpose, and not only on CI. ng serve is a single Node
+  // process that compiles chunks on demand AND proxies /api on the same event
+  // loop. Parallel workers all trigger the first compile at once, and the login
+  // POST queues behind it past the assertion timeout. Measured cold: 4 workers
+  // give 1-2 passes out of 4; 1 worker gives 4 of 4 in about 2 s each. Raise
+  // it again once the suite runs against a production build instead of the
+  // dev server.
+  workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
 
   use: {

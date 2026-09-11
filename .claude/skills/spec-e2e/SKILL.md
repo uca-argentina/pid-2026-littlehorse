@@ -61,8 +61,10 @@ Cero `waitForTimeout`. Usá los auto-waits de Playwright y asserts con `expect()
 ## Datos de test
 
 Cada spec crea sus propios datos vía API (no clickeando toda la UI para llegar al estado
-inicial) y limpia lo suyo. Los tests corren en paralelo: nunca dependan de datos
-compartidos ni del orden de ejecución.
+inicial) y limpia lo suyo. Nunca dependan de datos compartidos ni del orden de ejecución:
+hoy corren con un solo worker porque `ng serve` no aguanta varios (ver el comentario en
+`playwright.config.ts`), pero eso va a cambiar cuando corran contra el build de producción, y
+un test que asume orden se rompe justo ese día.
 
 ## Cuando un spec falla
 
