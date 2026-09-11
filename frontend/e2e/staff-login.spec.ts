@@ -6,8 +6,8 @@ import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './see
  * The staff login, end to end against the real API and the seeded database.
  * Every assertion is on what the person at the venue sees, not on internals.
  */
-const loginPath = `/${seededVenueSlug}/personal/ingresar`;
-const staffAreaPath = `/${seededVenueSlug}/personal`;
+const loginPath = `/${seededVenueSlug}/staff/login`;
+const staffAreaPath = `/${seededVenueSlug}/staff`;
 
 async function logIn(page: Page, password: string): Promise<void> {
   await page.getByRole('textbox', { name: /usuario/i }).fill(seededAdminUsername);
@@ -21,7 +21,7 @@ test.describe('Staff login', () => {
     await expect(page.getByRole('heading', { name: /iniciá tu turno/i })).toBeVisible();
   });
 
-  test('Ingresar_WithTheWrongPassword_SaysSoAndKeepsTheStaffOnTheScreen', async ({ page }) => {
+  test('rejects a wrong password and keeps the person on the screen', async ({ page }) => {
     await logIn(page, 'not-the-seeded-password');
 
     await expect(page.getByRole('alert')).toHaveText(/usuario o contraseña incorrectos/i);
@@ -33,7 +33,7 @@ test.describe('Staff login', () => {
     await expect(page.getByRole('textbox', { name: /contraseña/i })).toHaveValue('');
   });
 
-  test('Ingresar_WithTheSeededAdministrator_OpensTheStaffArea', async ({ page }) => {
+  test('opens the staff area for the seeded administrator', async ({ page }) => {
     await logIn(page, seededAdminPassword());
 
     await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
@@ -45,7 +45,7 @@ test.describe('Staff login', () => {
     await expect(page.getByText(/administrador/i)).toBeVisible();
   });
 
-  test('Sesion_WhenTheTabletIsReloaded_StaysOpen', async ({ page }) => {
+  test('keeps the session open when the tablet is reloaded', async ({ page }) => {
     await logIn(page, seededAdminPassword());
     await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
 
@@ -58,7 +58,7 @@ test.describe('Staff login', () => {
     ).toBeVisible();
   });
 
-  test('Salir_WhenPressed_ClosesTheSessionAndBlocksTheStaffAreaAgain', async ({ page }) => {
+  test('closes the session and blocks the staff area again when signing out', async ({ page }) => {
     await logIn(page, seededAdminPassword());
     await page.getByRole('button', { name: /salir/i }).click();
 
