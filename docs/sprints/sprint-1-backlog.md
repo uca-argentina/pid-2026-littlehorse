@@ -465,8 +465,9 @@ story que lo necesita.
 
 - **Autorización por rol en el backend.** La necesita el criterio 6 de US-03. Hoy el único
   endpoint que existe es el de ingreso, y ninguno usa `RequireAuthorization`.
-- **Playwright.** No está instalado y el Definition of Done pide una prueba de punta a punta
-  del recorrido principal.
+- **Los de punta a punta en la CI.** Playwright ya está instalado y cubre el ingreso, pero la
+  suite se corre a mano: ese job necesita SQL Server y el backend en el runner, y es una
+  decisión aparte.
 - **El prefijo `/api` fuera de desarrollo.** Hoy funciona por el proxy del servidor de
   desarrollo. Para desplegar desde `main` hay que reescribirlo, y todavía no existe ni
   `infra/` ni la configuración de Static Web Apps donde hacerlo.

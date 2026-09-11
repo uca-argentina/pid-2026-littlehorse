@@ -7,10 +7,10 @@ Hoy cubren el ingreso del personal (US-01):
 
 | Prueba                                    | Qué verifica                                                                |
 | ----------------------------------------- | --------------------------------------------------------------------------- |
-| `Ingresar_WithTheWrongPassword_...`       | El mensaje de error, y que el usuario se conserve y la contraseña se borre. |
-| `Ingresar_WithTheSeededAdministrator_...` | El ingreso entra al área del personal y muestra el rol que sale del token.  |
-| `Sesion_WhenTheTabletIsReloaded_...`      | La sesión sobrevive a un refresco de la tablet.                             |
-| `Salir_WhenPressed_...`                   | Cerrar la sesión vuelve a bloquear el área del personal.                    |
+| `rejects a wrong password…`               | El mensaje de error, y que el usuario se conserve y la contraseña se borre. |
+| `opens the staff area…`                   | El ingreso entra al área del personal y muestra el rol que sale del token.  |
+| `keeps the session open when reloaded`    | La sesión sobrevive a un refresco de la tablet.                             |
+| `closes the session and blocks the area…` | Cerrar la sesión vuelve a bloquear el área del personal.                    |
 
 ## Requisitos
 
@@ -58,7 +58,7 @@ pnpm --prefix frontend run e2e:report       # abre el informe de la última corr
 Para correr una sola prueba, se filtra por nombre:
 
 ```bash
-pnpm --prefix frontend exec playwright test -g "Salir_WhenPressed"
+pnpm --prefix frontend exec playwright test -g "closes the session"
 ```
 
 ## Qué levanta cada corrida
@@ -100,8 +100,11 @@ falta reproducir el fallo para entenderlo. Las dos carpetas están en el `.gitig
 
 ## Escribir una prueba nueva
 
-- **El nombre sigue la convención del proyecto:** `Sujeto_Escenario_ResultadoEsperado`, igual
-  que en los tests unitarios.
+- **El nombre completa la oración que empieza el `describe`**, en minúscula y sin `should`:
+  `test('opens the staff area for the seeded administrator')` se lee como
+  `Staff login > opens the staff area for the seeded administrator`. Es la misma convención
+  que los unitarios del frontend, y por el mismo motivo: acá no hay un método bajo prueba
+  que nombrar. Ver `CLAUDE.md`.
 - **Los elementos se buscan por rol y por texto visible**, nunca por clase de CSS ni por id.
   Un test que se rompe al renombrar una clase no estaba probando lo que le importa al usuario.
 - **Las afirmaciones son sobre lo que ve la persona en el boliche**, no sobre el estado
