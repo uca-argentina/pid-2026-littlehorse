@@ -81,7 +81,9 @@ git clone https://github.com/lamelapablo/drink-it.git
 cd drink-it
 pnpm --prefix frontend install
 dotnet restore backend/DrinkIt.slnx
+dotnet dev-certs https --trust          # una sola vez por máquina: la API sirve https
 docker compose up -d                    # SQL Server local, en localhost,1433
+pnpm --prefix frontend run e2e:install   # baja el Chromium de Playwright (~100 MB)
 ```
 
 La base tiene que estar levantada **antes** de correr la API: la cadena de conexión apunta a
@@ -103,11 +105,39 @@ leen solas, y son las mismas que usa la CI.
 | Arrancar | `dotnet run --project backend/src/DrinkIt.Api` | `pnpm --prefix frontend start` |
 | Tests | `dotnet test backend/DrinkIt.slnx` | `pnpm --prefix frontend test` |
 | Tests (una vez, sin watch) | — | `pnpm --prefix frontend run test:ci` |
+| Tests de punta a punta | — | `pnpm --prefix frontend run e2e` |
 | Lint | `dotnet format backend/DrinkIt.slnx --verify-no-changes` | `pnpm --prefix frontend run lint` |
 | Arreglar formato | `dotnet format backend/DrinkIt.slnx` | `pnpm --prefix frontend run format` |
 | Build de producción | `dotnet build backend/DrinkIt.slnx -c Release` | `pnpm --prefix frontend run build --configuration production` |
 
-Son exactamente los que corre la CI. Si pasan en tu máquina, pasan en el pipeline.
+Son exactamente los que corre la CI, salvo los de punta a punta, que todavía se corren a
+mano. Si pasan en tu máquina, pasan en el pipeline.
+
+### Pruebas de punta a punta
+
+Manejan un navegador de verdad contra la API y la base reales, con el boliche y el
+administrador que siembra el entorno de desarrollo. Hoy cubren el ingreso del personal:
+credenciales incorrectas, ingreso exitoso, la sesión que sobrevive a un refresco y la salida
+que vuelve a bloquear el área del personal.
+
+Sólo hacen falta dos cosas: **Docker corriendo con la base levantada** y el Chromium de
+Playwright bajado. Lo demás lo arranca la propia prueba. Si ya tenés la API o el `ng serve`
+levantados, los reutiliza en vez de abrir otros.
+
+```bash
+docker compose up -d                        # la base, si no está ya
+pnpm --prefix frontend run e2e              # la suite completa, sin ventana
+pnpm --prefix frontend run e2e:headed       # igual, pero viendo el navegador
+pnpm --prefix frontend run e2e:ui           # modo interactivo, para depurar un test
+pnpm --prefix frontend run e2e:report       # abre el informe de la última corrida
+```
+
+Las contraseñas no se repiten en los tests: salen del perfil de arranque de la API
+(`backend/src/DrinkIt.Api/Properties/launchSettings.json`), que es de dónde las toma la
+semilla de desarrollo.
+
+Si la base no está levantada, la prueba falla en dos segundos diciéndolo, en vez de esperar
+tres minutos a una API que nunca iba a arrancar.
 
 ## Cómo trabajamos
 
