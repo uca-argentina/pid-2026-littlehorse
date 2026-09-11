@@ -77,7 +77,7 @@ depende de nada sin terminar. Si le falta algo, no entra.
 
 | ID | Story | Depende de | Estado |
 |---|---|---|---|
-| US-01 | Iniciar sesión | — | **En curso** — backend listo, falta la pantalla |
+| US-01 | Iniciar sesión | — | **5 de 6** — sólo falta que existan las pantallas de gestión |
 | US-02 | Poder entrar la primera vez | — | ✅ **Terminada** |
 | US-03 | Dar de alta al equipo | US-01 | Pendiente |
 | US-04 | Ver y corregir al equipo | US-03 | Pendiente |
@@ -93,6 +93,12 @@ depende de nada sin terminar. Si le falta algo, no entra.
 Las doce son imprescindibles: cubren los seis puntos de la consigna y nada más. Las
 pantallas de la barra quedaron fuera del sprint el 2026-09-10; el motivo y la consecuencia
 están en *Fuera del alcance*.
+
+**Estado al viernes 11 de septiembre.** Una story terminada, una a un criterio de estarlo y
+diez sin empezar. Lo que se ganó en estos días no se ve en esa cuenta: la API está armada y
+el frontend dejó de estar vacío, así que las diez restantes ya no arrancan de cero. Aun así
+son diez en seis días, y el hito del lunes 14 sigue siendo el punto donde se decide qué
+entra.
 
 ---
 
@@ -131,9 +137,18 @@ están en *Fuera del alcance*.
 > El criterio 6 sale del [ADR-0008](../adr/0008-autenticacion-con-token-unico-sin-refresh-token.md):
 > la sesión dura ocho horas y vencer es un evento normal de fin de turno, no un error.
 
-**Avance — 4 de 6.** Falta la pantalla, que es lo que cierra los criterios 1 y 2. Los
-criterios 3, 4, 5 y 6 ya están cubiertos por `LoginHandlerTests`, `VenueIsolationTests` y
-`ProblemDetailsPipelineTests`.
+**Avance — 5 de 6.** La pantalla existe, se entra de verdad contra la API y los criterios
+2, 3, 4, 5 y 6 están cumplidos y con test. Falta sólo el criterio 1, y no por algo del
+ingreso: **las pantallas de gestión todavía no existen**, llegan con US-03 a US-08. Hoy un
+administrador que entra cae en la misma pantalla que un KDS, la que avisa que su rol no
+tiene pantallas.
+
+> **Ojo con esto al planificar.** El criterio 1 ata US-01 a seis stories posteriores, que es
+> el mismo acoplamiento que ya corregimos moviendo el viejo criterio 5 a US-03. Se puede
+> dejar así y aceptar que US-01 cierre recién con US-03, o mover "veo las pantallas de
+> gestión" a US-03 y dejar acá "entro y el sistema me reconoce como administrador". Lo
+> segundo es más limpio, pero reescribir un criterio después de construir es justo lo que
+> desaconseja la regla 1 de arriba. Decisión del equipo, no la tomé sola.
 
 ### US-02 · Poder entrar la primera vez
 
@@ -446,21 +461,28 @@ puerta a la versión definitiva.
 Nadie lo puede "ver funcionando", así que no lleva tarjeta propia: va adentro de la primera
 story que lo necesita.
 
-- **Extraer el sistema de diseño a `styles.scss`**, una sola vez, desde cualquiera de los
-  mockups. Las trece pantallas comparten paleta y tipografías; si cada quien copia el CSS de
-  la suya, terminamos con tres definiciones distintas del mismo dorado.
-- El andamiaje de Angular: rutas, layout, guard, interceptor y el cliente HTTP generado del
-  OpenAPI. Hoy no hay ni una ruta definida.
-- Autorización por rol en el backend. La necesita el criterio 6 de US-03 y hoy no la usa
-  ningún endpoint.
-- Playwright no está instalado y el Definition of Done pide una prueba de punta a punta.
+**Sigue pendiente:**
 
-**Ya está hecho y no se rehace:** el modelo de local y de personal, el aislamiento entre
-locales con su prueba, la base de datos con su migración, la API armada (autenticación,
-OpenAPI, migraciones y semilla de desarrollo), el ingreso de punta a punta del lado del
-backend y los errores como problem details. También están terminados **los trece diseños de
-pantalla**, en alta fidelidad y con un único sistema visual: no queda ninguna decisión de
-diseño por tomar.
+- **Autorización por rol en el backend.** La necesita el criterio 6 de US-03. Hoy el único
+  endpoint que existe es el de ingreso, y ninguno usa `RequireAuthorization`.
+- **Playwright.** No está instalado y el Definition of Done pide una prueba de punta a punta
+  del recorrido principal.
+- **El prefijo `/api` fuera de desarrollo.** Hoy funciona por el proxy del servidor de
+  desarrollo. Para desplegar desde `main` hay que reescribirlo, y todavía no existe ni
+  `infra/` ni la configuración de Static Web Apps donde hacerlo.
+
+**Ya está hecho y no se rehace.** Del backend: el modelo de local y de personal, el
+aislamiento entre locales con su prueba, la base con su migración, la API armada
+(autenticación, OpenAPI, migraciones y semilla de desarrollo) y los errores como problem
+details.
+
+Del frontend, que hasta el miércoles no tenía ni una ruta: el sistema de diseño con los
+tokens de los wireframes, las tipografías servidas desde nuestro propio dominio, el ruteo
+lazy, el guardián de sesión, el interceptor que adjunta y descarta el token, y los tipos
+generados del OpenAPI. Las diez stories que quedan enchufan ahí en vez de empezar de cero.
+
+Y están terminados **los trece diseños de pantalla**, en alta fidelidad y con un único
+sistema visual: no queda ninguna decisión de diseño por tomar.
 
 ## Calendario
 
