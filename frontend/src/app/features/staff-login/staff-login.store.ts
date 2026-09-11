@@ -74,7 +74,7 @@ export class StaffLoginStore {
    * screen with no idea it worked. Better to say the app could not continue.
    */
   private leaveTheLoginScreen(venueSlug: string): void {
-    this.router.navigate([venueSlug, 'personal']).then(
+    this.router.navigate([venueSlug, 'staff']).then(
       (navigated) => {
         if (!navigated) this.state.set('unreachable');
       },

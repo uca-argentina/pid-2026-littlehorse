@@ -19,7 +19,7 @@ export const authenticatedGuard: CanActivateFn = (route) => {
   // Only say the shift ran out when it actually did. Someone who simply never
   // signed in on this tab would otherwise be told they had been working for
   // eight hours.
-  return router.createUrlTree([venueSlug ?? '', 'personal', 'ingresar'], {
-    queryParams: sessions.expired() ? { vencida: true } : {},
+  return router.createUrlTree([venueSlug ?? '', 'staff', 'login'], {
+    queryParams: sessions.expired() ? { expired: true } : {},
   });
 };

@@ -36,45 +36,45 @@ function rejectedWith(type: string): HttpErrorResponse {
 }
 
 describe('StaffLoginPage', () => {
-  it('Entrar_WhenTheFormIsEmpty_CannotBePressed', async () => {
+  it('cannot be submitted while the form is empty', async () => {
     await openScreen(vi.fn());
 
     expect(enterButton().disabled).toBe(true);
   });
 
-  it('Entrar_WhenBothFieldsAreFilled_CanBePressed', async () => {
+  it('can be submitted once both fields are filled', async () => {
     const { fixture } = await openScreen(vi.fn());
 
     type(/usuario/i, 'euge');
-    type(/contraseña/i, 'una-contrasena');
+    type(/contraseña/i, 'a-password');
     await fixture.whenStable();
 
     expect(enterButton().disabled).toBe(false);
   });
 
-  it('Entrar_WhenPressed_SendsTheCredentialsForThatVenue', async () => {
+  it('sends the credentials for the venue in the address', async () => {
     const logIn = vi.fn().mockReturnValue(new Subject<StaffSession>());
     const { fixture } = await openScreen(logIn);
 
     type(/usuario/i, 'euge');
-    type(/contraseña/i, 'una-contrasena');
+    type(/contraseña/i, 'a-password');
     await fixture.whenStable();
     fireEvent.click(enterButton());
 
     expect(logIn).toHaveBeenCalledWith('bar-alfa', {
       username: 'euge',
-      password: 'una-contrasena',
+      password: 'a-password',
     });
   });
 
-  it('Render_WhenCredentialsAreWrong_SaysSoWithoutNamingTheField', async () => {
+  it('reports a wrong login without naming which field failed', async () => {
     const logIn = vi
       .fn()
       .mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
     const { fixture } = await openScreen(logIn);
 
     type(/usuario/i, 'euge');
-    type(/contraseña/i, 'mal');
+    type(/contraseña/i, 'wrong-password');
     await fixture.whenStable();
     fireEvent.click(enterButton());
     await fixture.whenStable();
@@ -83,12 +83,12 @@ describe('StaffLoginPage', () => {
     expect(screen.queryByText(/no existe/i)).toBeNull();
   });
 
-  it('Render_WhenTheApiCannotBeReached_DoesNotBlameTheCredentials', async () => {
+  it('does not blame the credentials when the API cannot be reached', async () => {
     const logIn = vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
     const { fixture } = await openScreen(logIn);
 
     type(/usuario/i, 'euge');
-    type(/contraseña/i, 'una-contrasena');
+    type(/contraseña/i, 'a-password');
     await fixture.whenStable();
     fireEvent.click(enterButton());
     await fixture.whenStable();
@@ -96,40 +96,40 @@ describe('StaffLoginPage', () => {
     expect(screen.getByRole('alert').textContent).toContain('No pudimos conectarnos');
   });
 
-  it('Render_WhenTheGuardTurnedThemAway_ReadsAsAnExpiredShiftAndNotAsAnError', async () => {
-    await openScreen(vi.fn(), { venueSlug: 'bar-alfa', vencida: 'true' });
+  it('reads as an expired shift, not an error, when the guard turned them away', async () => {
+    await openScreen(vi.fn(), { venueSlug: 'bar-alfa', expired: 'true' });
 
     expect(screen.getByRole('heading').textContent).toContain('Se terminó tu sesión');
     expect(screen.queryByText(/incorrectos/i)).toBeNull();
   });
 
-  it('Render_WhenTheAddressNamesAVenue_ShowsThatVenueAndNotAFixedOne', async () => {
+  it('shows the venue named in the address and not a fixed one', async () => {
     await openScreen(vi.fn(), { venueSlug: 'bar-beta' });
 
     expect(screen.getByText(/bar-beta/i)).not.toBeNull();
     expect(screen.queryByText(/bar-alfa/i)).toBeNull();
   });
 
-  it('Render_WhenCredentialsAreWrong_MarksBothFieldsAsInvalidAndPointsAtTheMessage', async () => {
+  it('marks both fields invalid and points them at the message', async () => {
     const logIn = vi
       .fn()
       .mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
     const { fixture } = await openScreen(logIn);
 
     type(/usuario/i, 'euge');
-    type(/contraseña/i, 'mal');
+    type(/contraseña/i, 'wrong-password');
     await fixture.whenStable();
     fireEvent.click(enterButton());
     await fixture.whenStable();
 
-    const usuario = screen.getByLabelText(/usuario/i);
+    const usernameField = screen.getByLabelText(/usuario/i);
     const message = screen.getByRole('alert');
 
-    expect(usuario.getAttribute('aria-invalid')).toBe('true');
-    expect(usuario.getAttribute('aria-describedby')).toBe(message.id);
+    expect(usernameField.getAttribute('aria-invalid')).toBe('true');
+    expect(usernameField.getAttribute('aria-describedby')).toBe(message.id);
   });
 
-  it('Render_WhenTheScreenOpens_LabelsEveryFieldForAScreenReader', async () => {
+  it('labels every field for a screen reader', async () => {
     await openScreen(vi.fn());
 
     // getByLabelText throws when no control carries that accessible name, so

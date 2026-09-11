@@ -10,13 +10,13 @@ import { rememberVenueGuard } from './core/venue/remember-venue-guard';
 // handed out.
 export const routes: Routes = [
   {
-    path: ':venueSlug/personal/ingresar',
+    path: ':venueSlug/staff/login',
     canActivate: [rememberVenueGuard],
     loadChildren: () =>
       import('./features/staff-login/staff-login.routes').then((m) => m.staffLoginRoutes),
   },
   {
-    path: ':venueSlug/personal',
+    path: ':venueSlug/staff',
     canActivate: [rememberVenueGuard],
     loadChildren: () =>
       import('./features/staff-home/staff-home.routes').then((m) => m.staffHomeRoutes),

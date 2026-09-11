@@ -5,7 +5,6 @@ import { StaffLoginStore } from '../staff-login.store';
 @Component({
   selector: 'drinkit-staff-login-page',
   imports: [VenueBrand],
-  standalone: true,
   styleUrl: './staff-login.page.scss',
   templateUrl: './staff-login.page.html',
 })
@@ -16,11 +15,11 @@ export class StaffLoginPage {
   readonly venueSlug = input.required<string>();
 
   /** From the query string, set by the guard when it turned someone away. */
-  readonly vencida = input<string | undefined>(undefined);
+  readonly expired = input<string | undefined>(undefined);
 
   constructor() {
     effect(() => {
-      if (this.vencida() !== undefined) this.store.startAfterExpiry();
+      if (this.expired() !== undefined) this.store.startAfterExpiry();
     });
   }
 

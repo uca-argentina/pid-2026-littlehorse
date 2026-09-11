@@ -44,33 +44,33 @@ describe('StaffLoginStore', () => {
 
   function typeValidCredentials(): void {
     store.username.set('euge');
-    store.password.set('una-contrasena');
+    store.password.set('a-password');
   }
 
-  it('CanSubmit_WhenNothingIsTyped_IsFalse', () => {
+  it('cannot be submitted while nothing is typed', () => {
     expect(store.canSubmit()).toBe(false);
   });
 
-  it('CanSubmit_WhenOnlyTheUsernameIsTyped_IsFalse', () => {
+  it('cannot be submitted with only the username typed', () => {
     store.username.set('euge');
 
     expect(store.canSubmit()).toBe(false);
   });
 
-  it('CanSubmit_WhenTheUsernameIsOnlyWhitespace_IsFalse', () => {
+  it('cannot be submitted with a username of only whitespace', () => {
     store.username.set('   ');
-    store.password.set('una-contrasena');
+    store.password.set('a-password');
 
     expect(store.canSubmit()).toBe(false);
   });
 
-  it('CanSubmit_WhenBothFieldsAreTyped_IsTrue', () => {
+  it('can be submitted once both fields are typed', () => {
     typeValidCredentials();
 
     expect(store.canSubmit()).toBe(true);
   });
 
-  it('Submit_WhileTheRequestIsInFlight_CannotBeSentAgain', () => {
+  it('does not send twice while a request is in flight', () => {
     logIn.mockReturnValue(new Subject<StaffSession>());
     typeValidCredentials();
 
@@ -81,20 +81,20 @@ describe('StaffLoginStore', () => {
     expect(logIn).toHaveBeenCalledTimes(1);
   });
 
-  it('Submit_WhenTheUsernameHasPadding_SendsItTrimmed', () => {
+  it('sends the username trimmed', () => {
     logIn.mockReturnValue(new Subject<StaffSession>());
     store.username.set('  euge  ');
-    store.password.set('una-contrasena');
+    store.password.set('a-password');
 
     store.submit('bar-alfa');
 
     expect(logIn).toHaveBeenCalledWith('bar-alfa', {
       username: 'euge',
-      password: 'una-contrasena',
+      password: 'a-password',
     });
   });
 
-  it('Submit_WhenCredentialsAreValid_RemembersTheSession', () => {
+  it('remembers the session when the credentials are valid', () => {
     const response = new Subject<StaffSession>();
     logIn.mockReturnValue(response);
     typeValidCredentials();
@@ -106,7 +106,7 @@ describe('StaffLoginStore', () => {
     expect(sessions.hasSession()).toBe(true);
   });
 
-  it('Submit_WhenCredentialsAreValid_LeavesTheLoginScreen', () => {
+  it('leaves the login screen when the credentials are valid', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const response = new Subject<StaffSession>();
     logIn.mockReturnValue(response);
@@ -115,10 +115,10 @@ describe('StaffLoginStore', () => {
     store.submit('bar-alfa');
     response.next(aSession);
 
-    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'personal']);
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff']);
   });
 
-  it('Submit_WhenCredentialsAreWrong_ReportsOneFailureForBothCases', () => {
+  it('reports the same failure whichever field was wrong', () => {
     logIn.mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
     typeValidCredentials();
 
@@ -127,7 +127,7 @@ describe('StaffLoginStore', () => {
     expect(store.status()).toBe('invalidCredentials');
   });
 
-  it('Submit_WhenCredentialsAreWrong_ClearsThePasswordAndKeepsTheUsername', () => {
+  it('clears the password and keeps the username after a wrong login', () => {
     logIn.mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
     typeValidCredentials();
 
@@ -137,7 +137,7 @@ describe('StaffLoginStore', () => {
     expect(store.username()).toBe('euge');
   });
 
-  it('Submit_WhenTheApiCannotBeReached_DoesNotBlameTheCredentials', () => {
+  it('does not blame the credentials when the API cannot be reached', () => {
     logIn.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
     typeValidCredentials();
 
@@ -146,7 +146,7 @@ describe('StaffLoginStore', () => {
     expect(store.status()).toBe('unreachable');
   });
 
-  it('StartAfterExpiry_WhenTheShiftTokenRanOut_IsNotTheSameAsAFailedLogin', () => {
+  it('tells an expired shift apart from a failed login', () => {
     store.startAfterExpiry();
 
     expect(store.status()).toBe('sessionExpired');

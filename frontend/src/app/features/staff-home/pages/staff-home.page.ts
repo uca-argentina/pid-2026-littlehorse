@@ -17,7 +17,6 @@ const ROLE_NAMES: Record<string, string> = {
 @Component({
   selector: 'drinkit-staff-home-page',
   imports: [VenueBrand],
-  standalone: true,
   styleUrl: './staff-home.page.scss',
   templateUrl: './staff-home.page.html',
 })
@@ -38,6 +37,6 @@ export class StaffHomePage {
 
   protected leave(): void {
     this.sessions.forget();
-    void this.router.navigate([this.venueSlug(), 'personal', 'ingresar']);
+    void this.router.navigate([this.venueSlug(), 'staff', 'login']);
   }
 }
