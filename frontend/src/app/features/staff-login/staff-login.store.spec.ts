@@ -1,7 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { Router } from '@angular/router';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { Subject, throwError } from 'rxjs';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { SessionStorage } from '../../core/auth/session-storage';
@@ -42,64 +41,24 @@ describe('StaffLoginStore', () => {
     router = TestBed.inject(Router);
   });
 
-  function typeValidCredentials(): void {
-    store.username.set('euge');
-    store.password.set('a-password');
-  }
+  const credentials = { username: 'euge', password: 'a-password' };
 
-  it('cannot be submitted while nothing is typed', () => {
-    expect(store.canSubmit()).toBe(false);
-  });
-
-  it('cannot be submitted with only the username typed', () => {
-    store.username.set('euge');
-
-    expect(store.canSubmit()).toBe(false);
-  });
-
-  it('cannot be submitted with a username of only whitespace', () => {
-    store.username.set('   ');
-    store.password.set('a-password');
-
-    expect(store.canSubmit()).toBe(false);
-  });
-
-  it('can be submitted once both fields are typed', () => {
-    typeValidCredentials();
-
-    expect(store.canSubmit()).toBe(true);
-  });
-
+  // Two taps on a slow connection must not place two logins.
   it('does not send twice while a request is in flight', () => {
     logIn.mockReturnValue(new Subject<StaffSession>());
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
+    store.submit('bar-alfa', credentials);
 
-    expect(store.canSubmit()).toBe(false);
+    expect(store.isSending()).toBe(true);
     expect(logIn).toHaveBeenCalledTimes(1);
-  });
-
-  it('sends the username trimmed', () => {
-    logIn.mockReturnValue(new Subject<StaffSession>());
-    store.username.set('  euge  ');
-    store.password.set('a-password');
-
-    store.submit('bar-alfa');
-
-    expect(logIn).toHaveBeenCalledWith('bar-alfa', {
-      username: 'euge',
-      password: 'a-password',
-    });
   });
 
   it('remembers the session when the credentials are valid', () => {
     const response = new Subject<StaffSession>();
     logIn.mockReturnValue(response);
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
     response.next(aSession);
 
     expect(sessions.session()).toEqual(aSession);
@@ -110,9 +69,8 @@ describe('StaffLoginStore', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const response = new Subject<StaffSession>();
     logIn.mockReturnValue(response);
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
     response.next(aSession);
 
     expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff']);
@@ -120,28 +78,16 @@ describe('StaffLoginStore', () => {
 
   it('reports the same failure whichever field was wrong', () => {
     logIn.mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
 
     expect(store.status()).toBe('invalidCredentials');
   });
 
-  it('clears the password and keeps the username after a wrong login', () => {
-    logIn.mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
-    typeValidCredentials();
-
-    store.submit('bar-alfa');
-
-    expect(store.password()).toBe('');
-    expect(store.username()).toBe('euge');
-  });
-
   it('does not blame the credentials when the API cannot be reached', () => {
     logIn.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
-    typeValidCredentials();
 
-    store.submit('bar-alfa');
+    store.submit('bar-alfa', credentials);
 
     expect(store.status()).toBe('unreachable');
   });

@@ -42,6 +42,15 @@ describe('StaffLoginPage', () => {
     expect(enterButton().disabled).toBe(true);
   });
 
+  it('cannot be submitted with only the username typed', async () => {
+    const { fixture } = await openScreen(vi.fn());
+
+    type(/usuario/i, 'euge');
+    await fixture.whenStable();
+
+    expect(enterButton().disabled).toBe(true);
+  });
+
   it('can be submitted once both fields are filled', async () => {
     const { fixture } = await openScreen(vi.fn());
 
@@ -127,6 +136,53 @@ describe('StaffLoginPage', () => {
 
     expect(usernameField.getAttribute('aria-invalid')).toBe('true');
     expect(usernameField.getAttribute('aria-describedby')).toBe(message.id);
+  });
+
+  // Moved here with the form: the store no longer holds the field values, so
+  // these three are now about what the screen does with them.
+  it('cannot be submitted with a username of only whitespace', async () => {
+    const { fixture } = await openScreen(vi.fn());
+
+    type(/usuario/i, '   ');
+    type(/contraseña/i, 'a-password');
+    await fixture.whenStable();
+
+    expect(enterButton().disabled).toBe(true);
+  });
+
+  it('sends the username trimmed', async () => {
+    const logIn = vi.fn().mockReturnValue(new Subject<StaffSession>());
+    const { fixture } = await openScreen(logIn);
+
+    type(/usuario/i, '  euge  ');
+    type(/contraseña/i, 'a-password');
+    await fixture.whenStable();
+    fireEvent.click(enterButton());
+
+    expect(logIn).toHaveBeenCalledWith('bar-alfa', {
+      username: 'euge',
+      password: 'a-password',
+    });
+  });
+
+  /**
+   * The tablet behind the bar is shared and unattended between shifts. A
+   * password left sitting in the field is readable by whoever picks it up next.
+   */
+  it('clears the password and keeps the username after a wrong login', async () => {
+    const logIn = vi
+      .fn()
+      .mockReturnValue(throwError(() => rejectedWith(ProblemTypes.invalidCredentials)));
+    const { fixture } = await openScreen(logIn);
+
+    type(/usuario/i, 'euge');
+    type(/contraseña/i, 'wrong-password');
+    await fixture.whenStable();
+    fireEvent.click(enterButton());
+    await fixture.whenStable();
+
+    expect((screen.getByLabelText(/contraseña/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/usuario/i) as HTMLInputElement).value).toBe('euge');
   });
 
   it('labels every field for a screen reader', async () => {

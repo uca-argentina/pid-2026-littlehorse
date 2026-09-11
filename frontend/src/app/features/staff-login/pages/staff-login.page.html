@@ -1,5 +1,5 @@
 <div class="frame">
-  <form class="card" (submit)="submit($event)">
+  <form class="card" [formGroup]="form" (ngSubmit)="submit()">
     <drinkit-venue-brand [venue]="venueSlug()" />
 
     @if (store.status() === 'sessionExpired') {
@@ -34,15 +34,12 @@
         [class.input-bad]="store.status() === 'invalidCredentials'"
         [attr.aria-invalid]="store.status() === 'invalidCredentials' ? 'true' : null"
         [attr.aria-describedby]="store.status() === 'invalidCredentials' ? 'login-error' : null"
-        name="username"
+        formControlName="username"
         type="text"
         autocomplete="username"
         autocapitalize="none"
         spellcheck="false"
-        placeholder="tu.usuario"
-        [value]="store.username()"
-        [disabled]="store.isSending()"
-        (input)="store.username.set(readCurrentValue($event))"
+        placeholder="Tu usuario"
       />
     </div>
 
@@ -54,17 +51,14 @@
         [class.input-bad]="store.status() === 'invalidCredentials'"
         [attr.aria-invalid]="store.status() === 'invalidCredentials' ? 'true' : null"
         [attr.aria-describedby]="store.status() === 'invalidCredentials' ? 'login-error' : null"
-        name="password"
+        formControlName="password"
         type="password"
         autocomplete="current-password"
         placeholder="Tu contraseña"
-        [value]="store.password()"
-        [disabled]="store.isSending()"
-        (input)="store.password.set(readCurrentValue($event))"
       />
     </div>
 
-    <button class="cta" type="submit" [disabled]="!store.canSubmit()">
+    <button class="cta" type="submit" [disabled]="!canSubmit()">
       @if (store.isSending()) {
         <span class="spinner" aria-hidden="true"></span>
         Entrando
