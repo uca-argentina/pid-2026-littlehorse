@@ -238,7 +238,7 @@ falta, preguntá antes de inventar el término.
 | Trago | `Drink` | | Ticket | `Ticket` |
 | Menú | `Menu` | | Cliente | `Customer` |
 | Mesa | `Table` | | Cajero | `Cashier` |
-| Cuenta VIP | `VipAccount` | | Bartender | `Bartender` |
+| Cuenta VIP | `VipAccount` | | KDS (estación de barra) | `Kds` |
 | Saldo | `Balance` | | Mozo | `Waiter` |
 | Método de pago | `PaymentMethod` | | Retiro en barra | `BarPickup` |
 | Efectivo | `Cash` | | Entrega en mesa | `TableDelivery` |

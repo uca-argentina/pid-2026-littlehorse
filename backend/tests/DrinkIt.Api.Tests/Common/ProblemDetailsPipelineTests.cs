@@ -161,6 +161,22 @@ public class ProblemDetailsPipelineTests
             response.Body.GetProperty("type").GetString());
     }
 
+    /// <summary>
+    /// A KDS that types the administration address. The authorization policy
+    /// answers 403 with no body, and unnamed it is indistinguishable to the PWA
+    /// from a session that ran out. The first must not send anyone to the login
+    /// screen: signing in again changes nothing about their role.
+    /// </summary>
+    [Fact]
+    public async Task Pipeline_WhenTheRoleIsNotAllowedThere_SaysSoWithItsOwnType()
+    {
+        HttpResponseSnapshot response = await Run(StatusCode(StatusCodes.Status403Forbidden));
+
+        Assert.Equal(StatusCodes.Status403Forbidden, response.StatusCode);
+        Assert.StartsWith("application/problem+json", response.ContentType, StringComparison.Ordinal);
+        Assert.Equal("urn:drinkit:problem:auth:forbidden", response.Body.GetProperty("type").GetString());
+    }
+
     // The endpoint that already named its problem keeps it: a rejected login is
     // not an expired session, and overwriting it here would erase the one
     // distinction this whole change exists to make.
@@ -211,14 +227,6 @@ public class ProblemDetailsPipelineTests
 
         await pipeline.Build()(context);
 
-        string raw = System.Text.Encoding.UTF8.GetString(body.ToArray());
-
-        return new HttpResponseSnapshot(
-            context.Response.StatusCode,
-            context.Response.ContentType ?? string.Empty,
-            raw,
-            raw.StartsWith('{') ? JsonDocument.Parse(raw).RootElement.Clone() : default);
+        return HttpResponseSnapshot.Of(context, body);
     }
-
-    private sealed record HttpResponseSnapshot(int StatusCode, string ContentType, string Raw, JsonElement Body);
 }

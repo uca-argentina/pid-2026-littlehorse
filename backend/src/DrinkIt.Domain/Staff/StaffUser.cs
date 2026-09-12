@@ -3,7 +3,7 @@ using DrinkIt.Domain.Common;
 namespace DrinkIt.Domain.Staff;
 
 /// <summary>
-/// Someone who works at a venue: an administrator or a bartender for now.
+/// Someone who works at a venue, in one of the roles of <see cref="StaffRole"/>.
 /// Customers are a separate aggregate — they belong to no venue and their
 /// account is optional.
 /// </summary>

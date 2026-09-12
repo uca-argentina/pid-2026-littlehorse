@@ -77,10 +77,10 @@ depende de nada sin terminar. Si le falta algo, no entra.
 
 | ID | Story | Depende de | Estado |
 |---|---|---|---|
-| US-01 | Iniciar sesión | — | **5 de 6** — sólo falta que existan las pantallas de gestión |
+| US-01 | Iniciar sesión | — | ✅ **Terminada** |
 | US-02 | Poder entrar la primera vez | — | ✅ **Terminada** |
-| US-03 | Dar de alta al equipo | US-01 | Pendiente |
-| US-04 | Ver y corregir al equipo | US-03 | Pendiente |
+| US-03 | Dar de alta al equipo | US-01 | ✅ **Terminada** |
+| US-04 | Ver y corregir al equipo | US-03 | Pendiente — el listado ya existe, falta editar |
 | US-05 | Dar de baja a quien se fue | US-03 | Pendiente |
 | US-06 | Cargar un trago en la carta | US-01 | Pendiente |
 | US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
@@ -94,11 +94,12 @@ Las doce son imprescindibles: cubren los seis puntos de la consigna y nada más.
 pantallas de la barra quedaron fuera del sprint el 2026-09-10; el motivo y la consecuencia
 están en *Fuera del alcance*.
 
-**Estado al viernes 11 de septiembre.** Una story terminada, una a un criterio de estarlo y
-diez sin empezar. Lo que se ganó en estos días no se ve en esa cuenta: la API está armada y
-el frontend dejó de estar vacío, así que las diez restantes ya no arrancan de cero. Aun así
-son diez en seis días, y el hito del lunes 14 sigue siendo el punto donde se decide qué
-entra.
+**Estado al sábado 12 de septiembre.** Tres stories terminadas y nueve sin empezar. US-03
+cerró de punta a punta y de paso cerró US-01: ahora un administrador entra y ve una pantalla
+de gestión de verdad, que era el único criterio que le faltaba. Con eso quedó hecha también
+la autorización por rol del backend, que era la pieza sin tarjeta que trababa todo el carril
+de administración. De las nueve que quedan, US-04 y US-05 enchufan en el listado que ya
+existe. El hito del lunes 14 sigue siendo el punto donde se decide qué entra.
 
 ---
 
@@ -137,18 +138,14 @@ entra.
 > El criterio 6 sale del [ADR-0008](../adr/0008-autenticacion-con-token-unico-sin-refresh-token.md):
 > la sesión dura ocho horas y vencer es un evento normal de fin de turno, no un error.
 
-**Avance — 5 de 6.** La pantalla existe, se entra de verdad contra la API y los criterios
-2, 3, 4, 5 y 6 están cumplidos y con test. Falta sólo el criterio 1, y no por algo del
-ingreso: **las pantallas de gestión todavía no existen**, llegan con US-03 a US-08. Hoy un
-administrador que entra cae en la misma pantalla que un KDS, la que avisa que su rol no
-tiene pantallas.
+✅ **Terminada.** Los seis criterios están cumplidos y con test. El criterio 1 cerró con
+US-03: un administrador que entra ve el acceso a *Usuarios internos* en la pantalla de
+inicio, y los demás roles siguen viendo el aviso de que su rol todavía no tiene pantallas.
 
-> **Ojo con esto al planificar.** El criterio 1 ata US-01 a seis stories posteriores, que es
-> el mismo acoplamiento que ya corregimos moviendo el viejo criterio 5 a US-03. Se puede
-> dejar así y aceptar que US-01 cierre recién con US-03, o mover "veo las pantallas de
-> gestión" a US-03 y dejar acá "entro y el sistema me reconoce como administrador". Lo
-> segundo es más limpio, pero reescribir un criterio después de construir es justo lo que
-> desaconseja la regla 1 de arriba. Decisión del equipo, no la tomé sola.
+> Quedó anotado que este criterio ataba US-01 a una story posterior, y efectivamente cerró
+> recién con ella. No hizo falta reescribirlo: US-03 entró antes de la fecha. Si el mismo
+> patrón vuelve a aparecer, conviene que el criterio hable de lo que la propia story
+> entrega.
 
 ### US-02 · Poder entrar la primera vez
 
@@ -198,6 +195,12 @@ tiene pantallas.
 6. **Dado** que entré con cualquier rol que no sea administrador, **cuando** escribo a mano
    la dirección de una pantalla de administración, **entonces** el sistema no me la muestra
    ni me deja operar sobre ningún recurso de administración.
+
+✅ **Terminada.** Los seis criterios están cumplidos. El alta corre contra la API real, el
+usuario nuevo aparece en el listado y entra enseguida, el nombre repetido se rechaza dentro
+del boliche y se acepta en otro, y el criterio 6 está cubierto por los dos lados: el
+guardián de rol en el front y la política de administrador en el backend, con una prueba de
+punta a punta que le pide el listado a la API con un token de KDS y recibe 403.
 
 > **Nota sobre los roles.** No existe un rol "bartender". El KDS es la cuenta de la
 > **estación de barra**, compartida por todos los que preparan ahí, tal como lo describe §11
@@ -484,6 +487,10 @@ generados del OpenAPI. Las diez stories que quedan enchufan ahí en vez de empez
 
 Y están terminados **los trece diseños de pantalla**, en alta fidelidad y con un único
 sistema visual: no queda ninguna decisión de diseño por tomar.
+
+Con US-03 se sumó la **autorización por rol**, que era trabajo sin tarjeta: la política de
+administrador en el backend, el guardián de rol en el front y el 403 con su propio tipo de
+problema para que la PWA no confunda "no es tu rol" con "se venció tu sesión".
 
 ## Calendario
 

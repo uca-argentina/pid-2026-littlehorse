@@ -1,0 +1,154 @@
+// The administration screens are the first ones that are not a single centred
+// card: this is a tablet or a laptop in an office, not a phone behind the bar.
+// The palette and the radii stay the same so it still reads as one product.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-4);
+  padding: var(--dk-space-3) var(--dk-space-5);
+  border-bottom: 1px solid var(--dk-border);
+}
+
+.station {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: var(--dk-text-min);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+// Pushes whoever is signed in, and the way out, to the far end of the header.
+.who {
+  margin-left: auto;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 900px;
+  padding: var(--dk-space-5);
+  margin: 0 auto;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 50px;
+  padding: 0 var(--dk-space-5);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 15.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cta:hover {
+  background: var(--dk-accent-hover);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  padding: 13px var(--dk-space-4);
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+}
+
+// Half-faded rather than hidden: they still have to be readable to be brought
+// back, and legible enough that nobody mistakes one for an active account.
+.row-off {
+  opacity: 0.65;
+}
+
+.username {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, 'SF Mono', menlo, monospace;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.chip {
+  padding: 5px 11px;
+  border: 1.5px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  color: var(--dk-text-muted);
+  font-size: var(--dk-text-min);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// The one role that can change the venue's data, so it is the one that gets
+// the accent. Everything else stays neutral.
+.chip-admin {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}
+
+.chip-off {
+  color: var(--dk-text-faint);
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: #1a1713;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.hint {
+  margin: auto 0 0;
+  color: var(--dk-text-faint);
+  font-size: 14px;
+  line-height: 1.55;
+}

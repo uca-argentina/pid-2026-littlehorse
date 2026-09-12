@@ -1,11 +1,10 @@
 using System.Text.Json;
-using DrinkIt.Api.Common;
 using DrinkIt.Api.Features.Authentication;
+using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Security;
 using DrinkIt.Domain.Staff;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DrinkIt.Api.Tests.Features.Authentication;
 
@@ -106,40 +105,8 @@ public class LoginEndpointTests
         IResult result = await LoginEndpoint.HandleAsync(
             new LoginRequest(username, password), handler, CancellationToken.None);
 
-        return await Execute(result);
+        return await EndpointResponse.Execute(result, "/bar-alfa/auth/login", HttpMethods.Post);
     }
-
-    /// <summary>
-    /// Writes the result to a real response. ProblemDetails is registered
-    /// because that is what stamps the traceId, exactly as Program.cs does.
-    /// </summary>
-    private static async Task<HttpResponseSnapshot> Execute(IResult result)
-    {
-        ServiceCollection services = new();
-        services.AddLogging();
-
-        // The real registration, not a bare AddProblemDetails: it installs the
-        // customization that names an unnamed 401, and these assert that a
-        // rejected login keeps the type the endpoint gave it.
-        services.AddProblemDetailsForEveryError();
-
-        await using ServiceProvider provider = services.BuildServiceProvider();
-        using MemoryStream body = new();
-
-        DefaultHttpContext context = new() { RequestServices = provider };
-        context.Request.Path = "/bar-alfa/auth/login";
-        context.Request.Method = HttpMethods.Post;
-        context.Response.Body = body;
-
-        await result.ExecuteAsync(context);
-
-        return new HttpResponseSnapshot(
-            context.Response.StatusCode,
-            context.Response.ContentType ?? string.Empty,
-            JsonDocument.Parse(body.ToArray()).RootElement.Clone());
-    }
-
-    private sealed record HttpResponseSnapshot(int StatusCode, string ContentType, JsonElement Body);
 
     private static class Fake
     {

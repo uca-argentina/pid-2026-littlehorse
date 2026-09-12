@@ -5,3 +5,7 @@ pnpm-lock.yaml
 playwright-report
 test-results
 blob-report
+
+# Snapshot of the API contract, written by "pnpm run generate:api" and not
+# committed. Whoever regenerates it should not have to format the API's output.
+openapi.json

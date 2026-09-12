@@ -1,0 +1,55 @@
+<div class="frame">
+  <header class="head">
+    <drinkit-venue-brand [venue]="venueSlug()" />
+    <p class="station">Administración</p>
+    <span class="who">{{ username() }}</span>
+    <drinkit-sign-out [venueSlug]="venueSlug()" />
+  </header>
+
+  <section class="body">
+    <div class="bar">
+      <h1 class="title">Usuarios internos</h1>
+      <a class="cta" routerLink="new">Nuevo usuario</a>
+    </div>
+
+    @if (staff.isLoading()) {
+      <p class="note" role="status">Cargando el equipo…</p>
+    }
+
+    @if (failure() === 'forbidden') {
+      <p class="note note-bad" role="alert">
+        Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que te
+        la vuelva a dar.
+      </p>
+    } @else if (failure() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos traer el equipo. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    @if (isEmpty()) {
+      <p class="note" role="status">Todavía no hay nadie cargado en este boliche.</p>
+    }
+
+    @if (rows().length > 0) {
+      <ul class="rows">
+        @for (row of rows(); track row.id) {
+          <li class="row" [class.row-off]="!row.isActive">
+            <span class="username">{{ row.username }}</span>
+            <span class="chip" [class.chip-admin]="row.roleName === 'Administrador'">
+              {{ row.roleName }}
+            </span>
+            @if (!row.isActive) {
+              <span class="chip chip-off">Dado de baja</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <p class="hint">
+      Cuando alguien deja de trabajar acá lo das de baja, no lo borrás: los pedidos que preparó
+      siguen apuntando a su usuario.
+    </p>
+  </section>
+</div>

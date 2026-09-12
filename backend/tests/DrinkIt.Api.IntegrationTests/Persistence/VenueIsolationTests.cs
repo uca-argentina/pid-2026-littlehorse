@@ -68,7 +68,7 @@ public sealed class VenueIsolationTests(SqlServerFixture sql)
         seed.Venues.AddRange(mine, theirs);
         seed.StaffUsers.AddRange(
             StaffUser.Create(mine.Id, mineUsername, "hash", StaffRole.Administrator),
-            StaffUser.Create(theirs.Id, theirsUsername, "hash", StaffRole.Bartender));
+            StaffUser.Create(theirs.Id, theirsUsername, "hash", StaffRole.Kds));
         await seed.SaveChangesAsync();
 
         return (mine, theirs);
