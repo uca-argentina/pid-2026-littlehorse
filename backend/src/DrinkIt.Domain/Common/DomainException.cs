@@ -8,7 +8,13 @@ namespace DrinkIt.Domain.Common;
 /// <see cref="Code"/> is the stable half and <see cref="Exception.Message"/> the
 /// disposable one. Tests assert the code so that rewording a message does not
 /// break them, and the API maps the code to the ProblemDetails type so the PWA
-/// can branch on it and translate it. The message is for logs and developers.
+/// can branch on it and translate it.
+///
+/// The message reaches the client: the API answers a broken invariant with a
+/// 400 whose detail is this text (ADR-0009). So it is written for the person
+/// who sent the request, never for the log — it names no table, no column and
+/// nothing about infrastructure, and it must not echo data the caller did not
+/// send. A message that cannot promise that does not belong in this exception.
 /// </remarks>
 public sealed class DomainException(string code, string message) : Exception(message)
 {
