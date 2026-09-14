@@ -37,7 +37,7 @@ async function logInAsTheAdministrator(page: Page): Promise<void> {
 async function createStaffUser(page: Page, username: string, role: RegExp): Promise<void> {
   await page.goto(`${staffUsersPath}/new`);
   await page.getByRole('textbox', { name: /usuario/i }).fill(username);
-  await page.getByLabel(/contraseña/i).fill(aNewPassword);
+  await page.getByLabel('Contraseña', { exact: true }).fill(aNewPassword);
   await page.getByRole('radio', { name: role }).check();
   await page.getByRole('button', { name: /crear usuario/i }).click();
 }
@@ -70,7 +70,7 @@ test.describe('Staff users', () => {
 
     await page.getByRole('link', { name: /nuevo usuario/i }).click();
     await page.getByRole('textbox', { name: /usuario/i }).fill(username);
-    await page.getByLabel(/contraseña/i).fill(aNewPassword);
+    await page.getByLabel('Contraseña', { exact: true }).fill(aNewPassword);
     await page.getByRole('radio', { name: /KDS/i }).check();
     await page.getByRole('button', { name: /crear usuario/i }).click();
 
@@ -109,7 +109,7 @@ test.describe('Staff users', () => {
 
     await page.goto(`${staffUsersPath}/new`);
     await page.getByRole('textbox', { name: /usuario/i }).fill('eu');
-    await page.getByLabel(/contraseña/i).fill(aNewPassword);
+    await page.getByLabel('Contraseña', { exact: true }).fill(aNewPassword);
     await page.getByRole('button', { name: /crear usuario/i }).click();
 
     await expect(page.getByText(/al menos tres caracteres/i)).toBeVisible();

@@ -5,6 +5,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 import { STAFF_ROLE_DESCRIPTIONS } from '../../../core/staff/staff-roles';
 import type { StaffRole } from '../../../core/staff/staff-roles';
+import { PasswordEye } from '../../../shared/password-eye/password-eye';
 import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
 import { NewStaffUserStore } from '../new-staff-user.store';
 
@@ -29,7 +30,7 @@ function trimmedMinLength(minimum: number) {
 
 @Component({
   selector: 'drinkit-new-staff-user-page',
-  imports: [ReactiveFormsModule, RouterLink, VenueBrand],
+  imports: [PasswordEye, ReactiveFormsModule, RouterLink, VenueBrand],
   // On the component and not on the route. A route's injector is created once
   // per route config and kept, so a store provided there outlives the screen:
   // cancel after a rejected attempt, come back, and the old message is still
@@ -91,6 +92,16 @@ export class NewStaffUserPage {
   );
 
   protected readonly roleError = computed(() => this.errorOf('role', 'Elegí un rol.'));
+
+  /**
+   * Dots by default: this is a laptop on a bar and somebody walks past. The eye
+   * exists because the administrator has to read this password out loud to the
+   * person it belongs to, and retyping it to check what they wrote is what
+   * makes anyone settle for something short.
+   */
+  protected readonly passwordVisible = signal(false);
+
+  protected readonly passwordType = computed(() => (this.passwordVisible() ? 'text' : 'password'));
 
   constructor() {
     // Reactive forms are not signal-aware, so enabling and disabling is driven

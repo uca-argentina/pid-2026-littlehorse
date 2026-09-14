@@ -52,17 +52,20 @@
 
     <div class="field">
       <label class="label" for="password">Contraseña</label>
-      <input
-        id="password"
-        class="input"
-        [class.input-bad]="passwordError() !== null"
-        [attr.aria-invalid]="passwordError() !== null ? 'true' : null"
-        [attr.aria-describedby]="passwordError() !== null ? 'password-error' : 'password-help'"
-        formControlName="password"
-        type="password"
-        autocomplete="new-password"
-        placeholder="Mínimo ocho caracteres"
-      />
+      <div class="peeked">
+        <input
+          id="password"
+          class="input"
+          [class.input-bad]="passwordError() !== null"
+          [attr.aria-invalid]="passwordError() !== null ? 'true' : null"
+          [attr.aria-describedby]="passwordError() !== null ? 'password-error' : 'password-help'"
+          formControlName="password"
+          [type]="passwordType()"
+          autocomplete="new-password"
+          placeholder="Mínimo ocho caracteres"
+        />
+        <drinkit-password-eye [(visible)]="passwordVisible" [disabled]="store.isSending()" />
+      </div>
       @if (passwordError() !== null) {
         <p id="password-error" class="bad">{{ passwordError() }}</p>
       } @else {

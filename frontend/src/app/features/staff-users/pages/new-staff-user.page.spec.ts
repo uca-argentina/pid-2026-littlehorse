@@ -26,12 +26,14 @@ function openScreen(create = vi.fn().mockReturnValue(of(created))) {
   }).then((rendered) => ({ rendered, create }));
 }
 
-function type(label: RegExp, value: string): void {
-  fireEvent.input(screen.getByLabelText(label), { target: { value } });
+// selector: 'input' on purpose. The eye carries an aria-label that also says
+// "contraseña", so without it the password field and its button both match.
+function field(label: RegExp): HTMLInputElement {
+  return screen.getByLabelText(label, { selector: 'input' }) as HTMLInputElement;
 }
 
-function field(label: RegExp): HTMLInputElement {
-  return screen.getByLabelText(label) as HTMLInputElement;
+function type(label: RegExp, value: string): void {
+  fireEvent.input(field(label), { target: { value } });
 }
 
 function role(name: RegExp): HTMLInputElement {
@@ -40,6 +42,10 @@ function role(name: RegExp): HTMLInputElement {
 
 function save(): void {
   screen.getByRole('button', { name: /crear usuario/i }).click();
+}
+
+function eye(): HTMLButtonElement {
+  return screen.getByRole('button', { name: /contraseña/i }) as HTMLButtonElement;
 }
 
 describe('NewStaffUserPage', () => {
@@ -204,6 +210,82 @@ describe('NewStaffUserPage', () => {
     await rendered.fixture.whenStable();
 
     expect(field(/usuario/i).value).toBe('martin.p');
+  });
+
+  /**
+   * The administrator types a password they will read out loud to somebody
+   * else. Dots are right by default, because this is a laptop on a bar, but
+   * having to retype it to find out what they wrote is what makes them pick
+   * something short instead.
+   */
+  it('hides the password behind dots until somebody asks to see it', async () => {
+    await openScreen();
+
+    expect(field(/contraseña/i).type).toBe('password');
+  });
+
+  it('shows the password while the eye is on', async () => {
+    const { rendered } = await openScreen();
+
+    eye().click();
+    await rendered.fixture.whenStable();
+
+    expect(field(/contraseña/i).type).toBe('text');
+  });
+
+  it('hides it again on the second press', async () => {
+    const { rendered } = await openScreen();
+
+    eye().click();
+    await rendered.fixture.whenStable();
+    eye().click();
+    await rendered.fixture.whenStable();
+
+    expect(field(/contraseña/i).type).toBe('password');
+  });
+
+  // The label has to say what pressing it will do, not what it did: a screen
+  // reader user cannot see the dots to work out which way round it is.
+  it('says what the eye will do next', async () => {
+    const { rendered } = await openScreen();
+
+    expect(eye().getAttribute('aria-label')).toBe('Mostrar la contraseña');
+
+    eye().click();
+    await rendered.fixture.whenStable();
+
+    expect(eye().getAttribute('aria-label')).toBe('Ocultar la contraseña');
+  });
+
+  // A button inside a form submits it unless it says otherwise, and this one
+  // would send a half-filled form every time somebody peeked.
+  it('does not try to save when the eye is pressed', async () => {
+    const { rendered, create } = await openScreen();
+
+    type(/usuario/i, 'martin.p');
+    type(/contraseña/i, 'a long enough one');
+    fireEvent.click(role(/mozo/i));
+    await rendered.fixture.whenStable();
+
+    eye().click();
+    await rendered.fixture.whenStable();
+
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  // What is on screen while it saves is what gets handed over, so the eye keeps
+  // whatever state it had; what it must not do is stay usable on a dead form.
+  it('locks the eye along with the rest of the form', async () => {
+    const { rendered } = await openScreen(vi.fn().mockReturnValue(new Subject<StaffUser>()));
+
+    type(/usuario/i, 'martin.p');
+    type(/contraseña/i, 'a long enough one');
+    fireEvent.click(role(/mozo/i));
+    await rendered.fixture.whenStable();
+    save();
+    await rendered.fixture.whenStable();
+
+    expect(eye().disabled).toBe(true);
   });
 
   it('locks the form while it is saving', async () => {

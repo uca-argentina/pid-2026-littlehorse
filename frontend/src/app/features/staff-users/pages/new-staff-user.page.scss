@@ -72,6 +72,21 @@
   font-size: 16px;
 }
 
+// Holds the eye on top of the field instead of beside it, so the password lines
+// up with every other input on the screen.
+.peeked {
+  position: relative;
+  display: flex;
+}
+
+.peeked .input {
+  flex: 1;
+  min-width: 0;
+
+  // Room for the button, so a long password never runs underneath it.
+  padding-right: 60px;
+}
+
 .input::placeholder {
   color: var(--dk-text-faint);
 }

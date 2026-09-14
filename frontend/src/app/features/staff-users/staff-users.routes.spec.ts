@@ -56,7 +56,9 @@ describe('staffUsersRoutes', () => {
   }
 
   function type(label: RegExp, value: string): void {
-    fireEvent.input(screen.getByLabelText(label), { target: { value } });
+    // selector: 'input' on purpose. The password field's eye carries an
+    // aria-label that also says "contraseña", so both match without it.
+    fireEvent.input(screen.getByLabelText(label, { selector: 'input' }), { target: { value } });
   }
 
   // The bug as it was found: create somebody whose username is taken, see the

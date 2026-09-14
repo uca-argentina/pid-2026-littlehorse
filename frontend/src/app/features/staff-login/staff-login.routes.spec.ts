@@ -46,7 +46,9 @@ describe('staffLoginRoutes', () => {
   }
 
   function type(label: RegExp, value: string): void {
-    fireEvent.input(screen.getByLabelText(label), { target: { value } });
+    // selector: 'input' on purpose. The password field's eye carries an
+    // aria-label that also says "contraseña", so both match without it.
+    fireEvent.input(screen.getByLabelText(label, { selector: 'input' }), { target: { value } });
   }
 
   it('opens the login clean after a rejected attempt and a trip elsewhere', async () => {
