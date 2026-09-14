@@ -13,9 +13,10 @@ import type { NewStaffUser } from './staff-users.service';
 type NewStaffUserStatus = 'idle' | 'sending' | 'usernameTaken' | 'passwordTooShort' | 'unreachable';
 
 /**
- * State and transitions of the "new staff user" screen. Provided by the route
- * rather than in root: it dies with the screen, so a stale failure never
- * survives into a later visit.
+ * State and transitions of the "new staff user" screen. Provided by the page
+ * component, not in root and not on the route: a component's providers die
+ * with the component, so a stale failure never survives into a later visit.
+ * (A route's injector would not — Angular creates it once and keeps it.)
  */
 @Injectable()
 export class NewStaffUserStore {

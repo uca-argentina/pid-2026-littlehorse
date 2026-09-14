@@ -30,6 +30,11 @@ function trimmedMinLength(minimum: number) {
 @Component({
   selector: 'drinkit-new-staff-user-page',
   imports: [ReactiveFormsModule, RouterLink, VenueBrand],
+  // On the component and not on the route. A route's injector is created once
+  // per route config and kept, so a store provided there outlives the screen:
+  // cancel after a rejected attempt, come back, and the old message is still
+  // on an empty form. A component's providers die with the component.
+  providers: [NewStaffUserStore],
   styleUrl: './new-staff-user.page.scss',
   templateUrl: './new-staff-user.page.html',
 })

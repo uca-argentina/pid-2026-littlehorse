@@ -18,6 +18,10 @@ function notBlank(control: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'drinkit-staff-login-page',
   imports: [ReactiveFormsModule, VenueBrand],
+  // On the component and not on the route, for the same reason as the staff
+  // form: a route's injector is created once and kept, so the store would
+  // carry a failed attempt into the next visit.
+  providers: [StaffLoginStore],
   styleUrl: './staff-login.page.scss',
   templateUrl: './staff-login.page.html',
 })
