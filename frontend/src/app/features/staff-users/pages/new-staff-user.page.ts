@@ -50,9 +50,10 @@ export class NewStaffUserPage {
       nonNullable: true,
       validators: [Validators.required, trimmedMinLength(PASSWORD_MIN_LENGTH)],
     }),
-    // The least privileged role, so a skipped field never hands out the account
-    // that can change the venue's data.
-    role: new FormControl<StaffRole>('Waiter', { nonNullable: true }),
+    // Nothing picked for them. Picking the role is the one real decision on
+    // this screen, and a default of "the least privileged" was handing out
+    // mozo — which has no screen yet — to anyone who skipped the field.
+    role: new FormControl<StaffRole | null>(null, { validators: [Validators.required] }),
   });
 
   /**
@@ -84,6 +85,8 @@ export class NewStaffUserPage {
     this.errorOf('password', 'La contraseña tiene que tener al menos ocho caracteres.'),
   );
 
+  protected readonly roleError = computed(() => this.errorOf('role', 'Elegí un rol.'));
+
   constructor() {
     // Reactive forms are not signal-aware, so enabling and disabling is driven
     // from here rather than bound in the template — binding [disabled] on a
@@ -99,7 +102,7 @@ export class NewStaffUserPage {
    * validator can never disagree. Touching the value signal first is what makes
    * this recompute: the control itself is not reactive.
    */
-  private errorOf(field: 'username' | 'password', message: string): string | null {
+  private errorOf(field: 'username' | 'password' | 'role', message: string): string | null {
     this.typed();
 
     if (!this.attempted() || this.store.isSending()) return null;
@@ -113,6 +116,10 @@ export class NewStaffUserPage {
     if (this.form.invalid || this.store.isSending()) return;
 
     const { username, password, role } = this.form.getRawValue();
+
+    // Validators.required already rejected a null role above; this is only
+    // what the compiler needs to see.
+    if (role === null) return;
 
     this.store.submit(this.venueSlug(), { username: username.trim(), password, role });
   }

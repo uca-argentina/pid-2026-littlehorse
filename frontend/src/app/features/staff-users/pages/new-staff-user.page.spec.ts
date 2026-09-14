@@ -55,11 +55,27 @@ describe('NewStaffUserPage', () => {
 
   // The least privileged one. Somebody who skips this field must not end up
   // handing out the account that can change the venue's data.
-  it('starts on the role that can do the least', async () => {
+  // Picking the role is the one real decision on this screen, so nothing is
+  // picked for them: a default of "the least privileged" was handing out mozo,
+  // which has no screen yet, to anyone who skipped the field.
+  it('starts with no role picked', async () => {
     await openScreen();
 
-    expect(role(/mozo/i).checked).toBe(true);
     expect(role(/administrador/i).checked).toBe(false);
+    expect(role(/KDS/i).checked).toBe(false);
+    expect(role(/mozo/i).checked).toBe(false);
+  });
+
+  it('refuses to save until a role is picked, and says so', async () => {
+    const { rendered, create } = await openScreen();
+
+    type(/usuario/i, 'martin.p');
+    type(/contraseña/i, 'a long enough one');
+    save();
+    await rendered.fixture.whenStable();
+
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByText(/elegí un rol/i)).not.toBeNull();
   });
 
   // Criterion 5, the four ways to get it wrong. Caught here and not by the API:
@@ -139,6 +155,7 @@ describe('NewStaffUserPage', () => {
 
     type(/usuario/i, '  Martin.P  ');
     type(/contraseña/i, 'a long enough one');
+    fireEvent.click(role(/mozo/i));
     save();
 
     expect(create).toHaveBeenCalledWith({
@@ -167,6 +184,7 @@ describe('NewStaffUserPage', () => {
 
     type(/usuario/i, 'martin.p');
     type(/contraseña/i, 'a long enough one');
+    fireEvent.click(role(/KDS/i));
     save();
     await rendered.fixture.whenStable();
 
@@ -181,6 +199,7 @@ describe('NewStaffUserPage', () => {
 
     type(/usuario/i, 'martin.p');
     type(/contraseña/i, 'a long enough one');
+    fireEvent.click(role(/KDS/i));
     save();
     await rendered.fixture.whenStable();
 
@@ -192,6 +211,7 @@ describe('NewStaffUserPage', () => {
 
     type(/usuario/i, 'martin.p');
     type(/contraseña/i, 'a long enough one');
+    fireEvent.click(role(/KDS/i));
     save();
     await rendered.fixture.whenStable();
 

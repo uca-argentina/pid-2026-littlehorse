@@ -44,7 +44,7 @@
         <p id="username-error" class="bad">{{ usernameError() }}</p>
       } @else {
         <p id="username-help" class="help">
-          Con esto entra. Tiene que ser único en este boliche; en otro local puede existir el mismo
+          Con esto entra. Tiene que ser único en este venue; en otro local puede existir el mismo
           nombre.
         </p>
       }
@@ -72,7 +72,11 @@
       }
     </div>
 
-    <fieldset class="field roles">
+    <fieldset
+      class="field roles"
+      [attr.aria-invalid]="roleError() !== null ? 'true' : null"
+      [attr.aria-describedby]="roleError() !== null ? 'role-error' : null"
+    >
       <legend class="label">Rol</legend>
       @for (option of roles; track option.role) {
         <label class="role" [class.role-on]="form.controls.role.value === option.role">
@@ -88,6 +92,9 @@
             <span class="role-does">{{ option.does }}</span>
           </span>
         </label>
+      }
+      @if (roleError() !== null) {
+        <p id="role-error" class="bad">{{ roleError() }}</p>
       }
     </fieldset>
 
