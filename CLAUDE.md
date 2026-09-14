@@ -145,7 +145,7 @@ Decidido el 2026-09-03: la plataforma es multi-tenant aunque arranquemos con un 
 Esto **no** significa construir la administración de boliches ahora — significa que el modelo
 lo permite sin una migración dolorosa después.
 
-- Todo agregado raíz lleva `VenueId`: `Order`, `Drink`, `Table`, `VipAccount`, `BarStation`
+- Todo agregado raíz lleva `VenueId`: `Order`, `Product`, `Table`, `VipAccount`, `BarStation`
   y los usuarios internos.
 - Un **global query filter** de EF Core aplica el filtro solo. Nadie escribe ese `WHERE` a
   mano, así que nadie se lo puede olvidar.
@@ -235,7 +235,7 @@ falta, preguntá antes de inventar el término.
 |---|---|---|---|---|
 | Pedido | `Order` | | Boliche | `Venue` |
 | Ítem del pedido | `OrderItem` | | Barra / estación | `BarStation` |
-| Trago | `Drink` | | Ticket | `Ticket` |
+| Trago / producto | `Product` | | Ticket | `Ticket` |
 | Menú | `Menu` | | Cliente | `Customer` |
 | Mesa | `Table` | | Cajero | `Cashier` |
 | Cuenta VIP | `VipAccount` | | KDS (estación de barra) | `Kds` |
@@ -245,6 +245,10 @@ falta, preguntá antes de inventar el término.
 | Pago digital | `DigitalPayment` | | Suscripción push | `PushSubscription` |
 | Usuario interno | `StaffUser` | | Rol | `StaffRole` |
 | Administrador | `Administrator` | | Baja lógica | `IsActive` |
+
+> **`Product`, no `Drink`.** Decidido el 2026-09-14: la carta vende tragos pero también
+> botellas, y el nombre tiene que cubrir las dos cosas. Los docs siguen diciendo "trago"
+> porque así lo dice la consigna; en el código es siempre `Product`.
 
 **Estados de `Order`** (§5 del diseño funcional):
 `Cart` · `AwaitingPayment` · `Paid` · `Queued` · `InPreparation` · `Ready` · `Delivered` · `Canceled`

@@ -308,7 +308,7 @@ punta a punta que le pide el listado a la API con un token de KDS y recibe 403.
 ### US-06 · Cargar un trago en la carta
 
 > **Como** administrador
-> **quiero** cargar un trago con nombre, descripción, foto y precio
+> **quiero** cargar un trago con nombre, descripción, foto, stock y precio
 > **para** que el cliente elija sabiendo qué es y cuánto sale, sin preguntarle a nadie.
 
 **Depende de:** US-01.
