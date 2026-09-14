@@ -1,7 +1,8 @@
-import { Component, computed, effect, inject, input } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { PasswordEye } from '../../../shared/password-eye/password-eye';
 import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
 import { StaffLoginStore } from '../staff-login.store';
 
@@ -17,7 +18,11 @@ function notBlank(control: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'drinkit-staff-login-page',
-  imports: [ReactiveFormsModule, VenueBrand],
+  imports: [PasswordEye, ReactiveFormsModule, VenueBrand],
+  // On the component and not on the route, for the same reason as the staff
+  // form: a route's injector is created once and kept, so the store would
+  // carry a failed attempt into the next visit.
+  providers: [StaffLoginStore],
   styleUrl: './staff-login.page.scss',
   templateUrl: './staff-login.page.html',
 })
@@ -52,6 +57,16 @@ export class StaffLoginPage {
   private readonly formStatus = toSignal(this.form.statusChanges, {
     initialValue: this.form.status,
   });
+
+  /**
+   * Dots by default. The eye is here because this screen is used on a tablet in
+   * the dark, with a password somebody dictated: typing it blind and getting
+   * back only "usuario o contraseña incorrectos" is how a shift starts with
+   * three failed attempts and nobody knowing which half was wrong.
+   */
+  protected readonly passwordVisible = signal(false);
+
+  protected readonly passwordType = computed(() => (this.passwordVisible() ? 'text' : 'password'));
 
   protected readonly canSubmit = computed(
     () => this.formStatus() === 'VALID' && !this.store.isSending(),

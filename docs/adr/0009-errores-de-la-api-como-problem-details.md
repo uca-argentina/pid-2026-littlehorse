@@ -53,6 +53,16 @@ JwtBearer): sin `UseExceptionHandler` ni `UseStatusCodePages` esas respuestas sa
   tablas y columnas, y el de una `DbUpdateException` a veces trae la cadena de conexión. El
   `detail` es un texto fijo y el `traceId` es lo que correlaciona con el log que sí tiene la
   causa. Hay un test que lo verifica filtrando a propósito primero.
+- **La única excepción es `DomainException`, y es un contrato.** Una invariante de dominio
+  rota vuelve como `400` con `type` = `ProblemTypes.For(Code)` y `detail` = `Message`, para que
+  el formulario pueda señalar el campo. Eso convierte al mensaje de **toda** `DomainException`
+  en texto que ve el cliente, hoy y para siempre: se escribe en el dominio, no puede nombrar
+  tablas, columnas ni nada de infraestructura, y no puede depender de datos que el cliente no
+  mandó. Si un mensaje no cumple eso, no va en una `DomainException`.
+
+  Es un *fallback*, no el camino normal: el formulario y el endpoint validan antes, así que
+  llegar al dominio con un dato inválido es una señal de que algo aguas arriba se saltó la
+  validación. Por eso se loguea como `Warning` con el código de la regla.
 - El `instance` es el path, no `"GET /orders"`: el RFC lo tipa como URI reference igual que
   el `type`, y ahí un espacio no es un carácter legal.
 

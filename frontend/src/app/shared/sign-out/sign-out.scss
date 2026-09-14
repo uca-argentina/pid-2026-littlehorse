@@ -1,0 +1,21 @@
+// Quiet on purpose. Ending the shift is not what anyone came to this screen to
+// do, so it never competes with the accent that marks the real action.
+
+.ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 0 var(--dk-space-5);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.ghost:hover {
+  color: var(--dk-text);
+}

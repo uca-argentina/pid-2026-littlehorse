@@ -14,9 +14,10 @@ import { StaffLoginService } from './staff-login.service';
 type LoginStatus = 'idle' | 'sending' | 'invalidCredentials' | 'sessionExpired' | 'unreachable';
 
 /**
- * State and transitions of the staff login screen. Provided by the feature's
- * route, not in root: it dies with the screen, so a stale failure never
- * survives into a later visit.
+ * State and transitions of the staff login screen. Provided by the page
+ * component, not in root and not on the route: a component's providers die
+ * with the component, so a stale failure never survives into a later visit.
+ * (A route's injector would not — Angular creates it once and keeps it.)
  */
 @Injectable()
 export class StaffLoginStore {

@@ -87,6 +87,18 @@ body {
   font-weight: 400;
 }
 
+// Read by a screen reader, never drawn. For a label whose field already says
+// what it is with a placeholder: dropping the label instead would leave the
+// field with no accessible name at all.
+.dk-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 // One focus ring for the whole app. The venue is dark and the accent is the
 // only colour that survives it.
 :focus-visible {

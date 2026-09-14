@@ -27,8 +27,18 @@ function enterButton(): HTMLButtonElement {
   return screen.getByRole('button', { name: /entrar/i }) as HTMLButtonElement;
 }
 
+// selector: 'input' on purpose. The password field's eye carries an aria-label
+// that also says "contraseña", so both match without it.
+function field(label: RegExp): HTMLInputElement {
+  return screen.getByLabelText(label, { selector: 'input' }) as HTMLInputElement;
+}
+
 function type(label: RegExp, value: string): void {
-  fireEvent.input(screen.getByLabelText(label), { target: { value } });
+  fireEvent.input(field(label), { target: { value } });
+}
+
+function eye(): HTMLButtonElement {
+  return screen.getByRole('button', { name: /contraseña/i }) as HTMLButtonElement;
 }
 
 function rejectedWith(type: string): HttpErrorResponse {
@@ -131,7 +141,7 @@ describe('StaffLoginPage', () => {
     fireEvent.click(enterButton());
     await fixture.whenStable();
 
-    const usernameField = screen.getByLabelText(/usuario/i);
+    const usernameField = field(/usuario/i);
     const message = screen.getByRole('alert');
 
     expect(usernameField.getAttribute('aria-invalid')).toBe('true');
@@ -181,8 +191,8 @@ describe('StaffLoginPage', () => {
     fireEvent.click(enterButton());
     await fixture.whenStable();
 
-    expect((screen.getByLabelText(/contraseña/i) as HTMLInputElement).value).toBe('');
-    expect((screen.getByLabelText(/usuario/i) as HTMLInputElement).value).toBe('euge');
+    expect(field(/contraseña/i).value).toBe('');
+    expect(field(/usuario/i).value).toBe('euge');
   });
 
   it('labels every field for a screen reader', async () => {
@@ -190,7 +200,54 @@ describe('StaffLoginPage', () => {
 
     // getByLabelText throws when no control carries that accessible name, so
     // reaching the assertion is already the check.
-    expect(screen.getByLabelText(/usuario/i)).not.toBeNull();
-    expect(screen.getByLabelText(/contraseña/i)).not.toBeNull();
+    expect(field(/usuario/i)).not.toBeNull();
+    expect(field(/contraseña/i)).not.toBeNull();
+  });
+
+  /**
+   * A tablet behind the bar, in the dark, with a password somebody dictated to
+   * them. Typing it blind and being told only "usuario o contraseña
+   * incorrectos" is how a shift starts with three failed attempts.
+   */
+  it('hides the password behind dots until somebody asks to see it', async () => {
+    await openScreen(vi.fn());
+
+    expect(field(/contraseña/i).type).toBe('password');
+  });
+
+  it('shows the password while the eye is on', async () => {
+    const { fixture } = await openScreen(vi.fn());
+
+    eye().click();
+    await fixture.whenStable();
+
+    expect(field(/contraseña/i).type).toBe('text');
+  });
+
+  it('hides it again on the second press', async () => {
+    const { fixture } = await openScreen(vi.fn());
+
+    eye().click();
+    await fixture.whenStable();
+    eye().click();
+    await fixture.whenStable();
+
+    expect(field(/contraseña/i).type).toBe('password');
+  });
+
+  // A button inside a form submits it unless it says otherwise, and this one
+  // would fire a login attempt every time somebody peeked.
+  it('does not try to sign in when the eye is pressed', async () => {
+    const logIn = vi.fn();
+    const { fixture } = await openScreen(logIn);
+
+    type(/usuario/i, 'euge');
+    type(/contraseña/i, 'a-password');
+    await fixture.whenStable();
+
+    eye().click();
+    await fixture.whenStable();
+
+    expect(logIn).not.toHaveBeenCalled();
   });
 });

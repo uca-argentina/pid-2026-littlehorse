@@ -95,6 +95,21 @@
   }
 }
 
+// Holds the eye over the right-hand end of the field, so the password still
+// lines up with every other input on the screen.
+.peeked {
+  position: relative;
+  display: flex;
+}
+
+.peeked .input {
+  flex: 1;
+  min-width: 0;
+
+  // Room for the button, so a long password never runs underneath it.
+  padding-right: 60px;
+}
+
 .input-bad {
   border-color: var(--dk-danger);
 }

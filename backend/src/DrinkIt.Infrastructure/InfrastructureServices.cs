@@ -1,10 +1,12 @@
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Security;
+using DrinkIt.Application.Staff;
 using DrinkIt.Application.Venues;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Seeding;
 using DrinkIt.Infrastructure.Security;
+using DrinkIt.Infrastructure.Staff;
 using DrinkIt.Infrastructure.Venues;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -40,6 +42,8 @@ public static class InfrastructureServices
 
         // These hold a DbContext, which is scoped to the request.
         services.AddScoped<IStaffCredentialsQuery, StaffCredentialsQuery>();
+        services.AddScoped<IStaffUserRepository, StaffUserRepository>();
+        services.AddScoped<IStaffUserQueries, StaffUserQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
 
         return services;

@@ -15,6 +15,14 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/staff-login/staff-login.routes').then((m) => m.staffLoginRoutes),
   },
+  // Before the bare ':venueSlug/staff' below, which would otherwise match this
+  // prefix first and then find no child to show.
+  {
+    path: ':venueSlug/staff/users',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () =>
+      import('./features/staff-users/staff-users.routes').then((m) => m.staffUsersRoutes),
+  },
   {
     path: ':venueSlug/staff',
     canActivate: [rememberVenueGuard],

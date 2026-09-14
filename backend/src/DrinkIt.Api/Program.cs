@@ -1,20 +1,20 @@
-using System.Text;
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
+using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Staff;
 using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<LoginHandler>();
+builder.Services.AddScoped<CreateStaffUserHandler>();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
@@ -29,26 +29,8 @@ if (!builder.Environment.IsDevelopment() && jwt.SigningKey.StartsWith("dev-", St
         "Jwt:SigningKey is still the development placeholder. Set a real key outside Development.");
 }
 
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidIssuer = jwt.Issuer,
-        ValidateAudience = true,
-        ValidAudience = jwt.Audience,
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
-        ValidateLifetime = true,
-        ClockSkew = TimeSpan.FromMinutes(1),
+builder.Services.AddStaffAuthentication(jwt);
 
-        // Match the short claim names the token is issued with.
-        RoleClaimType = JwtClaims.Role,
-        NameClaimType = JwtClaims.Name,
-    })
-    .AddExpiredSessionDetection();
-
-builder.Services.AddAuthorization();
 builder.Services.AddProblemDetailsForEveryError();
 builder.Services.AddOpenApi();
 
@@ -88,5 +70,6 @@ app.UseMiddleware<VenueResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapLogin();
+app.MapStaffUsers();
 
 await app.RunAsync();
