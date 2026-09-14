@@ -12,6 +12,37 @@
       <a class="cta" routerLink="new">Nuevo usuario</a>
     </div>
 
+    <div class="filters">
+      <div class="field">
+        <label class="dk-sr-only" for="search">Buscar usuario</label>
+        <input
+          id="search"
+          class="search"
+          type="search"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="Buscar usuario"
+          [value]="search()"
+          (input)="searchFor($event)"
+        />
+      </div>
+
+      <div class="tabs">
+        @for (tab of roleTabs(); track tab.filter) {
+          <button
+            class="pill"
+            type="button"
+            [class.pill-on]="roleFilter() === tab.filter"
+            [attr.aria-pressed]="roleFilter() === tab.filter"
+            (click)="narrowTo(tab.filter)"
+          >
+            {{ tab.name }} · {{ tab.count }}
+          </button>
+        }
+      </div>
+    </div>
+
     @if (staff.isLoading()) {
       <p class="note" role="status">Cargando el equipo…</p>
     }
@@ -29,6 +60,10 @@
 
     @if (isEmpty()) {
       <p class="note" role="status">Todavía no hay nadie cargado en este boliche.</p>
+    }
+
+    @if (nothingMatches()) {
+      <p class="note" role="status">Ningún usuario coincide con lo que buscaste.</p>
     }
 
     @if (rows().length > 0) {

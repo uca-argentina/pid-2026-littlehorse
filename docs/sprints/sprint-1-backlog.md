@@ -89,8 +89,11 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-10 | Armar el pedido | US-09 | Pendiente |
 | US-11 | Confirmar el pedido | US-10 | Pendiente |
 | US-12 | Seguir mi pedido | US-11 | Pendiente |
+| US-13 | Encontrar a alguien en el listado | US-03 | ✅ **Terminada** |
 
-Las doce son imprescindibles: cubren los seis puntos de la consigna y nada más. Las
+Las doce primeras son imprescindibles: cubren los seis puntos de la consigna y nada más.
+US-13 es la excepción, y entró por pedido del equipo el 2026-09-14 después de estar
+recortada: el detalle está en su ficha. Las
 pantallas de la barra quedaron fuera del sprint el 2026-09-10; el motivo y la consecuencia
 están en *Fuera del alcance*.
 
@@ -264,6 +267,39 @@ punta a punta que le pide el listado a la API con un token de KDS y recibe 403.
 > explica cuándo hay que volver sobre esa decisión. Por eso el "para" de esta story dice
 > "que no pueda volver a entrar" y no "cerrarle el acceso": la story promete exactamente lo
 > que el sistema hace.
+
+### US-13 · Encontrar a alguien en el listado
+
+> **Como** administrador
+> **quiero** buscar por nombre de usuario y filtrar por rol
+> **para** llegar a una persona sin leer la lista entera.
+
+**Depende de:** US-03.
+
+**Criterios de aceptación**
+
+1. **Dado** que escribo parte de un nombre de usuario, **cuando** miro el listado, **entonces**
+   sólo quedan quienes lo contienen, sin importar cómo lo escribí en mayúsculas.
+2. **Dado** que elijo un rol, **cuando** miro el listado, **entonces** sólo quedan los de ese
+   rol, incluidos los que están dados de baja.
+3. **Dado** que uso la búsqueda y el rol a la vez, **cuando** miro el listado, **entonces** se
+   aplican los dos.
+4. **Dado** que cada rol muestra cuántos tiene, **cuando** busco algo, **entonces** ese número
+   cuenta lo que quedó de la búsqueda y no el total del boliche.
+5. **Dado** que no coincide nadie, **cuando** miro el listado, **entonces** me lo dice con un
+   mensaje distinto al de un boliche sin gente cargada.
+
+> **Estaba recortada a propósito y volvió.** Hasta el 2026-09-14 figuraba en *Fuera del
+> alcance* con el motivo "con la cantidad de datos de una demo no se nota". El equipo pidió
+> incorporarla igual. Entra como story propia y no dentro de US-04, para no reescribir
+> criterios ya acordados después de haberlos construido.
+>
+> **Se filtra en el navegador, no en la API.** El equipo entero de un boliche entra en una
+> sola respuesta, así que no hay endpoint nuevo, ni paginado, ni una consulta por tecla
+> apretada. Cuando un boliche tenga cientos de usuarios habrá que mover esto al servidor, y
+> ahí aparecen el índice, el orden estable y el cursor.
+
+✅ **Terminada.** Los cinco criterios están cubiertos por `StaffUsersPage`.
 
 ---
 
@@ -543,6 +579,6 @@ Nada de esto lo pide la consigna del Sprint 1.
 | Mesas VIP, saldo de mesa y cajero | Este sprint es sólo retiro en barra. |
 | Las pantallas del mozo | El rol se puede elegir al dar de alta a alguien, pero la entrega en mesa llega con el sector VIP. |
 | Cancelar un pedido | No está entre los seis puntos de la consigna. |
-| Buscar, filtrar y paginar los listados | Con la cantidad de datos de una demo no se nota. |
+| Paginar los listados | Un boliche no tiene tanta gente ni tantos tragos como para necesitarlo. La búsqueda sí se incorporó: es US-13. |
 | Límite de intentos de ingreso | Pendiente reconocido en el ADR-0008; se resuelve con lo que ya trae el framework. |
 | Métricas y reportes | No están en la consigna. |

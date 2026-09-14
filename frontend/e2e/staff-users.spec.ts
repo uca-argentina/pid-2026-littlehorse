@@ -116,6 +116,28 @@ test.describe('Staff users', () => {
     await expect(page).toHaveURL(new RegExp(`${staffUsersPath}/new$`));
   });
 
+  /**
+   * US-13. The development database keeps everything every run ever created, so
+   * by now the listing is long — which is the condition this exists for, and the
+   * one a fresh database would not reproduce.
+   */
+  test('finds one person among everyone else', async ({ page }) => {
+    const username = aNewUsername();
+
+    await logInAsTheAdministrator(page);
+    await createStaffUser(page, username, /KDS/i);
+
+    await page.getByRole('searchbox', { name: /buscar usuario/i }).fill(username);
+
+    await expect(page.getByRole('listitem')).toHaveCount(1);
+    await expect(page.getByText(username, { exact: true })).toBeVisible();
+
+    // The count follows the search rather than the venue, so a tab never
+    // promises rows it will not show.
+    await expect(page.getByRole('button', { name: /^todos/i })).toContainText('Todos · 1');
+    await expect(page.getByRole('button', { name: /^mozos/i })).toContainText('Mozos · 0');
+  });
+
   test.describe('with an account that is not an administrator', () => {
     // Criterion 6, the half the person sees: the screen never opens.
     test('typing the administration address gets nowhere', async ({ page }) => {

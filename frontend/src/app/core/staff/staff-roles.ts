@@ -17,6 +17,8 @@ export type StaffRole = (typeof STAFF_ROLES)[number];
 export interface StaffRoleDescription {
   readonly role: StaffRole;
   readonly name: string;
+  /** How a filter over the whole team names this role. */
+  readonly plural: string;
   /** What this role can do, in the words an administrator would use. */
   readonly does: string;
 }
@@ -25,16 +27,20 @@ export const STAFF_ROLE_DESCRIPTIONS: readonly StaffRoleDescription[] = [
   {
     role: 'Administrator',
     name: 'Administrador',
+    plural: 'Administradores',
     does: 'Carga la carta y da de alta al resto del equipo.',
   },
   {
     role: 'Kds',
     name: 'KDS · estación de barra',
+    // The station is one account, so it never reads as a plural.
+    plural: 'KDS',
     does: 'La cuenta de la tablet de la barra, compartida por quienes preparan ahí.',
   },
   {
     role: 'Waiter',
     name: 'Mozo',
+    plural: 'Mozos',
     does: 'Entrega pedidos en las mesas del sector VIP.',
   },
 ];

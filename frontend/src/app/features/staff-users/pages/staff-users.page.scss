@@ -74,6 +74,68 @@
   background: var(--dk-accent-hover);
 }
 
+// Search on one line with the role tabs while there is room, stacked when there
+// is not: this screen is used on a laptop and on the tablet behind the bar.
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+}
+
+.field {
+  display: flex;
+  min-width: 260px;
+  flex: 1;
+}
+
+.search {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // 16px exactly: anything smaller makes iOS Safari zoom into the field on
+  // focus, and the layout never comes back on its own.
+  font-size: 16px;
+}
+
+.search::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-2);
+}
+
+.pill {
+  padding: 9px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.pill-on {
+  border-color: #5a4e42;
+  background: #2a2318;
+  color: var(--dk-text);
+  font-weight: 600;
+}
+
+.pill:hover:not(.pill-on) {
+  color: var(--dk-text);
+}
+
 .rows {
   display: flex;
   flex-direction: column;
