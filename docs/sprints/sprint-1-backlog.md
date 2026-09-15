@@ -85,11 +85,12 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-06 | Cargar un trago en la carta | US-01 | ✅ **Terminada** |
 | US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
 | US-08 | Corregir y sacar tragos | US-06 | Pendiente |
-| US-09 | Ver la carta desde el celular | US-06 | Pendiente |
+| US-09 | Ver la carta desde el celular | US-06 | ✅ **Terminada** |
 | US-10 | Armar el pedido | US-09 | Pendiente |
 | US-11 | Confirmar el pedido | US-10 | Pendiente |
 | US-12 | Seguir mi pedido | US-11 | Pendiente |
 | US-13 | Encontrar a alguien en el listado | US-03 | ✅ **Terminada** |
+| US-14 | Agrupar la carta por categoría | US-06, US-09 | Pendiente — planificada el 2026-09-15 |
 
 Las doce primeras son imprescindibles: cubren los seis puntos de la consigna y nada más.
 US-13 es la excepción, y entró por pedido del equipo el 2026-09-14 después de estar
@@ -452,6 +453,61 @@ foto, o cuya foto no carga, muestra el ícono de `public/images` en su lugar.
 - Se lee de noche, con poca luz y a los tirones: el diseño oscuro aprobado, sin texto por
   debajo de 13 píxeles.
 - Los tragos agotados se distinguen de los disponibles a simple vista.
+
+**Decisiones tomadas el 2026-09-15, antes de construirla.**
+
+| Tema | Cómo queda |
+|---|---|
+| Dirección del QR | `/{venueSlug}/menu`. Deja `/{venueSlug}` libre por si más adelante hace falta una bienvenida antes de la carta. |
+| Encabezado | El nombre real del boliche, que la respuesta de la carta devuelve junto con los tragos. Hasta ahora la app sólo conocía el slug. |
+| Buscador | **Entra, y no era un criterio.** Lo pidió el equipo hoy. Es un elemento más de una pantalla que se construye de cero y no toca nada ya cerrado, así que va acá adentro en vez de en una ficha aparte. Filtra en el navegador sobre la carta ya cargada, sin endpoint nuevo. |
+| Precio | `$ 4.500,00`, formato argentino con los dos decimales siempre. |
+| Categorías | **No entran acá.** Están en el wireframe y no en los criterios, y la categoría vive en `Product`, no en la carta. Es US-14. |
+
+✅ **Terminada.** Los cinco criterios están cumplidos y con prueba de punta a punta que abre
+la dirección del QR sin sesión. Es la primera pantalla de la app que no es de personal: no
+hay guardián de sesión, no se crea nada en el navegador, y hay un test que lo verifica
+leyendo el almacenamiento después de mirar la carta.
+
+> **Lo que la carta no cuenta.** La respuesta del cliente no lleva el stock ni el motivo por
+> el que algo no se puede pedir. Un trago agotado y uno que el boliche apagó esta noche se
+> ven iguales desde el teléfono, que es todo lo que necesita saber quien pide. Hay un test
+> que revisa que la palabra *stock* no aparezca en la respuesta.
+>
+> **Un slug que no existe da 404**, distinto de un boliche que existe y todavía no cargó
+> nada, que da lista vacía. En el teléfono son dos pantallas completamente distintas y el
+> criterio 5 depende de esa diferencia.
+
+### US-14 · Agrupar la carta por categoría
+
+> **Como** cliente
+> **quiero** que la carta esté separada en tragos, cervezas y sin alcohol
+> **para** encontrar lo que busco sin recorrer la lista entera.
+
+**Depende de:** US-06 y US-09.
+
+**Criterios de aceptación**
+
+1. **Dado** que cargo un trago, **cuando** completo el formulario, **entonces** tengo que
+   elegir una categoría entre tragos, cervezas y sin alcohol.
+2. **Dado** que abro la carta, **cuando** miro arriba, **entonces** tengo una solapa por
+   categoría más una de *Todos*, y la carta abre en *Todos*.
+3. **Dado** que elijo una solapa, **cuando** miro la carta, **entonces** sólo quedan los de
+   esa categoría, agotados incluidos.
+4. **Dado** que había tragos cargados antes de que existieran las categorías, **cuando**
+   abro la carta, **entonces** aparecen en *Tragos*.
+
+> **Por qué ficha propia.** Se pidió el 2026-09-15, mientras se planificaba US-09. No es un
+> criterio de US-09 y tampoco entra reabriendo US-06: la categoría es una columna nueva en
+> `Product`, con su migración y un campo más en el alta, o sea trabajo sobre una story ya
+> construida y cerrada. Mismo tratamiento que US-13.
+>
+> **Decidido:** lista fija en el código, como el enum de roles, sin tabla de categorías ni
+> texto libre. Obligatoria al cargar, y la migración le pone *Tragos* a lo que ya esté
+> cargado. Las solapas del cliente van sin conteo, a diferencia de las de administración,
+> porque así lo dibuja el wireframe del cliente.
+>
+> **Se construye después de US-09**, no antes: la carta tiene que estar caminando primero.
 
 ### US-10 · Armar el pedido
 

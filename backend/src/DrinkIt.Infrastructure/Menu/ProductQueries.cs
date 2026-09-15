@@ -30,4 +30,21 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
                 product.Stock == 0,
                 product.IsActive))
             .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
+        await context.Products
+            .AsNoTracking()
+            .Where(product => product.IsActive)
+            // What can be ordered first, so the reachable part of the menu is
+            // what a thumb lands on. Sold out stays visible, further down.
+            .OrderByDescending(product => product.IsAvailable && product.Stock > 0)
+            .ThenBy(product => product.Name)
+            .Select(product => new MenuItem(
+                product.Id,
+                product.Name,
+                product.Description,
+                product.ImageUrl,
+                product.Price,
+                product.IsAvailable && product.Stock > 0))
+            .ToListAsync(cancellationToken);
 }

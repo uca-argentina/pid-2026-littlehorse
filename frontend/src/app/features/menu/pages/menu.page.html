@@ -1,0 +1,111 @@
+<div class="frame">
+  <header class="head">
+    <div class="mark" aria-hidden="true">
+      <svg
+        width="23"
+        height="23"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.9"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M5 4h14l-7 8z" />
+        <path d="M12 12v7" />
+        <path d="M8.5 19.5h7" />
+      </svg>
+    </div>
+    <div>
+      <h1 class="venue">{{ venueName() || venueSlug() }}</h1>
+      <p class="sub">Barra principal</p>
+    </div>
+  </header>
+
+  <main class="body">
+    @if (menu.isLoading()) {
+      <p class="note" role="status">Buscando la carta…</p>
+    }
+
+    @if (isWrongAddress()) {
+      <p class="note note-bad" role="alert">
+        Esta dirección no es de ningún boliche. Fijate de escanear el QR de la barra.
+      </p>
+    } @else if (menu.error() !== undefined) {
+      <div class="note note-bad" role="alert">
+        <p class="note-what">No pudimos traer la carta. Fijate la señal y probá de nuevo.</p>
+        <button class="retry" type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+
+    @if (menu.hasValue()) {
+      <div class="search">
+        <svg
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.2-3.2" />
+        </svg>
+        <label class="dk-sr-only" for="search">Buscar trago</label>
+        <input
+          id="search"
+          class="term"
+          type="search"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="Buscar trago"
+          [value]="search()"
+          (input)="searchFor($event)"
+        />
+      </div>
+    }
+
+    @if (isEmpty()) {
+      <p class="note" role="status">
+        Este boliche todavía no cargó su carta. Preguntá en la barra.
+      </p>
+    }
+
+    @if (nothingMatches()) {
+      <p class="note" role="status">No encontramos ningún trago con ese nombre.</p>
+    }
+
+    @if (cards().length > 0) {
+      <ul class="list">
+        @for (card of cards(); track card.id) {
+          <li class="card" [class.card-off]="!card.isOrderable">
+            <img
+              class="thumb"
+              [src]="card.image"
+              alt=""
+              loading="lazy"
+              decoding="async"
+              (error)="useThePlaceholder($event)"
+            />
+            <div class="what">
+              <h2 class="name">{{ card.name }}</h2>
+              @if (card.isOrderable) {
+                @if (card.description !== null) {
+                  <p class="dsc">{{ card.description }}</p>
+                }
+                <p class="price">$ {{ card.price }}</p>
+              } @else {
+                <!-- In place of the description, and with no price: the design
+                     puts no number on something nobody can buy tonight. -->
+                <p class="dsc">Sin stock por ahora</p>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </main>
+</div>

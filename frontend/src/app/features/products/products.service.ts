@@ -19,12 +19,7 @@ export const IMAGE_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image
 
 export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
-/**
- * Shown where a product's picture would go when it has none, or when the
- * one it has cannot be fetched. Served with the app, so it is there even
- * when the storage is not.
- */
-export const PRODUCT_PLACEHOLDER = '/images/product-placeholder.svg';
+export { PRODUCT_PLACEHOLDER } from '../../shared/product-image/product-placeholder';
 
 /**
  * No venue in the path, unlike the login request. Everything here is done with
