@@ -78,6 +78,54 @@ public class StaffUserTests
         Assert.Equal(StaffUser.ErrorCodes.RoleInvalid, error.Code);
     }
 
+    // US-04: an administrator fixes a role that was assigned wrong, rather than
+    // deleting the person and loading them again under the right one.
+    [Fact]
+    public void ChangeRole_WhenTheRoleIsOneTheVenueHandsOut_ReplacesTheOldOne()
+    {
+        StaffUser user = AnAdministrator();
+
+        user.ChangeRole(StaffRole.Kds);
+
+        Assert.Equal(StaffRole.Kds, user.Role);
+    }
+
+    [Fact]
+    public void ChangeRole_WhenTheRoleIsNotADefinedValue_ThrowsRoleInvalid()
+    {
+        StaffUser user = AnAdministrator();
+
+        DomainException error = Assert.Throws<DomainException>(() => user.ChangeRole((StaffRole)99));
+
+        Assert.Equal(StaffUser.ErrorCodes.RoleInvalid, error.Code);
+        Assert.Equal(StaffRole.Administrator, user.Role);
+    }
+
+    // US-04: nobody can recover a forgotten password, because only its hash is
+    // stored. The administrator sets a new one and hands it over again.
+    [Fact]
+    public void ChangePassword_WhenTheHashIsGiven_ReplacesTheOldOne()
+    {
+        StaffUser user = AnAdministrator();
+
+        user.ChangePassword("a-new-hash");
+
+        Assert.Equal("a-new-hash", user.PasswordHash);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ChangePassword_WhenTheHashIsBlank_ThrowsPasswordHashRequired(string hash)
+    {
+        StaffUser user = AnAdministrator();
+
+        DomainException error = Assert.Throws<DomainException>(() => user.ChangePassword(hash));
+
+        Assert.Equal(StaffUser.ErrorCodes.PasswordHashRequired, error.Code);
+        Assert.Equal("hash", user.PasswordHash);
+    }
+
     [Fact]
     public void Deactivate_WhenActive_MakesInactive()
     {

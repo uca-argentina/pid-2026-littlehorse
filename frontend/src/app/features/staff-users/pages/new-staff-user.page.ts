@@ -9,7 +9,7 @@ import { PasswordEye } from '../../../shared/password-eye/password-eye';
 import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
 import { NewStaffUserStore } from '../new-staff-user.store';
 
-/** Kept in step with CreateStaffUserHandler.PasswordMinLength on the server. */
+/** Kept in step with StaffPasswordPolicy.MinLength on the server. */
 const PASSWORD_MIN_LENGTH = 8;
 
 /** Kept in step with StaffUser's own rule in the domain. */

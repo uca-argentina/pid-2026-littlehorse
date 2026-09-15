@@ -21,6 +21,12 @@ export const staffUsersRoutes: Routes = [
         path: 'new',
         loadComponent: () => import('./pages/new-staff-user.page').then((m) => m.NewStaffUserPage),
       },
+      // After 'new', which would otherwise be read as somebody's id.
+      {
+        path: ':id',
+        loadComponent: () =>
+          import('./pages/edit-staff-user.page').then((m) => m.EditStaffUserPage),
+      },
     ],
   },
 ];

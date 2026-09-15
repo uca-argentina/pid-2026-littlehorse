@@ -90,6 +90,17 @@ describe('StaffUsersPage', () => {
     expect(screen.getByRole('alert').textContent).toContain('Esta pantalla es de administración');
   });
 
+  // US-04: the way in to correcting somebody is their own row, not an address
+  // an administrator has to be told.
+  it('offers the way to correct each person', async () => {
+    await openScreenShowing(theTeam);
+
+    const editing = screen.getAllByRole('link', { name: /editar/i });
+
+    expect(editing).toHaveLength(theTeam.length);
+    expect(editing[0].getAttribute('href')).toBe('/bar-alfa/staff/users/id-1');
+  });
+
   it('offers the way to add somebody', async () => {
     await openScreenShowing(theTeam);
 

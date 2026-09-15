@@ -1,0 +1,153 @@
+<div class="frame">
+  <header class="head">
+    <drinkit-venue-brand [venue]="venueSlug()" />
+    <p class="station">Administración</p>
+    <span class="grow"></span>
+    <drinkit-sign-out [venueSlug]="venueSlug()" />
+  </header>
+
+  <section class="body">
+    <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'users']">Volver al equipo</a>
+
+    @if (staff.isLoading()) {
+      <p class="note" role="status">Buscando a esta persona…</p>
+    }
+
+    @if (isMissing()) {
+      <p class="note" role="status">No encontramos a nadie con ese usuario en este boliche.</p>
+    }
+
+    @if (person() !== undefined) {
+      <h1 class="title">{{ username() }}</h1>
+      <p class="now">
+        Hoy es <strong>{{ roleName() }}</strong>
+        @if (!isActive()) {
+          · dado de baja
+        }
+      </p>
+
+      <section class="card">
+        <h2 class="card-title">Rol</h2>
+
+        @if (store.roleStatus() === 'saved') {
+          <p class="note note-good" role="status">Rol guardado.</p>
+        }
+        @if (store.roleStatus() === 'lastAdministrator') {
+          <p class="note note-bad" role="alert">
+            Es el último administrador activo del boliche. Nombrá a otro antes de sacarle el rol.
+          </p>
+        }
+        @if (store.roleStatus() === 'unreachable') {
+          <p class="note note-bad" role="alert">No pudimos guardarlo. Probá de nuevo.</p>
+        }
+
+        <div class="roles">
+          @for (option of roles; track option.role) {
+            <label class="role" [class.role-on]="pickedRole.value === option.role">
+              <input
+                class="radio"
+                type="radio"
+                name="role"
+                [formControl]="pickedRole"
+                [value]="option.role"
+              />
+              <span>
+                <span class="role-name">{{ option.name }}</span>
+                <span class="role-does">{{ option.does }}</span>
+              </span>
+            </label>
+          }
+        </div>
+
+        <button class="cta" type="button" [disabled]="store.isBusy()" (click)="saveRole()">
+          Guardar el rol
+        </button>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Contraseña</h2>
+
+        @if (store.passwordStatus() === 'saved') {
+          <p class="note note-good" role="status">
+            Contraseña cambiada. Dásela en mano: no la vas a poder ver de nuevo.
+          </p>
+        }
+        @if (store.passwordStatus() === 'passwordTooShort') {
+          <p class="note note-bad" role="alert">
+            La contraseña es demasiado corta. Tienen que ser al menos ocho caracteres.
+          </p>
+        }
+        @if (store.passwordStatus() === 'unreachable') {
+          <p class="note note-bad" role="alert">No pudimos cambiarla. Probá de nuevo.</p>
+        }
+
+        <div class="field">
+          <label class="label" for="password">Contraseña nueva</label>
+          <div class="peeked">
+            <input
+              id="password"
+              class="input"
+              [class.input-bad]="passwordError() !== null"
+              [attr.aria-invalid]="passwordError() !== null ? 'true' : null"
+              [attr.aria-describedby]="
+                passwordError() !== null ? 'password-error' : 'password-help'
+              "
+              [formControl]="password"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              autocomplete="new-password"
+              placeholder="Mínimo ocho caracteres"
+            />
+            <drinkit-password-eye [(visible)]="passwordVisible" [disabled]="store.isBusy()" />
+          </div>
+          @if (passwordError() !== null) {
+            <p id="password-error" class="bad">{{ passwordError() }}</p>
+          } @else {
+            <p id="password-help" class="help">
+              La anterior deja de funcionar en cuanto guardás esta.
+            </p>
+          }
+        </div>
+
+        <button class="cta" type="button" [disabled]="store.isBusy()" (click)="savePassword()">
+          Cambiar la contraseña
+        </button>
+      </section>
+
+      <section class="danger">
+        <h2 class="danger-title">Acceso al sistema</h2>
+
+        @if (store.accessStatus() === 'lastAdministrator') {
+          <p class="note note-bad" role="alert">
+            Es el último administrador activo del boliche. Nombrá a otro antes de darlo de baja.
+          </p>
+        }
+        @if (store.accessStatus() === 'unreachable') {
+          <p class="note note-bad" role="alert">No pudimos hacerlo. Probá de nuevo.</p>
+        }
+
+        @if (isActive()) {
+          <p class="danger-what">
+            El usuario pierde acceso al sistema, pero no se borra nada: sigue en el listado y los
+            pedidos que preparó siguen apuntando a su usuario.
+          </p>
+          <button
+            class="danger-button"
+            type="button"
+            [disabled]="store.isBusy()"
+            (click)="deactivate()"
+          >
+            Dar de baja
+          </button>
+        } @else {
+          <p class="danger-what">
+            El usuario no tiene acceso al sistema. Al reactivarlo vuelve con su usuario, su
+            contraseña y su rol de siempre.
+          </p>
+          <button class="cta" type="button" [disabled]="store.isBusy()" (click)="reactivate()">
+            Reactivar
+          </button>
+        }
+      </section>
+    }
+  </section>
+</div>
