@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Testcontainers.Azurite" />
   </ItemGroup>
 
   <ItemGroup>

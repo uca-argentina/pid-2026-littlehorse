@@ -32,6 +32,7 @@ public static class InfrastructureServices
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<DevelopmentSeedOptions>(configuration.GetSection(DevelopmentSeedOptions.SectionName));
+        services.Configure<ImageStorageOptions>(configuration.GetSection(ImageStorageOptions.SectionName));
         services.AddScoped<DevelopmentSeeder>();
 
         // Injected rather than calling DateTimeOffset.UtcNow, so token expiry
@@ -41,6 +42,8 @@ public static class InfrastructureServices
         // Stateless and thread-safe, so one instance is enough.
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<ITokenIssuer, JwtTokenIssuer>();
+        // The blob client is thread-safe and holds its own connection pool.
+        services.AddSingleton<IImageStore, AzureBlobImageStore>();
 
         // These hold a DbContext, which is scoped to the request.
         services.AddScoped<IStaffCredentialsQuery, StaffCredentialsQuery>();

@@ -53,7 +53,7 @@ docs/
 
 ```bash
 # Base de datos local — ANTES de correr la API
-docker compose up -d                    # SQL Server en localhost,1433
+docker compose up -d                    # SQL Server en localhost,1433 y Azurite (blobs) en :10000
 docker compose down                     # apagarla; el volumen conserva los datos
 
 # Backend
