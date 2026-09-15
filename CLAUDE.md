@@ -16,6 +16,7 @@ leé también su consigna en `docs/sprints/` — define el alcance del sprint.
 | Backend | .NET 10 · Minimal APIs · EF Core · SignalR |
 | Frontend | Angular 22 (standalone + signals) · PWA (`@angular/service-worker`) |
 | Base de datos | Azure SQL (SQL Server local vía Docker para dev) |
+| Archivos | Azure Blob Storage para las fotos de la carta (Azurite local vía Docker para dev) |
 | Hosting | Azure Container Apps (API) + Static Web Apps (PWA) — ver ADR-0007 |
 | CI/CD | GitHub Actions · OIDC hacia Azure (sin secretos de larga vida) |
 
@@ -26,7 +27,7 @@ backend/
   src/
     DrinkIt.Domain/          # Entidades, value objects, reglas. CERO dependencias externas.
     DrinkIt.Application/     # Casos de uso (handlers), puertos (interfaces), DTOs.
-    DrinkIt.Infrastructure/  # EF Core, pasarela de pago, Web Push, SignalR, impresora.
+    DrinkIt.Infrastructure/  # EF Core, Blob Storage, pasarela de pago, Web Push, SignalR, impresora.
     DrinkIt.Api/             # Minimal API endpoints, DI, middleware. Capa fina.
   tests/
     DrinkIt.Domain.Tests/         # Unitarios puros, sin mocks, rapidísimos.
@@ -79,6 +80,10 @@ pnpm --prefix frontend run e2e:ui       # modo interactivo, para depurar un test
 **La API no arranca sin la base.** La cadena de conexión apunta a `localhost,1433` con las
 credenciales del `docker-compose.yml`. En Development se aplica las migraciones y siembra el
 boliche y el administrador sola: no hay que correr `dotnet ef database update` a mano.
+
+El mismo `docker compose` levanta **Azurite** (emulador de Blob Storage) para las fotos de los
+productos. La API arranca sin él, pero subir una foto falla hasta que esté corriendo. La foto
+se sirve desde `127.0.0.1:10000` directo al navegador, nunca a través de la API.
 
 Los tests son otra cosa y **no** usan ese contenedor: los de integración levantan el suyo con
 Testcontainers y lo tiran al terminar, así que sólo necesitan Docker corriendo.

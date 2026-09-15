@@ -38,6 +38,7 @@ mayor motivación y lo que habilita el push.
 | Backend | .NET 10 · Minimal APIs · EF Core · SignalR |
 | Frontend | Angular 22 (standalone + signals) · PWA (`@angular/service-worker`) |
 | Base de datos | Azure SQL — SQL Server en Docker para desarrollo local |
+| Archivos | Azure Blob Storage para las fotos de la carta — Azurite en Docker para desarrollo local |
 | Tiempo real | SignalR in-process (sin Azure SignalR Service) |
 | Notificaciones | Web Push (VAPID) desde el Service Worker |
 | Hosting | Azure Container Apps · Static Web Apps · Azure SQL — todo en tiers gratuitos |
@@ -69,8 +70,8 @@ infra/            # Bicep (todavía vacío).
 - [pnpm](https://pnpm.io/) — `npm install -g --allow-scripts=pnpm pnpm@latest`. El
   `--allow-scripts` hace falta: sin él npm bloquea el script que arma el ejecutable de pnpm
   en Windows. Corepack no sirve, Node dejó de distribuirlo a partir de la v25.
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — para SQL Server local
-  y los tests de integración con Testcontainers
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — para SQL Server y
+  Azurite locales, y los tests de integración con Testcontainers
 - VS Code con las extensiones recomendadas (te las ofrece al abrir el workspace, o buscá
   `@recommended` en el panel de extensiones)
 
@@ -82,7 +83,7 @@ cd drink-it
 pnpm --prefix frontend install
 dotnet restore backend/DrinkIt.slnx
 dotnet dev-certs https --trust          # una sola vez por máquina: la API sirve https
-docker compose up -d                    # SQL Server local, en localhost,1433
+docker compose up -d                    # SQL Server en localhost,1433 y Azurite en localhost:10000
 pnpm --prefix frontend run e2e:install   # baja el Chromium de Playwright (~100 MB)
 ```
 
@@ -90,8 +91,13 @@ La base tiene que estar levantada **antes** de correr la API: la cadena de conex
 ese contenedor. En Development la API se aplica las migraciones y siembra un boliche con un
 administrador sola, así que después de `docker compose up -d` no hay ningún paso manual.
 
-Los tests no usan ese contenedor: los de integración levantan el suyo con Testcontainers y lo
-tiran al terminar. Sólo necesitan Docker corriendo.
+El mismo `docker compose` levanta **Azurite**, el emulador de Azure Blob Storage, donde van
+las fotos de los productos. La API arranca sin él, pero subir una foto falla hasta que esté
+corriendo. La foto se sirve desde `http://127.0.0.1:10000/...` directo al navegador, sin
+pasar por la API, y el container se crea solo con la primera subida.
+
+Los tests no usan esos contenedores: los de integración levantan los suyos con Testcontainers
+(SQL Server y Azurite) y los tiran al terminar. Sólo necesitan Docker corriendo.
 
 La versión exacta del SDK de .NET sale de `global.json` y la de pnpm del campo
 `packageManager` de `frontend/package.json`. No hace falta elegirlas: las herramientas las
@@ -101,7 +107,7 @@ leen solas, y son las mismas que usa la CI.
 
 | | Backend | Frontend |
 |---|---|---|
-| Levantar la base | `docker compose up -d` | — |
+| Levantar la base y el storage | `docker compose up -d` | — |
 | Arrancar | `dotnet run --project backend/src/DrinkIt.Api` | `pnpm --prefix frontend start` |
 | Tests | `dotnet test backend/DrinkIt.slnx` | `pnpm --prefix frontend test` |
 | Tests (una vez, sin watch) | — | `pnpm --prefix frontend run test:ci` |
