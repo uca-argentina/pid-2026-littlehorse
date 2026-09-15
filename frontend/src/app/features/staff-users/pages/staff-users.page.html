@@ -77,6 +77,7 @@
             @if (!row.isActive) {
               <span class="chip chip-off">Dado de baja</span>
             }
+            <a class="edit" [routerLink]="['/', venueSlug(), 'staff', 'users', row.id]">Editar</a>
           </li>
         }
       </ul>

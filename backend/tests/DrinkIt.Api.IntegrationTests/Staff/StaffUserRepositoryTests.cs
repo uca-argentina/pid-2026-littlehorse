@@ -105,6 +105,74 @@ public sealed class StaffUserRepositoryTests(SqlServerFixture sql)
         Assert.False(listed[1].IsActive);
     }
 
+    /// <summary>
+    /// US-05: the row survives the baja. This is what the whole soft delete
+    /// exists for — the orders that person prepared keep pointing somewhere.
+    /// </summary>
+    [Fact]
+    public async Task SaveChangesAsync_WhenSomebodyIsDeactivated_KeepsTheirRow()
+    {
+        (Venue mine, _) = await SeedTwoVenues("martin.p", "nobody");
+
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+        StaffUserRepository repository = new(asMine);
+
+        StaffUser martin = (await repository.GetForUpdateAsync(
+            await IdOf(asMine, "martin.p"), CancellationToken.None))!;
+        martin.Deactivate();
+        await repository.SaveChangesAsync(CancellationToken.None);
+
+        await using DrinkItDbContext later = sql.CreateContext(mine.Id);
+        StaffUser? stored = await later.StaffUsers.SingleOrDefaultAsync(u => u.Username == "martin.p");
+
+        Assert.NotNull(stored);
+        Assert.False(stored.IsActive);
+        Assert.Equal("hash", stored.PasswordHash);
+        Assert.Equal(StaffRole.Administrator, stored.Role);
+    }
+
+    /// <summary>
+    /// The write side has to be scoped to the venue exactly like the read side.
+    /// A repository that could load somebody else's aggregate would let one
+    /// venue deactivate another venue's staff by guessing an id.
+    /// </summary>
+    [Fact]
+    public async Task GetForUpdateAsync_WhenTheUserBelongsToAnotherVenue_FindsNothing()
+    {
+        (Venue mine, Venue theirs) = await SeedTwoVenues("ana", "beto");
+
+        await using DrinkItDbContext asTheirs = sql.CreateContext(theirs.Id);
+        Guid betoId = await IdOf(asTheirs, "beto");
+
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+
+        Assert.Null(await new StaffUserRepository(asMine).GetForUpdateAsync(betoId, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_WhenSomebodyComesBack_TurnsTheirAccountBackOn()
+    {
+        (Venue mine, _) = await SeedTwoVenues("martin.p", "nobody");
+
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+        StaffUserRepository repository = new(asMine);
+        Guid martinId = await IdOf(asMine, "martin.p");
+
+        StaffUser martin = (await repository.GetForUpdateAsync(martinId, CancellationToken.None))!;
+        martin.Deactivate();
+        await repository.SaveChangesAsync(CancellationToken.None);
+
+        martin.Activate();
+        await repository.SaveChangesAsync(CancellationToken.None);
+
+        await using DrinkItDbContext later = sql.CreateContext(mine.Id);
+
+        Assert.True((await later.StaffUsers.SingleAsync(u => u.Id == martinId)).IsActive);
+    }
+
+    private static Task<Guid> IdOf(DrinkItDbContext context, string username) =>
+        context.StaffUsers.AsNoTracking().Where(u => u.Username == username).Select(u => u.Id).SingleAsync();
+
     private async Task<(Venue Mine, Venue Theirs)> SeedTwoVenues(string mineUsername, string theirsUsername)
     {
         // Slugs are unique platform-wide, so every test needs its own.

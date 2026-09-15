@@ -21,4 +21,20 @@ public interface IStaffUserRepository
 
     /// <summary>Persists the new user. Saving is the repository's job, not the caller's.</summary>
     Task AddAsync(StaffUser user, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The whole aggregate, tracked, so a use case can change it. Returns null
+    /// when this venue has nobody with that id — including when another venue
+    /// does, because the global query filter hides it either way.
+    /// </summary>
+    Task<StaffUser?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Commits what the use case changed on a tracked aggregate.</summary>
+    Task SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// How many administrators this venue could still sign in with. Read before
+    /// taking one away, so the venue is never left unable to administer itself.
+    /// </summary>
+    Task<int> CountActiveAdministratorsAsync(CancellationToken cancellationToken);
 }
