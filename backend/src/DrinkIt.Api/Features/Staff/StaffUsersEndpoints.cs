@@ -9,6 +9,12 @@ namespace DrinkIt.Api.Features.Staff;
 /// <summary>What the administration screen posts. The role travels as its name.</summary>
 public sealed record CreateStaffUserRequest(string Username, string Password, string Role);
 
+/// <summary>What the administration screen sends to correct somebody's role.</summary>
+public sealed record ChangeStaffUserRoleRequest(string Role);
+
+/// <summary>What it sends to hand somebody a new password.</summary>
+public sealed record ResetStaffUserPasswordRequest(string Password);
+
 public sealed record StaffUserResponse(Guid Id, string Username, string Role, bool IsActive);
 
 internal static class StaffUsersEndpoints
@@ -36,6 +42,41 @@ internal static class StaffUsersEndpoints
             .Produces<StaffUserResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
+            .MapPut("/{id:guid}/role", ChangeRoleAsync)
+            .WithName("ChangeStaffUserRole")
+            .WithSummary("Corrects the role somebody was given.")
+            .Produces<StaffUserResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
+            .MapPut("/{id:guid}/password", ResetPasswordAsync)
+            .WithName("ResetStaffUserPassword")
+            .WithSummary("Replaces a forgotten password with a new one.")
+            .Produces<StaffUserResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // POST and not DELETE: nothing is deleted. The row stays so the orders
+        // that person prepared keep pointing at their account, and the same
+        // account comes back when they do.
+        group
+            .MapPost("/{id:guid}/deactivate", DeactivateAsync)
+            .WithName("DeactivateStaffUser")
+            .WithSummary("Takes away access without taking away the account.")
+            .Produces<StaffUserResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
+            .MapPost("/{id:guid}/reactivate", ReactivateAsync)
+            .WithName("ReactivateStaffUser")
+            .WithSummary("Gives somebody who came back the account they always had.")
+            .Produces<StaffUserResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return endpoints;
     }
@@ -72,6 +113,48 @@ internal static class StaffUsersEndpoints
             new StaffUserResponse(created.Id, created.Username, created.Role.ToString(), created.IsActive));
     }
 
+    internal static async Task<IResult> ChangeRoleAsync(
+        Guid id,
+        ChangeStaffUserRoleRequest request,
+        ChangeStaffUserRoleHandler handler,
+        CancellationToken cancellationToken)
+    {
+        if (!TryReadRole(request.Role, out StaffRole role)) return RoleIsNotOneWeHandOut(request.Role);
+
+        return Answer(await handler.HandleAsync(new ChangeStaffUserRoleCommand(id, role), cancellationToken));
+    }
+
+    internal static async Task<IResult> ResetPasswordAsync(
+        Guid id,
+        ResetStaffUserPasswordRequest request,
+        ResetStaffUserPasswordHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(
+            new ResetStaffUserPasswordCommand(id, request.Password), cancellationToken));
+
+    internal static async Task<IResult> DeactivateAsync(
+        Guid id,
+        DeactivateStaffUserHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
+
+    internal static async Task<IResult> ReactivateAsync(
+        Guid id,
+        ReactivateStaffUserHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
+
+    /// <summary>The updated user, or the failure named so the screen can branch on it.</summary>
+    private static IResult Answer(Result<StaffUserSummary> result)
+    {
+        if (!result.IsSuccess) return Rejected(result.Error!);
+
+        StaffUserSummary user = result.Value;
+
+        return TypedResults.Ok(
+            new StaffUserResponse(user.Id, user.Username, user.Role.ToString(), user.IsActive));
+    }
+
     /// <summary>
     /// One of our names, and nothing else. Enum.TryParse on its own also accepts
     /// "2", "99", and a comma-separated list that it ORs together even for an
@@ -97,16 +180,34 @@ internal static class StaffUsersEndpoints
             type: ProblemTypes.For(StaffUser.ErrorCodes.RoleInvalid));
 
     /// <summary>
-    /// An expected failure of the use case. A taken username is a conflict with
-    /// the current state of the venue, not malformed input, so it is a 409 and
-    /// the screen can tell the two apart without reading the message.
+    /// What each expected failure means over HTTP. A conflict is a request that
+    /// argues with the state of the venue — the username is taken, or that is
+    /// the last administrator left — as opposed to one that is simply
+    /// malformed, and the screen tells them apart without reading the message.
     /// </summary>
-    private static ProblemHttpResult Rejected(Error error) =>
-        TypedResults.Problem(
-            title: error == CreateStaffUserHandler.UsernameTaken ? "Username already taken" : "Invalid request",
+    private static readonly Dictionary<string, int> StatusByErrorCode = new(StringComparer.Ordinal)
+    {
+        [StaffUserErrors.NotFound.Code] = StatusCodes.Status404NotFound,
+        [CreateStaffUserHandler.UsernameTaken.Code] = StatusCodes.Status409Conflict,
+        [StaffUserErrors.LastAdministrator.Code] = StatusCodes.Status409Conflict,
+    };
+
+    private static readonly Dictionary<int, string> TitleByStatus = new()
+    {
+        [StatusCodes.Status404NotFound] = "Not found",
+        [StatusCodes.Status409Conflict] = "Conflict with the current state",
+    };
+
+    private static ProblemHttpResult Rejected(Error error)
+    {
+        // Anything the table does not name is malformed input, which is the
+        // only other shape an expected failure of these use cases can take.
+        int status = StatusByErrorCode.GetValueOrDefault(error.Code, StatusCodes.Status400BadRequest);
+
+        return TypedResults.Problem(
+            title: TitleByStatus.GetValueOrDefault(status, "Invalid request"),
             detail: error.Message,
-            statusCode: error == CreateStaffUserHandler.UsernameTaken
-                ? StatusCodes.Status409Conflict
-                : StatusCodes.Status400BadRequest,
+            statusCode: status,
             type: ProblemTypes.For(error.Code));
+    }
 }

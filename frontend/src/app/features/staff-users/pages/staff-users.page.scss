@@ -169,6 +169,27 @@
   color: var(--dk-text-faint);
 }
 
+// Quiet: correcting somebody is not what an administrator opens this screen to
+// do, so it never competes with the gold of "Nuevo usuario".
+.edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  color: var(--dk-text);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.edit:hover {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}
+
 .note {
   margin: 0;
   padding: 13px 15px;

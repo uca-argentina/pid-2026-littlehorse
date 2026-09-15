@@ -74,6 +74,29 @@ public sealed class StaffUser : IBelongsToVenue
     public static string NormalizeUsername(string username) =>
         (username ?? string.Empty).Trim().ToLowerInvariant();
 
+    /// <summary>
+    /// Fixes a role that was assigned wrong. The person keeps their account, so
+    /// whatever they did under the old role still points at them.
+    /// </summary>
+    public void ChangeRole(StaffRole role)
+    {
+        if (!Enum.IsDefined(role)) throw new DomainException(ErrorCodes.RoleInvalid, $"'{role}' is not a valid staff role.");
+
+        Role = role;
+    }
+
+    /// <summary>
+    /// Replaces a forgotten password. Nothing can recover the old one — only its
+    /// hash was ever stored — so the administrator sets a new one and hands it
+    /// over again.
+    /// </summary>
+    public void ChangePassword(string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash)) throw new DomainException(ErrorCodes.PasswordHashRequired, "Password hash is required.");
+
+        PasswordHash = passwordHash;
+    }
+
     public void Deactivate() => IsActive = false;
 
     public void Activate() => IsActive = true;

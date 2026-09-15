@@ -21,4 +21,25 @@ internal sealed class StaffUserRepository(DrinkItDbContext context) : IStaffUser
 
         await context.SaveChangesAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Tracked, unlike every read on this side of the app: the use case is
+    /// about to change the aggregate. No venue in the WHERE either, so a user
+    /// from another venue is simply not found.
+    /// </summary>
+    public Task<StaffUser?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+        context.StaffUsers.FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken) =>
+        context.SaveChangesAsync(cancellationToken);
+
+    /// <summary>
+    /// Counted inside this venue, like everything else here: the global query
+    /// filter scopes it, so another venue's administrators never make this one
+    /// look safe to empty.
+    /// </summary>
+    public Task<int> CountActiveAdministratorsAsync(CancellationToken cancellationToken) =>
+        context.StaffUsers.CountAsync(
+            user => user.IsActive && user.Role == StaffRole.Administrator,
+            cancellationToken);
 }

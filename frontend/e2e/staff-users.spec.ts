@@ -51,6 +51,25 @@ async function signOut(page: Page): Promise<void> {
   await page.getByRole('menuitem', { name: /salir/i }).click();
 }
 
+/**
+ * Somebody's id, looked up as the administrator. A non-administrator cannot ask
+ * the API who they are — that is the whole point of the test that uses this —
+ * so the id has to come from an account that can.
+ */
+async function idOf(request: APIRequestContext, username: string): Promise<string> {
+  const administrator = await tokenFor(request, seededAdminUsername, seededAdminPassword());
+  const listing = await request.get('/api/staff/users', {
+    headers: { Authorization: `Bearer ${administrator}` },
+  });
+
+  const everyone = (await listing.json()) as { id: string; username: string }[];
+  const found = everyone.find((user) => user.username === username);
+
+  expect(found, `${username} is not in the listing`).toBeDefined();
+
+  return found!.id;
+}
+
 /** A token straight from the API, to ask it things the screens will not ask. */
 async function tokenFor(
   request: APIRequestContext,
@@ -148,6 +167,83 @@ test.describe('Staff users', () => {
     await expect(page.getByRole('button', { name: /^mozos/i })).toContainText('Mozos · 0');
   });
 
+  /**
+   * US-05, criteria 1 and 2 and then 4, end to end: access goes away, the row
+   * stays, and the same account comes back. The half that matters is the login
+   * attempt in the middle — a screen that says "dado de baja" proves nothing
+   * about whether that person can still get in.
+   */
+  test('takes access away, keeps the row, and gives the account back', async ({ page }) => {
+    const username = aNewUsername();
+
+    await logInAsTheAdministrator(page);
+    await createStaffUser(page, username, /KDS/i);
+    await page.getByRole('searchbox', { name: /buscar usuario/i }).fill(username);
+    await page.getByRole('link', { name: /editar/i }).click();
+
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(username);
+    await page.getByRole('button', { name: /dar de baja/i }).click();
+    await expect(page.getByRole('button', { name: /reactivar/i })).toBeVisible();
+
+    // Criterion 2: still there, marked, not deleted.
+    await page.getByRole('link', { name: /volver al equipo/i }).click();
+    await page.getByRole('searchbox', { name: /buscar usuario/i }).fill(username);
+    await expect(page.getByText(username, { exact: true })).toBeVisible();
+    await expect(page.getByText(/dado de baja/i).first()).toBeVisible();
+
+    // Criterion 1: the password is still right, and it still does not work.
+    await signOut(page);
+    await logIn(page, username, aNewPassword);
+
+    await expect(page.getByRole('alert')).toHaveText(/usuario o contraseña incorrectos/i);
+    await expect(page).toHaveURL(new RegExp(`${loginPath}$`));
+
+    // Criterion 4: the account they always had, without loading them again.
+    await logInAsTheAdministrator(page);
+    await page.goto(staffUsersPath);
+    await page.getByRole('searchbox', { name: /buscar usuario/i }).fill(username);
+    await page.getByRole('link', { name: /editar/i }).click();
+    await page.getByRole('button', { name: /reactivar/i }).click();
+    await expect(page.getByRole('button', { name: /dar de baja/i })).toBeVisible();
+
+    await signOut(page);
+    await logIn(page, username, aNewPassword);
+
+    await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
+  });
+
+  // US-04, criteria 2 and 3.
+  test('corrects a role that was assigned wrong, and hands out a new password', async ({
+    page,
+  }) => {
+    const username = aNewUsername();
+    const anotherPassword = 'another-long-enough-password';
+
+    await logInAsTheAdministrator(page);
+    await createStaffUser(page, username, /mozo/i);
+    await page.getByRole('searchbox', { name: /buscar usuario/i }).fill(username);
+    await page.getByRole('link', { name: /editar/i }).click();
+
+    await page.getByRole('radio', { name: /KDS/i }).check();
+    await page.getByRole('button', { name: /guardar el rol/i }).click();
+    await expect(page.getByText(/rol guardado/i)).toBeVisible();
+
+    await page.getByLabel(/contraseña nueva/i).fill(anotherPassword);
+    await page.getByRole('button', { name: /cambiar la contraseña/i }).click();
+    await expect(page.getByText(/contraseña cambiada/i)).toBeVisible();
+
+    await signOut(page);
+
+    // The old one stopped working the moment the new one was saved.
+    await logIn(page, username, aNewPassword);
+    await expect(page.getByRole('alert')).toHaveText(/usuario o contraseña incorrectos/i);
+
+    // The new one works, and the role it lands on is the corrected one.
+    await logIn(page, username, anotherPassword);
+    await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
+    await expect(page.getByText(/KDS · estación de barra/)).toBeVisible();
+  });
+
   test.describe('with an account that is not an administrator', () => {
     // Criterion 6, the half the person sees: the screen never opens.
     test('typing the administration address gets nowhere', async ({ page }) => {
@@ -175,7 +271,19 @@ test.describe('Staff users', () => {
 
     // Criterion 6, the half that matters: a guard only hides a screen, and
     // anyone can call the API without one.
-    test('the API refuses the administration endpoints too', async ({ page, request }) => {
+    /**
+     * Every administration endpoint, not just the listing. A guard in the PWA
+     * only hides a screen: anybody can call the API without one, so this is
+     * where "only an administrator" is actually decided.
+     *
+     * Their own account included. A KDS cannot change their own role, reset
+     * their own password or deactivate themselves either — the whole group is
+     * for administrators, and being the subject of the request changes nothing.
+     */
+    test('the API refuses every administration endpoint, their own account included', async ({
+      page,
+      request,
+    }) => {
       const username = aNewUsername();
 
       await logInAsTheAdministrator(page);
@@ -183,11 +291,28 @@ test.describe('Staff users', () => {
       await expect(page.getByText(username, { exact: true })).toBeVisible();
 
       const token = await tokenFor(request, username, aNewPassword);
-      const listing = await request.get('/api/staff/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const asThemselves = { headers: { Authorization: `Bearer ${token}` } };
+      const theirOwnId = await idOf(request, username);
 
-      expect(listing.status()).toBe(403);
+      const refused = [
+        await request.get('/api/staff/users', asThemselves),
+        await request.post('/api/staff/users', {
+          ...asThemselves,
+          data: { username: aNewUsername(), password: aNewPassword, role: 'Waiter' },
+        }),
+        await request.put(`/api/staff/users/${theirOwnId}/role`, {
+          ...asThemselves,
+          data: { role: 'Administrator' },
+        }),
+        await request.put(`/api/staff/users/${theirOwnId}/password`, {
+          ...asThemselves,
+          data: { password: 'another-long-enough-one' },
+        }),
+        await request.post(`/api/staff/users/${theirOwnId}/deactivate`, asThemselves),
+        await request.post(`/api/staff/users/${theirOwnId}/reactivate`, asThemselves),
+      ];
+
+      expect(refused.map((response) => response.status())).toEqual([403, 403, 403, 403, 403, 403]);
     });
   });
 });

@@ -80,8 +80,8 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-01 | Iniciar sesión | — | ✅ **Terminada** |
 | US-02 | Poder entrar la primera vez | — | ✅ **Terminada** |
 | US-03 | Dar de alta al equipo | US-01 | ✅ **Terminada** |
-| US-04 | Ver y corregir al equipo | US-03 | Pendiente — el listado ya existe, falta editar |
-| US-05 | Dar de baja a quien se fue | US-03 | Pendiente |
+| US-04 | Ver y corregir al equipo | US-03 | ✅ **Terminada** |
+| US-05 | Dar de baja a quien se fue | US-03 | **3 de 4** — falta el criterio de los pedidos, que no existen todavía |
 | US-06 | Cargar un trago en la carta | US-01 | ✅ **Terminada** |
 | US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
 | US-08 | Corregir y sacar tragos | US-06 | Pendiente |
@@ -103,6 +103,11 @@ de gestión de verdad, que era el único criterio que le faltaba. Con eso quedó
 la autorización por rol del backend, que era la pieza sin tarjeta que trababa todo el carril
 de administración. De las nueve que quedan, US-04 y US-05 enchufan en el listado que ya
 existe. El hito del lunes 14 sigue siendo el punto donde se decide qué entra.
+
+**Estado al lunes 14 de septiembre.** Cinco terminadas, una a un criterio de estarlo y seis
+sin empezar. Con US-04 y US-05 el ABM de personal queda completo: se da de alta, se corrige,
+se da de baja y se reactiva, y nada se borra. Lo que queda es todo la carta y el pedido, que
+es el camino crítico hacia el hito de hoy.
 
 **Estado al martes 15 de septiembre.** US-06 cerró de punta a punta: un administrador entra
 directo al listado de productos, carga uno con su foto, y la foto queda en Blob Storage
@@ -249,6 +254,13 @@ punta a punta que le pide el listado a la API con un token de KDS y recibe 403.
 5. **Dado** que entré con cualquier rol que no sea administrador, **cuando** escribo a mano
    la dirección del listado, **entonces** el sistema no me lo muestra.
 
+✅ **Terminada.** El listado muestra usuario, rol y estado; desde cada fila se entra a
+corregir a esa persona. El cambio de rol y el reseteo de contraseña son dos acciones
+separadas, una por endpoint, así que una que falla no arrastra a la otra. Los criterios 4 y
+5 ya estaban cubiertos por el filtro global y por el guardián de rol, y el criterio 5 tiene
+además una prueba que le pide a la API los seis endpoints de administración con un token
+que no es de administrador.
+
 ### US-05 · Dar de baja a quien se fue
 
 > **Como** administrador
@@ -267,6 +279,19 @@ punta a punta que le pide el listado a la API con un token de KDS y recibe 403.
    **entonces** siguen mostrando quién los preparó.
 4. **Dado** que esa persona vuelve a trabajar, **cuando** la reactivo, **entonces** entra con
    su cuenta de siempre, sin cargarla de nuevo.
+
+**3 de 4.** Los criterios 1, 2 y 4 están cumplidos y con prueba de punta a punta: se da de
+baja, la fila sigue en el listado marcada, esa persona no entra ni con la contraseña
+correcta, y al reactivarla vuelve con su cuenta de siempre. Falta el criterio 3, y no por
+algo de la baja: **los pedidos no existen hasta US-11**, así que no hay nada a lo que
+consultarle quién lo preparó. La baja lógica ya deja el dato preparado.
+
+> **Una regla que no estaba en los criterios.** El boliche nunca puede quedarse sin un
+> administrador activo: dar de baja al último, o sacarle el rol, se rechaza. No alcanzaba
+> con prohibir tocar la cuenta propia — el rol y el estado activo viajan en un token de ocho
+> horas que no se vuelve a chequear, así que dos administradores podían darse de baja
+> mutuamente y dejar el local sin nadie que pudiera administrarlo. Se cuenta cuántos
+> quedarían, que es lo que corta el caso sin importar quién pregunta.
 
 > **Limitación conocida, decidida a propósito.** Dar de baja **no corta la sesión que ya está
 > abierta**: si esa persona estaba trabajando, sigue pudiendo hasta que le venza el token, y

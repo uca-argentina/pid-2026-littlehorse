@@ -1,0 +1,253 @@
+// Same header and the same column as the rest of the administration, so this
+// reads as a step inside the listing and not as a different place.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 620px;
+  padding: var(--dk-space-5);
+  margin: 0 auto;
+}
+
+.back {
+  align-self: flex-start;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.title {
+  margin: 0;
+  font-family: ui-monospace, 'SF Mono', menlo, monospace;
+  font-size: 26px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.now {
+  margin: calc(var(--dk-space-3) * -1) 0 0;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-5);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+}
+
+.card-title {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.label {
+  color: var(--dk-text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.peeked {
+  position: relative;
+  display: flex;
+}
+
+.input {
+  width: 100%;
+  min-height: 54px;
+
+  // Room for the eye, so a long password never runs underneath it.
+  padding: 0 60px 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // 16px exactly: anything smaller makes iOS Safari zoom into the field on
+  // focus, and the layout never comes back on its own.
+  font-size: 16px;
+}
+
+.input::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.input-bad {
+  border-color: var(--dk-danger);
+}
+
+.help {
+  margin: 0;
+  color: var(--dk-text-faint);
+  font-size: 12.5px;
+}
+
+.bad {
+  margin: 0;
+  color: var(--dk-danger);
+  font-size: 13px;
+}
+
+.roles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.role {
+  display: flex;
+  gap: var(--dk-space-3);
+  align-items: center;
+  min-height: 66px;
+  padding: 12px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-ink);
+}
+
+.role-on {
+  border-color: var(--dk-accent);
+  background: #241e14;
+}
+
+.radio {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  accent-color: var(--dk-accent);
+}
+
+.role-name {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.role-does {
+  display: block;
+  margin-top: 2px;
+  color: var(--dk-text-muted);
+  font-size: var(--dk-text-min);
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: #1a1713;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+.note-good {
+  border-color: var(--dk-accent);
+  color: var(--dk-text);
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: 50px;
+  padding: 0 var(--dk-space-5);
+  border: 0;
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 700;
+}
+
+.cta:disabled {
+  opacity: 0.6;
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--dk-accent-hover);
+}
+
+// Dashed and apart from the cards above: this is the only thing on the screen
+// that takes something away, even though it takes nothing away for good.
+.danger {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-5);
+  border: 1px dashed #6b3a33;
+  border-radius: var(--dk-radius-lg);
+  background: #191612;
+}
+
+.danger-title {
+  margin: 0;
+  color: #e0a79b;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.danger-what {
+  margin: 0;
+  color: var(--dk-text-faint);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.danger-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: 50px;
+  padding: 0 var(--dk-space-5);
+  border: 1px solid #6b3a33;
+  border-radius: var(--dk-radius-md);
+  background: none;
+  color: #c85a4a;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.danger-button:disabled {
+  opacity: 0.6;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: var(--dk-danger-surface);
+}

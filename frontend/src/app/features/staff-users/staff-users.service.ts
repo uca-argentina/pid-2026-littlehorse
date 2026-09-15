@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
 import type { components } from '../../core/api/schema';
+import type { StaffRole } from '../../core/staff/staff-roles';
 
 /** Taken from the generated contract, so nothing here can drift from the API. */
 export type StaffUser = components['schemas']['StaffUserResponse'];
@@ -21,5 +22,25 @@ export class StaffUsersService {
 
   create(user: NewStaffUser): Observable<StaffUser> {
     return this.http.post<StaffUser>(STAFF_USERS_URL, user);
+  }
+
+  changeRole(id: string, role: StaffRole): Observable<StaffUser> {
+    return this.http.put<StaffUser>(`${STAFF_USERS_URL}/${id}/role`, { role });
+  }
+
+  resetPassword(id: string, password: string): Observable<StaffUser> {
+    return this.http.put<StaffUser>(`${STAFF_USERS_URL}/${id}/password`, { password });
+  }
+
+  /**
+   * POST and not DELETE, because nothing is deleted. The row stays so the
+   * orders that person prepared keep pointing at their account.
+   */
+  deactivate(id: string): Observable<StaffUser> {
+    return this.http.post<StaffUser>(`${STAFF_USERS_URL}/${id}/deactivate`, {});
+  }
+
+  reactivate(id: string): Observable<StaffUser> {
+    return this.http.post<StaffUser>(`${STAFF_USERS_URL}/${id}/reactivate`, {});
   }
 }

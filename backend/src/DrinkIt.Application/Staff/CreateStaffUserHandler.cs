@@ -19,18 +19,8 @@ public sealed class CreateStaffUserHandler(
     IPasswordHasher passwordHasher,
     ICurrentVenue currentVenue)
 {
-    /// <summary>
-    /// Long enough that it is not guessable, short enough that it can be handed
-    /// over out loud in a noisy venue. It is the administrator who types it,
-    /// not its owner, so there is nobody to remember a longer one.
-    /// </summary>
-    public const int PasswordMinLength = 8;
-
     public static readonly Error UsernameTaken =
         new("staff.username_taken", "Somebody in this venue already uses that username.");
-
-    public static readonly Error PasswordTooShort =
-        new("staff.password_too_short", $"The password must be at least {PasswordMinLength} characters.");
 
     public async Task<Result<CreatedStaffUser>> HandleAsync(
         CreateStaffUserCommand command,
@@ -41,7 +31,7 @@ public sealed class CreateStaffUserHandler(
         // afterwards, where the failure is a 500 and not a readable message.
         string username = StaffUser.NormalizeUsername(command.Username);
 
-        if ((command.Password ?? string.Empty).Trim().Length < PasswordMinLength) return PasswordTooShort;
+        if (!StaffPasswordPolicy.IsLongEnough(command.Password)) return StaffPasswordPolicy.TooShort;
         if (await staffUsers.UsernameExistsAsync(username, cancellationToken)) return UsernameTaken;
 
         // Whatever is left wrong with the username or the role is a broken
