@@ -1,8 +1,10 @@
 using DrinkIt.Application.Authentication;
+using DrinkIt.Application.Menu;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
 using DrinkIt.Application.Venues;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Seeding;
 using DrinkIt.Infrastructure.Security;
@@ -44,6 +46,8 @@ public static class InfrastructureServices
         services.AddScoped<IStaffCredentialsQuery, StaffCredentialsQuery>();
         services.AddScoped<IStaffUserRepository, StaffUserRepository>();
         services.AddScoped<IStaffUserQueries, StaffUserQueries>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IProductQueries, ProductQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
 
         return services;
