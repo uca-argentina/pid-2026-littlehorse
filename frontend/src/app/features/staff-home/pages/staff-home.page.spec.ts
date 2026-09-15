@@ -65,6 +65,16 @@ describe('StaffHomePage', () => {
     expect(link.getAttribute('href')).toBe('/bar-alfa/staff/users');
   });
 
+  // US-06: the menu is managed from here too. Same reason as the staff link —
+  // an administrator who has to be told the address has no screen at all.
+  it('takes an administrator to the menu they manage', async () => {
+    await openScreenAs('Administrator');
+
+    const link = screen.getByRole('link', { name: /productos/i });
+
+    expect(link.getAttribute('href')).toBe('/bar-alfa/staff/products');
+  });
+
   it('does not tell an administrator there is nothing for their role', async () => {
     await openScreenAs('Administrator');
 

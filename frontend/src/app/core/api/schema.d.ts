@@ -70,9 +70,9 @@ export interface components {
       description: null | string;
       imageUrl: null | string;
       /** Format: double */
-      price: number | string;
+      price: number;
       /** Format: int32 */
-      stock: number | string;
+      stock: number;
     };
     /** @description What the administration screen posts. The role travels as its name. */
     CreateStaffUserRequest: {
@@ -99,7 +99,7 @@ export interface components {
       type?: null | string;
       title?: null | string;
       /** Format: int32 */
-      status?: null | number | string;
+      status?: null | number;
       detail?: null | string;
       instance?: null | string;
     };
@@ -110,9 +110,9 @@ export interface components {
       description: null | string;
       imageUrl: null | string;
       /** Format: double */
-      price: number | string;
+      price: number;
       /** Format: int32 */
-      stock: number | string;
+      stock: number;
       isAvailable: boolean;
       isSoldOut: boolean;
       isActive: boolean;

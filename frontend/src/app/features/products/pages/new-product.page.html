@@ -1,0 +1,123 @@
+<div class="frame">
+  <header class="head">
+    <drinkit-venue-brand [venue]="venueSlug()" />
+    <p class="station">Administración</p>
+  </header>
+
+  <form class="body" [formGroup]="form" (ngSubmit)="submit()">
+    <h1 class="title">Nuevo producto</h1>
+
+    @if (store.status() === 'nameTaken') {
+      <p class="note note-bad" role="alert">
+        Ya hay un producto con ese nombre en este boliche. Elegí otro.
+      </p>
+    }
+
+    @if (store.status() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos guardarlo. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    <div class="field">
+      <label class="label" for="name">Nombre</label>
+      <input
+        id="name"
+        class="input"
+        [class.input-bad]="nameError() !== null"
+        [attr.aria-invalid]="nameError() !== null ? 'true' : null"
+        [attr.aria-describedby]="nameError() !== null ? 'name-error' : 'name-help'"
+        formControlName="name"
+        type="text"
+        autocomplete="off"
+        placeholder="Gin Tonic"
+      />
+      @if (nameError() !== null) {
+        <p id="name-error" class="bad">{{ nameError() }}</p>
+      } @else {
+        <p id="name-help" class="help">Como aparece en la carta. Único en este boliche.</p>
+      }
+    </div>
+
+    <div class="field">
+      <label class="label" for="description">Descripción</label>
+      <textarea
+        id="description"
+        class="input input-area"
+        [class.input-bad]="descriptionError() !== null"
+        [attr.aria-invalid]="descriptionError() !== null ? 'true' : null"
+        [attr.aria-describedby]="
+          descriptionError() !== null ? 'description-error' : 'description-help'
+        "
+        formControlName="description"
+        rows="3"
+        placeholder="Gin, tónica y una rodaja de lima."
+      ></textarea>
+      @if (descriptionError() !== null) {
+        <p id="description-error" class="bad">{{ descriptionError() }}</p>
+      } @else {
+        <p id="description-help" class="help">
+          Opcional. Es lo que el cliente lee en la carta: corto, se lee en un celular, de noche y
+          apurado.
+        </p>
+      }
+    </div>
+
+    <div class="pair">
+      <div class="field">
+        <label class="label" for="price">Precio</label>
+        <div class="prefixed">
+          <span class="prefix" aria-hidden="true">$</span>
+          <input
+            id="price"
+            class="input"
+            [class.input-bad]="priceError() !== null"
+            [attr.aria-invalid]="priceError() !== null ? 'true' : null"
+            [attr.aria-describedby]="priceError() !== null ? 'price-error' : null"
+            formControlName="price"
+            type="number"
+            inputmode="decimal"
+            min="0"
+            step="0.01"
+            placeholder="4500"
+          />
+        </div>
+        @if (priceError() !== null) {
+          <p id="price-error" class="bad">{{ priceError() }}</p>
+        }
+      </div>
+
+      <div class="field">
+        <label class="label" for="stock">Stock</label>
+        <input
+          id="stock"
+          class="input"
+          [class.input-bad]="stockError() !== null"
+          [attr.aria-invalid]="stockError() !== null ? 'true' : null"
+          [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
+          formControlName="stock"
+          type="number"
+          inputmode="numeric"
+          min="0"
+          step="1"
+          placeholder="20"
+        />
+        @if (stockError() !== null) {
+          <p id="stock-error" class="bad">{{ stockError() }}</p>
+        } @else {
+          <p id="stock-help" class="help">Cuántos hay para vender. En cero queda como sin stock.</p>
+        }
+      </div>
+    </div>
+
+    <button class="cta" type="submit" [disabled]="store.isSending()">
+      @if (store.isSending()) {
+        Creando
+      } @else {
+        Crear producto
+      }
+    </button>
+
+    <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'products']">Cancelar</a>
+  </form>
+</div>

@@ -13,4 +13,6 @@ export const ProblemTypes = {
 
   usernameTaken: 'urn:drinkit:problem:staff:username-taken',
   passwordTooShort: 'urn:drinkit:problem:staff:password-too-short',
+
+  productNameTaken: 'urn:drinkit:problem:product:name-taken',
 } as const;

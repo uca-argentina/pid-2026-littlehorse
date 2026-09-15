@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
@@ -35,6 +36,11 @@ if (!builder.Environment.IsDevelopment() && jwt.SigningKey.StartsWith("dev-", St
 builder.Services.AddStaffAuthentication(jwt);
 
 builder.Services.AddProblemDetailsForEveryError();
+// Numbers are numbers on the wire. ASP.NET's default also reads them from
+// strings, and the OpenAPI document says so — every price would reach the
+// generated Angular client typed as "number | string".
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict);
 builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
