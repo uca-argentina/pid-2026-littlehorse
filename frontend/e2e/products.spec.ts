@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
@@ -41,6 +42,9 @@ async function fillTheForm(page: Page, name: string, price: string, stock: strin
   await page.getByRole('button', { name: /crear producto/i }).click();
 }
 
+/** A one-pixel PNG: enough to be a picture, small enough to live in the repo. */
+const aPhoto = join(__dirname, 'fixtures', 'pixel.png');
+
 test.describe('Products', () => {
   test('adds a product that then shows up in the listing', async ({ page }) => {
     const name = aNewProductName();
@@ -57,6 +61,41 @@ test.describe('Products', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText('4.500');
     await expect(row).toContainText('20 en stock');
+  });
+
+  // Criterion 4, the half this story owns: the photo goes up with the product
+  // and the listing shows it from the storage, not from the API. The customer's
+  // menu is US-09's spec.
+  test('uploads the photo along with the product and shows it in the listing', async ({ page }) => {
+    const name = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await page.getByLabel(/foto/i).setInputFiles(aPhoto);
+    await expect(page.getByRole('img', { name: /vista previa/i })).toBeVisible();
+    await fillTheForm(page, name, '4500', '20');
+
+    const row = page.getByRole('listitem').filter({ hasText: name });
+    await expect(row).toBeVisible();
+    const picture = row.getByRole('img', { name });
+    await expect(picture).toBeVisible();
+    await expect(picture).toHaveAttribute('src', /product-images\/products\//);
+  });
+
+  // The API would answer 415 to this, after the whole file went up. The form
+  // says so first, and nothing is created.
+  test('does not save with a file that is not a picture', async ({ page }) => {
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await page.getByLabel(/foto/i).setInputFiles({
+      name: 'menu.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4'),
+    });
+    await fillTheForm(page, aNewProductName(), '4500', '20');
+
+    await expect(page.getByText(/JPEG, PNG o WebP/i)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${productsPath}/new$`));
   });
 
   // Decided on 2026-09-14: stock at zero sells the product out on its own.

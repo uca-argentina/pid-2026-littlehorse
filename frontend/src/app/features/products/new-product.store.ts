@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { Router } from '@angular/router';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { ProductsService } from './products.service';
@@ -9,8 +10,11 @@ import type { NewProduct } from './products.service';
 /**
  * What the screen is doing right now. One value rather than a set of booleans,
  * so "sending" and "that name is taken" cannot both be true at once.
+ * 'imageFailed' is the odd one: the product exists by then, only its photo
+ * did not make it, and the screen has to say so rather than offer to create
+ * it again.
  */
-type NewProductStatus = 'idle' | 'sending' | 'nameTaken' | 'unreachable';
+type NewProductStatus = 'idle' | 'sending' | 'nameTaken' | 'unreachable' | 'imageFailed';
 
 /**
  * State and transitions of the "new product" screen. Provided by the page
@@ -31,16 +35,38 @@ export class NewProductStore {
 
   readonly isSending = computed(() => this.state() === 'sending');
 
-  submit(venueSlug: string, product: NewProduct): void {
+  /**
+   * Two requests when there is a photo: the product first, because the upload
+   * needs its id to be filed under, and the listing only once both are done —
+   * arriving to a row with an empty square where the photo should be reads as
+   * a failed upload.
+   */
+  submit(venueSlug: string, product: NewProduct, image: File | null): void {
     if (this.isSending()) return;
 
     this.state.set('sending');
 
     this.products
       .create(product)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        // A failed upload is caught here and not in the error branch below:
+        // by then the product is on the menu, and "nothing was created" would
+        // be a lie.
+        switchMap((created) =>
+          image === null
+            ? of('done' as const)
+            : this.products.uploadImage(created.id, image).pipe(
+                map(() => 'done' as const),
+                catchError(() => of('imageFailed' as const)),
+              ),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe({
-        next: () => this.showTheListing(venueSlug),
+        next: (outcome) => {
+          if (outcome === 'imageFailed') this.state.set('imageFailed');
+          else this.showTheListing(venueSlug);
+        },
         error: (error: unknown) => this.state.set(reasonFor(error)),
       });
   }

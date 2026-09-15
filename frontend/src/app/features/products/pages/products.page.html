@@ -7,6 +7,36 @@
       <a class="cta" routerLink="new">Nuevo producto</a>
     </div>
 
+    <div class="filters">
+      <div class="field">
+        <label class="dk-sr-only" for="search">Buscar producto</label>
+        <input
+          id="search"
+          class="search"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Buscar producto"
+          [value]="search()"
+          (input)="searchFor($event)"
+        />
+      </div>
+
+      <div class="pills">
+        @for (pill of pills(); track pill.filter) {
+          <button
+            class="pill"
+            type="button"
+            [class.pill-on]="stockFilter() === pill.filter"
+            [attr.aria-pressed]="stockFilter() === pill.filter"
+            (click)="narrowTo(pill.filter)"
+          >
+            {{ pill.name }} · {{ pill.count }}
+          </button>
+        }
+      </div>
+    </div>
+
     @if (products.isLoading()) {
       <p class="note" role="status">Cargando la carta…</p>
     }
@@ -29,15 +59,21 @@
       </p>
     }
 
+    @if (nothingMatches()) {
+      <p class="note" role="status">Ningún producto coincide con lo que buscaste.</p>
+    }
+
     @if (rows().length > 0) {
       <ul class="rows">
         @for (row of rows(); track row.id) {
-          <li class="row" [class.row-off]="!row.isActive">
-            @if (row.imageUrl !== null) {
-              <img class="thumb" [src]="row.imageUrl" [alt]="row.name" loading="lazy" />
-            } @else {
-              <span class="thumb thumb-empty" aria-hidden="true"></span>
-            }
+          <li class="row" [class.row-off]="!row.isActive" [attr.aria-label]="row.name">
+            <img
+              class="thumb"
+              [src]="row.imageUrl"
+              [alt]="row.name"
+              loading="lazy"
+              (error)="showPlaceholder($event)"
+            />
             <span class="about">
               <span class="name">{{ row.name }}</span>
               @if (row.description !== null) {

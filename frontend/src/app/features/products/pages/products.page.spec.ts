@@ -2,8 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { render, screen } from '@testing-library/angular';
-import { PRODUCTS_URL } from '../products.service';
+import { fireEvent, render, screen, within } from '@testing-library/angular';
+import { PRODUCTS_URL, PRODUCT_PLACEHOLDER } from '../products.service';
 import type { Product } from '../products.service';
 import { ProductsPage } from './products.page';
 
@@ -90,7 +90,9 @@ describe('ProductsPage', () => {
   it('marks a product with no stock left', async () => {
     await openScreenShowing(theMenu);
 
-    expect(screen.getByText(/sin stock/i)).not.toBeNull();
+    const row = screen.getByRole('listitem', { name: /aperol spritz/i });
+
+    expect(within(row).getByText(/sin stock/i)).not.toBeNull();
   });
 
   // US-08 keeps deactivated products in the listing so old orders still point
@@ -102,13 +104,27 @@ describe('ProductsPage', () => {
     expect(screen.getByText(/dado de baja/i)).not.toBeNull();
   });
 
-  it('shows the picture when there is one and a placeholder when there is not', async () => {
+  it('shows the picture when there is one and the placeholder when there is not', async () => {
     await openScreenShowing(theMenu);
 
-    const pictures = screen.getAllByRole('img');
+    expect(screen.getByRole('img', { name: 'Gin Tonic' }).getAttribute('src')).toBe(
+      'https://images.example.com/gin-tonic.jpg',
+    );
+    expect(screen.getByRole('img', { name: 'Aperol Spritz' }).getAttribute('src')).toBe(
+      PRODUCT_PLACEHOLDER,
+    );
+  });
 
-    expect(pictures).toHaveLength(1);
-    expect(pictures[0]?.getAttribute('src')).toBe('https://images.example.com/gin-tonic.jpg');
+  // US-06, criterion 5: a picture that cannot be fetched — storage down, blob
+  // deleted — shows as the placeholder, never as a broken image.
+  it('falls back to the placeholder when the picture cannot be loaded', async () => {
+    const rendered = await openScreenShowing(theMenu);
+    const picture = screen.getByRole('img', { name: 'Gin Tonic' });
+
+    fireEvent.error(picture);
+    await rendered.fixture.whenStable();
+
+    expect(picture.getAttribute('src')).toBe(PRODUCT_PLACEHOLDER);
   });
 
   it('asks the API without naming a venue, because the token carries it', async () => {
@@ -138,5 +154,99 @@ describe('ProductsPage', () => {
     await openScreenShowing([]);
 
     expect(screen.getByRole('status').textContent).toContain('Todavía no');
+  });
+
+  describe('searching and filtering', () => {
+    function search(term: string): void {
+      fireEvent.input(screen.getByLabelText(/buscar/i), { target: { value: term } });
+    }
+
+    function pill(name: RegExp): HTMLButtonElement {
+      return screen.getByRole('button', { name }) as HTMLButtonElement;
+    }
+
+    function listed(): string[] {
+      return screen.getAllByRole('listitem').map((row) => row.getAttribute('aria-label') ?? '');
+    }
+
+    it('narrows the list to whatever matches what was typed', async () => {
+      const rendered = await openScreenShowing(theMenu);
+
+      search('aper');
+      await rendered.fixture.whenStable();
+
+      expect(listed()).toEqual(['Aperol Spritz']);
+    });
+
+    it('matches however it was capitalised', async () => {
+      const rendered = await openScreenShowing(theMenu);
+
+      search('GIN');
+      await rendered.fixture.whenStable();
+
+      expect(listed()).toEqual(['Gin Tonic']);
+    });
+
+    // Not the same situation as a venue with nothing loaded, and saying the
+    // wrong one sends an administrator looking for a bug that is not there.
+    it('says nothing matched, which is not an empty menu', async () => {
+      const rendered = await openScreenShowing(theMenu);
+
+      search('zzz');
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('status').textContent).toContain('Ningún producto coincide');
+      expect(screen.queryByText(/todavía no hay ningún producto/i)).toBeNull();
+    });
+
+    // The two states an administrator goes looking for at night: what ran
+    // out, and what was taken off the menu.
+    it('counts everything, what is sold out and what was deactivated', async () => {
+      await openScreenShowing(theMenu);
+
+      expect(pill(/todos/i).textContent).toContain('3');
+      expect(pill(/sin stock/i).textContent).toContain('1');
+      expect(pill(/dados de baja/i).textContent).toContain('1');
+    });
+
+    it('shows only what is sold out when that filter is on', async () => {
+      const rendered = await openScreenShowing(theMenu);
+
+      pill(/sin stock/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(listed()).toEqual(['Aperol Spritz']);
+    });
+
+    it('shows only what was deactivated when that filter is on', async () => {
+      const rendered = await openScreenShowing(theMenu);
+
+      pill(/dados de baja/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(listed()).toEqual(['Daiquiri']);
+    });
+
+    it('narrows by filter and by what was typed at once', async () => {
+      const rendered = await openScreenShowing(theMenu);
+
+      pill(/sin stock/i).click();
+      search('gin');
+      await rendered.fixture.whenStable();
+
+      expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    });
+
+    // Counted over what the search left, not over the whole menu: a pill that
+    // promises one and then shows none reads as a filter that is broken.
+    it('counts what the search left, not the whole menu', async () => {
+      const rendered = await openScreenShowing(theMenu);
+
+      search('gin');
+      await rendered.fixture.whenStable();
+
+      expect(pill(/todos/i).textContent).toContain('1');
+      expect(pill(/sin stock/i).textContent).toContain('0');
+    });
   });
 });

@@ -31,19 +31,25 @@ const aNewProduct: NewProduct = {
   stock: 20,
 };
 
+const aPhoto = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'gin-tonic.png', {
+  type: 'image/png',
+});
+
 describe('NewProductStore', () => {
   let store: NewProductStore;
   let create: ReturnType<typeof vi.fn>;
+  let uploadImage: ReturnType<typeof vi.fn>;
   let router: Router;
 
   beforeEach(() => {
     create = vi.fn();
+    uploadImage = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
         NewProductStore,
-        { provide: ProductsService, useValue: { create } },
+        { provide: ProductsService, useValue: { create, uploadImage } },
       ],
     });
 
@@ -55,8 +61,8 @@ describe('NewProductStore', () => {
   it('does not send twice while a request is in flight', () => {
     create.mockReturnValue(new Subject<Product>());
 
-    store.submit('bar-alfa', aNewProduct);
-    store.submit('bar-alfa', aNewProduct);
+    store.submit('bar-alfa', aNewProduct, null);
+    store.submit('bar-alfa', aNewProduct, null);
 
     expect(create).toHaveBeenCalledTimes(1);
   });
@@ -65,7 +71,7 @@ describe('NewProductStore', () => {
     create.mockReturnValue(of(created));
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    store.submit('bar-alfa', aNewProduct);
+    store.submit('bar-alfa', aNewProduct, null);
 
     expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'products']);
     expect(store.status()).toBe('idle');
@@ -74,7 +80,7 @@ describe('NewProductStore', () => {
   it('reports a name that this venue already uses', () => {
     create.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.productNameTaken)));
 
-    store.submit('bar-alfa', aNewProduct);
+    store.submit('bar-alfa', aNewProduct, null);
 
     expect(store.status()).toBe('nameTaken');
   });
@@ -89,17 +95,61 @@ describe('NewProductStore', () => {
   ])('reports %s as unreachable', (_case, error) => {
     create.mockReturnValue(throwError(() => error));
 
-    store.submit('bar-alfa', aNewProduct);
+    store.submit('bar-alfa', aNewProduct, null);
 
     expect(store.status()).toBe('unreachable');
+  });
+
+  // The picture needs the product's id to be filed under, so it goes second,
+  // and the listing is not shown until it is there: arriving to a row with an
+  // empty square where the photo should be reads as a failed upload.
+  it('uploads the photo once the product exists, then goes to the listing', () => {
+    create.mockReturnValue(of(created));
+    uploadImage.mockReturnValue(of({ imageUrl: 'https://images.example.com/a.png' }));
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    store.submit('bar-alfa', aNewProduct, aPhoto);
+
+    expect(uploadImage).toHaveBeenCalledWith(created.id, aPhoto);
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'products']);
+  });
+
+  it('does not upload anything when no photo was chosen', () => {
+    create.mockReturnValue(of(created));
+    vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    store.submit('bar-alfa', aNewProduct, null);
+
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('does not upload the photo when the product was refused', () => {
+    create.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.productNameTaken)));
+
+    store.submit('bar-alfa', aNewProduct, aPhoto);
+
+    expect(uploadImage).not.toHaveBeenCalled();
+  });
+
+  // The product is on the menu by then, so this is not "nothing was created":
+  // it is a different message, and the screen must not offer to create it again.
+  it('reports a photo that could not be uploaded as its own failure', () => {
+    create.mockReturnValue(of(created));
+    uploadImage.mockReturnValue(throwError(() => rejectedWith(0, '')));
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    store.submit('bar-alfa', aNewProduct, aPhoto);
+
+    expect(store.status()).toBe('imageFailed');
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   it('lets a new attempt through after a failure', () => {
     create.mockReturnValueOnce(throwError(() => rejectedWith(0, '')));
     create.mockReturnValueOnce(new Subject<Product>());
 
-    store.submit('bar-alfa', aNewProduct);
-    store.submit('bar-alfa', aNewProduct);
+    store.submit('bar-alfa', aNewProduct, null);
+    store.submit('bar-alfa', aNewProduct, null);
 
     expect(create).toHaveBeenCalledTimes(2);
     expect(store.isSending()).toBe(true);

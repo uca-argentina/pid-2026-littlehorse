@@ -50,6 +50,69 @@
   background: var(--dk-accent-hover);
 }
 
+// Search on one line with the pills while there is room, stacked when there
+// is not: this screen is used on a laptop and on the tablet behind the bar.
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+}
+
+.field {
+  display: flex;
+  min-width: 260px;
+  flex: 1;
+}
+
+.search {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // 16px exactly: anything smaller makes iOS Safari zoom into the field on
+  // focus, and the layout never comes back on its own.
+  font-size: 16px;
+}
+
+.search::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-2);
+}
+
+.pill {
+  min-height: 44px;
+  padding: 0 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.pill-on {
+  border-color: #5a4e42;
+  background: #2a2318;
+  color: var(--dk-text);
+  font-weight: 600;
+}
+
+.pill:hover:not(.pill-on) {
+  color: var(--dk-text);
+}
+
 .rows {
   display: flex;
   flex-direction: column;
@@ -62,9 +125,9 @@
 .row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--dk-space-3);
+  gap: var(--dk-space-4);
   align-items: center;
-  padding: 13px var(--dk-space-4);
+  padding: var(--dk-space-4);
   border: 1px solid var(--dk-border-subtle);
   border-radius: var(--dk-radius-md);
   background: var(--dk-surface);
@@ -77,13 +140,15 @@
 }
 
 // The same square whether there is a picture or not, so the names line up
-// down the list. An image that fails to load falls back to the well behind it.
+// down the list. Big enough to tell a gin tonic from a fernet at a glance —
+// the picture is the reason the row is this tall. An image that fails to
+// load falls back to the well behind it.
 .thumb {
-  width: 48px;
-  height: 48px;
+  width: 96px;
+  height: 96px;
   flex-shrink: 0;
   border: 1px solid var(--dk-border);
-  border-radius: 10px;
+  border-radius: var(--dk-radius-md);
   background: var(--dk-surface-raised);
   object-fit: cover;
 }
@@ -95,29 +160,31 @@
   min-width: 160px;
 }
 
+// Every size inside a row is the listing's base scaled by the same 1.15, so
+// the row reads as one thing and not as a name with fine print under it.
 .name {
-  font-size: 17px;
+  font-size: 21px;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .description {
-  margin-top: 1px;
+  margin-top: 2px;
   color: var(--dk-text-muted);
-  font-size: 13.5px;
+  font-size: 15.5px;
 }
 
 .price {
-  font-size: 17px;
+  font-size: 19.5px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .stock {
-  min-width: 96px;
+  min-width: 110px;
   color: var(--dk-text-muted);
-  font-size: 13.5px;
+  font-size: 15.5px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -130,11 +197,11 @@
 }
 
 .chip {
-  padding: 5px 11px;
+  padding: 6px 13px;
   border: 1.5px solid var(--dk-border);
   border-radius: var(--dk-radius-pill);
   color: var(--dk-text-muted);
-  font-size: var(--dk-text-min);
+  font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
 }

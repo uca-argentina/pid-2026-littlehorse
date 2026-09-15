@@ -16,6 +16,12 @@
       </p>
     }
 
+    @if (store.status() === 'imageFailed') {
+      <p class="note note-bad" role="alert">
+        El producto se creó, pero la foto no se pudo subir. Vas a poder cargarla cuando lo edites.
+      </p>
+    }
+
     <div class="field">
       <label class="label" for="name">Nombre</label>
       <input
@@ -107,14 +113,59 @@
       </div>
     </div>
 
-    <button class="cta" type="submit" [disabled]="store.isSending()">
-      @if (store.isSending()) {
-        Creando
+    <div class="field">
+      <span class="label" id="photo-label">Foto</span>
+      <label
+        class="drop"
+        [class.drop-on]="dragging()"
+        [class.drop-bad]="photoError() !== null"
+        (dragover)="dragOver($event)"
+        (dragleave)="dragLeave()"
+        (drop)="drop($event)"
+      >
+        <input
+          class="dk-sr-only"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          aria-labelledby="photo-label"
+          [attr.aria-invalid]="photoError() !== null ? 'true' : null"
+          [attr.aria-describedby]="photoError() !== null ? 'photo-error' : 'photo-help'"
+          [disabled]="store.isSending()"
+          (change)="choosePhoto($event)"
+        />
+        @if (photoPreview() !== null) {
+          <img class="drop-preview" [src]="photoPreview()" alt="Vista previa de la foto" />
+          <span class="drop-hint">Tocá para elegir otra</span>
+        } @else {
+          <span class="drop-file">Arrastrá una foto o tocá para elegirla</span>
+        }
+      </label>
+      @if (photoError() !== null) {
+        <p id="photo-error" class="bad">{{ photoError() }}</p>
       } @else {
-        Crear producto
+        <p id="photo-help" class="help">
+          Opcional. Si no cargás ninguna, en la carta se muestra un ícono en su lugar.
+        </p>
       }
-    </button>
+      @if (photoPreview() !== null) {
+        <button class="link" type="button" [disabled]="store.isSending()" (click)="removePhoto()">
+          Sacar la foto
+        </button>
+      }
+    </div>
 
-    <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'products']">Cancelar</a>
+    @if (store.status() === 'imageFailed') {
+      <a class="cta" [routerLink]="['/', venueSlug(), 'staff', 'products']">Ir al listado</a>
+    } @else {
+      <button class="cta" type="submit" [disabled]="store.isSending()">
+        @if (store.isSending()) {
+          Creando
+        } @else {
+          Crear producto
+        }
+      </button>
+
+      <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'products']">Cancelar</a>
+    }
   </form>
 </div>

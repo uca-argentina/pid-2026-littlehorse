@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { trimmedMinLength } from '../../../shared/forms/trimmed-min-length';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { NewProductStore } from '../new-product.store';
+import { IMAGE_MAX_BYTES, IMAGE_TYPES } from '../products.service';
 
 /** Kept in step with Product's own rules in the domain. */
 const NAME_MAX_LENGTH = 80;
@@ -88,6 +89,37 @@ export class NewProductPage {
     this.errorOf('stock', 'El stock tiene que ser un número entero, cero o más.'),
   );
 
+  /**
+   * The photo lives outside the reactive form: a file input cannot be bound
+   * to a FormControl, and there is nothing to type into it anyway.
+   */
+  protected readonly photo = signal<File | null>(null);
+
+  /**
+   * An object URL for the chosen file, so the administrator sees the picture
+   * itself and not a file name. Object URLs hold the file in memory until
+   * they are released, so every one made here is revoked when replaced,
+   * removed, or when the screen goes away.
+   */
+  protected readonly photoPreview = signal<string | null>(null);
+
+  /**
+   * Checked here, before a byte goes up: the API would answer 415 and 413 to
+   * these, but only after the whole file crossed the venue's connection.
+   */
+  protected readonly photoError = computed(() => {
+    const file = this.photo();
+
+    if (file === null || !this.attempted()) return null;
+    if (!IMAGE_TYPES.includes(file.type)) return 'La foto tiene que ser JPEG, PNG o WebP.';
+    if (file.size > IMAGE_MAX_BYTES) return 'La foto no puede pesar más de 5 MB.';
+
+    return null;
+  });
+
+  /** Dragging over the zone: what shows the drop will land. */
+  protected readonly dragging = signal(false);
+
   constructor() {
     // Reactive forms are not signal-aware, so enabling and disabling is driven
     // from here rather than bound in the template.
@@ -95,6 +127,8 @@ export class NewProductPage {
       if (this.store.isSending()) this.form.disable();
       else this.form.enable();
     });
+
+    inject(DestroyRef).onDestroy(() => this.setPhoto(null));
   }
 
   /**
@@ -110,10 +144,50 @@ export class NewProductPage {
     return this.form.controls[field].invalid ? message : null;
   }
 
+  protected choosePhoto(event: Event): void {
+    this.setPhoto((event.target as HTMLInputElement).files?.[0] ?? null);
+  }
+
+  protected dragOver(event: DragEvent): void {
+    // Without this the browser opens the file instead of handing it over.
+    event.preventDefault();
+    this.dragging.set(true);
+  }
+
+  protected dragLeave(): void {
+    this.dragging.set(false);
+  }
+
+  protected drop(event: DragEvent): void {
+    event.preventDefault();
+    this.dragging.set(false);
+    this.setPhoto(event.dataTransfer?.files[0] ?? null);
+  }
+
+  protected removePhoto(): void {
+    this.setPhoto(null);
+  }
+
+  /** The one place a preview is made or released, so none is ever leaked. */
+  private setPhoto(file: File | null): void {
+    const previous = this.photoPreview();
+
+    if (previous !== null) URL.revokeObjectURL(previous);
+
+    this.photo.set(file);
+    this.photoPreview.set(file === null ? null : URL.createObjectURL(file));
+  }
+
+  private photoIsInvalid(): boolean {
+    const file = this.photo();
+
+    return file !== null && (!IMAGE_TYPES.includes(file.type) || file.size > IMAGE_MAX_BYTES);
+  }
+
   protected submit(): void {
     this.attempted.set(true);
 
-    if (this.form.invalid || this.store.isSending()) return;
+    if (this.form.invalid || this.photoIsInvalid() || this.store.isSending()) return;
 
     const { name, description, price, stock } = this.form.getRawValue();
 
@@ -121,13 +195,18 @@ export class NewProductPage {
     // compiler needs to see.
     if (price === null || stock === null) return;
 
-    this.store.submit(this.venueSlug(), {
-      name: name.trim(),
-      description: description.trim() === '' ? null : description.trim(),
-      // The picture is uploaded from the listing once the product exists.
-      imageUrl: null,
-      price,
-      stock,
-    });
+    this.store.submit(
+      this.venueSlug(),
+      {
+        name: name.trim(),
+        description: description.trim() === '' ? null : description.trim(),
+        // The picture goes up on its own request once the product exists;
+        // the store handles the second step.
+        imageUrl: null,
+        price,
+        stock,
+      },
+      this.photo(),
+    );
   }
 }

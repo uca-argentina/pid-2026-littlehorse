@@ -23,7 +23,10 @@ const created: Product = {
 const rejectedWith = (status: number, type: string) =>
   vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status, error: { type } })));
 
-function openScreen(create = vi.fn().mockReturnValue(of(created))) {
+function openScreen(
+  create = vi.fn().mockReturnValue(of(created)),
+  uploadImage = vi.fn().mockReturnValue(of({ imageUrl: 'https://images.example.com/a.png' })),
+) {
   return render(NewProductPage, {
     inputs: { venueSlug: 'bar-alfa' },
     providers: [
@@ -31,10 +34,30 @@ function openScreen(create = vi.fn().mockReturnValue(of(created))) {
       // land on, the router rejects and that masks the actual assertion.
       provideRouter([{ path: ':venueSlug/staff/products', children: [] }]),
       NewProductStore,
-      { provide: ProductsService, useValue: { create } },
+      { provide: ProductsService, useValue: { create, uploadImage } },
     ],
-  }).then((rendered) => ({ rendered, create }));
+  }).then((rendered) => ({ rendered, create, uploadImage }));
 }
+
+function aFile(name: string, type: string, bytes = 4): File {
+  return new File([new Uint8Array(bytes)], name, { type });
+}
+
+function choosePhoto(file: File): void {
+  fireEvent.change(screen.getByLabelText(/foto/i), { target: { files: [file] } });
+}
+
+// jsdom has no object URLs. The preview is whatever the browser hands back
+// for the file, and this is the closest a test can get to checking that.
+beforeEach(() => {
+  vi.stubGlobal('URL', {
+    ...URL,
+    createObjectURL: vi.fn((file: File) => `blob:preview/${file.name}`),
+    revokeObjectURL: vi.fn(),
+  });
+});
+
+afterEach(() => vi.unstubAllGlobals());
 
 function field(label: RegExp): HTMLInputElement {
   return screen.getByLabelText(label) as HTMLInputElement;
@@ -221,6 +244,92 @@ describe('NewProductPage', () => {
 
     expect(create).toHaveBeenCalledTimes(1);
     expect(button.disabled).toBe(true);
+  });
+
+  // US-06, criterion 4. The photo is optional, and when there is one it goes
+  // up with the product: the administrator saves once.
+  it('uploads the chosen photo along with the product', async () => {
+    const { rendered, uploadImage } = await openScreen();
+    const photo = aFile('gin-tonic.png', 'image/png');
+
+    fillAGinTonic();
+    choosePhoto(photo);
+    save();
+    await rendered.fixture.whenStable();
+
+    expect(uploadImage).toHaveBeenCalledWith(created.id, photo);
+  });
+
+  // What the administrator wants to check is the picture, not the file name:
+  // whether it is the right one, and whether it is upright.
+  it('shows a preview of the photo that was chosen', async () => {
+    const { rendered } = await openScreen();
+
+    choosePhoto(aFile('gin-tonic.png', 'image/png'));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('img', { name: /vista previa/i }).getAttribute('src')).toBe(
+      'blob:preview/gin-tonic.png',
+    );
+  });
+
+  // Object URLs hold the file in memory until they are released.
+  it('releases the preview when the photo is taken away', async () => {
+    const { rendered } = await openScreen();
+
+    choosePhoto(aFile('gin-tonic.png', 'image/png'));
+    await rendered.fixture.whenStable();
+    screen.getByRole('button', { name: /sacar la foto/i }).click();
+    await rendered.fixture.whenStable();
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:preview/gin-tonic.png');
+    expect(screen.queryByRole('img', { name: /vista previa/i })).toBeNull();
+  });
+
+  // The API would answer 415 and 413 to these, after the whole file went up
+  // over the venue's connection. The form says so before sending a byte.
+  it('refuses a file that is not a picture we show, and says so', async () => {
+    const { rendered, create } = await openScreen();
+
+    fillAGinTonic();
+    choosePhoto(aFile('menu.pdf', 'application/pdf'));
+    save();
+    await rendered.fixture.whenStable();
+
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByText(/JPEG, PNG o WebP/i)).not.toBeNull();
+  });
+
+  it('refuses a picture over five megabytes, and says so', async () => {
+    const { rendered, create } = await openScreen();
+
+    fillAGinTonic();
+    choosePhoto(aFile('huge.jpg', 'image/jpeg', 5 * 1024 * 1024 + 1));
+    save();
+    await rendered.fixture.whenStable();
+
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByText(/5 MB/)).not.toBeNull();
+  });
+
+  // The product exists by now: offering "Crear producto" again would end in
+  // "that name is taken". What is left to do is to go and see it.
+  it('says the product was created when only the photo failed, and leads to the listing', async () => {
+    const { rendered } = await openScreen(
+      undefined,
+      vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 }))),
+    );
+
+    fillAGinTonic();
+    choosePhoto(aFile('gin-tonic.png', 'image/png'));
+    save();
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toContain('se creó');
+    expect(screen.queryByRole('button', { name: /crear producto/i })).toBeNull();
+    expect(screen.getByRole('link', { name: /ir al listado/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/products',
+    );
   });
 
   it('offers a way back to the listing without saving', async () => {

@@ -8,6 +8,24 @@ export type Product = components['schemas']['ProductResponse'];
 
 export type NewProduct = components['schemas']['CreateProductRequest'];
 
+export type ProductImage = components['schemas']['ProductImageResponse'];
+
+/**
+ * What the form lets through before a byte goes up. Kept in step with
+ * UploadProductImageHandler on the server, which decides the same by the
+ * bytes rather than by what the browser says the file is.
+ */
+export const IMAGE_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'image/webp'];
+
+export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Shown where a product's picture would go when it has none, or when the
+ * one it has cannot be fetched. Served with the app, so it is there even
+ * when the storage is not.
+ */
+export const PRODUCT_PLACEHOLDER = '/images/product-placeholder.svg';
+
 /**
  * No venue in the path, unlike the login request. Everything here is done with
  * a token, and the token carries the venue: putting it in the URL would offer
@@ -21,5 +39,13 @@ export class ProductsService {
 
   create(product: NewProduct): Observable<Product> {
     return this.http.post<Product>(PRODUCTS_URL, product);
+  }
+
+  /** Multipart, with the file in the "image" part, as the API expects it. */
+  uploadImage(productId: string, image: File): Observable<ProductImage> {
+    const form = new FormData();
+    form.append('image', image, image.name);
+
+    return this.http.put<ProductImage>(`${PRODUCTS_URL}/${productId}/image`, form);
   }
 }
