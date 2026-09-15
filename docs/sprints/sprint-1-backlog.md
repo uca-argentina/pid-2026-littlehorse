@@ -86,7 +86,7 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
 | US-08 | Corregir y sacar tragos | US-06 | Pendiente |
 | US-09 | Ver la carta desde el celular | US-06 | ✅ **Terminada** |
-| US-10 | Armar el pedido | US-09 | Pendiente |
+| US-10 | Armar el pedido | US-09 | **4 de 5** — falta la aclaración por trago |
 | US-11 | Confirmar el pedido | US-10 | Pendiente |
 | US-12 | Seguir mi pedido | US-11 | Pendiente |
 | US-13 | Encontrar a alguien en el listado | US-03 | ✅ **Terminada** |
@@ -530,6 +530,19 @@ leyendo el almacenamiento después de mirar la carta.
    **entonces** mi pedido sigue armado como lo dejé.
 5. **Dado** que mi pedido está vacío, **cuando** miro la pantalla, **entonces** no puedo
    avanzar a confirmar.
+
+**4 de 5, todo desde la carta.** Se construyó el `+` de cada tarjeta, el `−` con la cantidad
+en los tragos que ya están en el pedido, y la barra de abajo con el resumen y el total. Con
+eso quedan cumplidos los criterios 1, 2, 4 y 5. Falta el 3, la aclaración por trago, que
+necesita la pantalla del pedido.
+
+| Decisión | Cómo queda |
+|---|---|
+| Dónde vive el pedido a medio armar | En el navegador, con una clave por boliche. Sobrevive a que atiendan un llamado o cierren la pestaña, que es el criterio 4, y el pedido de un local nunca aparece en otro. Cuando exista el pedido de verdad, en US-11, se muda al servidor. |
+| Qué hace la barra de abajo | Nada, todavía. Tiene el aspecto exacto del wireframe, dorada y con el total, pero dice "Tu pedido" y no "Ver pedido": la pantalla del pedido no existe, y el dorado invita a tocar. Cambia una palabra cuando esa pantalla llegue. |
+| Cambiar cantidades | Desde la tarjeta de la carta, con el `−`, la cantidad y el `+`. Aparecen recién cuando el trago está en el pedido, y sacar el último lo saca del pedido en vez de dejar una línea en cero. |
+| El botón de usuario del encabezado | **No entra.** Llevaría a un login de cliente, y las cuentas de cliente están fuera del Sprint 1 porque la consigna pide expresamente poder pedir sin cuenta. Además el criterio 2 de US-09 está construido y con prueba de que la carta no ofrece iniciar sesión. |
+| Tocar dos veces el mismo trago | Sube la cantidad de esa línea, no abre una segunda. |
 
 ### US-11 · Confirmar el pedido
 

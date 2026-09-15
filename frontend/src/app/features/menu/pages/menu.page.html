@@ -91,7 +91,7 @@
               (error)="useThePlaceholder($event)"
             />
             <div class="what">
-              <h2 class="name">{{ card.name }}</h2>
+              <h2 class="name" [id]="'name-' + card.id">{{ card.name }}</h2>
               @if (card.isOrderable) {
                 @if (card.description !== null) {
                   <p class="dsc">{{ card.description }}</p>
@@ -103,9 +103,79 @@
                 <p class="dsc">Sin stock por ahora</p>
               }
             </div>
+            @if (card.isOrderable) {
+              <div class="qty">
+                <!--
+                  The minus and the count appear only once the drink is in the
+                  order. Drawn on every card they would be two controls doing
+                  nothing across most of a menu.
+                -->
+                @if (cart.quantityOf(card.id) > 0) {
+                  <button
+                    class="step"
+                    type="button"
+                    [attr.aria-label]="'Quitar un ' + card.name + ' del pedido'"
+                    (click)="takeOneOut(card)"
+                  >
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.6"
+                      stroke-linecap="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M5 12h14" />
+                    </svg>
+                  </button>
+                  <span
+                    class="count"
+                    [attr.data-testid]="'quantity-' + card.name"
+                    [attr.aria-label]="cart.quantityOf(card.id) + ' en tu pedido'"
+                  >
+                    {{ cart.quantityOf(card.id) }}
+                  </span>
+                }
+                <button
+                  class="add"
+                  type="button"
+                  [attr.aria-label]="'Agregar ' + card.name + ' al pedido'"
+                  (click)="addToOrder(card)"
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+              </div>
+            }
           </li>
         }
       </ul>
     }
   </main>
+
+  <!--
+    A summary and not a button: the screen that shows the order is not built
+    yet, and a control that does nothing reads as an app that broke. It becomes
+    the "Ver pedido" button of the wireframe when that screen lands.
+  -->
+  @if (!cart.isEmpty()) {
+    <footer class="foot">
+      <p class="order" data-testid="order-summary" role="status">
+        <span>Tu pedido · {{ howMany() }}</span>
+        <span class="order-total">$ {{ orderTotal() }}</span>
+      </p>
+    </footer>
+  }
 </div>

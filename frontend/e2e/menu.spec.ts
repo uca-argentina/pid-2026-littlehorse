@@ -123,4 +123,77 @@ test.describe('Menu', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Bar Alfa');
     await expect(card(page, name)).toBeVisible();
   });
+
+  /**
+   * US-10, the half that lives on the menu. The order screen is not built yet,
+   * so the strip at the bottom is a summary and nothing more.
+   */
+  test('adds a drink to the order and keeps it after a reload', async ({ page, request }) => {
+    const name = aNewProduct();
+    await loadProduct(request, name, 12);
+
+    await page.goto(menuPath);
+    await page.getByRole('searchbox', { name: /buscar trago/i }).fill(name);
+
+    await expect(page.getByTestId('order-summary')).toHaveCount(0);
+
+    await page.getByRole('button', { name: new RegExp(`agregar ${name}`, 'i') }).click();
+    await expect(page.getByTestId('order-summary')).toContainText('1 ítem');
+    await expect(page.getByTestId('order-summary')).toContainText('$ 4.500,00');
+
+    await page.getByRole('button', { name: new RegExp(`agregar ${name}`, 'i') }).click();
+    await expect(page.getByTestId('order-summary')).toContainText('2 ítems');
+
+    // Criterion 4, in a real browser: they took a phone call and came back.
+    await page.reload();
+
+    await expect(page.getByTestId('order-summary')).toContainText('2 ítems');
+    await expect(page.getByTestId('order-summary')).toContainText('$ 9.000,00');
+  });
+
+  // US-10, criterion 2, without leaving the menu: the count on the card and the
+  // total at the bottom move together.
+  test('lowers the quantity from the card itself', async ({ page, request }) => {
+    const name = aNewProduct();
+    await loadProduct(request, name, 12);
+
+    await page.goto(menuPath);
+    await page.getByRole('searchbox', { name: /buscar trago/i }).fill(name);
+
+    const add = page.getByRole('button', { name: new RegExp(`agregar ${name}`, 'i') });
+    const take = page.getByRole('button', { name: new RegExp(`quitar un ${name}`, 'i') });
+
+    // Nothing to take out until there is something in the order.
+    await expect(take).toHaveCount(0);
+
+    await add.click();
+    await add.click();
+    await expect(page.getByTestId(`quantity-${name}`)).toHaveText('2');
+
+    await take.click();
+    await expect(page.getByTestId(`quantity-${name}`)).toHaveText('1');
+    await expect(page.getByTestId('order-summary')).toContainText('$ 4.500,00');
+
+    // The last one out takes the drink out of the order, and the card goes back
+    // to offering only the way in.
+    await take.click();
+    await expect(page.getByTestId(`quantity-${name}`)).toHaveCount(0);
+    await expect(take).toHaveCount(0);
+    await expect(page.getByTestId('order-summary')).toHaveCount(0);
+  });
+
+  // The order belongs to the venue it was built in, and nothing carries it out.
+  test('leaves the order behind when another venue is opened', async ({ page, request }) => {
+    const name = aNewProduct();
+    await loadProduct(request, name, 6);
+
+    await page.goto(menuPath);
+    await page.getByRole('searchbox', { name: /buscar trago/i }).fill(name);
+    await page.getByRole('button', { name: new RegExp(`agregar ${name}`, 'i') }).click();
+    await expect(page.getByTestId('order-summary')).toContainText('1 ítem');
+
+    await page.goto('/bar-que-no-existe/menu');
+
+    await expect(page.getByTestId('order-summary')).toHaveCount(0);
+  });
 });

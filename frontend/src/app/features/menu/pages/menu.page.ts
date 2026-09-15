@@ -1,6 +1,7 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { Cart } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 import { menuUrl } from '../menu.service';
@@ -21,6 +22,7 @@ interface MenuCard {
   readonly name: string;
   readonly description: string | null;
   readonly image: string;
+  readonly amount: number;
   readonly price: string;
   readonly isOrderable: boolean;
 }
@@ -36,6 +38,8 @@ interface MenuCard {
   templateUrl: './menu.page.html',
 })
 export class MenuPage {
+  protected readonly cart = inject(Cart);
+
   /** From the path. Bound by the router, so the screen never asks for a venue. */
   readonly venueSlug = input.required<string>();
 
@@ -83,10 +87,32 @@ export class MenuPage {
         name: item.name,
         description: item.description,
         image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
+        amount: item.price,
         price: PRICE.format(item.price),
         isOrderable: item.isOrderable,
       }));
   });
+
+  /** "1 ítem", "2 ítems". One drink is one, and the plural is not free. */
+  protected readonly howMany = computed(() =>
+    this.cart.count() === 1 ? '1 ítem' : `${this.cart.count()} ítems`,
+  );
+
+  protected readonly orderTotal = computed(() => PRICE.format(this.cart.total()));
+
+  constructor() {
+    // The order belongs to the venue whose address is open, and switching
+    // venues has to switch orders rather than carry one into the other.
+    effect(() => this.cart.open(this.venueSlug()));
+  }
+
+  protected addToOrder(card: MenuCard): void {
+    this.cart.add({ id: card.id, name: card.name, price: card.amount });
+  }
+
+  protected takeOneOut(card: MenuCard): void {
+    this.cart.subtract(card.id);
+  }
 
   /** The venue has not loaded anything. Criterion 5, and its own message. */
   protected readonly isEmpty = computed(
