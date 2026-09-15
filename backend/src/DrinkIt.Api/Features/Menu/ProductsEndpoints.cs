@@ -16,6 +16,9 @@ public sealed record CreateProductRequest(
     decimal Price,
     int Stock);
 
+/// <summary>Where the picture ended up. The listing shows it from here on.</summary>
+public sealed record ProductImageResponse(string ImageUrl);
+
 public sealed record ProductResponse(
     Guid Id,
     string Name,
@@ -52,6 +55,19 @@ internal static class ProductsEndpoints
             .Produces<ProductResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
+            .MapPut("/{id:guid}/image", UploadImageAsync)
+            .WithName("UploadProductImage")
+            .WithSummary("Puts a picture on a product, replacing the one it had. JPEG, PNG or WebP, up to 5 MB.")
+            // The form is posted with a bearer token, never from a cookie
+            // session, so there is no cross-site request for a token to stop.
+            .DisableAntiforgery()
+            .Produces<ProductImageResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+            .ProducesProblem(StatusCodes.Status415UnsupportedMediaType);
 
         return endpoints;
     }
@@ -107,17 +123,56 @@ internal static class ProductsEndpoints
                 created.IsActive));
     }
 
-    /// <summary>
-    /// A taken name is a conflict with the current state of the menu, not
-    /// malformed input, so it is a 409 and the screen can tell the two apart
-    /// without reading the message.
-    /// </summary>
-    private static ProblemHttpResult Rejected(Error error) =>
+    internal static async Task<IResult> UploadImageAsync(
+        Guid id,
+        IFormFile? image,
+        UploadProductImageHandler handler,
+        CancellationToken cancellationToken)
+    {
+        if (image is null) return ImageIsMissing();
+
+        // The form file is buffered by the framework, so the stream can be read
+        // twice: once to tell the format, once to store it.
+        await using Stream content = image.OpenReadStream();
+
+        Result<UploadedProductImage> result = await handler.HandleAsync(
+            new UploadProductImageCommand(id, content, image.Length),
+            cancellationToken);
+
+        if (!result.IsSuccess) return Rejected(result.Error!);
+
+        return TypedResults.Ok(new ProductImageResponse(result.Value.ImageUrl));
+    }
+
+    private static ProblemHttpResult ImageIsMissing() =>
         TypedResults.Problem(
-            title: error == CreateProductHandler.NameTaken ? "Product name already taken" : "Invalid request",
+            title: "Invalid request",
+            detail: "Send the picture as the 'image' part of a multipart form.",
+            statusCode: StatusCodes.Status400BadRequest,
+            type: ProblemTypes.For("product.image_required"));
+
+    /// <summary>
+    /// Each expected failure with the status that names it, so the screen can
+    /// tell them apart without reading the message: a taken name is a conflict
+    /// with the menu (409), a missing product is not found (404), a picture
+    /// too big is too big (413) and a PDF is not a media type we show (415).
+    /// Anything else is malformed input.
+    /// </summary>
+    private static ProblemHttpResult Rejected(Error error)
+    {
+        (string title, int status) = error switch
+        {
+            _ when error == CreateProductHandler.NameTaken => ("Product name already taken", StatusCodes.Status409Conflict),
+            _ when error == UploadProductImageHandler.ProductNotFound => ("Product not found", StatusCodes.Status404NotFound),
+            _ when error == UploadProductImageHandler.ImageTooLarge => ("Picture too large", StatusCodes.Status413PayloadTooLarge),
+            _ when error == UploadProductImageHandler.ImageFormatUnsupported => ("Picture format not supported", StatusCodes.Status415UnsupportedMediaType),
+            _ => ("Invalid request", StatusCodes.Status400BadRequest),
+        };
+
+        return TypedResults.Problem(
+            title: title,
             detail: error.Message,
-            statusCode: error == CreateProductHandler.NameTaken
-                ? StatusCodes.Status409Conflict
-                : StatusCodes.Status400BadRequest,
+            statusCode: status,
             type: ProblemTypes.For(error.Code));
+    }
 }

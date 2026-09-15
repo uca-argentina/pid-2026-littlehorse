@@ -92,6 +92,82 @@ public class ProductsEndpointsTests
         Assert.False(response.Body[1].GetProperty("isActive").GetBoolean());
     }
 
+    private static readonly byte[] APng = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52];
+
+    private static readonly byte[] APdf = [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A, 0x0A];
+
+    [Fact]
+    public async Task UploadImageAsync_WhenTheImageIsValid_RespondsWithTheNewAddress()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+
+        HttpResponseSnapshot response = await Upload(product, product.Id, APng);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.StartsWith("application/json", response.ContentType, StringComparison.Ordinal);
+        Assert.StartsWith($"https://images.example.com/products/{product.Id}/", response.Text("imageUrl"), StringComparison.Ordinal);
+    }
+
+    // Another venue's id looks exactly like this: the repository, scoped by the
+    // venue filter, finds nothing, and nothing is what the answer says.
+    [Fact]
+    public async Task UploadImageAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+
+        HttpResponseSnapshot response = await Upload(product, Guid.CreateVersion7(), APng);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task UploadImageAsync_WhenTheImageIsTooLarge_RespondsWithPayloadTooLarge()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+
+        HttpResponseSnapshot response = await Upload(product, product.Id, APng, declaredLength: UploadProductImageHandler.MaxImageBytes + 1);
+
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:image-too-large", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task UploadImageAsync_WhenTheBytesAreNotAnImageWeShow_RespondsWithUnsupportedMediaType()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+
+        HttpResponseSnapshot response = await Upload(product, product.Id, APdf);
+
+        Assert.Equal(StatusCodes.Status415UnsupportedMediaType, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:image-format-unsupported", response.Text("type"));
+    }
+
+    // A multipart body with no file in it is malformed input, not a missing
+    // product: it gets its own answer so the screen can say "choose a photo".
+    [Fact]
+    public async Task UploadImageAsync_WhenNoFileWasSent_RespondsWithBadRequest()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        UploadProductImageHandler handler = new(new Fake.Repository(null, product), new Fake.Images());
+
+        IResult result = await ProductsEndpoints.UploadImageAsync(product.Id, null, handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/image", HttpMethods.Put);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:image-required", response.Text("type"));
+    }
+
+    private static async Task<HttpResponseSnapshot> Upload(Product stored, Guid productId, byte[] bytes, long? declaredLength = null)
+    {
+        UploadProductImageHandler handler = new(new Fake.Repository(null, stored), new Fake.Images());
+        FormFile file = new(new MemoryStream(bytes), 0, declaredLength ?? bytes.Length, "image", "photo.png");
+
+        IResult result = await ProductsEndpoints.UploadImageAsync(productId, file, handler, CancellationToken.None);
+
+        return await EndpointResponse.Execute(result, $"{Path}/{productId}/image", HttpMethods.Put);
+    }
+
     private static async Task<HttpResponseSnapshot> Create(CreateProductRequest request, string? taken = null)
     {
         CreateProductHandler handler = new(new Fake.Repository(taken), new Fake.CurrentVenue());
@@ -108,7 +184,7 @@ public class ProductsEndpointsTests
             public Guid Id { get; } = Guid.CreateVersion7();
         }
 
-        public sealed class Repository(string? taken) : IProductRepository
+        public sealed class Repository(string? taken, Product? stored = null) : IProductRepository
         {
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>
                 Task.FromResult(string.Equals(name, taken, StringComparison.OrdinalIgnoreCase));
@@ -116,9 +192,15 @@ public class ProductsEndpointsTests
             public Task AddAsync(Product product, CancellationToken cancellationToken) => Task.CompletedTask;
 
             public Task<Product?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
-                Task.FromResult<Product?>(null);
+                Task.FromResult(stored?.Id == id ? stored : null);
 
             public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
+        public sealed class Images : IImageStore
+        {
+            public Task<string> SaveAsync(string name, Stream content, string contentType, CancellationToken cancellationToken) =>
+                Task.FromResult($"https://images.example.com/{name}");
         }
 
         public sealed class Queries(ProductListItem[] stored) : IProductQueries

@@ -19,6 +19,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<LoginHandler>();
 builder.Services.AddScoped<CreateStaffUserHandler>();
 builder.Services.AddScoped<CreateProductHandler>();
+builder.Services.AddScoped<UploadProductImageHandler>();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
