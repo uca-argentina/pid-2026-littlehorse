@@ -159,3 +159,48 @@ public class ProductTests
         Assert.Equal(Product.ErrorCodes.ImageUrlInvalid, error.Code);
     }
 }
+
+public class ProductImageTests
+{
+    private static Product AGinTonicWithoutPicture() =>
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+
+    // The picture arrives after the product exists: the upload needs an id to
+    // file it under, so creation and the picture are two steps.
+    [Fact]
+    public void ReplaceImage_WhenThereWasNone_StoresTheAddress()
+    {
+        Product product = AGinTonicWithoutPicture();
+
+        product.ReplaceImage("https://images.example.com/gin-tonic.jpg");
+
+        Assert.Equal("https://images.example.com/gin-tonic.jpg", product.ImageUrl);
+    }
+
+    [Fact]
+    public void ReplaceImage_WhenThereWasOne_SwapsIt()
+    {
+        Product product = AGinTonicWithoutPicture();
+        product.ReplaceImage("https://images.example.com/old.jpg");
+
+        product.ReplaceImage("https://images.example.com/new.jpg");
+
+        Assert.Equal("https://images.example.com/new.jpg", product.ImageUrl);
+    }
+
+    // Same rule as at creation: it ends up in an img src on a phone.
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("gin-tonic.jpg")]
+    [InlineData("javascript:alert(1)")]
+    public void ReplaceImage_WhenTheAddressIsNotAnAbsoluteHttpUrl_ThrowsImageUrlInvalid(string imageUrl)
+    {
+        Product product = AGinTonicWithoutPicture();
+
+        DomainException error = Assert.Throws<DomainException>(() => product.ReplaceImage(imageUrl));
+
+        Assert.Equal(Product.ErrorCodes.ImageUrlInvalid, error.Code);
+        Assert.Null(product.ImageUrl);
+    }
+}

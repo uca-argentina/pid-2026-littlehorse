@@ -105,9 +105,24 @@ public sealed class Product : IBelongsToVenue
 
         string? cleanImageUrl = BlankToNull(imageUrl);
 
-        if (cleanImageUrl is not null && !IsAbsoluteHttpUrl(cleanImageUrl)) throw new DomainException(ErrorCodes.ImageUrlInvalid, "The image address has to be a full http or https link.");
+        if (cleanImageUrl is not null) EnsureAbsoluteHttpUrl(cleanImageUrl);
 
         return new Product(Guid.CreateVersion7(), venueId, cleanName, cleanDescription, cleanImageUrl, price, stock);
+    }
+
+    /// <summary>
+    /// The picture arrives after the product exists — the upload needs an id to
+    /// file it under — and can be swapped later. The address is whatever the
+    /// storage handed back; the same rule as at creation applies to it.
+    /// </summary>
+    public void ReplaceImage(string imageUrl)
+    {
+        string cleanImageUrl = BlankToNull(imageUrl)
+            ?? throw new DomainException(ErrorCodes.ImageUrlInvalid, "The image address has to be a full http or https link.");
+
+        EnsureAbsoluteHttpUrl(cleanImageUrl);
+
+        ImageUrl = cleanImageUrl;
     }
 
     private static string? BlankToNull(string? value) =>
@@ -117,7 +132,11 @@ public sealed class Product : IBelongsToVenue
     /// The address ends up in an img src on the customer's phone: it has to be
     /// something a browser fetches and nothing a browser would execute.
     /// </summary>
-    private static bool IsAbsoluteHttpUrl(string value) =>
-        Uri.TryCreate(value, UriKind.Absolute, out Uri? uri)
-        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+    private static void EnsureAbsoluteHttpUrl(string value)
+    {
+        bool isHttp = Uri.TryCreate(value, UriKind.Absolute, out Uri? uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+        if (!isHttp) throw new DomainException(ErrorCodes.ImageUrlInvalid, "The image address has to be a full http or https link.");
+    }
 }
