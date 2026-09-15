@@ -84,6 +84,28 @@ App Service alcanzaba un `dotnet publish`.
 3. **Log Analytics.** Container Apps crea un workspace por defecto; tiene 5 GB/mes gratis pero
    conviene bajar la retención para no acercarse al límite.
 
+## Adenda del 2026-09-15: las fotos de la carta
+
+US-06 sumó un recurso que no estaba en la tabla: una **cuenta de Azure Storage** con un
+container de blobs (`product-images`) para las fotos de los productos. Es el único componente
+**fuera de los tiers gratuitos**: Blob Storage no tiene oferta gratuita permanente. A los
+volúmenes de un boliche —decenas de fotos, unos pocos MB— cuesta centavos por mes, y el límite
+de gasto de la suscripción sigue siendo la garantía real.
+
+Cómo tiene que crearse, cuando exista `infra/`:
+
+- SKU **Standard LRS**, el más barato; no hay nada que replicar geográficamente.
+- **Lectura pública a nivel de blob** (`allowBlobPublicAccess: true` en la cuenta, acceso
+  `Blob` en el container). La API guarda la URL del blob y el celular del cliente la carga
+  directo en un `<img>`, sin token ni pasar por la API. El container lo crea la propia API
+  en la primera subida.
+- La cadena de conexión llega a la API como `ImageStorage__ConnectionString`. En desarrollo
+  es `UseDevelopmentStorage=true` contra Azurite, desde `docker-compose.yml`.
+
+Se descartó guardar las fotos en la base o en el disco del contenedor: la base gratuita tiene
+32 GB pero cada foto pasaría por la API en cada carta que se abre, y el disco de Container
+Apps se pierde en cada reinicio.
+
 ## Qué no pudimos verificar
 
 Los límites citados salen de la documentación oficial de Microsoft a la fecha de este ADR.

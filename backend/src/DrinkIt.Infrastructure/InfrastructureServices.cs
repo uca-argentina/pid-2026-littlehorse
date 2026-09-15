@@ -1,8 +1,10 @@
 using DrinkIt.Application.Authentication;
+using DrinkIt.Application.Menu;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
 using DrinkIt.Application.Venues;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Seeding;
 using DrinkIt.Infrastructure.Security;
@@ -30,6 +32,7 @@ public static class InfrastructureServices
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<DevelopmentSeedOptions>(configuration.GetSection(DevelopmentSeedOptions.SectionName));
+        services.Configure<ImageStorageOptions>(configuration.GetSection(ImageStorageOptions.SectionName));
         services.AddScoped<DevelopmentSeeder>();
 
         // Injected rather than calling DateTimeOffset.UtcNow, so token expiry
@@ -39,11 +42,15 @@ public static class InfrastructureServices
         // Stateless and thread-safe, so one instance is enough.
         services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
         services.AddSingleton<ITokenIssuer, JwtTokenIssuer>();
+        // The blob client is thread-safe and holds its own connection pool.
+        services.AddSingleton<IImageStore, AzureBlobImageStore>();
 
         // These hold a DbContext, which is scoped to the request.
         services.AddScoped<IStaffCredentialsQuery, StaffCredentialsQuery>();
         services.AddScoped<IStaffUserRepository, StaffUserRepository>();
         services.AddScoped<IStaffUserQueries, StaffUserQueries>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IProductQueries, ProductQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
 
         return services;

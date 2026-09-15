@@ -5,9 +5,8 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { STAFF_ROLE_DESCRIPTIONS, staffRoleName } from '../../../core/staff/staff-roles';
 import type { StaffRole } from '../../../core/staff/staff-roles';
+import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { PasswordEye } from '../../../shared/password-eye/password-eye';
-import { SignOut } from '../../../shared/sign-out/sign-out';
-import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
 import { EditStaffUserStore } from '../edit-staff-user.store';
 import { STAFF_USERS_URL } from '../staff-users.service';
 import type { StaffUser } from '../staff-users.service';
@@ -17,7 +16,7 @@ const PASSWORD_MIN_LENGTH = 8;
 
 @Component({
   selector: 'drinkit-edit-staff-user-page',
-  imports: [PasswordEye, ReactiveFormsModule, RouterLink, SignOut, VenueBrand],
+  imports: [AdminHeader, PasswordEye, ReactiveFormsModule, RouterLink],
   // On the component and not on the route: a route's injector is created once
   // and kept, so a store provided there would carry a stale message from one
   // person's screen to the next one opened.

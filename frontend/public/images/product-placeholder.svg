@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="">
+  <!-- Shown in place of a product picture: none loaded, or the one loaded could not be fetched. Same glass as the venue mark, in the faint icon colour of the design system. -->
+  <rect width="96" height="96" rx="14" fill="#272219"/>
+  <g fill="none" stroke="#6b5f51" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="translate(24 24) scale(2)">
+    <path d="M5 4h14l-7 8z"/>
+    <path d="M12 12v7"/>
+    <path d="M8.5 19.5h7"/>
+  </g>
+</svg>

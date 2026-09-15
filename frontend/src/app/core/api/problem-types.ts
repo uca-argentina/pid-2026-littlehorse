@@ -16,4 +16,6 @@ export const ProblemTypes = {
 
   /** Taking this account away would leave the venue unable to administer itself. */
   lastAdministrator: 'urn:drinkit:problem:staff:last-administrator',
+
+  productNameTaken: 'urn:drinkit:problem:product:name-taken',
 } as const;

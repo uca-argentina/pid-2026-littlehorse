@@ -1,0 +1,240 @@
+// Same header and the same column width as the listing it came from, so the
+// form reads as a step inside that screen and not as a different place.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 560px;
+  padding: var(--dk-space-5);
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 160px;
+}
+
+// Price and stock side by side while there is room: they are read together.
+.pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-4);
+}
+
+.label {
+  color: var(--dk-text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // 16px exactly: anything smaller makes iOS Safari zoom into the field on
+  // focus, and the layout never comes back on its own.
+  font-size: 16px;
+}
+
+.input-area {
+  padding: 14px var(--dk-space-4);
+  line-height: 1.45;
+  resize: vertical;
+}
+
+// The currency sign sits inside the field, so the number reads as a price
+// without the sign becoming something the administrator has to type.
+.prefixed {
+  position: relative;
+  display: flex;
+}
+
+.prefix {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--dk-space-4);
+  display: flex;
+  align-items: center;
+  color: var(--dk-text-faint);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.prefixed .input {
+  padding-left: 34px;
+}
+
+.input::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.input-bad {
+  border-color: var(--dk-danger);
+}
+
+.help {
+  margin: 0;
+  color: var(--dk-text-faint);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.bad {
+  margin: 0;
+  color: var(--dk-danger);
+  font-size: 13px;
+}
+
+// The drop zone from the wireframe. A label around a hidden file input, so
+// tapping anywhere on it opens the picker and the input keeps its keyboard
+// and screen-reader behaviour.
+.drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 120px;
+  padding: var(--dk-space-4);
+  border: 1px dashed #4a4034;
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-ink);
+  color: var(--dk-text-faint);
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.drop:focus-within,
+.drop-on {
+  border-color: var(--dk-accent);
+  color: var(--dk-text);
+}
+
+.drop-bad {
+  border-color: var(--dk-danger);
+}
+
+.drop-file {
+  color: var(--dk-text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+// As the listing will show it, only bigger: same rounded square, cropped to
+// fit, so what is checked here is what the customer gets.
+.drop-preview {
+  width: 120px;
+  height: 120px;
+  border: 1px solid var(--dk-border);
+  border-radius: 10px;
+  background: var(--dk-surface-raised);
+  object-fit: cover;
+}
+
+.drop-hint {
+  font-size: 12.5px;
+}
+
+.link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  text-decoration: underline;
+}
+
+.link:hover:not(:disabled) {
+  color: var(--dk-text);
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: #1a1713;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border: 0;
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
+.cta:disabled {
+  opacity: 0.6;
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--dk-accent-hover);
+}
+
+// The way back, kept quiet: leaving without saving is not what this screen is
+// for, but a form with no way out is a dead end on a shared laptop.
+.ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  color: var(--dk-text-muted);
+  font-size: 15.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ghost:hover {
+  color: var(--dk-text);
+}

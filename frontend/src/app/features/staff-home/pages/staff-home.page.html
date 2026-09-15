@@ -5,17 +5,9 @@
     <h1 class="title">Hola, {{ username() }}</h1>
     <p class="role">{{ roleName() }}</p>
 
-    @if (isAdministrator()) {
-      <a class="cta" [routerLink]="['/', venueSlug(), 'staff', 'users']">Usuarios internos</a>
-      <p class="alert" role="status">
-        La carta llega en los próximos días. Las pantallas de la barra quedaron fuera de este
-        sprint.
-      </p>
-    } @else {
-      <p class="alert" role="status">
-        Todavía no hay pantallas para tu rol. La cola de la barra llega en el próximo sprint.
-      </p>
-    }
+    <p class="alert" role="status">
+      Todavía no hay pantallas para tu rol. La cola de la barra llega en el próximo sprint.
+    </p>
 
     <drinkit-sign-out [venueSlug]="venueSlug()" />
   </section>

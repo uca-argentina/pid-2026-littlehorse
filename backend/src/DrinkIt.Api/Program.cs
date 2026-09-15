@@ -1,10 +1,13 @@
+using System.Text.Json.Serialization;
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
+using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Menu;
 using DrinkIt.Application.Staff;
 using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
@@ -19,6 +22,8 @@ builder.Services.AddScoped<ChangeStaffUserRoleHandler>();
 builder.Services.AddScoped<ResetStaffUserPasswordHandler>();
 builder.Services.AddScoped<DeactivateStaffUserHandler>();
 builder.Services.AddScoped<ReactivateStaffUserHandler>();
+builder.Services.AddScoped<CreateProductHandler>();
+builder.Services.AddScoped<UploadProductImageHandler>();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
@@ -36,6 +41,11 @@ if (!builder.Environment.IsDevelopment() && jwt.SigningKey.StartsWith("dev-", St
 builder.Services.AddStaffAuthentication(jwt);
 
 builder.Services.AddProblemDetailsForEveryError();
+// Numbers are numbers on the wire. ASP.NET's default also reads them from
+// strings, and the OpenAPI document says so — every price would reach the
+// generated Angular client typed as "number | string".
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict);
 builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
@@ -75,5 +85,6 @@ app.UseAuthorization();
 
 app.MapLogin();
 app.MapStaffUsers();
+app.MapProducts();
 
 await app.RunAsync();

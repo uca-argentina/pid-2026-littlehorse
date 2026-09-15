@@ -107,6 +107,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/products': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists every product of the venue, deactivated ones included. */
+    get: operations['ListProducts'];
+    put?: never;
+    /** Adds a product to the venue's menu. */
+    post: operations['CreateProduct'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/products/{id}/image': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Puts a picture on a product, replacing the one it had. JPEG, PNG or WebP, up to 5 MB. */
+    put: operations['UploadProductImage'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -115,12 +150,27 @@ export interface components {
     ChangeStaffUserRoleRequest: {
       role: string;
     };
+    /**
+     * @description What the administration screen posts. The image address is whatever the
+     *     upload returned, or null while there is none.
+     */
+    CreateProductRequest: {
+      name: string;
+      description: null | string;
+      imageUrl: null | string;
+      /** Format: double */
+      price: number;
+      /** Format: int32 */
+      stock: number;
+    };
     /** @description What the administration screen posts. The role travels as its name. */
     CreateStaffUserRequest: {
       username: string;
       password: string;
       role: string;
     };
+    /** Format: binary */
+    IFormFile: string;
     /**
      * @description What the client posts. Kept apart from LoginCommand so the wire
      *         contract can change without dragging the use case with it.
@@ -140,9 +190,27 @@ export interface components {
       type?: null | string;
       title?: null | string;
       /** Format: int32 */
-      status?: null | number | string;
+      status?: null | number;
       detail?: null | string;
       instance?: null | string;
+    };
+    /** @description Where the picture ended up. The listing shows it from here on. */
+    ProductImageResponse: {
+      imageUrl: string;
+    };
+    ProductResponse: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      description: null | string;
+      imageUrl: null | string;
+      /** Format: double */
+      price: number;
+      /** Format: int32 */
+      stock: number;
+      isAvailable: boolean;
+      isSoldOut: boolean;
+      isActive: boolean;
     };
     /** @description What it sends to hand somebody a new password. */
     ResetStaffUserPasswordRequest: {
@@ -418,6 +486,132 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListProducts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductResponse'][];
+        };
+      };
+    };
+  };
+  CreateProduct: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateProductRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UploadProductImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'multipart/form-data': {
+          image?: components['schemas']['IFormFile'];
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductImageResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Payload Too Large */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unsupported Media Type */
+      415: {
         headers: {
           [name: string]: unknown;
         };

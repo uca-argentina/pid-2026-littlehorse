@@ -1,0 +1,166 @@
+// The header the administration screens share, as in the wireframes: one bar
+// with the venue and the account, and the tabs on their own row underneath.
+
+.head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-4);
+  padding: var(--dk-space-3) var(--dk-space-5);
+  border-bottom: 1px solid var(--dk-border);
+}
+
+// Pushes the account, and the menu button after it, to the far end.
+.account {
+  position: relative;
+  margin-left: auto;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 14.5px;
+  white-space: nowrap;
+}
+
+.chip:hover,
+.chip[aria-expanded='true'] {
+  border-color: var(--dk-text-muted);
+  color: var(--dk-text);
+}
+
+.chip-icon {
+  flex-shrink: 0;
+}
+
+// Under the chip, flush with its right edge, over whatever the screen shows.
+.popover {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  padding: 6px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
+}
+
+.menu-item {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 var(--dk-space-4);
+  border: 0;
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: var(--dk-surface-raised);
+}
+
+// The menu button only exists on a phone; wider than that the tabs are always
+// on screen and it has nothing to open.
+.burger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: var(--dk-space-3) var(--dk-space-5) 0;
+}
+
+// Tall enough to hit on the tablet behind the bar: 44px is the floor for
+// anything touched with one hand.
+.tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  color: var(--dk-text-muted);
+  font-size: 15.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tab:hover {
+  color: var(--dk-text);
+}
+
+// The screen you are on, inverted: the one tab that reads as pressed.
+.tab-on {
+  border-color: var(--dk-text);
+  background: var(--dk-text);
+  color: var(--dk-ink);
+  font-weight: 700;
+}
+
+.tab-on:hover {
+  color: var(--dk-ink);
+}
+
+// A phone held upright. The role no longer fits next to the name, the tabs
+// fold away behind the menu button, and opened they stack as a list.
+@media (width < 640px) {
+  .head {
+    gap: var(--dk-space-3);
+    padding-right: var(--dk-space-4);
+    padding-left: var(--dk-space-4);
+  }
+
+  .chip span {
+    display: none;
+  }
+
+  .chip {
+    padding: 0 12px;
+  }
+
+  .burger {
+    display: flex;
+  }
+
+  .tabs {
+    display: none;
+    flex-direction: column;
+    padding: var(--dk-space-3) var(--dk-space-4);
+    border-bottom: 1px solid var(--dk-border);
+  }
+
+  .tabs-open {
+    display: flex;
+  }
+
+  .tab {
+    min-height: 48px;
+  }
+}

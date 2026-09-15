@@ -1,4 +1,5 @@
 using DrinkIt.Application.Authentication;
+using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Authentication;
@@ -36,6 +37,26 @@ public sealed class VenueIsolationTests(SqlServerFixture sql)
         Assert.Equal(2, storedForOurVenues);
         Assert.Equal(["euge"], visible);
         Assert.NotEqual(mine.Id, theirs.Id);
+    }
+
+    // The menu is the second table that carries a VenueId. Same filter, same
+    // test: a venue's products are its own.
+    [Fact]
+    public async Task Products_WhenReadFromAnotherVenue_AreNotVisible()
+    {
+        (Venue mine, Venue theirs) = await SeedTwoVenuesWithOneUserEach("euge", "nico");
+
+        await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
+        seed.Products.AddRange(
+            Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20),
+            Product.Create(theirs.Id, "Fernet", null, null, 4000m, 20));
+        await seed.SaveChangesAsync();
+
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+
+        string[] visible = await asMine.Products.Select(product => product.Name).ToArrayAsync();
+
+        Assert.Equal(["Gin Tonic"], visible);
     }
 
     // The query login actually runs. It relies on the global filter rather than

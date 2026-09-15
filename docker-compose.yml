@@ -1,5 +1,5 @@
-# Local development database. Not used in Azure: production runs on Azure SQL
-# (see docs/adr/0007-hosting-en-azure-a-costo-cero.md).
+# Local development services. Not used in Azure: production runs on Azure SQL
+# and Azure Blob Storage (see docs/adr/0007-hosting-en-azure-a-costo-cero.md).
 #
 #   docker compose up -d
 #
@@ -24,5 +24,19 @@ services:
       retries: 10
       start_period: 30s
 
+  # Stands in for Azure Blob Storage, where the product pictures live. The
+  # API reaches it through "UseDevelopmentStorage=true" and the browser loads
+  # the pictures straight from localhost:10000. --skipApiVersionCheck because
+  # the SDK speaks a newer API version than the emulator admits to.
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: drinkit-azurite
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --location /data --skipApiVersionCheck
+    ports:
+      - "10000:10000"
+    volumes:
+      - drinkit-azurite-data:/data
+
 volumes:
   drinkit-sql-data:
+  drinkit-azurite-data:

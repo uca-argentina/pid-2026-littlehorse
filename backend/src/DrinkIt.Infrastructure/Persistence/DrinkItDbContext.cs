@@ -1,4 +1,5 @@
 using DrinkIt.Application.Common;
+using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,8 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
     public DbSet<Venue> Venues => Set<Venue>();
 
     public DbSet<StaffUser> StaffUsers => Set<StaffUser>();
+
+    public DbSet<Product> Products => Set<Product>();
 
     /// <summary>Read by the global query filters below.</summary>
     private Guid CurrentVenueId => currentVenue.Id;
@@ -26,6 +29,7 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
         // resolving the tenant means looking a venue up by slug before any venue
         // is known. Filtering it would make that lookup impossible.
         modelBuilder.Entity<StaffUser>().HasQueryFilter(user => user.VenueId == CurrentVenueId);
+        modelBuilder.Entity<Product>().HasQueryFilter(product => product.VenueId == CurrentVenueId);
 
         base.OnModelCreating(modelBuilder);
     }

@@ -82,7 +82,7 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-03 | Dar de alta al equipo | US-01 | ✅ **Terminada** |
 | US-04 | Ver y corregir al equipo | US-03 | ✅ **Terminada** |
 | US-05 | Dar de baja a quien se fue | US-03 | **3 de 4** — falta el criterio de los pedidos, que no existen todavía |
-| US-06 | Cargar un trago en la carta | US-01 | Pendiente |
+| US-06 | Cargar un trago en la carta | US-01 | ✅ **Terminada** |
 | US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
 | US-08 | Corregir y sacar tragos | US-06 | Pendiente |
 | US-09 | Ver la carta desde el celular | US-06 | Pendiente |
@@ -97,17 +97,25 @@ recortada: el detalle está en su ficha. Las
 pantallas de la barra quedaron fuera del sprint el 2026-09-10; el motivo y la consecuencia
 están en *Fuera del alcance*.
 
-**Estado al lunes 14 de septiembre.** Cinco terminadas, una a un criterio de estarlo y seis
-sin empezar. Con US-04 y US-05 el ABM de personal queda completo: se da de alta, se corrige,
-se da de baja y se reactiva, y nada se borra. Lo que queda es todo la carta y el pedido, que
-es el camino crítico hacia el hito de hoy.
-
 **Estado al sábado 12 de septiembre.** Tres stories terminadas y nueve sin empezar. US-03
 cerró de punta a punta y de paso cerró US-01: ahora un administrador entra y ve una pantalla
 de gestión de verdad, que era el único criterio que le faltaba. Con eso quedó hecha también
 la autorización por rol del backend, que era la pieza sin tarjeta que trababa todo el carril
 de administración. De las nueve que quedan, US-04 y US-05 enchufan en el listado que ya
 existe. El hito del lunes 14 sigue siendo el punto donde se decide qué entra.
+
+**Estado al lunes 14 de septiembre.** Cinco terminadas, una a un criterio de estarlo y seis
+sin empezar. Con US-04 y US-05 el ABM de personal queda completo: se da de alta, se corrige,
+se da de baja y se reactiva, y nada se borra. Lo que queda es todo la carta y el pedido, que
+es el camino crítico hacia el hito de hoy.
+
+**Estado al martes 15 de septiembre.** US-06 cerró de punta a punta: un administrador entra
+directo al listado de productos, carga uno con su foto, y la foto queda en Blob Storage
+(Azurite en desarrollo). Con ella entraron tres decisiones que no estaban escritas —la
+entidad se llama `Product` porque la carta también vende botellas, el stock es numérico y
+en cero el producto queda agotado solo, y la foto se sube como archivo en vez de pegar un
+enlace— y la cabecera de administración con pestañas, que reemplazó a la pantalla de inicio
+de `/staff`. Quedan US-07 y US-08 en el carril de la carta, y todo el carril del cliente.
 
 ---
 
@@ -333,7 +341,7 @@ consultarle quién lo preparó. La baja lógica ya deja el dato preparado.
 ### US-06 · Cargar un trago en la carta
 
 > **Como** administrador
-> **quiero** cargar un trago con nombre, descripción, foto y precio
+> **quiero** cargar un trago con nombre, descripción, foto, stock y precio
 > **para** que el cliente elija sabiendo qué es y cuánto sale, sin preguntarle a nadie.
 
 **Depende de:** US-01.
@@ -350,6 +358,25 @@ consultarle quién lo preparó. La baja lógica ya deja el dato preparado.
    al trago.
 5. **Dado** que la foto que cargué no se puede mostrar, **cuando** el cliente abre la carta,
    **entonces** ve el trago igual, con un espacio de imagen vacío, y nunca una pantalla rota.
+
+✅ **Terminada.** El alta corre contra la API real: nombre, descripción, precio, stock y foto,
+y el producto aparece en el listado de administración con su foto servida desde el storage.
+Los criterios 2 y 3 se cumplen en el formulario antes de mandar nada y en la API después
+(precio en cero → 400 con su tipo de problema; nombre vacío → el formulario lo señala). El
+criterio 5 está cubierto con el mecanismo que va a usar la carta del cliente: un producto sin
+foto, o cuya foto no carga, muestra el ícono de `public/images` en su lugar.
+
+> **La mitad de los criterios 1, 4 y 5 que dice "la carta que ve el cliente" se verifica en
+> US-09**, que es donde esa pantalla existe. Mismo patrón que se anotó en US-01: el criterio
+> ata la story a una posterior. Lo que US-06 entrega y prueba es que el producto está en la
+> carta del boliche, con su foto, listo para que US-09 lo muestre.
+>
+> **Decisiones que entraron con la story (2026-09-14/15).** La entidad se llama `Product` y
+> no `Drink`: la carta también vende botellas. El **stock es numérico** y obligatorio; en
+> cero el producto queda agotado solo, y aparte existe el interruptor de disponibilidad que
+> construye US-07. El **nombre es único por boliche**, como el usuario de US-03. La **foto se
+> sube como archivo** —JPEG, PNG o WebP, hasta 5 MB, sin redimensionar— a Azure Blob
+> Storage, con Azurite en desarrollo; la tabla de decisiones de abajo quedó corregida.
 
 ### US-07 · Marcar que un trago se acabó
 
@@ -515,7 +542,7 @@ puerta a la versión definitiva.
 
 | Tema | Cómo queda en este sprint | Cómo va a ser después |
 |---|---|---|
-| Foto del trago | El administrador pega el enlace de una imagen | Sube el archivo desde su computadora |
+| Foto del trago | Sube el archivo desde el formulario; va a Azure Blob Storage, con Azurite en desarrollo. Sin redimensionar | Miniaturas para la carta si el peso de las fotos se nota en el celular |
 | Aviso de "listo" | La pantalla del cliente consulta cada tres segundos | Notificación al celular, y SignalR en vez de consultar |
 | Pago | Confirmar el pedido equivale a pagarlo | Pago digital, efectivo en caja y saldo de mesa VIP |
 | Ticket de la barra | Se trabaja desde la pantalla del KDS | Se imprime el ticket y se escanea el QR |
@@ -533,8 +560,14 @@ story que lo necesita.
   suite se corre a mano: ese job necesita SQL Server y el backend en el runner, y es una
   decisión aparte.
 - **El prefijo `/api` fuera de desarrollo.** Hoy funciona por el proxy del servidor de
-  desarrollo. Para desplegar desde `main` hay que reescribirlo, y todavía no existe ni
-  `infra/` ni la configuración de Static Web Apps donde hacerlo.
+  desarrollo (`frontend/proxy.conf.json`, que reenvía `/api` a la API y le saca el prefijo).
+  Para desplegar desde `main` lo tiene que hacer Static Web Apps en su
+  `staticwebapp.config.json`, y todavía no existe ni `infra/` ni ese archivo.
+- **La cuenta de Storage para las fotos.** US-06 guarda las fotos en Blob Storage y en
+  desarrollo usa Azurite. En Azure hace falta una cuenta Standard LRS con lectura pública de
+  blobs, y su cadena de conexión en `ImageStorage__ConnectionString`. Es el único recurso
+  fuera de los tiers gratuitos; el detalle está en la adenda del
+  [ADR-0007](../adr/0007-hosting-en-azure-a-costo-cero.md). Va con `infra/`.
 
 **Ya está hecho y no se rehace.** Del backend: el modelo de local y de personal, el
 aislamiento entre locales con su prueba, la base con su migración, la API armada
@@ -552,6 +585,12 @@ sistema visual: no queda ninguna decisión de diseño por tomar.
 Con US-03 se sumó la **autorización por rol**, que era trabajo sin tarjeta: la política de
 administrador en el backend, el guardián de rol en el front y el 403 con su propio tipo de
 problema para que la PWA no confunda "no es tu rol" con "se venció tu sesión".
+
+Con US-06 se sumaron la **cabecera de administración** con pestañas, chip de cuenta y menú
+para celular —la pantalla de inicio de `/staff` quedó sólo para los roles que todavía no
+tienen pantallas—, el **puerto `IImageStore`** con su implementación en Blob Storage, y la
+detección del formato de imagen por los bytes del archivo, que US-08 reutiliza tal cual para
+cambiar la foto.
 
 ## Calendario
 

@@ -1,10 +1,5 @@
 <div class="frame">
-  <header class="head">
-    <drinkit-venue-brand [venue]="venueSlug()" />
-    <p class="station">Administración</p>
-    <span class="grow"></span>
-    <drinkit-sign-out [venueSlug]="venueSlug()" />
-  </header>
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
 
   <section class="body">
     <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'users']">Volver al equipo</a>

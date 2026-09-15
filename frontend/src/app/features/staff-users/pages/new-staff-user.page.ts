@@ -6,7 +6,7 @@ import { RouterLink } from '@angular/router';
 import { STAFF_ROLE_DESCRIPTIONS } from '../../../core/staff/staff-roles';
 import type { StaffRole } from '../../../core/staff/staff-roles';
 import { PasswordEye } from '../../../shared/password-eye/password-eye';
-import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
+import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { NewStaffUserStore } from '../new-staff-user.store';
 
 /** Kept in step with StaffPasswordPolicy.MinLength on the server. */
@@ -30,7 +30,7 @@ function trimmedMinLength(minimum: number) {
 
 @Component({
   selector: 'drinkit-new-staff-user-page',
-  imports: [PasswordEye, ReactiveFormsModule, RouterLink, VenueBrand],
+  imports: [PasswordEye, ReactiveFormsModule, AdminHeader, RouterLink],
   // On the component and not on the route. A route's injector is created once
   // per route config and kept, so a store provided there outlives the screen:
   // cancel after a rejected attempt, come back, and the old message is still

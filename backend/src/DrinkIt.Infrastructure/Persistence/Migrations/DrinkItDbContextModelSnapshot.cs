@@ -22,6 +22,49 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("DrinkIt.Domain.Menu.Product", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("Stock")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Products", (string)null);
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -77,6 +120,15 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Venues", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Menu.Product", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>

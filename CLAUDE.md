@@ -16,6 +16,7 @@ leé también su consigna en `docs/sprints/` — define el alcance del sprint.
 | Backend | .NET 10 · Minimal APIs · EF Core · SignalR |
 | Frontend | Angular 22 (standalone + signals) · PWA (`@angular/service-worker`) |
 | Base de datos | Azure SQL (SQL Server local vía Docker para dev) |
+| Archivos | Azure Blob Storage para las fotos de la carta (Azurite local vía Docker para dev) |
 | Hosting | Azure Container Apps (API) + Static Web Apps (PWA) — ver ADR-0007 |
 | CI/CD | GitHub Actions · OIDC hacia Azure (sin secretos de larga vida) |
 
@@ -26,7 +27,7 @@ backend/
   src/
     DrinkIt.Domain/          # Entidades, value objects, reglas. CERO dependencias externas.
     DrinkIt.Application/     # Casos de uso (handlers), puertos (interfaces), DTOs.
-    DrinkIt.Infrastructure/  # EF Core, pasarela de pago, Web Push, SignalR, impresora.
+    DrinkIt.Infrastructure/  # EF Core, Blob Storage, pasarela de pago, Web Push, SignalR, impresora.
     DrinkIt.Api/             # Minimal API endpoints, DI, middleware. Capa fina.
   tests/
     DrinkIt.Domain.Tests/         # Unitarios puros, sin mocks, rapidísimos.
@@ -53,7 +54,7 @@ docs/
 
 ```bash
 # Base de datos local — ANTES de correr la API
-docker compose up -d                    # SQL Server en localhost,1433
+docker compose up -d                    # SQL Server en localhost,1433 y Azurite (blobs) en :10000
 docker compose down                     # apagarla; el volumen conserva los datos
 
 # Backend
@@ -79,6 +80,10 @@ pnpm --prefix frontend run e2e:ui       # modo interactivo, para depurar un test
 **La API no arranca sin la base.** La cadena de conexión apunta a `localhost,1433` con las
 credenciales del `docker-compose.yml`. En Development se aplica las migraciones y siembra el
 boliche y el administrador sola: no hay que correr `dotnet ef database update` a mano.
+
+El mismo `docker compose` levanta **Azurite** (emulador de Blob Storage) para las fotos de los
+productos. La API arranca sin él, pero subir una foto falla hasta que esté corriendo. La foto
+se sirve desde `127.0.0.1:10000` directo al navegador, nunca a través de la API.
 
 Los tests son otra cosa y **no** usan ese contenedor: los de integración levantan el suyo con
 Testcontainers y lo tiran al terminar, así que sólo necesitan Docker corriendo.
@@ -145,7 +150,7 @@ Decidido el 2026-09-03: la plataforma es multi-tenant aunque arranquemos con un 
 Esto **no** significa construir la administración de boliches ahora — significa que el modelo
 lo permite sin una migración dolorosa después.
 
-- Todo agregado raíz lleva `VenueId`: `Order`, `Drink`, `Table`, `VipAccount`, `BarStation`
+- Todo agregado raíz lleva `VenueId`: `Order`, `Product`, `Table`, `VipAccount`, `BarStation`
   y los usuarios internos.
 - Un **global query filter** de EF Core aplica el filtro solo. Nadie escribe ese `WHERE` a
   mano, así que nadie se lo puede olvidar.
@@ -235,7 +240,7 @@ falta, preguntá antes de inventar el término.
 |---|---|---|---|---|
 | Pedido | `Order` | | Boliche | `Venue` |
 | Ítem del pedido | `OrderItem` | | Barra / estación | `BarStation` |
-| Trago | `Drink` | | Ticket | `Ticket` |
+| Trago / producto | `Product` | | Ticket | `Ticket` |
 | Menú | `Menu` | | Cliente | `Customer` |
 | Mesa | `Table` | | Cajero | `Cashier` |
 | Cuenta VIP | `VipAccount` | | KDS (estación de barra) | `Kds` |
@@ -245,6 +250,10 @@ falta, preguntá antes de inventar el término.
 | Pago digital | `DigitalPayment` | | Suscripción push | `PushSubscription` |
 | Usuario interno | `StaffUser` | | Rol | `StaffRole` |
 | Administrador | `Administrator` | | Baja lógica | `IsActive` |
+
+> **`Product`, no `Drink`.** Decidido el 2026-09-14: la carta vende tragos pero también
+> botellas, y el nombre tiene que cubrir las dos cosas. Los docs siguen diciendo "trago"
+> porque así lo dice la consigna; en el código es siempre `Product`.
 
 **Estados de `Order`** (§5 del diseño funcional):
 `Cart` · `AwaitingPayment` · `Paid` · `Queued` · `InPreparation` · `Ready` · `Delivered` · `Canceled`
