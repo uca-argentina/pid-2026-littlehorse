@@ -137,6 +137,39 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
         Assert.False(listed[1].IsSoldOut);
     }
 
+    // The id of another venue's product is a valid id: it is the filter, not
+    // the lookup, that has to say "not yours".
+    [Fact]
+    public async Task GetForUpdateAsync_WhenTheProductBelongsToAnotherVenue_FindsNothing()
+    {
+        (Venue mine, Venue theirs) = await SeedTwoVenues("Fernet", "Gin Tonic");
+
+        await using DrinkItDbContext asTheirs = sql.CreateContext(theirs.Id);
+        Product foreign = await asTheirs.Products.SingleAsync(product => product.Name == "Gin Tonic");
+
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+
+        Assert.Null(await new ProductRepository(asMine).GetForUpdateAsync(foreign.Id, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_WhenTheImageWasReplaced_WritesTheNewAddress()
+    {
+        (Venue mine, _) = await SeedTwoVenues("Fernet", "Gin Tonic");
+
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+        ProductRepository repository = new(asMine);
+        Product fernet = (await asMine.Products.SingleAsync(product => product.Name == "Fernet"));
+        Product? tracked = await repository.GetForUpdateAsync(fernet.Id, CancellationToken.None);
+        tracked!.ReplaceImage("https://images.example.com/products/fernet/new.png");
+        await repository.SaveChangesAsync(CancellationToken.None);
+
+        await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
+        Product stored = await fresh.Products.SingleAsync(product => product.Id == fernet.Id);
+
+        Assert.Equal("https://images.example.com/products/fernet/new.png", stored.ImageUrl);
+    }
+
     private static Product AProduct(Guid venueId, string name) =>
         Product.Create(venueId, name, "Something to drink.", "https://images.example.com/drink.jpg", 4500m, 20);
 

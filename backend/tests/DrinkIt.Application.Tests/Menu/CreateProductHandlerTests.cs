@@ -129,6 +129,11 @@ public class CreateProductHandlerTests
 
                 return Task.CompletedTask;
             }
+
+            public Task<Product?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+                Task.FromResult<Product?>(null);
+
+            public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

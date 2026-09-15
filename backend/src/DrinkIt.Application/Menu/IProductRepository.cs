@@ -20,4 +20,14 @@ public interface IProductRepository
 
     /// <summary>Persists the new product. Saving is the repository's job, not the caller's.</summary>
     Task AddAsync(Product product, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The product to change, tracked so that <see cref="SaveChangesAsync"/>
+    /// writes it back. Null when the venue of the current request has no such
+    /// product — another venue's product is not found, not forbidden.
+    /// </summary>
+    Task<Product?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>Writes back whatever <see cref="GetForUpdateAsync"/> handed out.</summary>
+    Task SaveChangesAsync(CancellationToken cancellationToken);
 }

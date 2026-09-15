@@ -114,6 +114,11 @@ public class ProductsEndpointsTests
                 Task.FromResult(string.Equals(name, taken, StringComparison.OrdinalIgnoreCase));
 
             public Task AddAsync(Product product, CancellationToken cancellationToken) => Task.CompletedTask;
+
+            public Task<Product?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+                Task.FromResult<Product?>(null);
+
+            public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         public sealed class Queries(ProductListItem[] stored) : IProductQueries

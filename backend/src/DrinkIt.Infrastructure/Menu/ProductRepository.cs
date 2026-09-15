@@ -22,4 +22,14 @@ internal sealed class ProductRepository(DrinkItDbContext context) : IProductRepo
 
         await context.SaveChangesAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Tracked, so the change lands with <see cref="SaveChangesAsync"/>. The
+    /// venue filter applies here too: another venue's id finds nothing.
+    /// </summary>
+    public Task<Product?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+        context.Products.SingleOrDefaultAsync(product => product.Id == id, cancellationToken);
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken) =>
+        context.SaveChangesAsync(cancellationToken);
 }
