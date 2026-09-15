@@ -1,12 +1,10 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
-import { SessionStorage } from '../../../core/auth/session-storage';
 import { STAFF_ROLE_DESCRIPTIONS, staffRoleName } from '../../../core/staff/staff-roles';
 import type { StaffRole } from '../../../core/staff/staff-roles';
-import { SignOut } from '../../../shared/sign-out/sign-out';
-import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
+import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { STAFF_USERS_URL } from '../staff-users.service';
 import type { StaffUser } from '../staff-users.service';
 
@@ -34,13 +32,11 @@ type ListingFailure = 'none' | 'forbidden' | 'unreachable';
 
 @Component({
   selector: 'drinkit-staff-users-page',
-  imports: [RouterLink, SignOut, VenueBrand],
+  imports: [AdminHeader, RouterLink],
   styleUrl: './staff-users.page.scss',
   templateUrl: './staff-users.page.html',
 })
 export class StaffUsersPage {
-  private readonly sessions = inject(SessionStorage);
-
   /** From the path. Bound by the router, so the screen never asks for a venue. */
   readonly venueSlug = input.required<string>();
 
@@ -105,9 +101,6 @@ export class StaffUsersPage {
       })),
     ];
   });
-
-  /** Who is doing the managing, so a shared laptop never hides whose account it is. */
-  protected readonly username = computed(() => this.sessions.session()?.username ?? '');
 
   /**
    * The two failures are worth telling apart: one goes away when the signal

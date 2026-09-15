@@ -18,4 +18,7 @@ export class VenueBrand {
    * is any session to ask with.
    */
   readonly venue = input.required<string>();
+
+  /** The line under the name: which part of the app this is. */
+  readonly context = input('Personal');
 }

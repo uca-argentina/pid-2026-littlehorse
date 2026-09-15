@@ -28,7 +28,7 @@ async function logInAsTheAdministrator(page: Page): Promise<void> {
   await page.getByRole('textbox', { name: /usuario/i }).fill(seededAdminUsername);
   await page.getByRole('textbox', { name: /contraseña/i }).fill(seededAdminPassword());
   await page.getByRole('button', { name: /entrar/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/${seededVenueSlug}/staff$`));
+  await expect(page).toHaveURL(new RegExp(`${productsPath}$`));
 }
 
 async function fillTheForm(page: Page, name: string, price: string, stock: string): Promise<void> {
@@ -45,12 +45,8 @@ test.describe('Products', () => {
   test('adds a product that then shows up in the listing', async ({ page }) => {
     const name = aNewProductName();
 
+    // Signing in lands here: the menu is what an administrator manages first.
     await logInAsTheAdministrator(page);
-
-    // The way in is the home screen, not a typed address: an administrator who
-    // has to be told the URL has no administration screen at all.
-    await page.getByRole('link', { name: /productos/i }).click();
-    await expect(page).toHaveURL(new RegExp(`${productsPath}$`));
 
     await page.getByRole('link', { name: /nuevo producto/i }).click();
     await fillTheForm(page, name, '4500', '20');

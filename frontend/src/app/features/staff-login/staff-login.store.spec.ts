@@ -65,13 +65,26 @@ describe('StaffLoginStore', () => {
     expect(sessions.hasSession()).toBe(true);
   });
 
-  it('leaves the login screen when the credentials are valid', () => {
+  // Straight to what they manage: there is no home screen for an administrator.
+  it('takes an administrator to the products when the credentials are valid', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const response = new Subject<StaffSession>();
     logIn.mockReturnValue(response);
 
     store.submit('bar-alfa', credentials);
     response.next(aSession);
+
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'products']);
+  });
+
+  // US-01, criterion 2: a role without screens is told so, not left on the login.
+  it('takes any other role to the screen that says there is nothing for them yet', () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const response = new Subject<StaffSession>();
+    logIn.mockReturnValue(response);
+
+    store.submit('bar-alfa', credentials);
+    response.next({ ...aSession, role: 'Kds' });
 
     expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff']);
   });

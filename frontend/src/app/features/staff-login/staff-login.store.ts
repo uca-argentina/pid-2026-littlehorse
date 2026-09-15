@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { SessionStorage } from '../../core/auth/session-storage';
+import { staffLandingFor } from '../../core/auth/staff-landing';
 import type { StaffCredentials } from '../../core/auth/staff-session';
 import { StaffLoginService } from './staff-login.service';
 
@@ -52,7 +53,7 @@ export class StaffLoginStore {
         next: (session) => {
           this.sessions.remember(session);
           this.state.set('idle');
-          this.leaveTheLoginScreen(venueSlug);
+          this.leaveTheLoginScreen(staffLandingFor(session.role, venueSlug));
         },
         error: (error: unknown) => this.fail(error),
       });
@@ -62,8 +63,8 @@ export class StaffLoginStore {
    * A navigation that silently refuses leaves the person looking at the login
    * screen with no idea it worked. Better to say the app could not continue.
    */
-  private leaveTheLoginScreen(venueSlug: string): void {
-    this.router.navigate([venueSlug, 'staff']).then(
+  private leaveTheLoginScreen(landing: string[]): void {
+    this.router.navigate(landing).then(
       (navigated) => {
         if (!navigated) this.state.set('unreachable');
       },

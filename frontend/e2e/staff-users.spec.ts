@@ -31,7 +31,7 @@ async function logIn(page: Page, username: string, password: string): Promise<vo
 
 async function logInAsTheAdministrator(page: Page): Promise<void> {
   await logIn(page, seededAdminUsername, seededAdminPassword());
-  await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
+  await expect(page).toHaveURL(new RegExp(`${staffAreaPath}/products$`));
 }
 
 async function createStaffUser(page: Page, username: string, role: RegExp): Promise<void> {
@@ -40,6 +40,15 @@ async function createStaffUser(page: Page, username: string, role: RegExp): Prom
   await page.getByLabel('Contraseña', { exact: true }).fill(aNewPassword);
   await page.getByRole('radio', { name: role }).check();
   await page.getByRole('button', { name: /crear usuario/i }).click();
+}
+
+/**
+ * Salir lives behind the account chip in the administration header: open the
+ * menu, then leave.
+ */
+async function signOut(page: Page): Promise<void> {
+  await page.getByRole('button', { name: new RegExp(`^${seededAdminUsername} · `, 'i') }).click();
+  await page.getByRole('menuitem', { name: /salir/i }).click();
 }
 
 /** A token straight from the API, to ask it things the screens will not ask. */
@@ -63,8 +72,9 @@ test.describe('Staff users', () => {
 
     await logInAsTheAdministrator(page);
 
-    // The way in is the home screen, not a typed address: an administrator who
-    // has to be told the URL has no administration screen at all.
+    // The way in is the tab in the header, not a typed address: an
+    // administrator who has to be told the URL has no administration screen
+    // at all.
     await page.getByRole('link', { name: /usuarios internos/i }).click();
     await expect(page).toHaveURL(new RegExp(`${staffUsersPath}$`));
 
@@ -80,7 +90,7 @@ test.describe('Staff users', () => {
 
     // Criterion 1, second half: they can sign in straight away. This is the one
     // that catches a user created inactive, or with the password stored wrong.
-    await page.getByRole('button', { name: /salir/i }).click();
+    await signOut(page);
     await logIn(page, username, aNewPassword);
 
     await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
@@ -145,7 +155,10 @@ test.describe('Staff users', () => {
 
       await logInAsTheAdministrator(page);
       await createStaffUser(page, username, /KDS/i);
-      await page.getByRole('button', { name: /salir/i }).click();
+      // Waited for before signing out: the form has a way out in its header
+      // too, and leaving while the request is in flight cancels it.
+      await expect(page.getByText(username, { exact: true })).toBeVisible();
+      await signOut(page);
 
       // Waited for on purpose: the session is only stored once the login lands,
       // and navigating before that turns this into a test of the wrong guard.

@@ -4,7 +4,7 @@ import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { trimmedMinLength } from '../../../shared/forms/trimmed-min-length';
-import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
+import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { NewProductStore } from '../new-product.store';
 
 /** Kept in step with Product's own rules in the domain. */
@@ -26,7 +26,7 @@ type Field = 'name' | 'description' | 'price' | 'stock';
 
 @Component({
   selector: 'drinkit-new-product-page',
-  imports: [ReactiveFormsModule, RouterLink, VenueBrand],
+  imports: [ReactiveFormsModule, AdminHeader, RouterLink],
   // On the component and not on the route: a route's injector is created once
   // and kept, so a store provided there would carry a rejected attempt into
   // the next visit. A component's providers die with the component.

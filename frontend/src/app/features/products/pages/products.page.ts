@@ -1,10 +1,8 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
-import { SessionStorage } from '../../../core/auth/session-storage';
-import { SignOut } from '../../../shared/sign-out/sign-out';
-import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
+import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { PRODUCTS_URL } from '../products.service';
 import type { Product } from '../products.service';
 
@@ -42,13 +40,11 @@ function pesos(amount: number): string {
 
 @Component({
   selector: 'drinkit-products-page',
-  imports: [RouterLink, SignOut, VenueBrand],
+  imports: [AdminHeader, RouterLink],
   styleUrl: './products.page.scss',
   templateUrl: './products.page.html',
 })
 export class ProductsPage {
-  private readonly sessions = inject(SessionStorage);
-
   /** From the path. Bound by the router, so the screen never asks for a venue. */
   readonly venueSlug = input.required<string>();
 
@@ -73,9 +69,6 @@ export class ProductsPage {
       isActive: product.isActive,
     })),
   );
-
-  /** Who is doing the managing, so a shared laptop never hides whose account it is. */
-  protected readonly username = computed(() => this.sessions.session()?.username ?? '');
 
   /**
    * The two failures are worth telling apart: one goes away when the signal

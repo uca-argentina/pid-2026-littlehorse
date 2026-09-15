@@ -18,12 +18,7 @@ async function openScreenAs(role: string) {
     inputs: { venueSlug: 'bar-alfa' },
     // Salir navigates for real: without a route to land on, the router rejects
     // and the rejection surfaces as an unhandled error that can mask a failure.
-    providers: [
-      provideRouter([
-        { path: ':venueSlug/staff/login', children: [] },
-        { path: ':venueSlug/staff/users', children: [] },
-      ]),
-    ],
+    providers: [provideRouter([{ path: ':venueSlug/staff/login', children: [] }])],
   });
 
   rendered.fixture.debugElement.injector.get(SessionStorage).remember(sessionFor(role));
@@ -34,7 +29,7 @@ async function openScreenAs(role: string) {
 
 describe('StaffHomePage', () => {
   it('greets whoever signed in by name', async () => {
-    await openScreenAs('Administrator');
+    await openScreenAs('Kds');
 
     expect(screen.getByRole('heading').textContent).toContain('Hola, euge');
   });
@@ -55,40 +50,14 @@ describe('StaffHomePage', () => {
     expect(screen.getByText(/KDS · estación de barra/)).not.toBeNull();
   });
 
-  // US-01, criterion 1: an administrator signs in and reaches the management
-  // screens. Until this existed they landed on the same dead end as a KDS.
-  it('takes an administrator to the screens they manage', async () => {
-    await openScreenAs('Administrator');
-
-    const link = screen.getByRole('link', { name: /usuarios internos/i });
-
-    expect(link.getAttribute('href')).toBe('/bar-alfa/staff/users');
-  });
-
-  // US-06: the menu is managed from here too. Same reason as the staff link —
-  // an administrator who has to be told the address has no screen at all.
-  it('takes an administrator to the menu they manage', async () => {
-    await openScreenAs('Administrator');
-
-    const link = screen.getByRole('link', { name: /productos/i });
-
-    expect(link.getAttribute('href')).toBe('/bar-alfa/staff/products');
-  });
-
-  it('does not tell an administrator there is nothing for their role', async () => {
-    await openScreenAs('Administrator');
-
-    expect(screen.queryByText(/Todavía no hay pantallas para tu rol/)).toBeNull();
-  });
-
   it('shows the venue named in the address and not a fixed one', async () => {
-    await openScreenAs('Administrator');
+    await openScreenAs('Kds');
 
     expect(screen.getByText(/bar-alfa/i)).not.toBeNull();
   });
 
   it('ends the session when the person signs out', async () => {
-    const rendered = await openScreenAs('Administrator');
+    const rendered = await openScreenAs('Kds');
     const sessions = rendered.fixture.debugElement.injector.get(SessionStorage);
 
     screen.getByRole('button', { name: /salir/i }).click();

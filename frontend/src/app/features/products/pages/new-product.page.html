@@ -1,8 +1,5 @@
 <div class="frame">
-  <header class="head">
-    <drinkit-venue-brand [venue]="venueSlug()" />
-    <p class="station">Administración</p>
-  </header>
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
 
   <form class="body" [formGroup]="form" (ngSubmit)="submit()">
     <h1 class="title">Nuevo producto</h1>
