@@ -302,13 +302,15 @@
   font-weight: 700;
 }
 
-.cta:hover:not(:disabled) {
-  background: var(--dk-accent-hover);
-}
-
 // Dimmed rather than greyed out: it is still the thing this screen leads to.
+// Before the hover rule and not after it, which is what stylelint's
+// no-descending-specificity asks for: the more specific selector goes first.
 .cta:disabled {
   background: var(--dk-accent-disabled);
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--dk-accent-hover);
 }
 
 .safe {

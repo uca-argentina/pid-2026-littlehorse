@@ -108,6 +108,7 @@ drinkit-theme-toggle {
 
 .card {
   display: flex;
+
   // Wraps so the note can take a row of its own under the drink, at the full
   // width of the card: an aclaración shares the line with nothing.
   flex-wrap: wrap;
