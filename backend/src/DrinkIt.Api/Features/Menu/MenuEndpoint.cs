@@ -30,6 +30,7 @@ internal static class MenuEndpoint
             // it does not already grant: the menu is on a poster on the wall.
             .MapGet("/{venueSlug}/menu", GetAsync)
             .AllowAnonymous()
+            .WithMetadata(new ScopedBySlugAttribute())
             .WithName("GetMenu")
             .WithTags("Menu")
             .WithSummary("The menu a customer reads after scanning the venue's QR.")

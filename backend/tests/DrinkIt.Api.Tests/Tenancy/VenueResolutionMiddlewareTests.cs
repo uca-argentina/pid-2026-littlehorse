@@ -2,7 +2,6 @@ using System.Security.Claims;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Venues;
 using DrinkIt.Infrastructure.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
 namespace DrinkIt.Api.Tests.Tenancy;
@@ -57,6 +56,18 @@ public class VenueResolutionMiddlewareTests
         CurrentVenue current = new();
 
         await Run(current, claimedVenue: VenueFromToken, slug: "bar-alfa", isPublic: true);
+
+        Assert.Equal(VenueFromSlug, current.Id);
+    }
+
+    // The most common real request the middleware handles: a customer's phone,
+    // with no token at all, hitting a public endpoint by its slug.
+    [Fact]
+    public async Task InvokeAsync_WhenTheEndpointIsPublicAndThereIsNoToken_TakesTheVenueFromTheSlug()
+    {
+        CurrentVenue current = new();
+
+        await Run(current, claimedVenue: null, slug: "bar-alfa", isPublic: true);
 
         Assert.Equal(VenueFromSlug, current.Id);
     }
@@ -116,7 +127,7 @@ public class VenueResolutionMiddlewareTests
         {
             context.SetEndpoint(new Endpoint(
                 _ => Task.CompletedTask,
-                new EndpointMetadataCollection(new AllowAnonymousAttribute()),
+                new EndpointMetadataCollection(new ScopedBySlugAttribute()),
                 "public"));
         }
 

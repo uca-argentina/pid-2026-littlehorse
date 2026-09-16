@@ -1,6 +1,7 @@
-import { HttpErrorResponse, httpResource } from '@angular/common/http';
+import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { Cart } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
@@ -67,14 +68,20 @@ export class MenuPage {
     () => problemTypeOf(this.menu.error()) === ProblemTypes.venueNotFound,
   );
 
-  protected readonly venueName = computed(() =>
-    this.menu.hasValue() ? this.menu.value().venueName : '',
-  );
+  // Cached rather than read straight from the resource: a reload (the retry
+  // button) keeps the previous value around while it is in flight, which would
+  // otherwise make the header flicker back to the raw slug mid-retry.
+  private readonly lastVenueName = signal('');
+
+  protected readonly venueName = computed(() => this.lastVenueName());
 
   // hasValue() and not value(): reading the value of a failed resource throws,
   // and the template reads this on every change detection, error state included.
+  // Also gated on !isLoading(): a reload (venue switch or retry) keeps the
+  // previous response's items around while the new one is in flight, and
+  // acting on them (e.g. adding one to the cart) would act on the wrong venue.
   private readonly everything = computed<MenuItem[]>(() =>
-    this.menu.hasValue() ? this.menu.value().items : [],
+    this.menu.hasValue() && !this.menu.isLoading() ? this.menu.value().items : [],
   );
 
   protected readonly cards = computed<MenuCard[]>(() => {
@@ -104,6 +111,10 @@ export class MenuPage {
     // The order belongs to the venue whose address is open, and switching
     // venues has to switch orders rather than carry one into the other.
     effect(() => this.cart.open(this.venueSlug()));
+
+    effect(() => {
+      if (this.menu.hasValue()) this.lastVenueName.set(this.menu.value().venueName);
+    });
   }
 
   protected addToOrder(card: MenuCard): void {
@@ -147,16 +158,4 @@ export class MenuPage {
 
     if (!image.src.endsWith(PRODUCT_PLACEHOLDER)) image.src = PRODUCT_PLACEHOLDER;
   }
-}
-
-/**
- * A resource reports the failure wrapped, keeping the original underneath in
- * "cause", so the response has to be dug out rather than cast.
- */
-function problemTypeOf(error: unknown): string | undefined {
-  const response = error instanceof HttpErrorResponse ? error : (error as Error | null)?.cause;
-
-  return response instanceof HttpErrorResponse
-    ? (response.error as { type?: string } | null)?.type
-    : undefined;
 }

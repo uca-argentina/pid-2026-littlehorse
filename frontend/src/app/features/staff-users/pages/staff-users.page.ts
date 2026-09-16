@@ -1,7 +1,8 @@
-import { HttpErrorResponse, httpResource } from '@angular/common/http';
+import { httpResource } from '@angular/common/http';
 import { Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { STAFF_ROLE_DESCRIPTIONS, staffRoleName } from '../../../core/staff/staff-roles';
 import type { StaffRole } from '../../../core/staff/staff-roles';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
@@ -131,16 +132,4 @@ export class StaffUsersPage {
   protected searchFor(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
   }
-}
-
-/**
- * A resource reports the failure wrapped, keeping the original underneath in
- * "cause", so the response has to be dug out rather than cast.
- */
-function problemTypeOf(error: unknown): string | undefined {
-  const response = error instanceof HttpErrorResponse ? error : (error as Error | null)?.cause;
-
-  return response instanceof HttpErrorResponse
-    ? (response.error as { type?: string } | null)?.type
-    : undefined;
 }

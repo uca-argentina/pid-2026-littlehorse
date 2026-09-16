@@ -25,9 +25,7 @@
   <main class="body">
     @if (menu.isLoading()) {
       <p class="note" role="status">Buscando la carta…</p>
-    }
-
-    @if (isWrongAddress()) {
+    } @else if (isWrongAddress()) {
       <p class="note note-bad" role="alert">
         Esta dirección no es de ningún boliche. Fijate de escanear el QR de la barra.
       </p>

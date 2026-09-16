@@ -1,8 +1,20 @@
 using DrinkIt.Application.Venues;
 using DrinkIt.Infrastructure.Authentication;
-using Microsoft.AspNetCore.Authorization;
 
 namespace DrinkIt.Api.Tenancy;
+
+/// <summary>
+/// Declares that an endpoint is addressed by the slug in its own route — the
+/// customer's menu, the staff login — and must resolve its venue from that
+/// slug rather than from a token. Deliberately its own metadata and not a
+/// reuse of <see cref="Microsoft.AspNetCore.Authorization.IAllowAnonymous"/>:
+/// authentication and tenancy resolution are different questions that happen
+/// to agree on today's two endpoints, and a future anonymous endpoint that is
+/// not about any particular venue (a health check, say) must not silently
+/// inherit slug-resolution semantics it was never meant to have.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+internal sealed class ScopedBySlugAttribute : Attribute;
 
 /// <summary>
 /// Decides which venue the request belongs to, before anything queries the
@@ -18,10 +30,10 @@ namespace DrinkIt.Api.Tenancy;
 /// an authenticated bartender cannot reach another venue by editing the address.
 /// </item>
 /// <item>
-/// A public endpoint is addressed by slug and belongs to that slug, whoever
-/// happens to be carrying a token. Otherwise an administrator of one venue
-/// opening another venue's menu would be served their own venue's products
-/// under the other venue's name.
+/// An endpoint marked <see cref="ScopedBySlugAttribute"/> is addressed by slug
+/// and belongs to that slug, whoever happens to be carrying a token. Otherwise
+/// an administrator of one venue opening another venue's menu would be served
+/// their own venue's products under the other venue's name.
 /// </item>
 /// </list>
 /// </remarks>
@@ -31,7 +43,7 @@ internal sealed class VenueResolutionMiddleware(RequestDelegate next)
 
     public async Task InvokeAsync(HttpContext context, CurrentVenue currentVenue, IVenueLookup venues)
     {
-        if (IsPublic(context))
+        if (IsScopedBySlug(context))
         {
             VenueIdentity? fromSlug = await FromRouteSlug(context, venues);
 
@@ -52,11 +64,12 @@ internal sealed class VenueResolutionMiddleware(RequestDelegate next)
     }
 
     /// <summary>
-    /// Anonymous by declaration, which is how an endpoint says it is the
-    /// customer's door. Routing has already run, so the metadata is here.
+    /// Declared, not inferred: routing has already run, so the metadata is
+    /// here. See <see cref="ScopedBySlugAttribute"/> for why this is its own
+    /// declaration instead of a check on anonymous access.
     /// </summary>
-    private static bool IsPublic(HttpContext context) =>
-        context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is not null;
+    private static bool IsScopedBySlug(HttpContext context) =>
+        context.GetEndpoint()?.Metadata.GetMetadata<ScopedBySlugAttribute>() is not null;
 
     private static Guid? FromToken(HttpContext context)
     {

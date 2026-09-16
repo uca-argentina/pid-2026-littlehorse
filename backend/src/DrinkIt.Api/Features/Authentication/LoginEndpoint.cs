@@ -1,4 +1,5 @@
 using DrinkIt.Api.Common;
+using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Common;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -21,6 +22,7 @@ internal static class LoginEndpoint
             // credentials are still required.
             .MapPost("/{venueSlug}/auth/login", HandleAsync)
             .AllowAnonymous()
+            .WithMetadata(new ScopedBySlugAttribute())
             .WithName("Login")
             .WithSummary("Signs a staff member in to one venue.")
             .Produces<LoginResponse>()

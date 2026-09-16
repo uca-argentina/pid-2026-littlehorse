@@ -103,6 +103,12 @@ test.describe('Menu', () => {
    * venue's menu was served their own venue's products under the other venue's
    * name: the API preferred the token's venue over the slug, on a page that is
    * addressed by slug and by nothing else.
+   *
+   * Only one venue exists in dev today, so this cannot prove the slug wins
+   * over a *different* venue's token — that half of the regression is what
+   * `VenueResolutionMiddlewareTests.InvokeAsync_WhenTheEndpointIsPublic_TheSlugWinsOverTheToken`
+   * actually covers. What this test owns is that a leftover staff session
+   * does not break the customer's page at all.
    */
   test('shows the venue in the address even to somebody signed in elsewhere', async ({
     page,
