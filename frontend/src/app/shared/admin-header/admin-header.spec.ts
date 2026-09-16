@@ -3,7 +3,25 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { SessionStorage } from '../../core/auth/session-storage';
+import { BrowserStore } from '../../core/storage/browser-store';
 import { AdminHeader } from './admin-header';
+
+// The runner is Node and there is no localStorage there, so a spec that
+// reached for one would fail for a reason that has nothing to do with the
+// header. A fresh one per test also keeps a choice in one case out of the next.
+class StoreInMemory extends BrowserStore {
+  readonly entries = new Map<string, string>();
+
+  override read(key: string): string | null {
+    return this.entries.get(key) ?? null;
+  }
+
+  override write(key: string, value: string): void {
+    this.entries.set(key, value);
+  }
+}
+
+let store: StoreInMemory;
 
 async function openHeader() {
   const rendered = await render(AdminHeader, {
@@ -15,6 +33,7 @@ async function openHeader() {
         { path: ':venueSlug/staff/login', children: [] },
         { path: ':venueSlug/staff/products', children: [] },
       ]),
+      { provide: BrowserStore, useValue: store },
     ],
   });
 
@@ -41,34 +60,14 @@ function menuToggle(): HTMLButtonElement {
   return screen.getByLabelText(/menú/i) as HTMLButtonElement;
 }
 
-// jsdom in this project's test environment has no working Storage: the
-// origin it renders under does not implement one. The closest a test can get
-// is a stand-in with the same shape, same as URL's createObjectURL elsewhere.
-function fakeLocalStorage(): Storage {
-  const data = new Map<string, string>();
-
-  return {
-    getItem: (key) => data.get(key) ?? null,
-    setItem: (key, value) => void data.set(key, value),
-    removeItem: (key) => void data.delete(key),
-    clear: () => data.clear(),
-    key: (index) => Array.from(data.keys())[index] ?? null,
-    get length() {
-      return data.size;
-    },
-  };
-}
-
 describe('AdminHeader', () => {
   // Isolates each test from whatever an earlier one chose, and from a real
   // browser's own leftover choice: the device's light/dark setting is never
   // read, only this.
   beforeEach(() => {
-    vi.stubGlobal('localStorage', fakeLocalStorage());
+    store = new StoreInMemory();
     document.documentElement.removeAttribute('data-theme');
   });
-
-  afterEach(() => vi.unstubAllGlobals());
 
   // The two administration screens, reachable from each other: until this
   // existed, an administrator on one of them had no way to the other but the
@@ -185,32 +184,11 @@ describe('AdminHeader', () => {
     expect(menuToggle().getAttribute('aria-expanded')).toBe('false');
   });
 
-  // Dark is always where the shift starts: the device's own preference is
-  // never read, only what somebody chose here last time.
-  it('starts on the dark theme, offering to switch to light', async () => {
+  // The toggle's own behaviour — default, switching, persisting — is
+  // ThemeToggle's spec. This only checks the header actually carries one.
+  it('offers a way to switch themes', async () => {
     await openHeader();
 
-    const toggle = screen.getByRole('button', { name: /cambiar a tema claro/i });
-
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(toggle.getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('switches to the light theme and back, and remembers the choice', async () => {
-    const { rendered } = await openHeader();
-
-    screen.getByRole('button', { name: /cambiar a tema claro/i }).click();
-    await rendered.fixture.whenStable();
-
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    expect(
-      screen.getByRole('button', { name: /cambiar a tema oscuro/i }).getAttribute('aria-pressed'),
-    ).toBe('true');
-    expect(localStorage.getItem('drinkit.theme')).toBe('light');
-
-    screen.getByRole('button', { name: /cambiar a tema oscuro/i }).click();
-    await rendered.fixture.whenStable();
-
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(screen.getByRole('button', { name: /cambiar a tema claro/i })).not.toBeNull();
   });
 });

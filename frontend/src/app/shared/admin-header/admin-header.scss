@@ -22,24 +22,6 @@
   position: relative;
 }
 
-.theme-toggle {
-  display: flex;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius-pill);
-  background: none;
-  color: var(--dk-text-muted);
-}
-
-.theme-toggle:hover {
-  border-color: var(--dk-text-muted);
-  color: var(--dk-text);
-}
-
 .chip {
   display: inline-flex;
   align-items: center;

@@ -1,4 +1,5 @@
 import { DOCUMENT, Injectable, effect, inject, signal } from '@angular/core';
+import { BrowserStore } from '../storage/browser-store';
 
 export type Theme = 'dark' | 'light';
 
@@ -6,17 +7,20 @@ const STORAGE_KEY = 'drinkit.theme';
 
 /**
  * Which palette the app shows. Always dark unless a person explicitly picks
- * light through the sun/moon toggle in AdminHeader — never through the
+ * light through the sun/moon toggle (shared/theme-toggle) — never through the
  * device's own light/dark setting, which the app deliberately never reads.
  * The venue is dark on purpose (see styles.scss); a light screen a customer
  * or the KDS never asked for would blind whoever is holding it.
  *
- * In localStorage, not sessionStorage: unlike a staff session this is not
- * shift-scoped, it is the person's own preference and outlives the tab.
+ * Through BrowserStore rather than localStorage directly: unlike a staff
+ * session this is not shift-scoped, it is the person's own preference and
+ * outlives the tab, so it belongs in the same seam Cart already uses.
  */
 @Injectable({ providedIn: 'root' })
 export class ThemeStorage {
   private readonly document = inject(DOCUMENT);
+
+  private readonly store = inject(BrowserStore);
 
   private readonly current = signal<Theme>(this.readStored());
 
@@ -30,7 +34,7 @@ export class ThemeStorage {
       const theme = this.current();
 
       this.document.documentElement.setAttribute('data-theme', theme);
-      this.write(theme);
+      this.store.write(STORAGE_KEY, theme);
     });
   }
 
@@ -39,21 +43,6 @@ export class ThemeStorage {
   }
 
   private readStored(): Theme {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === 'light' ? 'light' : 'dark';
-    } catch {
-      // Private windows and locked-down browsers throw on access. Dark is
-      // the default either way.
-      return 'dark';
-    }
-  }
-
-  private write(theme: Theme): void {
-    try {
-      localStorage.setItem(STORAGE_KEY, theme);
-    } catch {
-      // Storage is a convenience, not the source of truth: the signal above
-      // already holds the preference for this page load.
-    }
+    return this.store.read(STORAGE_KEY) === 'light' ? 'light' : 'dark';
   }
 }
