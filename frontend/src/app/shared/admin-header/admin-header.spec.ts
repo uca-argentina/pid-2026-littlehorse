@@ -3,7 +3,12 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { SessionStorage } from '../../core/auth/session-storage';
+import { BrowserStore } from '../../core/storage/browser-store';
+import { StoreInMemory } from '../../core/storage/store-in-memory';
 import { AdminHeader } from './admin-header';
+
+// A fresh StoreInMemory per test keeps a choice in one case out of the next.
+let store: StoreInMemory;
 
 async function openHeader() {
   const rendered = await render(AdminHeader, {
@@ -15,6 +20,7 @@ async function openHeader() {
         { path: ':venueSlug/staff/login', children: [] },
         { path: ':venueSlug/staff/products', children: [] },
       ]),
+      { provide: BrowserStore, useValue: store },
     ],
   });
 
@@ -42,6 +48,14 @@ function menuToggle(): HTMLButtonElement {
 }
 
 describe('AdminHeader', () => {
+  // Isolates each test from whatever an earlier one chose, and from a real
+  // browser's own leftover choice: the device's light/dark setting is never
+  // read, only this.
+  beforeEach(() => {
+    store = new StoreInMemory();
+    document.documentElement.removeAttribute('data-theme');
+  });
+
   // The two administration screens, reachable from each other: until this
   // existed, an administrator on one of them had no way to the other but the
   // address bar.
@@ -51,7 +65,7 @@ describe('AdminHeader', () => {
     expect(screen.getByRole('link', { name: /productos/i }).getAttribute('href')).toBe(
       '/bar-alfa/staff/products',
     );
-    expect(screen.getByRole('link', { name: /usuarios internos/i }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /staff/i }).getAttribute('href')).toBe(
       '/bar-alfa/staff/users',
     );
   });
@@ -76,9 +90,7 @@ describe('AdminHeader', () => {
     await harness.navigateByUrl('/bar-alfa/staff/users');
     await harness.fixture.whenStable();
 
-    expect(
-      screen.getByRole('link', { name: /usuarios internos/i }).getAttribute('aria-current'),
-    ).toBe('page');
+    expect(screen.getByRole('link', { name: /staff/i }).getAttribute('aria-current')).toBe('page');
     expect(
       screen.getByRole('link', { name: /productos/i }).getAttribute('aria-current'),
     ).toBeNull();
@@ -157,5 +169,13 @@ describe('AdminHeader', () => {
     await rendered.fixture.whenStable();
 
     expect(menuToggle().getAttribute('aria-expanded')).toBe('false');
+  });
+
+  // The toggle's own behaviour — default, switching, persisting — is
+  // ThemeToggle's spec. This only checks the header actually carries one.
+  it('offers a way to switch themes', async () => {
+    await openHeader();
+
+    expect(screen.getByRole('button', { name: /cambiar a tema claro/i })).not.toBeNull();
   });
 });

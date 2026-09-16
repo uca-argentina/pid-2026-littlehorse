@@ -1,0 +1,23 @@
+// A flex item wherever it lands: the host itself carries no box of its own,
+// so a header's flex row lays out the button directly, no wrapper needed.
+:host {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.toggle {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: none;
+  color: var(--dk-text-muted);
+}
+
+.toggle:hover {
+  border-color: var(--dk-text-muted);
+  color: var(--dk-text);
+}

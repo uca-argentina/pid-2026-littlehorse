@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SessionStorage } from '../../core/auth/session-storage';
 import { SignOutFlow } from '../../core/auth/sign-out-flow';
 import { staffRoleName } from '../../core/staff/staff-roles';
+import { ThemeToggle } from '../theme-toggle/theme-toggle';
 import { VenueBrand } from '../venue-brand/venue-brand';
 
 /**
@@ -18,7 +19,7 @@ import { VenueBrand } from '../venue-brand/venue-brand';
  */
 @Component({
   selector: 'drinkit-admin-header',
-  imports: [RouterLink, RouterLinkActive, VenueBrand],
+  imports: [RouterLink, RouterLinkActive, ThemeToggle, VenueBrand],
   styleUrl: './admin-header.scss',
   templateUrl: './admin-header.html',
   host: {
