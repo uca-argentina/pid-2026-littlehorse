@@ -118,6 +118,23 @@ en cero el producto queda agotado solo, y la foto se sube como archivo en vez de
 enlace— y la cabecera de administración con pestañas, que reemplazó a la pantalla de inicio
 de `/staff`. Quedan US-07 y US-08 en el carril de la carta, y todo el carril del cliente.
 
+**Estado al miércoles 16 de septiembre.** Arrancó el carril del cliente, que era el que no
+había empezado. US-09 cerró: quien escanea el QR abre `/{venueSlug}/menu` y lee la carta sin
+cuenta, sin login y sin instalar nada, con buscador y el nombre real del boliche. US-10 va
+4 de 5, todo resuelto desde la misma pantalla: el `+` de cada tarjeta, el `−` con la cantidad
+en lo que ya está pedido, y la barra dorada de abajo con el resumen y el total. El pedido a
+medio armar vive en el navegador por boliche, así que sobrevive a que atiendan un llamado.
+
+Dos cosas salieron de ahí y no eran de ninguna story. Una regla de multi-tenancy estaba
+escrita a medias: el middleware daba prioridad al token siempre, también en rutas públicas,
+así que un administrador que abría la carta de otro boliche recibía los tragos del suyo bajo
+el nombre del otro. Ahora en un endpoint anónimo gana el slug y en uno de personal gana el
+token. Y apareció `BrowserStore`, la costura que el almacenamiento del navegador no tenía:
+está en *Deuda anotada* por qué conviene que los dos servicios viejos también la usen.
+
+Quedan seis: US-07 y US-08 cierran la carta del administrador, US-11 y US-12 cierran el
+pedido, y US-14 son las categorías. El camino crítico es el pedido.
+
 ---
 
 ## Arranque
@@ -623,8 +640,6 @@ story que lo necesita.
 
 **Sigue pendiente:**
 
-- **Autorización por rol en el backend.** La necesita el criterio 6 de US-03. Hoy el único
-  endpoint que existe es el de ingreso, y ninguno usa `RequireAuthorization`.
 - **Los de punta a punta en la CI.** Playwright ya está instalado y cubre el ingreso, pero la
   suite se corre a mano: ese job necesita SQL Server y el backend en el runner, y es una
   decisión aparte.
@@ -637,6 +652,28 @@ story que lo necesita.
   blobs, y su cadena de conexión en `ImageStorage__ConnectionString`. Es el único recurso
   fuera de los tiers gratuitos; el detalle está en la adenda del
   [ADR-0007](../adr/0007-hosting-en-azure-a-costo-cero.md). Va con `infra/`.
+
+**Deuda anotada, no urgente.**
+
+- **Tres lugares nombran el almacenamiento del navegador.** Desde el 2026-09-15 existe
+  `core/storage/browser-store.ts`, que envuelve `localStorage` en un `try/catch` y es
+  inyectable, así que un test le puede pasar un almacén de mentira y probar de verdad que
+  algo se guarda. El carrito ya lo usa. `SessionStorage` y `LastVenue` siguen con su propio
+  `try/catch` copiado adentro, de cuando no había costura.
+
+  No hay nada roto: los tres funcionan, y el `try/catch` está porque una ventana de incógnito
+  o un navegador que bloquea datos de sitio tiran al acceder. Lo que falta es que la idea
+  esté escrita una sola vez, y que esos dos tengan la prueba de persistencia que hoy no
+  tienen: sus tests pasan igual si el navegador se traga todo.
+
+  **`LastVenue` es quince minutos**: dos métodos, tres usos, nadie le inyecta nada.
+  **`SessionStorage` es la que cuesta**, y no por el `try/catch` sino porque guarda en
+  `sessionStorage` y no en `localStorage`, a propósito — la tablet de la barra es compartida
+  y una sesión no debe sobrevivir a la pestaña. `BrowserStore` hoy sabe un solo
+  almacenamiento, así que primero hay que decidir si maneja los dos o si son dos servicios.
+  Cuelga de ahí toda la autenticación, así que se revisa con más cuidado.
+
+  **Después del hito**, y en ese orden. Si aparece un cuarto lugar, deja de ser prolijidad.
 
 **Ya está hecho y no se rehace.** Del backend: el modelo de local y de personal, el
 aislamiento entre locales con su prueba, la base con su migración, la API armada
