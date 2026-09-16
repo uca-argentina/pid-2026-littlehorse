@@ -1,24 +1,11 @@
 import { render, screen } from '@testing-library/angular';
 import { BrowserStore } from '../../core/storage/browser-store';
+import { StoreInMemory } from '../../core/storage/store-in-memory';
 import { ThemeToggle } from './theme-toggle';
 
 const STORAGE_KEY = 'drinkit.theme';
 
-// The runner is Node and there is no localStorage there, so a spec that
-// reached for one would fail for a reason that has nothing to do with the
-// toggle. A fresh one per test also keeps a choice in one case out of the next.
-class StoreInMemory extends BrowserStore {
-  readonly entries = new Map<string, string>();
-
-  override read(key: string): string | null {
-    return this.entries.get(key) ?? null;
-  }
-
-  override write(key: string, value: string): void {
-    this.entries.set(key, value);
-  }
-}
-
+// A fresh StoreInMemory per test keeps a choice in one case out of the next.
 let store: StoreInMemory;
 
 async function openToggle() {

@@ -1,26 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { BrowserStore } from '../storage/browser-store';
+import { StoreInMemory } from '../storage/store-in-memory';
 import { CART_STORAGE_PREFIX, Cart } from './cart';
 
 const ginTonic = { id: 'id-1', name: 'Gin Tonic', price: 4500 };
 const fernet = { id: 'id-2', name: 'Fernet con Coca', price: 4000 };
-
-/**
- * What the browser would remember, as a Map. The runner is Node and there is
- * no localStorage there, so a spec that reached for one would fail for a reason
- * that has nothing to do with the cart.
- */
-class StoreInMemory extends BrowserStore {
-  readonly entries = new Map<string, string>();
-
-  override read(key: string): string | null {
-    return this.entries.get(key) ?? null;
-  }
-
-  override write(key: string, value: string): void {
-    this.entries.set(key, value);
-  }
-}
 
 /**
  * A browser that forgets: a private window, a full quota. BrowserStore turns

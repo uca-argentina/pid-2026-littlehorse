@@ -168,25 +168,14 @@ drinkit-theme-toggle {
   gap: 6px;
 }
 
-// DOM order stays step, count, add (the minus and count only exist once
-// something is in the order, the plus is always there); this only reorders
-// how it paints.
-.step {
-  order: 3;
-}
-
-.count {
-  order: 2;
-}
-
-.add {
-  order: 1;
-}
-
 // The quiet half of the stepper, from the cart wireframe: bordered, not filled.
 // Taking one out is never the thing a menu is inviting anybody to do.
+// DOM order stays step, count, add (the minus and count only exist once
+// something is in the order, the plus is always there); order only reorders
+// how it paints: +, count, - top to bottom.
 .step {
   display: flex;
+  order: 3;
   width: 42px;
   height: 42px;
   align-items: center;
@@ -198,6 +187,7 @@ drinkit-theme-toggle {
 }
 
 .count {
+  order: 2;
   min-width: 20px;
   text-align: center;
   font-size: 16px;
@@ -209,6 +199,7 @@ drinkit-theme-toggle {
 // thing on a card that does something, so it is the only thing that is gold.
 .add {
   display: flex;
+  order: 1;
   width: 42px;
   height: 42px;
   flex-shrink: 0;

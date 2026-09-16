@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BrowserStore } from '../storage/browser-store';
+import { StoreInMemory } from '../storage/store-in-memory';
 import { ThemeStorage } from './theme-storage';
 
 const STORAGE_KEY = 'drinkit.theme';
@@ -10,21 +11,7 @@ class Host {
   readonly theme = inject(ThemeStorage);
 }
 
-// The runner is Node and there is no localStorage there, so a spec that
-// reached for one would fail for a reason that has nothing to do with the
-// theme. A fresh one per test also keeps a choice in one case out of the next.
-class StoreInMemory extends BrowserStore {
-  readonly entries = new Map<string, string>();
-
-  override read(key: string): string | null {
-    return this.entries.get(key) ?? null;
-  }
-
-  override write(key: string, value: string): void {
-    this.entries.set(key, value);
-  }
-}
-
+// A fresh StoreInMemory per test keeps a choice in one case out of the next.
 let store: StoreInMemory;
 
 async function openHost() {
