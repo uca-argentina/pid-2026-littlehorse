@@ -1,0 +1,192 @@
+<div class="frame">
+  <header class="head">
+    <a class="back" [routerLink]="menuLink()" aria-label="Volver a la carta">
+      <svg
+        width="19"
+        height="19"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M15 18l-6-6 6-6" />
+      </svg>
+    </a>
+
+    <h1 class="ttl">Tu pedido</h1>
+
+    <div class="mark" aria-hidden="true">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M5 4h14l-7 8z" />
+        <path d="M12 12v7" />
+        <path d="M8.5 19.5h7" />
+      </svg>
+    </div>
+  </header>
+
+  <main class="body">
+    @if (cart.isEmpty()) {
+      <p class="note" role="status">
+        Todavía no agregaste nada. Volvé a la carta y tocá el + del trago que quieras.
+      </p>
+    } @else {
+      <ul class="list">
+        @for (line of lines(); track line.id) {
+          <li class="item">
+            <div class="top">
+              <div class="thumb" aria-hidden="true">
+                <svg
+                  width="25"
+                  height="25"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 4h14l-7 8z" />
+                  <path d="M12 12v7" />
+                  <path d="M8.5 19.5h7" />
+                </svg>
+              </div>
+
+              <div class="what">
+                <h2 class="nm">{{ line.name }}</h2>
+
+                <!--
+                  A field and not text: US-10 asks for an aclaración per drink,
+                  and one that only shows what was written elsewhere makes
+                  somebody walk back to the carta to fix a typo.
+                -->
+                <input
+                  class="note-field"
+                  type="text"
+                  [id]="'note-' + line.id"
+                  [attr.aria-label]="'Nota para ' + line.name"
+                  [value]="line.note"
+                  [attr.maxlength]="noteMaxLength"
+                  placeholder="sin nota"
+                  autocomplete="off"
+                  (input)="noteFor(line, $event)"
+                />
+              </div>
+
+              <p class="lp" [attr.data-testid]="'line-total-' + line.name">$ {{ line.total }}</p>
+            </div>
+
+            <div class="bot">
+              <button
+                class="sbtn"
+                type="button"
+                [attr.aria-label]="'Quitar un ' + line.name + ' del pedido'"
+                (click)="takeOneOut(line)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                >
+                  <path d="M5 12h14" />
+                </svg>
+              </button>
+
+              <span class="qty" [attr.data-testid]="'quantity-' + line.name">{{
+                line.quantity
+              }}</span>
+
+              <button
+                class="sbtn"
+                type="button"
+                [attr.aria-label]="'Agregar otro ' + line.name"
+                (click)="addOne(line)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                >
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+
+              <!--
+                Alongside the minus and not instead of it: the minus walks a
+                quantity down, this is for changing your mind about the drink.
+              -->
+              <button
+                class="rm"
+                type="button"
+                [attr.aria-label]="'Sacar ' + line.name + ' del pedido'"
+                (click)="takeItOut(line)"
+              >
+                Quitar
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+    <a class="ghost" [routerLink]="menuLink()">
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+      <span>Agregar más tragos</span>
+    </a>
+
+    <div class="sum">
+      <p class="srow">
+        <span class="mu">Subtotal</span>
+        <span class="mu num" data-testid="subtotal">$ {{ subtotal() }}</span>
+      </p>
+      <p class="srow">
+        <span class="tot">Total</span>
+        <span class="tot num" data-testid="total">$ {{ total() }}</span>
+      </p>
+    </div>
+  </main>
+
+  <footer class="foot">
+    <!--
+      Disabled until there is a payment screen to go to (US-11). Drawn and not
+      hidden so the screen is the one somebody will learn: a gold button that
+      leads nowhere is what reads as a broken app, and a button that appears
+      later moves everything under it.
+    -->
+    <button class="cta" type="button" disabled>
+      <span>Ir a pagar</span>
+      <span class="num">$ {{ total() }}</span>
+    </button>
+
+    <p class="safe">Vas a poder pagar desde acá en cuanto esté lista la pantalla de pago.</p>
+  </footer>
+</div>

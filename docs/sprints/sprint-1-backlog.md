@@ -86,7 +86,7 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
 | US-08 | Corregir y sacar tragos | US-06 | Pendiente |
 | US-09 | Ver la carta desde el celular | US-06 | ✅ **Terminada** |
-| US-10 | Armar el pedido | US-09 | **4 de 5** — falta la aclaración por trago |
+| US-10 | Armar el pedido | US-09 | **Terminada** — a falta de prueba a mano |
 | US-11 | Confirmar el pedido | US-10 | Pendiente |
 | US-12 | Seguir mi pedido | US-11 | Pendiente |
 | US-13 | Encontrar a alguien en el listado | US-03 | ✅ **Terminada** |
@@ -120,10 +120,13 @@ de `/staff`. Quedan US-07 y US-08 en el carril de la carta, y todo el carril del
 
 **Estado al miércoles 16 de septiembre.** Arrancó el carril del cliente, que era el que no
 había empezado. US-09 cerró: quien escanea el QR abre `/{venueSlug}/menu` y lee la carta sin
-cuenta, sin login y sin instalar nada, con buscador y el nombre real del boliche. US-10 va
-4 de 5, todo resuelto desde la misma pantalla: el `+` de cada tarjeta, el `−` con la cantidad
-en lo que ya está pedido, y la barra dorada de abajo con el resumen y el total. El pedido a
-medio armar vive en el navegador por boliche, así que sobrevive a que atiendan un llamado.
+cuenta, sin login y sin instalar nada, con buscador y el nombre real del boliche. US-10
+cerró con la pantalla del pedido en `/{venueSlug}/order`: la barra dorada de la carta ahora
+dice "Ver pedido" y lleva ahí, y la pantalla muestra cada trago con su cantidad, su
+aclaración, el subtotal y el total. La aclaración se escribe en los dos lados —en la tarjeta
+de la carta, detrás de un botón "Nota", y en la línea del pedido, en un campo siempre a la
+vista— y es la misma nota. El pedido a medio armar vive en el navegador por boliche, así que
+sobrevive a que atiendan un llamado.
 
 Dos cosas salieron de ahí y no eran de ninguna story. Una regla de multi-tenancy estaba
 escrita a medias: el middleware daba prioridad al token siempre, también en rutas públicas,
@@ -548,16 +551,23 @@ leyendo el almacenamiento después de mirar la carta.
 5. **Dado** que mi pedido está vacío, **cuando** miro la pantalla, **entonces** no puedo
    avanzar a confirmar.
 
-**4 de 5, todo desde la carta.** Se construyó el `+` de cada tarjeta, el `−` con la cantidad
-en los tragos que ya están en el pedido, y la barra de abajo con el resumen y el total. Con
-eso quedan cumplidos los criterios 1, 2, 4 y 5. Falta el 3, la aclaración por trago, que
-necesita la pantalla del pedido.
+**Terminada.** Los cinco criterios están construidos y probados: en la carta, el `+` de cada
+tarjeta y el `−` con la cantidad; en `/{venueSlug}/order`, la pantalla del pedido con las
+líneas, la aclaración por trago, el subtotal y el total. Falta la prueba a mano.
 
 | Decisión | Cómo queda |
 |---|---|
 | Dónde vive el pedido a medio armar | En el navegador, con una clave por boliche. Sobrevive a que atiendan un llamado o cierren la pestaña, que es el criterio 4, y el pedido de un local nunca aparece en otro. Cuando exista el pedido de verdad, en US-11, se muda al servidor. |
-| Qué hace la barra de abajo | Nada, todavía. Tiene el aspecto exacto del wireframe, dorada y con el total, pero dice "Tu pedido" y no "Ver pedido": la pantalla del pedido no existe, y el dorado invita a tocar. Cambia una palabra cuando esa pantalla llegue. |
-| Cambiar cantidades | Desde la tarjeta de la carta, con el `−`, la cantidad y el `+`. Aparecen recién cuando el trago está en el pedido, y sacar el último lo saca del pedido en vez de dejar una línea en cero. |
+| Qué hace la barra de abajo | Lleva a la pantalla del pedido, y dice "Ver pedido · N ítems" con el total al lado. Es el último elemento de una carta que alguien terminó de leer, así que es lo que lo hace avanzar. |
+| Cambiar cantidades | En los dos lados. En la tarjeta de la carta, con el `−`, la cantidad y el `+`; en la línea del pedido, con el mismo par. Sacar el último saca el trago del pedido en vez de dejar una línea en cero. |
+| Sacar un trago entero | Con "Quitar" en la línea del pedido, además del `−`. El `−` baja de a uno; "Quitar" es para quien cambió de idea sobre el trago y no tiene por qué tocar cinco veces para decirlo. |
+| Dónde se escribe la aclaración | En los dos lados, y es la misma nota. En la tarjeta de la carta detrás de un botón "Nota" —abierta siempre, un campo bajo cada tarjeta convierte la carta en un formulario— y en la línea del pedido, en un campo siempre a la vista. Escrita, la tarjeta la muestra bajo el nombre del trago. |
+| Cuánto puede durar la aclaración | 120 caracteres. Entra "sin hielo, con mucho limón" y se lee de un vistazo en un ticket en un boliche oscuro; un párrafo no lo leería nadie y atrasaría la cola. |
+| Una nota por línea, no por unidad | El modelo la guarda en el ítem del pedido, así que dos Gin Tonic con la misma nota son una línea con cantidad 2. Pedir uno con hielo y otro sin hielo no se puede todavía; si aparece la necesidad, es una story propia. |
+| Subtotal **y** total | Los dos, como el wireframe, aunque hoy den el mismo número: entre ellos va a caer el cargo por servicio o la propina, y un resumen que gana una fila después es uno que hay que aprender dos veces. |
+| "Ir a pagar" | Dibujado y **deshabilitado** hasta que exista US-11. Un botón dorado que no lleva a ningún lado es lo que se lee como una app rota, y uno que aparece después mueve todo lo que está debajo. |
+| El pedido vacío | Muestra la pantalla igual, con el resumen en cero y un texto que explica cómo agregar. No se puede avanzar, que es el criterio 5. |
+| La foto del trago en la línea | No se guarda: la línea lleva el nombre y el precio, y la miniatura es el ícono de copa del wireframe. El wireframe dibuja el ícono, y guardar la imagen obligaría a que el pedido dependa de que la foto siga existiendo. |
 | El botón de usuario del encabezado | **No entra.** Llevaría a un login de cliente, y las cuentas de cliente están fuera del Sprint 1 porque la consigna pide expresamente poder pedir sin cuenta. Además el criterio 2 de US-09 está construido y con prueba de que la carta no ofrece iniciar sesión. |
 | Tocar dos veces el mismo trago | Sube la cantidad de esa línea, no abre una segunda. |
 

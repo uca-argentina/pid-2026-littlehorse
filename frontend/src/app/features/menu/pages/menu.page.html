@@ -89,6 +89,16 @@
             />
             <div class="what">
               <h2 class="name" [id]="'name-' + card.id">{{ card.name }}</h2>
+
+              <!--
+                Under the name, where it reads as part of what was ordered, and
+                only while the field is closed: open, the field is already
+                showing it and the card would say the same thing twice.
+              -->
+              @if (!isWritingOn(card.id) && cart.noteOf(card.id); as note) {
+                <p class="card-note" [attr.data-testid]="'note-' + card.name">{{ note }}</p>
+              }
+
               @if (card.isOrderable) {
                 @if (card.description !== null) {
                   <p class="dsc">{{ card.description }}</p>
@@ -155,6 +165,45 @@
                   </svg>
                 </button>
               </div>
+
+              <!--
+                Only once the drink is in the order: the note travels with the
+                line, and until there is a line there is nothing to write on.
+              -->
+              @if (cart.quantityOf(card.id) > 0) {
+                <div class="note-row">
+                  @if (isWritingOn(card.id)) {
+                    <input
+                      class="note-field"
+                      type="text"
+                      [id]="'note-field-' + card.id"
+                      [attr.aria-label]="'Nota para ' + card.name"
+                      [value]="cart.noteOf(card.id) ?? ''"
+                      [attr.maxlength]="noteMaxLength"
+                      placeholder="sin hielo, poco limón…"
+                      autocomplete="off"
+                      (input)="noteFor(card.id, $event)"
+                    />
+                    <button
+                      class="note-done"
+                      type="button"
+                      [attr.aria-label]="'Listo con la nota de ' + card.name"
+                      (click)="writeNoteOn(card.id)"
+                    >
+                      Listo
+                    </button>
+                  } @else {
+                    <button
+                      class="note-open"
+                      type="button"
+                      [attr.aria-label]="'Escribir una nota para ' + card.name"
+                      (click)="writeNoteOn(card.id)"
+                    >
+                      Nota
+                    </button>
+                  }
+                </div>
+              }
             }
           </li>
         }
@@ -169,10 +218,10 @@
   -->
   @if (!cart.isEmpty()) {
     <footer class="foot">
-      <p class="order" data-testid="order-summary" role="status">
-        <span>Tu pedido · {{ howMany() }}</span>
+      <a class="order" data-testid="order-summary" [routerLink]="orderLink()">
+        <span>Ver pedido · {{ howMany() }}</span>
         <span class="order-total">$ {{ orderTotal() }}</span>
-      </p>
+      </a>
     </footer>
   }
 </div>

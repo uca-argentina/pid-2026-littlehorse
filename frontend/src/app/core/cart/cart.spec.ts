@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { BrowserStore } from '../storage/browser-store';
 import { StoreInMemory } from '../storage/store-in-memory';
-import { CART_STORAGE_PREFIX, Cart } from './cart';
+import { CART_STORAGE_PREFIX, Cart, NOTE_MAX_LENGTH } from './cart';
 
 const ginTonic = { id: 'id-1', name: 'Gin Tonic', price: 4500 };
 const fernet = { id: 'id-2', name: 'Fernet con Coca', price: 4000 };
@@ -219,6 +219,132 @@ describe('Cart', () => {
       after.open('bar-alfa');
 
       expect(after.isEmpty()).toBe(true);
+    });
+  });
+
+  describe('taking a whole drink out', () => {
+    // US-10, criterion 3. The minus walks a quantity down one at a time;
+    // "Quitar" is for somebody who changed their mind about the drink itself
+    // and should not have to tap five times to say so.
+    it('removes the line whatever the quantity is', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+      cart.add(ginTonic);
+      cart.add(ginTonic);
+
+      cart.remove(ginTonic.id);
+
+      expect(cart.quantityOf(ginTonic.id)).toBe(0);
+      expect(cart.lines()).toEqual([]);
+    });
+
+    it('leaves the rest of the order alone', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+      cart.add(fernet);
+
+      cart.remove(ginTonic.id);
+
+      expect(cart.quantityOf(fernet.id)).toBe(1);
+    });
+
+    it('is still gone when the app is opened again', () => {
+      const before = aCart();
+      before.open('bar-alfa');
+      before.add(ginTonic);
+      before.remove(ginTonic.id);
+
+      const after = aCart();
+      after.open('bar-alfa');
+
+      expect(after.isEmpty()).toBe(true);
+    });
+  });
+
+  describe('the note on a drink', () => {
+    // US-10, criterion 5: "sin hielo" belongs to the drink it was written on.
+    it('is kept against the drink it was written for', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+      cart.add(fernet);
+
+      cart.setNote(ginTonic.id, 'sin hielo');
+
+      expect(cart.noteOf(ginTonic.id)).toBe('sin hielo');
+      expect(cart.noteOf(fernet.id)).toBeNull();
+    });
+
+    it('survives adding another of the same drink', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+      cart.setNote(ginTonic.id, 'sin hielo');
+
+      cart.add(ginTonic);
+
+      expect(cart.noteOf(ginTonic.id)).toBe('sin hielo');
+      expect(cart.quantityOf(ginTonic.id)).toBe(2);
+    });
+
+    // Erasing the field is taking the note back, not leaving an empty one:
+    // an empty string would reach the bar as a line with a blank remark.
+    it('is gone again when the field is left blank', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+      cart.setNote(ginTonic.id, 'sin hielo');
+
+      cart.setNote(ginTonic.id, '   ');
+
+      expect(cart.noteOf(ginTonic.id)).toBeNull();
+    });
+
+    it('loses the spaces around it', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+
+      cart.setNote(ginTonic.id, '  sin hielo  ');
+
+      expect(cart.noteOf(ginTonic.id)).toBe('sin hielo');
+    });
+
+    // The field stops at NOTE_MAX_LENGTH, but what arrives here can come from
+    // a store written by an older version, or from a paste the browser let by.
+    it('is cut to what the bar will be handed', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+
+      cart.setNote(ginTonic.id, 'x'.repeat(NOTE_MAX_LENGTH + 40));
+
+      expect(cart.noteOf(ginTonic.id)).toHaveLength(NOTE_MAX_LENGTH);
+    });
+
+    it('is still there when the app is opened again', () => {
+      const before = aCart();
+      before.open('bar-alfa');
+      before.add(ginTonic);
+      before.setNote(ginTonic.id, 'sin hielo');
+
+      const after = aCart();
+      after.open('bar-alfa');
+
+      expect(after.noteOf(ginTonic.id)).toBe('sin hielo');
+    });
+
+    // A stale screen, or two taps racing.
+    it('does nothing for a drink that is not in the order', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+
+      cart.setNote(ginTonic.id, 'sin hielo');
+
+      expect(cart.isEmpty()).toBe(true);
+      expect(cart.noteOf(ginTonic.id)).toBeNull();
     });
   });
 
