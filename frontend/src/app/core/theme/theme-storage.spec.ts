@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { BrowserStore } from '../storage/browser-store';
 import { ThemeStorage } from './theme-storage';
 
 const STORAGE_KEY = 'drinkit.theme';
@@ -9,7 +10,26 @@ class Host {
   readonly theme = inject(ThemeStorage);
 }
 
+// The runner is Node and there is no localStorage there, so a spec that
+// reached for one would fail for a reason that has nothing to do with the
+// theme. A fresh one per test also keeps a choice in one case out of the next.
+class StoreInMemory extends BrowserStore {
+  readonly entries = new Map<string, string>();
+
+  override read(key: string): string | null {
+    return this.entries.get(key) ?? null;
+  }
+
+  override write(key: string, value: string): void {
+    this.entries.set(key, value);
+  }
+}
+
+let store: StoreInMemory;
+
 async function openHost() {
+  TestBed.configureTestingModule({ providers: [{ provide: BrowserStore, useValue: store }] });
+
   const fixture = TestBed.createComponent(Host);
 
   await fixture.whenStable();
@@ -17,31 +37,11 @@ async function openHost() {
   return fixture;
 }
 
-// jsdom in this project's test environment has no working Storage: the
-// origin it renders under does not implement one. The closest a test can get
-// is a stand-in with the same shape, same as URL's createObjectURL elsewhere.
-function fakeLocalStorage(): Storage {
-  const data = new Map<string, string>();
-
-  return {
-    getItem: (key) => data.get(key) ?? null,
-    setItem: (key, value) => void data.set(key, value),
-    removeItem: (key) => void data.delete(key),
-    clear: () => data.clear(),
-    key: (index) => Array.from(data.keys())[index] ?? null,
-    get length() {
-      return data.size;
-    },
-  };
-}
-
 describe('ThemeStorage', () => {
   beforeEach(() => {
-    vi.stubGlobal('localStorage', fakeLocalStorage());
+    store = new StoreInMemory();
     document.documentElement.removeAttribute('data-theme');
   });
-
-  afterEach(() => vi.unstubAllGlobals());
 
   // The device's own light/dark preference is never read: the venue is dark
   // on purpose, and only an explicit toggle may change that.
@@ -53,7 +53,7 @@ describe('ThemeStorage', () => {
   });
 
   it('starts with what was chosen on an earlier visit', async () => {
-    localStorage.setItem(STORAGE_KEY, 'light');
+    store.entries.set(STORAGE_KEY, 'light');
 
     const fixture = await openHost();
 
@@ -70,13 +70,13 @@ describe('ThemeStorage', () => {
 
     expect(theme.theme()).toBe('light');
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('light');
+    expect(store.entries.get(STORAGE_KEY)).toBe('light');
 
     theme.toggle();
     await fixture.whenStable();
 
     expect(theme.theme()).toBe('dark');
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('dark');
+    expect(store.entries.get(STORAGE_KEY)).toBe('dark');
   });
 });
