@@ -120,6 +120,13 @@ export class NewProductPage {
   /** Dragging over the zone: what shows the drop will land. */
   protected readonly dragging = signal(false);
 
+  /**
+   * On by default, matching what a freshly created product does today. Purely
+   * visual until US-07 gives it something to switch: the form keeps the state
+   * but does not send it.
+   */
+  protected readonly isAvailable = signal(true);
+
   constructor() {
     // Reactive forms are not signal-aware, so enabling and disabling is driven
     // from here rather than bound in the template.
@@ -166,6 +173,10 @@ export class NewProductPage {
 
   protected removePhoto(): void {
     this.setPhoto(null);
+  }
+
+  protected toggleAvailability(): void {
+    this.isAvailable.update((available) => !available);
   }
 
   /** The one place a preview is made or released, so none is ever leaked. */

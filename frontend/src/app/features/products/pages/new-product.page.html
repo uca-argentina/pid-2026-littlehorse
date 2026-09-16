@@ -2,6 +2,7 @@
   <drinkit-admin-header [venueSlug]="venueSlug()" />
 
   <form class="body" [formGroup]="form" (ngSubmit)="submit()">
+    <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'products']">Volver al listado</a>
     <h1 class="title">Nuevo producto</h1>
 
     @if (store.status() === 'nameTaken') {
@@ -22,150 +23,185 @@
       </p>
     }
 
-    <div class="field">
-      <label class="label" for="name">Nombre</label>
-      <input
-        id="name"
-        class="input"
-        [class.input-bad]="nameError() !== null"
-        [attr.aria-invalid]="nameError() !== null ? 'true' : null"
-        [attr.aria-describedby]="nameError() !== null ? 'name-error' : 'name-help'"
-        formControlName="name"
-        type="text"
-        autocomplete="off"
-        placeholder="Gin Tonic"
-      />
-      @if (nameError() !== null) {
-        <p id="name-error" class="bad">{{ nameError() }}</p>
-      } @else {
-        <p id="name-help" class="help">Como aparece en la carta. Único en este boliche.</p>
-      }
-    </div>
-
-    <div class="field">
-      <label class="label" for="description">Descripción</label>
-      <textarea
-        id="description"
-        class="input input-area"
-        [class.input-bad]="descriptionError() !== null"
-        [attr.aria-invalid]="descriptionError() !== null ? 'true' : null"
-        [attr.aria-describedby]="
-          descriptionError() !== null ? 'description-error' : 'description-help'
-        "
-        formControlName="description"
-        rows="3"
-        placeholder="Gin, tónica y una rodaja de lima."
-      ></textarea>
-      @if (descriptionError() !== null) {
-        <p id="description-error" class="bad">{{ descriptionError() }}</p>
-      } @else {
-        <p id="description-help" class="help">
-          Opcional. Es lo que el cliente lee en la carta: corto, se lee en un celular, de noche y
-          apurado.
-        </p>
-      }
-    </div>
-
-    <div class="pair">
-      <div class="field">
-        <label class="label" for="price">Precio</label>
-        <div class="prefixed">
-          <span class="prefix" aria-hidden="true">$</span>
+    <div class="columns">
+      <div class="card grow">
+        <div class="field">
+          <label class="label" for="name">Nombre</label>
           <input
-            id="price"
+            id="name"
             class="input"
-            [class.input-bad]="priceError() !== null"
-            [attr.aria-invalid]="priceError() !== null ? 'true' : null"
-            [attr.aria-describedby]="priceError() !== null ? 'price-error' : null"
-            formControlName="price"
-            type="number"
-            inputmode="decimal"
-            min="0"
-            step="0.01"
-            placeholder="4500"
+            [class.input-bad]="nameError() !== null"
+            [attr.aria-invalid]="nameError() !== null ? 'true' : null"
+            [attr.aria-describedby]="nameError() !== null ? 'name-error' : 'name-help'"
+            formControlName="name"
+            type="text"
+            autocomplete="off"
+            placeholder="Gin Tonic"
           />
+          @if (nameError() !== null) {
+            <p id="name-error" class="bad">{{ nameError() }}</p>
+          } @else {
+            <p id="name-help" class="help">Como aparece en la carta. Único en este boliche.</p>
+          }
         </div>
-        @if (priceError() !== null) {
-          <p id="price-error" class="bad">{{ priceError() }}</p>
-        }
+
+        <div class="field">
+          <label class="label" for="description">Descripción</label>
+          <textarea
+            id="description"
+            class="input input-area"
+            [class.input-bad]="descriptionError() !== null"
+            [attr.aria-invalid]="descriptionError() !== null ? 'true' : null"
+            [attr.aria-describedby]="
+              descriptionError() !== null ? 'description-error' : 'description-help'
+            "
+            formControlName="description"
+            rows="3"
+            placeholder="Gin, tónica y una rodaja de lima."
+          ></textarea>
+          @if (descriptionError() !== null) {
+            <p id="description-error" class="bad">{{ descriptionError() }}</p>
+          } @else {
+            <p id="description-help" class="help">
+              Opcional. Es lo que el cliente lee en la carta: corto, se lee en un celular, de noche
+              y apurado.
+            </p>
+          }
+        </div>
+
+        <div class="pair">
+          <div class="field">
+            <label class="label" for="price">Precio</label>
+            <div class="prefixed">
+              <span class="prefix" aria-hidden="true">$</span>
+              <input
+                id="price"
+                class="input"
+                [class.input-bad]="priceError() !== null"
+                [attr.aria-invalid]="priceError() !== null ? 'true' : null"
+                [attr.aria-describedby]="priceError() !== null ? 'price-error' : null"
+                formControlName="price"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="4500"
+              />
+            </div>
+            @if (priceError() !== null) {
+              <p id="price-error" class="bad">{{ priceError() }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label class="label" for="stock">Stock</label>
+            <input
+              id="stock"
+              class="input"
+              [class.input-bad]="stockError() !== null"
+              [attr.aria-invalid]="stockError() !== null ? 'true' : null"
+              [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
+              formControlName="stock"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              placeholder="20"
+            />
+            @if (stockError() !== null) {
+              <p id="stock-error" class="bad">{{ stockError() }}</p>
+            } @else {
+              <p id="stock-help" class="help">
+                Cuántos hay para vender. En cero queda como sin stock.
+              </p>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="label" id="available-label">Disponible</span>
+          <div class="switch-row">
+            <button
+              class="sw"
+              [class.sw-off]="!isAvailable()"
+              type="button"
+              role="switch"
+              [attr.aria-checked]="isAvailable()"
+              aria-labelledby="available-label available-desc"
+              [disabled]="store.isSending()"
+              (click)="toggleAvailability()"
+            >
+              <span class="sw-knob"></span>
+            </button>
+            <span id="available-desc" class="switch-text">Se puede pedir</span>
+          </div>
+          <p class="help">
+            Apagalo cuando quieras que no aparezca mas en la menu que ve el cliente.
+          </p>
+        </div>
       </div>
 
-      <div class="field">
-        <label class="label" for="stock">Stock</label>
-        <input
-          id="stock"
-          class="input"
-          [class.input-bad]="stockError() !== null"
-          [attr.aria-invalid]="stockError() !== null ? 'true' : null"
-          [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
-          formControlName="stock"
-          type="number"
-          inputmode="numeric"
-          min="0"
-          step="1"
-          placeholder="20"
-        />
-        @if (stockError() !== null) {
-          <p id="stock-error" class="bad">{{ stockError() }}</p>
+      <div class="side">
+        <div class="card">
+          <span class="label" id="photo-label">Foto</span>
+          <label
+            class="drop"
+            [class.drop-on]="dragging()"
+            [class.drop-bad]="photoError() !== null"
+            (dragover)="dragOver($event)"
+            (dragleave)="dragLeave()"
+            (drop)="drop($event)"
+          >
+            <input
+              class="dk-sr-only"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              aria-labelledby="photo-label"
+              [attr.aria-invalid]="photoError() !== null ? 'true' : null"
+              [attr.aria-describedby]="photoError() !== null ? 'photo-error' : 'photo-help'"
+              [disabled]="store.isSending()"
+              (change)="choosePhoto($event)"
+            />
+            @if (photoPreview() !== null) {
+              <img class="drop-preview" [src]="photoPreview()" alt="Vista previa de la foto" />
+              <span class="drop-hint">Tocá para elegir otra</span>
+            } @else {
+              <span class="drop-file">Arrastrá una foto o tocá para elegirla</span>
+            }
+          </label>
+          @if (photoError() !== null) {
+            <p id="photo-error" class="bad">{{ photoError() }}</p>
+          } @else {
+            <p id="photo-help" class="help">
+              Opcional. Si no cargás ninguna, en la carta se muestra un ícono en su lugar.
+            </p>
+          }
+          @if (photoPreview() !== null) {
+            <button
+              class="link"
+              type="button"
+              [disabled]="store.isSending()"
+              (click)="removePhoto()"
+            >
+              Sacar la foto
+            </button>
+          }
+        </div>
+
+        @if (store.status() === 'imageFailed') {
+          <a class="cta" [routerLink]="['/', venueSlug(), 'staff', 'products']">Ir al listado</a>
         } @else {
-          <p id="stock-help" class="help">Cuántos hay para vender. En cero queda como sin stock.</p>
+          <button class="cta" type="submit" [disabled]="store.isSending()">
+            @if (store.isSending()) {
+              Creando
+            } @else {
+              Crear producto
+            }
+          </button>
+
+          <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'products']">Cancelar</a>
         }
       </div>
     </div>
-
-    <div class="field">
-      <span class="label" id="photo-label">Foto</span>
-      <label
-        class="drop"
-        [class.drop-on]="dragging()"
-        [class.drop-bad]="photoError() !== null"
-        (dragover)="dragOver($event)"
-        (dragleave)="dragLeave()"
-        (drop)="drop($event)"
-      >
-        <input
-          class="dk-sr-only"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          aria-labelledby="photo-label"
-          [attr.aria-invalid]="photoError() !== null ? 'true' : null"
-          [attr.aria-describedby]="photoError() !== null ? 'photo-error' : 'photo-help'"
-          [disabled]="store.isSending()"
-          (change)="choosePhoto($event)"
-        />
-        @if (photoPreview() !== null) {
-          <img class="drop-preview" [src]="photoPreview()" alt="Vista previa de la foto" />
-          <span class="drop-hint">Tocá para elegir otra</span>
-        } @else {
-          <span class="drop-file">Arrastrá una foto o tocá para elegirla</span>
-        }
-      </label>
-      @if (photoError() !== null) {
-        <p id="photo-error" class="bad">{{ photoError() }}</p>
-      } @else {
-        <p id="photo-help" class="help">
-          Opcional. Si no cargás ninguna, en la carta se muestra un ícono en su lugar.
-        </p>
-      }
-      @if (photoPreview() !== null) {
-        <button class="link" type="button" [disabled]="store.isSending()" (click)="removePhoto()">
-          Sacar la foto
-        </button>
-      }
-    </div>
-
-    @if (store.status() === 'imageFailed') {
-      <a class="cta" [routerLink]="['/', venueSlug(), 'staff', 'products']">Ir al listado</a>
-    } @else {
-      <button class="cta" type="submit" [disabled]="store.isSending()">
-        @if (store.isSending()) {
-          Creando
-        } @else {
-          Crear producto
-        }
-      </button>
-
-      <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'products']">Cancelar</a>
-    }
   </form>
 </div>

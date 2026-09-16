@@ -12,9 +12,18 @@
   flex-direction: column;
   gap: var(--dk-space-4);
   width: 100%;
-  max-width: 560px;
+
+  // Wide enough for the two columns; same figure as the listing this form
+  // came from, so the two screens read as one place.
+  max-width: 1100px;
   padding: var(--dk-space-5);
   margin: 0 auto;
+}
+
+.back {
+  align-self: flex-start;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
 }
 
 .title {
@@ -24,9 +33,49 @@
   letter-spacing: -0.02em;
 }
 
+// Form on the left, photo and actions on the right, side by side while there
+// is room for both; stacked below, where there is not.
+.columns {
+  display: flex;
+  gap: var(--dk-space-4);
+  align-items: flex-start;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  padding: var(--dk-space-5);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+}
+
+.grow {
+  flex: 1;
+  min-width: 280px;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--dk-space-4);
+  width: 360px;
+}
+
+@media (width <= 720px) {
+  .columns {
+    flex-direction: column;
+  }
+
+  .side {
+    width: 100%;
+  }
+}
+
 .field {
   display: flex;
-  flex: 1;
   flex-direction: column;
   gap: 7px;
   min-width: 160px;
@@ -41,10 +90,58 @@
 
 .label {
   color: var(--dk-text-muted);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-3);
+  padding: 9px 0;
+}
+
+// Purely visual for now: US-07 is what makes this switch mean something to
+// the customer's menu. Until then it holds its place and its state, and the
+// form does not send it.
+.sw {
+  position: relative;
+  width: 52px;
+  height: 30px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-accent);
+}
+
+.sw:disabled {
+  opacity: 0.6;
+}
+
+.sw-off {
+  background: var(--dk-border);
+}
+
+.sw-knob {
+  position: absolute;
+  top: 3px;
+  left: 25px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-ink);
+}
+
+.sw-off .sw-knob {
+  left: 3px;
+  background: var(--dk-text-faint);
+}
+
+.switch-text {
+  font-size: 16.5px;
 }
 
 .input {
@@ -57,9 +154,9 @@
   color: var(--dk-text);
   font-family: inherit;
 
-  // 16px exactly: anything smaller makes iOS Safari zoom into the field on
-  // focus, and the layout never comes back on its own.
-  font-size: 16px;
+  // Above the 16px that keeps iOS Safari from zooming into the field on
+  // focus: going bigger is still safe, only smaller is not.
+  font-size: 17px;
 }
 
 .input-area {
@@ -83,7 +180,7 @@
   display: flex;
   align-items: center;
   color: var(--dk-text-faint);
-  font-size: 16px;
+  font-size: 17px;
   pointer-events: none;
 }
 
@@ -105,15 +202,15 @@
 
 .help {
   margin: 0;
-  color: var(--dk-text-faint);
-  font-size: 12.5px;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
   line-height: 1.45;
 }
 
 .bad {
   margin: 0;
   color: var(--dk-danger);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 // The drop zone from the wireframe. A label around a hidden file input, so
@@ -125,13 +222,13 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 120px;
+  min-height: 160px;
   padding: var(--dk-space-4);
-  border: 1px dashed #4a4034;
+  border: 1px dashed var(--dk-drop-border);
   border-radius: var(--dk-radius-md);
   background: var(--dk-ink);
   color: var(--dk-text-faint);
-  font-size: 14px;
+  font-size: 15px;
   text-align: center;
   cursor: pointer;
 }
@@ -155,8 +252,8 @@
 // As the listing will show it, only bigger: same rounded square, cropped to
 // fit, so what is checked here is what the customer gets.
 .drop-preview {
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 150px;
   border: 1px solid var(--dk-border);
   border-radius: 10px;
   background: var(--dk-surface-raised);
@@ -164,7 +261,7 @@
 }
 
 .drop-hint {
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .link {
@@ -174,7 +271,7 @@
   background: none;
   color: var(--dk-text-muted);
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 14.5px;
   text-decoration: underline;
 }
 
@@ -187,7 +284,7 @@
   padding: 13px 15px;
   border: 1px solid var(--dk-border);
   border-radius: var(--dk-radius-md);
-  background: #1a1713;
+  background: var(--dk-note-surface);
   color: var(--dk-text-muted);
   font-size: 14.5px;
 }
