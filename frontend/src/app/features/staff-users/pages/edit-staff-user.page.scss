@@ -102,7 +102,7 @@
 
 .help {
   margin: 0;
-  color: var(--dk-text-faint);
+  color: var(--dk-text-muted);
   font-size: 12.5px;
 }
 
@@ -131,7 +131,7 @@
 
 .role-on {
   border-color: var(--dk-accent);
-  background: #241e14;
+  background: var(--dk-role-on-surface);
 }
 
 .radio {
@@ -159,7 +159,7 @@
   padding: 13px 15px;
   border: 1px solid var(--dk-border);
   border-radius: var(--dk-radius-md);
-  background: #1a1713;
+  background: var(--dk-note-surface);
   color: var(--dk-text-muted);
   font-size: 14.5px;
   line-height: 1.45;
@@ -207,14 +207,14 @@
   flex-direction: column;
   gap: var(--dk-space-3);
   padding: var(--dk-space-5);
-  border: 1px dashed #6b3a33;
+  border: 1px dashed var(--dk-danger-zone-border);
   border-radius: var(--dk-radius-lg);
-  background: #191612;
+  background: var(--dk-danger-zone-surface);
 }
 
 .danger-title {
   margin: 0;
-  color: #e0a79b;
+  color: var(--dk-danger-zone-title);
   font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -223,7 +223,7 @@
 
 .danger-what {
   margin: 0;
-  color: var(--dk-text-faint);
+  color: var(--dk-text-muted);
   font-size: 13.5px;
   line-height: 1.5;
 }
@@ -235,10 +235,10 @@
   align-self: flex-start;
   min-height: 50px;
   padding: 0 var(--dk-space-5);
-  border: 1px solid #6b3a33;
+  border: 1px solid var(--dk-danger-zone-border);
   border-radius: var(--dk-radius-md);
   background: none;
-  color: #c85a4a;
+  color: var(--dk-danger-zone-action);
   font-family: inherit;
   font-size: 15px;
   font-weight: 700;
