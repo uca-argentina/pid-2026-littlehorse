@@ -10,10 +10,34 @@
   border-bottom: 1px solid var(--dk-border);
 }
 
-// Pushes the account, and the menu button after it, to the far end.
+// Pushes the theme toggle, the account, and the menu button to the far end.
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-2);
+  margin-left: auto;
+}
+
 .account {
   position: relative;
-  margin-left: auto;
+}
+
+.theme-toggle {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: none;
+  color: var(--dk-text-muted);
+}
+
+.theme-toggle:hover {
+  border-color: var(--dk-text-muted);
+  color: var(--dk-text);
 }
 
 .chip {

@@ -41,7 +41,35 @@ function menuToggle(): HTMLButtonElement {
   return screen.getByLabelText(/menú/i) as HTMLButtonElement;
 }
 
+// jsdom in this project's test environment has no working Storage: the
+// origin it renders under does not implement one. The closest a test can get
+// is a stand-in with the same shape, same as URL's createObjectURL elsewhere.
+function fakeLocalStorage(): Storage {
+  const data = new Map<string, string>();
+
+  return {
+    getItem: (key) => data.get(key) ?? null,
+    setItem: (key, value) => void data.set(key, value),
+    removeItem: (key) => void data.delete(key),
+    clear: () => data.clear(),
+    key: (index) => Array.from(data.keys())[index] ?? null,
+    get length() {
+      return data.size;
+    },
+  };
+}
+
 describe('AdminHeader', () => {
+  // Isolates each test from whatever an earlier one chose, and from a real
+  // browser's own leftover choice: the device's light/dark setting is never
+  // read, only this.
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', fakeLocalStorage());
+    document.documentElement.removeAttribute('data-theme');
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
   // The two administration screens, reachable from each other: until this
   // existed, an administrator on one of them had no way to the other but the
   // address bar.
@@ -51,7 +79,7 @@ describe('AdminHeader', () => {
     expect(screen.getByRole('link', { name: /productos/i }).getAttribute('href')).toBe(
       '/bar-alfa/staff/products',
     );
-    expect(screen.getByRole('link', { name: /usuarios internos/i }).getAttribute('href')).toBe(
+    expect(screen.getByRole('link', { name: /staff/i }).getAttribute('href')).toBe(
       '/bar-alfa/staff/users',
     );
   });
@@ -76,9 +104,7 @@ describe('AdminHeader', () => {
     await harness.navigateByUrl('/bar-alfa/staff/users');
     await harness.fixture.whenStable();
 
-    expect(
-      screen.getByRole('link', { name: /usuarios internos/i }).getAttribute('aria-current'),
-    ).toBe('page');
+    expect(screen.getByRole('link', { name: /staff/i }).getAttribute('aria-current')).toBe('page');
     expect(
       screen.getByRole('link', { name: /productos/i }).getAttribute('aria-current'),
     ).toBeNull();
@@ -157,5 +183,34 @@ describe('AdminHeader', () => {
     await rendered.fixture.whenStable();
 
     expect(menuToggle().getAttribute('aria-expanded')).toBe('false');
+  });
+
+  // Dark is always where the shift starts: the device's own preference is
+  // never read, only what somebody chose here last time.
+  it('starts on the dark theme, offering to switch to light', async () => {
+    await openHeader();
+
+    const toggle = screen.getByRole('button', { name: /cambiar a tema claro/i });
+
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('switches to the light theme and back, and remembers the choice', async () => {
+    const { rendered } = await openHeader();
+
+    screen.getByRole('button', { name: /cambiar a tema claro/i }).click();
+    await rendered.fixture.whenStable();
+
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(
+      screen.getByRole('button', { name: /cambiar a tema oscuro/i }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(localStorage.getItem('drinkit.theme')).toBe('light');
+
+    screen.getByRole('button', { name: /cambiar a tema oscuro/i }).click();
+    await rendered.fixture.whenStable();
+
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 });
