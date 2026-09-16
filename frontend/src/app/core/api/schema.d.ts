@@ -21,6 +21,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/{venueSlug}/menu': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The menu a customer reads after scanning the venue's QR. */
+    get: operations['GetMenu'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/users': {
     parameters: {
       query?: never;
@@ -186,6 +203,25 @@ export interface components {
       username: string;
       role: string;
     };
+    /** @description One card of the menu, as the customer's phone receives it. */
+    MenuItemResponse: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      description: null | string;
+      imageUrl: null | string;
+      /** Format: double */
+      price: number;
+      isOrderable: boolean;
+    };
+    /**
+     * @description The venue's menu. The name travels with it because the customer scanned a
+     *     QR and never typed where they are: the screen is what tells them.
+     */
+    MenuResponse: {
+      venueName: string;
+      items: components['schemas']['MenuItemResponse'][];
+    };
     ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -256,6 +292,37 @@ export interface operations {
       };
       /** @description Unauthorized */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetMenu: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        venueSlug: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['MenuResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

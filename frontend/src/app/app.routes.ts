@@ -28,6 +28,11 @@ export const routes: Routes = [
     canActivate: [rememberVenueGuard],
     loadChildren: () => import('./features/products/products.routes').then((m) => m.productsRoutes),
   },
+  // The customer's door: what the venue's QR points at.
+  {
+    path: ':venueSlug/menu',
+    loadChildren: () => import('./features/menu/menu.routes').then((m) => m.menuRoutes),
+  },
   {
     path: ':venueSlug/staff',
     canActivate: [rememberVenueGuard],

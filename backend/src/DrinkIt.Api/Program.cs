@@ -84,6 +84,7 @@ app.UseMiddleware<VenueResolutionMiddleware>();
 app.UseAuthorization();
 
 app.MapLogin();
+app.MapMenu();
 app.MapStaffUsers();
 app.MapProducts();
 

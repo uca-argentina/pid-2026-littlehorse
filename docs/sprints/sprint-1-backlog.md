@@ -85,11 +85,12 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-06 | Cargar un trago en la carta | US-01 | ✅ **Terminada** |
 | US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
 | US-08 | Corregir y sacar tragos | US-06 | Pendiente |
-| US-09 | Ver la carta desde el celular | US-06 | Pendiente |
-| US-10 | Armar el pedido | US-09 | Pendiente |
+| US-09 | Ver la carta desde el celular | US-06 | ✅ **Terminada** |
+| US-10 | Armar el pedido | US-09 | **4 de 5** — falta la aclaración por trago |
 | US-11 | Confirmar el pedido | US-10 | Pendiente |
 | US-12 | Seguir mi pedido | US-11 | Pendiente |
 | US-13 | Encontrar a alguien en el listado | US-03 | ✅ **Terminada** |
+| US-14 | Agrupar la carta por categoría | US-06, US-09 | Pendiente — planificada el 2026-09-15 |
 
 Las doce primeras son imprescindibles: cubren los seis puntos de la consigna y nada más.
 US-13 es la excepción, y entró por pedido del equipo el 2026-09-14 después de estar
@@ -116,6 +117,23 @@ entidad se llama `Product` porque la carta también vende botellas, el stock es 
 en cero el producto queda agotado solo, y la foto se sube como archivo en vez de pegar un
 enlace— y la cabecera de administración con pestañas, que reemplazó a la pantalla de inicio
 de `/staff`. Quedan US-07 y US-08 en el carril de la carta, y todo el carril del cliente.
+
+**Estado al miércoles 16 de septiembre.** Arrancó el carril del cliente, que era el que no
+había empezado. US-09 cerró: quien escanea el QR abre `/{venueSlug}/menu` y lee la carta sin
+cuenta, sin login y sin instalar nada, con buscador y el nombre real del boliche. US-10 va
+4 de 5, todo resuelto desde la misma pantalla: el `+` de cada tarjeta, el `−` con la cantidad
+en lo que ya está pedido, y la barra dorada de abajo con el resumen y el total. El pedido a
+medio armar vive en el navegador por boliche, así que sobrevive a que atiendan un llamado.
+
+Dos cosas salieron de ahí y no eran de ninguna story. Una regla de multi-tenancy estaba
+escrita a medias: el middleware daba prioridad al token siempre, también en rutas públicas,
+así que un administrador que abría la carta de otro boliche recibía los tragos del suyo bajo
+el nombre del otro. Ahora en un endpoint anónimo gana el slug y en uno de personal gana el
+token. Y apareció `BrowserStore`, la costura que el almacenamiento del navegador no tenía:
+está en *Deuda anotada* por qué conviene que los dos servicios viejos también la usen.
+
+Quedan seis: US-07 y US-08 cierran la carta del administrador, US-11 y US-12 cierran el
+pedido, y US-14 son las categorías. El camino crítico es el pedido.
 
 ---
 
@@ -453,6 +471,61 @@ foto, o cuya foto no carga, muestra el ícono de `public/images` en su lugar.
   debajo de 13 píxeles.
 - Los tragos agotados se distinguen de los disponibles a simple vista.
 
+**Decisiones tomadas el 2026-09-15, antes de construirla.**
+
+| Tema | Cómo queda |
+|---|---|
+| Dirección del QR | `/{venueSlug}/menu`. Deja `/{venueSlug}` libre por si más adelante hace falta una bienvenida antes de la carta. |
+| Encabezado | El nombre real del boliche, que la respuesta de la carta devuelve junto con los tragos. Hasta ahora la app sólo conocía el slug. |
+| Buscador | **Entra, y no era un criterio.** Lo pidió el equipo hoy. Es un elemento más de una pantalla que se construye de cero y no toca nada ya cerrado, así que va acá adentro en vez de en una ficha aparte. Filtra en el navegador sobre la carta ya cargada, sin endpoint nuevo. |
+| Precio | `$ 4.500,00`, formato argentino con los dos decimales siempre. |
+| Categorías | **No entran acá.** Están en el wireframe y no en los criterios, y la categoría vive en `Product`, no en la carta. Es US-14. |
+
+✅ **Terminada.** Los cinco criterios están cumplidos y con prueba de punta a punta que abre
+la dirección del QR sin sesión. Es la primera pantalla de la app que no es de personal: no
+hay guardián de sesión, no se crea nada en el navegador, y hay un test que lo verifica
+leyendo el almacenamiento después de mirar la carta.
+
+> **Lo que la carta no cuenta.** La respuesta del cliente no lleva el stock ni el motivo por
+> el que algo no se puede pedir. Un trago agotado y uno que el boliche apagó esta noche se
+> ven iguales desde el teléfono, que es todo lo que necesita saber quien pide. Hay un test
+> que revisa que la palabra *stock* no aparezca en la respuesta.
+>
+> **Un slug que no existe da 404**, distinto de un boliche que existe y todavía no cargó
+> nada, que da lista vacía. En el teléfono son dos pantallas completamente distintas y el
+> criterio 5 depende de esa diferencia.
+
+### US-14 · Agrupar la carta por categoría
+
+> **Como** cliente
+> **quiero** que la carta esté separada en tragos, cervezas y sin alcohol
+> **para** encontrar lo que busco sin recorrer la lista entera.
+
+**Depende de:** US-06 y US-09.
+
+**Criterios de aceptación**
+
+1. **Dado** que cargo un trago, **cuando** completo el formulario, **entonces** tengo que
+   elegir una categoría entre tragos, cervezas y sin alcohol.
+2. **Dado** que abro la carta, **cuando** miro arriba, **entonces** tengo una solapa por
+   categoría más una de *Todos*, y la carta abre en *Todos*.
+3. **Dado** que elijo una solapa, **cuando** miro la carta, **entonces** sólo quedan los de
+   esa categoría, agotados incluidos.
+4. **Dado** que había tragos cargados antes de que existieran las categorías, **cuando**
+   abro la carta, **entonces** aparecen en *Tragos*.
+
+> **Por qué ficha propia.** Se pidió el 2026-09-15, mientras se planificaba US-09. No es un
+> criterio de US-09 y tampoco entra reabriendo US-06: la categoría es una columna nueva en
+> `Product`, con su migración y un campo más en el alta, o sea trabajo sobre una story ya
+> construida y cerrada. Mismo tratamiento que US-13.
+>
+> **Decidido:** lista fija en el código, como el enum de roles, sin tabla de categorías ni
+> texto libre. Obligatoria al cargar, y la migración le pone *Tragos* a lo que ya esté
+> cargado. Las solapas del cliente van sin conteo, a diferencia de las de administración,
+> porque así lo dibuja el wireframe del cliente.
+>
+> **Se construye después de US-09**, no antes: la carta tiene que estar caminando primero.
+
 ### US-10 · Armar el pedido
 
 > **Como** cliente
@@ -474,6 +547,19 @@ foto, o cuya foto no carga, muestra el ícono de `public/images` en su lugar.
    **entonces** mi pedido sigue armado como lo dejé.
 5. **Dado** que mi pedido está vacío, **cuando** miro la pantalla, **entonces** no puedo
    avanzar a confirmar.
+
+**4 de 5, todo desde la carta.** Se construyó el `+` de cada tarjeta, el `−` con la cantidad
+en los tragos que ya están en el pedido, y la barra de abajo con el resumen y el total. Con
+eso quedan cumplidos los criterios 1, 2, 4 y 5. Falta el 3, la aclaración por trago, que
+necesita la pantalla del pedido.
+
+| Decisión | Cómo queda |
+|---|---|
+| Dónde vive el pedido a medio armar | En el navegador, con una clave por boliche. Sobrevive a que atiendan un llamado o cierren la pestaña, que es el criterio 4, y el pedido de un local nunca aparece en otro. Cuando exista el pedido de verdad, en US-11, se muda al servidor. |
+| Qué hace la barra de abajo | Nada, todavía. Tiene el aspecto exacto del wireframe, dorada y con el total, pero dice "Tu pedido" y no "Ver pedido": la pantalla del pedido no existe, y el dorado invita a tocar. Cambia una palabra cuando esa pantalla llegue. |
+| Cambiar cantidades | Desde la tarjeta de la carta, con el `−`, la cantidad y el `+`. Aparecen recién cuando el trago está en el pedido, y sacar el último lo saca del pedido en vez de dejar una línea en cero. |
+| El botón de usuario del encabezado | **No entra.** Llevaría a un login de cliente, y las cuentas de cliente están fuera del Sprint 1 porque la consigna pide expresamente poder pedir sin cuenta. Además el criterio 2 de US-09 está construido y con prueba de que la carta no ofrece iniciar sesión. |
+| Tocar dos veces el mismo trago | Sube la cantidad de esa línea, no abre una segunda. |
 
 ### US-11 · Confirmar el pedido
 
@@ -554,8 +640,6 @@ story que lo necesita.
 
 **Sigue pendiente:**
 
-- **Autorización por rol en el backend.** La necesita el criterio 6 de US-03. Hoy el único
-  endpoint que existe es el de ingreso, y ninguno usa `RequireAuthorization`.
 - **Los de punta a punta en la CI.** Playwright ya está instalado y cubre el ingreso, pero la
   suite se corre a mano: ese job necesita SQL Server y el backend en el runner, y es una
   decisión aparte.
@@ -568,6 +652,28 @@ story que lo necesita.
   blobs, y su cadena de conexión en `ImageStorage__ConnectionString`. Es el único recurso
   fuera de los tiers gratuitos; el detalle está en la adenda del
   [ADR-0007](../adr/0007-hosting-en-azure-a-costo-cero.md). Va con `infra/`.
+
+**Deuda anotada, no urgente.**
+
+- **Tres lugares nombran el almacenamiento del navegador.** Desde el 2026-09-15 existe
+  `core/storage/browser-store.ts`, que envuelve `localStorage` en un `try/catch` y es
+  inyectable, así que un test le puede pasar un almacén de mentira y probar de verdad que
+  algo se guarda. El carrito ya lo usa. `SessionStorage` y `LastVenue` siguen con su propio
+  `try/catch` copiado adentro, de cuando no había costura.
+
+  No hay nada roto: los tres funcionan, y el `try/catch` está porque una ventana de incógnito
+  o un navegador que bloquea datos de sitio tiran al acceder. Lo que falta es que la idea
+  esté escrita una sola vez, y que esos dos tengan la prueba de persistencia que hoy no
+  tienen: sus tests pasan igual si el navegador se traga todo.
+
+  **`LastVenue` es quince minutos**: dos métodos, tres usos, nadie le inyecta nada.
+  **`SessionStorage` es la que cuesta**, y no por el `try/catch` sino porque guarda en
+  `sessionStorage` y no en `localStorage`, a propósito — la tablet de la barra es compartida
+  y una sesión no debe sobrevivir a la pestaña. `BrowserStore` hoy sabe un solo
+  almacenamiento, así que primero hay que decidir si maneja los dos o si son dos servicios.
+  Cuelga de ahí toda la autenticación, así que se revisa con más cuidado.
+
+  **Después del hito**, y en ese orden. Si aparece un cuarto lugar, deja de ser prolijidad.
 
 **Ya está hecho y no se rehace.** Del backend: el modelo de local y de personal, el
 aislamiento entre locales con su prueba, la base con su migración, la API armada

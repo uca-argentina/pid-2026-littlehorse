@@ -17,5 +17,8 @@ export const ProblemTypes = {
   /** Taking this account away would leave the venue unable to administer itself. */
   lastAdministrator: 'urn:drinkit:problem:staff:last-administrator',
 
+  /** The address belongs to no venue. A wrong QR, not a network that dropped. */
+  venueNotFound: 'urn:drinkit:problem:venue:not-found',
+
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 } as const;
