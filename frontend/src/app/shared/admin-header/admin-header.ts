@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SessionStorage } from '../../core/auth/session-storage';
 import { SignOutFlow } from '../../core/auth/sign-out-flow';
 import { staffRoleName } from '../../core/staff/staff-roles';
+import { ThemeStorage } from '../../core/theme/theme-storage';
 import { VenueBrand } from '../venue-brand/venue-brand';
 
 /**
@@ -32,6 +33,8 @@ export class AdminHeader {
   private readonly signOut = inject(SignOutFlow);
 
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  protected readonly theme = inject(ThemeStorage);
 
   /** From the path. Bound by the router, so the header never asks for a venue. */
   readonly venueSlug = input.required<string>();
