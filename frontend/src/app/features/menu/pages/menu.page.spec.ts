@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { CART_STORAGE_PREFIX, Cart } from '../../../core/cart/cart';
+import { BrowserStore } from '../../../core/storage/browser-store';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { menuUrl } from '../menu.service';
@@ -41,7 +42,11 @@ const carta: Menu = {
 async function openScreen() {
   const rendered = await render(MenuPage, {
     inputs: { venueSlug: 'bar-alfa' },
-    providers: [provideHttpClient(), provideHttpClientTesting()],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: BrowserStore, useValue: store },
+    ],
   });
 
   return { rendered, http: TestBed.inject(HttpTestingController) };
@@ -60,10 +65,30 @@ function names(): string[] {
   return screen.getAllByRole('listitem').map((card) => card.querySelector('h2')?.textContent ?? '');
 }
 
+/**
+ * What the browser would remember, as a Map. The runner is Node and there is no
+ * localStorage there, so a spec that reached for one would fail for a reason
+ * that has nothing to do with the menu. A fresh one per test also keeps an
+ * order built in one case out of the next.
+ */
+class StoreInMemory extends BrowserStore {
+  readonly entries = new Map<string, string>();
+
+  override read(key: string): string | null {
+    return this.entries.get(key) ?? null;
+  }
+
+  override write(key: string, value: string): void {
+    this.entries.set(key, value);
+  }
+}
+
+let store: StoreInMemory;
+
 describe('MenuPage', () => {
-  // The order outlives the tab on purpose, so it outlives a test too unless it
-  // is cleared: one case here leaves a drink in it for the next one otherwise.
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    store = new StoreInMemory();
+  });
 
   // Criterion 1: the venue of the QR, and not a venue picked from a screen.
   it('asks for the menu of the venue in the address', async () => {
@@ -309,7 +334,7 @@ describe('MenuPage', () => {
      * shows an order it did not watch being built.
      */
     it('shows an order that was already there when it opened', async () => {
-      localStorage.setItem(
+      store.entries.set(
         `${CART_STORAGE_PREFIX}bar-alfa`,
         JSON.stringify([
           { productId: 'id-1', name: 'Gin Tonic', unitPrice: 4500, quantity: 2, note: null },

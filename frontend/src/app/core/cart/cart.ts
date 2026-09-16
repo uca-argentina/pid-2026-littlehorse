@@ -1,4 +1,5 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { BrowserStore } from '../storage/browser-store';
 
 /** One drink in the order, with however many of it were asked for. */
 export interface CartLine {
@@ -33,6 +34,8 @@ export const CART_STORAGE_PREFIX = 'drinkit.cart.';
  */
 @Injectable({ providedIn: 'root' })
 export class Cart {
+  private readonly store = inject(BrowserStore);
+
   private readonly venue = signal<string | null>(null);
 
   private readonly stored = signal<CartLine[]>([]);
@@ -53,7 +56,7 @@ export class Cart {
     if (this.venue() === venueSlug) return;
 
     this.venue.set(venueSlug);
-    this.stored.set(read(venueSlug));
+    this.stored.set(this.read(venueSlug));
   }
 
   /**
@@ -109,24 +112,20 @@ export class Cart {
 
     if (venueSlug === null) return;
 
-    try {
-      localStorage.setItem(CART_STORAGE_PREFIX + venueSlug, JSON.stringify(lines));
-    } catch {
-      // A private window, a browser blocking site data, storage that is full.
-      // Losing the order when the tab closes is bad; a menu that refuses to
-      // work at all is worse, and the signal above already holds it for now.
-    }
+    this.store.write(CART_STORAGE_PREFIX + venueSlug, JSON.stringify(lines));
   }
-}
 
-function read(venueSlug: string): CartLine[] {
-  try {
-    const stored = localStorage.getItem(CART_STORAGE_PREFIX + venueSlug);
+  private read(venueSlug: string): CartLine[] {
+    const stored = this.store.read(CART_STORAGE_PREFIX + venueSlug);
 
-    return stored === null ? [] : (JSON.parse(stored) as CartLine[]);
-  } catch {
-    // Nothing there, or something half-written by an older version of the app.
-    // Starting clean beats rendering an order nobody can explain.
-    return [];
+    if (stored === null) return [];
+
+    try {
+      return JSON.parse(stored) as CartLine[];
+    } catch {
+      // Something half-written, or left by an older version of the app.
+      // Starting clean beats rendering an order nobody can explain.
+      return [];
+    }
   }
 }

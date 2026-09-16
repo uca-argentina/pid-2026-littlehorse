@@ -1,21 +1,58 @@
 import { TestBed } from '@angular/core/testing';
+import { BrowserStore } from '../storage/browser-store';
 import { CART_STORAGE_PREFIX, Cart } from './cart';
 
 const ginTonic = { id: 'id-1', name: 'Gin Tonic', price: 4500 };
 const fernet = { id: 'id-2', name: 'Fernet con Coca', price: 4000 };
 
-function aCart(): Cart {
+/**
+ * What the browser would remember, as a Map. The runner is Node and there is
+ * no localStorage there, so a spec that reached for one would fail for a reason
+ * that has nothing to do with the cart.
+ */
+class StoreInMemory extends BrowserStore {
+  readonly entries = new Map<string, string>();
+
+  override read(key: string): string | null {
+    return this.entries.get(key) ?? null;
+  }
+
+  override write(key: string, value: string): void {
+    this.entries.set(key, value);
+  }
+}
+
+/**
+ * A browser that forgets: a private window, a full quota. BrowserStore turns
+ * every one of those into a write that goes nowhere, which is what reaches the
+ * cart.
+ */
+class StoreThatForgets extends BrowserStore {
+  override read(): string | null {
+    return null;
+  }
+
+  override write(): void {
+    // Swallowed, exactly as the real one does.
+  }
+}
+
+let store: StoreInMemory;
+
+/** A cart that survived the app being closed keeps whatever the store holds. */
+function aCart(browserStore: BrowserStore = store): Cart {
   TestBed.resetTestingModule();
+  TestBed.configureTestingModule({
+    providers: [{ provide: BrowserStore, useValue: browserStore }],
+  });
 
   return TestBed.inject(Cart);
 }
 
 describe('Cart', () => {
-  beforeEach(() => localStorage.clear());
-
-  // One case below breaks localStorage on purpose, and without this the next
-  // test inherits a browser that cannot store anything.
-  afterEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    store = new StoreInMemory();
+  });
 
   it('starts with nothing in it', () => {
     const cart = aCart();
@@ -108,28 +145,30 @@ describe('Cart', () => {
     cart.open('bar-alfa');
     cart.add(ginTonic);
 
-    expect(localStorage.getItem(`${CART_STORAGE_PREFIX}bar-alfa`)).not.toBeNull();
-    expect(localStorage.getItem(`${CART_STORAGE_PREFIX}bar-beta`)).toBeNull();
+    expect(store.entries.has(`${CART_STORAGE_PREFIX}bar-alfa`)).toBe(true);
+    expect(store.entries.has(`${CART_STORAGE_PREFIX}bar-beta`)).toBe(false);
   });
 
   /**
    * A private window, a browser set to block site data, storage that is full.
    * Losing the order is bad; a menu that will not render at all is worse.
    */
-  it('still works when the browser refuses to store anything', () => {
-    const cart = aCart();
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('storage is full');
-    });
+  /**
+   * Losing the order when the tab closes is bad; a menu that refuses to work at
+   * all is worse. What is on screen this visit still holds.
+   */
+  it('still works when the browser forgets everything', () => {
+    const cart = aCart(new StoreThatForgets());
 
     cart.open('bar-alfa');
     cart.add(ginTonic);
 
     expect(cart.count()).toBe(1);
+    expect(cart.total()).toBe(4500);
   });
 
   it('starts clean when what was stored cannot be read back', () => {
-    localStorage.setItem(`${CART_STORAGE_PREFIX}bar-alfa`, 'no es json');
+    store.entries.set(`${CART_STORAGE_PREFIX}bar-alfa`, 'no es json');
 
     const cart = aCart();
     cart.open('bar-alfa');
