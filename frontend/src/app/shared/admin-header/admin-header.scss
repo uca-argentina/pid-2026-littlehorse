@@ -10,16 +10,10 @@
   border-bottom: 1px solid var(--dk-border);
 }
 
-// Pushes the theme toggle, the account, and the menu button to the far end.
-.controls {
-  display: flex;
-  align-items: center;
-  gap: var(--dk-space-2);
-  margin-left: auto;
-}
-
+// Pushes the account, and the menu button after it, to the far end.
 .account {
   position: relative;
+  margin-left: auto;
 }
 
 .chip {

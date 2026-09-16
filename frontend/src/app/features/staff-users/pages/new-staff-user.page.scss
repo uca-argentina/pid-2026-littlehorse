@@ -36,7 +36,7 @@
 .label {
   padding: 0;
   color: var(--dk-text-muted);
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -51,9 +51,9 @@
   color: var(--dk-text);
   font-family: inherit;
 
-  // Above the 16px that keeps iOS Safari from zooming into the field on
-  // focus: going bigger is still safe, only smaller is not.
-  font-size: 17px;
+  // 16px exactly: anything smaller makes iOS Safari zoom into the field on
+  // focus, and the layout never comes back on its own.
+  font-size: 16px;
 }
 
 // Holds the eye on top of the field instead of beside it, so the password lines
@@ -85,15 +85,15 @@
 
 .help {
   margin: 0;
-  color: var(--dk-text-muted);
-  font-size: 13.5px;
+  color: var(--dk-text-faint);
+  font-size: 12.5px;
   line-height: 1.45;
 }
 
 .bad {
   margin: 0;
   color: var(--dk-danger);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .roles {
@@ -113,7 +113,7 @@
 
 .role-on {
   border-color: var(--dk-accent);
-  background: var(--dk-role-on-surface);
+  background: #241e14;
 }
 
 // The native control, kept and only resized: it is what makes the group
@@ -127,7 +127,7 @@
 
 .role-name {
   display: block;
-  font-size: 16.5px;
+  font-size: 15.5px;
   font-weight: 700;
 }
 
@@ -135,7 +135,7 @@
   display: block;
   margin-top: 2px;
   color: var(--dk-text-muted);
-  font-size: 14px;
+  font-size: var(--dk-text-min);
 }
 
 .note {
@@ -143,7 +143,7 @@
   padding: 13px 15px;
   border: 1px solid var(--dk-border);
   border-radius: var(--dk-radius-md);
-  background: var(--dk-note-surface);
+  background: #1a1713;
   color: var(--dk-text-muted);
   font-size: 14.5px;
 }

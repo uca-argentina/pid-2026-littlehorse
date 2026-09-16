@@ -339,28 +339,4 @@ describe('NewProductPage', () => {
       '/bar-alfa/staff/products',
     );
   });
-
-  // Purely visual until US-07 gives it something to switch: on by default,
-  // toggleable, and not part of what gets sent.
-  it('shows the availability switch on by default, and it does not send it yet', async () => {
-    const { rendered, create } = await openScreen();
-    const toggle = screen.getByRole('switch', { name: /disponible/i });
-
-    expect(toggle.getAttribute('aria-checked')).toBe('true');
-
-    toggle.click();
-    await rendered.fixture.whenStable();
-    expect(toggle.getAttribute('aria-checked')).toBe('false');
-
-    fillAGinTonic();
-    save();
-
-    expect(create).toHaveBeenCalledWith({
-      name: 'Gin Tonic',
-      description: 'Gin, tónica y una rodaja de lima.',
-      imageUrl: null,
-      price: 4500,
-      stock: 20,
-    });
-  });
 });

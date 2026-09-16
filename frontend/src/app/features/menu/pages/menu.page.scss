@@ -44,9 +44,15 @@
   line-height: 1.08;
 }
 
-// The component carries its own look; only its position in this row is ours.
-drinkit-theme-toggle {
-  margin-left: auto;
+.sub {
+  margin: 3px 0 0;
+  color: var(--dk-text-muted);
+
+  // The wireframe draws this at 12px. The story's own rules forbid anything
+  // under 13: it is read at night, at arm's length, in a hurry.
+  font-size: var(--dk-text-min);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .body {
@@ -68,7 +74,7 @@ drinkit-theme-toggle {
   border: 1px solid var(--dk-border-subtle);
   border-radius: 14px;
   background: var(--dk-surface);
-  color: var(--dk-text-muted);
+  color: #9c9187;
 }
 
 .term {
@@ -94,7 +100,7 @@ drinkit-theme-toggle {
 }
 
 .term::placeholder {
-  color: var(--dk-text-muted);
+  color: #9c9187;
 }
 
 .list {
@@ -109,8 +115,8 @@ drinkit-theme-toggle {
 .card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px;
+  gap: 14px;
+  padding: 12px;
   border: 1px solid var(--dk-border-subtle);
   border-radius: 14px;
   background: var(--dk-surface);
@@ -123,11 +129,11 @@ drinkit-theme-toggle {
 }
 
 .thumb {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
   border: 1px solid var(--dk-border);
-  border-radius: 13px;
+  border-radius: 11px;
   background: var(--dk-surface-raised);
   object-fit: cover;
 }
@@ -139,7 +145,7 @@ drinkit-theme-toggle {
 
 .name {
   margin: 0;
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 600;
   line-height: 1.12;
 }
@@ -147,48 +153,30 @@ drinkit-theme-toggle {
 .dsc {
   margin: 1px 0 0;
   color: var(--dk-text-muted);
-  font-size: 14px;
+  font-size: var(--dk-text-min);
 }
 
 .price {
   margin: 4px 0 0;
   color: var(--dk-accent);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-// Stacked, not in a row: +, count, - top to bottom. Uses less width than a
-// row, which is the column that matters on a phone this narrow.
 .qty {
   display: flex;
-  flex-direction: column;
   flex-shrink: 0;
   align-items: center;
-  gap: 6px;
-}
-
-// DOM order stays step, count, add (the minus and count only exist once
-// something is in the order, the plus is always there); this only reorders
-// how it paints.
-.step {
-  order: 3;
-}
-
-.count {
-  order: 2;
-}
-
-.add {
-  order: 1;
+  gap: 8px;
 }
 
 // The quiet half of the stepper, from the cart wireframe: bordered, not filled.
 // Taking one out is never the thing a menu is inviting anybody to do.
 .step {
   display: flex;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--dk-border);
@@ -205,12 +193,12 @@ drinkit-theme-toggle {
   font-variant-numeric: tabular-nums;
 }
 
-// Solid gold, same 42px as .step so the pair reads as one control. The only
-// thing on a card that does something, so it is the only thing that is gold.
+// Traced from the wireframe: 44px, radius 13, solid gold. The only thing on a
+// card that does something, so it is the only thing on a card that is gold.
 .add {
   display: flex;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;

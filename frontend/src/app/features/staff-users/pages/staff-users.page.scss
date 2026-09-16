@@ -103,8 +103,8 @@
 }
 
 .pill-on {
-  border-color: var(--dk-pill-on-border);
-  background: var(--dk-pill-on-surface);
+  border-color: #5a4e42;
+  background: #2a2318;
   color: var(--dk-text);
   font-weight: 600;
 }
@@ -195,7 +195,7 @@
   padding: 13px 15px;
   border: 1px solid var(--dk-border);
   border-radius: var(--dk-radius-md);
-  background: var(--dk-note-surface);
+  background: #1a1713;
   color: var(--dk-text-muted);
   font-size: 14.5px;
 }
@@ -208,7 +208,7 @@
 
 .hint {
   margin: auto 0 0;
-  color: var(--dk-text-muted);
+  color: var(--dk-text-faint);
   font-size: 14px;
   line-height: 1.55;
 }

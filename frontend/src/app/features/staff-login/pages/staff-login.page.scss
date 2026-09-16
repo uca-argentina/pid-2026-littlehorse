@@ -46,12 +46,12 @@
 .alert-bad {
   border: 1px solid var(--dk-danger);
   background: var(--dk-danger-surface);
-  color: var(--dk-danger-alert-text);
+  color: #f2c9ba;
 }
 
 .alert-info {
   border: 1px solid var(--dk-border);
-  background: var(--dk-note-surface);
+  background: #1a1713;
   color: var(--dk-text-muted);
 }
 
@@ -130,7 +130,7 @@
   font-weight: 700;
 
   &:disabled {
-    background: var(--dk-accent-disabled);
+    background: #8a7038;
   }
 }
 

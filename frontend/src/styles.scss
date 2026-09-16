@@ -6,11 +6,9 @@
 // otherwise the same gold ends up defined three slightly different ways.
 
 :root {
-  // Surfaces, darkest to lightest. Dark is still the default everywhere and
-  // it stays that way unless a person on an administration screen opts into
-  // the light palette below: the app is used at night, in a dark room, and a
-  // light screen blinds the person holding it, so the switch never follows
-  // the device's own light/dark setting — only ThemeStorage's own choice.
+  // Surfaces, darkest to lightest. The app is dark by design, not by theme:
+  // it is used at night, in a dark room, and a light screen blinds the person
+  // holding it.
   --dk-ink: #12100e; // page background
   --dk-surface: #1e1a16; // cards, inputs on top of the page
   --dk-surface-raised: #272219; // thumbnails and wells inside a card
@@ -24,32 +22,15 @@
   --dk-icon-faint: #6b5f51;
 
   // The single accent. Everything actionable is this gold, and nothing that
-  // is not actionable uses it. Kept the same in both palettes: it is the
-  // brand, not a surface.
+  // is not actionable uses it.
   --dk-accent: #e0b65c;
   --dk-accent-hover: #efce8a;
-  --dk-accent-disabled: #8a7038;
   --dk-on-accent: #12100e; // text placed on top of the accent
 
   // Feedback. Not in the wireframes, which only draw the happy path, so these
   // are chosen to sit inside the same palette.
   --dk-danger: #e07a5c;
   --dk-danger-surface: #2a1b16;
-  --dk-danger-alert-text: #f2c9ba; // body copy on --dk-danger-surface
-
-  // A handful of surfaces and borders that recur across screens with the same
-  // meaning (an inline note, an "on" pill, a picked role, a drop zone, the
-  // deactivate zone) but were hand-picked hex before there was a second
-  // palette to keep them in step with.
-  --dk-note-surface: #1a1713;
-  --dk-pill-on-surface: #2a2318;
-  --dk-pill-on-border: #5a4e42;
-  --dk-role-on-surface: #241e14;
-  --dk-drop-border: #4a4034;
-  --dk-danger-zone-border: #6b3a33;
-  --dk-danger-zone-surface: #191612;
-  --dk-danger-zone-title: #e0a79b;
-  --dk-danger-zone-action: #c85a4a;
 
   // Type. Instrument Serif carries venue and product names, Karla everything
   // else. The design system's third face, IBM Plex Mono, arrives with the
@@ -77,37 +58,6 @@
   --dk-text-min: 13px;
 
   color-scheme: dark;
-}
-
-// The light palette. Opt-in only, through the sun/moon toggle in
-// AdminHeader — never through prefers-color-scheme, so a device set to light
-// mode does not silently flip a customer's or the KDS's screen. ThemeStorage
-// stamps data-theme on <html>; this is the only place that reacts to it.
-:root[data-theme='light'] {
-  --dk-ink: #faf6ef;
-  --dk-surface: #fff;
-  --dk-surface-raised: #f1ebe0;
-  --dk-border: #ddd2c1;
-  --dk-border-subtle: #e8e0d2;
-  --dk-text: #201a13;
-  --dk-text-muted: #5c5248;
-  --dk-text-faint: #8a7d6c;
-  --dk-icon-faint: #9c8f7d;
-  --dk-accent-disabled: #d9c295;
-  --dk-danger: #b3492c;
-  --dk-danger-surface: #fbe3da;
-  --dk-danger-alert-text: #7a2f1c;
-  --dk-note-surface: #f1ebe0;
-  --dk-pill-on-surface: #ece2d0;
-  --dk-pill-on-border: #c9b8a0;
-  --dk-role-on-surface: #f3e6cd;
-  --dk-drop-border: #c9b8a0;
-  --dk-danger-zone-border: #dba99a;
-  --dk-danger-zone-surface: #fdf1ec;
-  --dk-danger-zone-title: #963d26;
-  --dk-danger-zone-action: #a8422c;
-
-  color-scheme: light;
 }
 
 *,

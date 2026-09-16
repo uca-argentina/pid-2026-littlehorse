@@ -5,7 +5,6 @@ import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { Cart } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
-import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
 import { menuUrl } from '../menu.service';
 import type { Menu, MenuItem } from '../menu.service';
 
@@ -36,7 +35,6 @@ interface MenuCard {
  */
 @Component({
   selector: 'drinkit-menu-page',
-  imports: [ThemeToggle],
   styleUrl: './menu.page.scss',
   templateUrl: './menu.page.html',
 })

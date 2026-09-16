@@ -1,5 +1,5 @@
-import type { APIRequestContext, Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 
 /**
@@ -94,7 +94,7 @@ test.describe('Staff users', () => {
     // The way in is the tab in the header, not a typed address: an
     // administrator who has to be told the URL has no administration screen
     // at all.
-    await page.getByRole('link', { name: /staff/i }).click();
+    await page.getByRole('link', { name: /usuarios internos/i }).click();
     await expect(page).toHaveURL(new RegExp(`${staffUsersPath}$`));
 
     await page.getByRole('link', { name: /nuevo usuario/i }).click();
