@@ -86,7 +86,7 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-08 | Corregir y sacar tragos           | US-06        | Pendiente                                                             |
 | US-09 | Ver la carta desde el celular     | US-06        | ✅ **Terminada**                                                      |
 | US-10 | Armar el pedido                   | US-09        | **Terminada** — a falta de prueba a mano                              |
-| US-11 | Confirmar el pedido               | US-10        | Pendiente                                                             |
+| US-11 | Confirmar el pedido               | US-10        | **Terminada** — a falta de prueba a mano                              |
 | US-12 | Seguir mi pedido                  | US-11        | Pendiente                                                             |
 | US-13 | Encontrar a alguien en el listado | US-03        | ✅ **Terminada**                                                      |
 | US-14 | Agrupar la carta por categoría    | US-06, US-09 | Pendiente — planificada el 2026-09-15                                 |
