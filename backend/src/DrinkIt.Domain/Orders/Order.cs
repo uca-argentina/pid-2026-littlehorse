@@ -35,16 +35,21 @@ public sealed class Order : IBelongsToVenue
     /// <summary>Room for a full name on a ticket, and no more.</summary>
     public const int CustomerNameMaxLength = 60;
 
-    private readonly List<OrderItem> _items;
+    private readonly List<OrderItem> _items = [];
 
-    private Order(Guid id, Guid venueId, string customerName, OrderCode code, List<OrderItem> items)
+    /// <summary>
+    /// The lines are filled in afterwards rather than taken here: EF Core reads
+    /// a row back through this constructor and cannot hand a navigation to a
+    /// parameter, so a constructor that asked for them would make the aggregate
+    /// unloadable.
+    /// </summary>
+    private Order(Guid id, Guid venueId, string customerName, OrderCode code)
     {
         Id = id;
         VenueId = venueId;
         CustomerName = customerName;
         Code = code;
         Status = OrderStatus.Cart;
-        _items = items;
     }
 
     public Guid Id { get; }
@@ -82,12 +87,11 @@ public sealed class Order : IBelongsToVenue
         if (items.Count == 0) throw new DomainException(ErrorCodes.Empty, "An order with nothing in it cannot be placed.");
         if (items.Select(item => item.ProductId).Distinct().Count() != items.Count) throw new DomainException(ErrorCodes.DuplicateItem, "Each drink goes on one line, with a quantity beside it.");
 
-        return new Order(
-            Guid.CreateVersion7(),
-            venueId,
-            cleanName,
-            code,
-            [.. items.Select(ToItem)]);
+        Order order = new(Guid.CreateVersion7(), venueId, cleanName, code);
+
+        order._items.AddRange(items.Select(ToItem));
+
+        return order;
     }
 
     /// <summary>
