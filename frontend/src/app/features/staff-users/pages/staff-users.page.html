@@ -1,0 +1,86 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <section class="body">
+    <div class="bar">
+      <h1 class="title">Staff</h1>
+      <a class="cta" routerLink="new">Nuevo usuario</a>
+    </div>
+
+    <div class="filters">
+      <div class="field">
+        <label class="dk-sr-only" for="search">Buscar usuario</label>
+        <input
+          id="search"
+          class="search"
+          type="search"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="Buscar usuario"
+          [value]="search()"
+          (input)="searchFor($event)"
+        />
+      </div>
+
+      <div class="tabs">
+        @for (tab of roleTabs(); track tab.filter) {
+          <button
+            class="pill"
+            type="button"
+            [class.pill-on]="roleFilter() === tab.filter"
+            [attr.aria-pressed]="roleFilter() === tab.filter"
+            (click)="narrowTo(tab.filter)"
+          >
+            {{ tab.name }} · {{ tab.count }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (staff.isLoading()) {
+      <p class="note" role="status">Cargando el equipo…</p>
+    }
+
+    @if (failure() === 'forbidden') {
+      <p class="note note-bad" role="alert">
+        Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que te
+        la vuelva a dar.
+      </p>
+    } @else if (failure() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos traer el equipo. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    @if (isEmpty()) {
+      <p class="note" role="status">Todavía no hay nadie cargado en este boliche.</p>
+    }
+
+    @if (nothingMatches()) {
+      <p class="note" role="status">Ningún usuario coincide con lo que buscaste.</p>
+    }
+
+    @if (rows().length > 0) {
+      <ul class="rows">
+        @for (row of rows(); track row.id) {
+          <li class="row" [class.row-off]="!row.isActive">
+            <span class="username">{{ row.username }}</span>
+            <span class="chip" [class.chip-admin]="row.roleName === 'Administrador'">
+              {{ row.roleName }}
+            </span>
+            @if (!row.isActive) {
+              <span class="chip chip-off">Dado de baja</span>
+            }
+            <a class="edit" [routerLink]="['/', venueSlug(), 'staff', 'users', row.id]">Editar</a>
+          </li>
+        }
+      </ul>
+    }
+
+    <p class="hint">
+      Cuando alguien deja de trabajar acá lo das de baja, no lo borrás: los pedidos que preparó
+      siguen apuntando a su usuario.
+    </p>
+  </section>
+</div>

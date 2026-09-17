@@ -27,7 +27,7 @@ erDiagram
         guid venue_id FK "NOT NULL - siempre pertenece a un local"
         nvarchar username UK "unico por venue"
         nvarchar password_hash
-        tinyint role "Administrator | Bartender"
+        int role "Administrator | Kds | Waiter"
         bit is_active "baja logica del ABM"
         datetime2 created_at
     }
@@ -192,7 +192,7 @@ Está en el diseño funcional y **se modela más adelante**, no ahora:
 | `PushSubscription` | Las notificaciones se simulan con cambios de estado. |
 | `BarStation` | Una sola barra en el MVP; el KDS no se reparte por estación. |
 | `PaymentMethod`, pasarela | El pago se simula. |
-| Rol `Cashier`, rol `Waiter` | La consigna fija Administrador y Bartender. |
+| Rol `Cashier` | Este sprint es sólo retiro en barra, y la caja llega con el efectivo. |
 
 Caso aparte, `CUSTOMER`: **la tabla está en el modelo, el login no se construye todavía.**
 La consigna pide explícitamente que el cliente pueda pedir sin cuenta y sólo exige

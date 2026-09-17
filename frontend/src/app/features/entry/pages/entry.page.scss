@@ -1,0 +1,44 @@
+.frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: var(--dk-space-5);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  align-items: center;
+  width: 420px;
+  max-width: 100%;
+  padding: var(--dk-space-6);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+  text-align: center;
+}
+
+.mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.title {
+  margin: 0;
+  font-size: 30px;
+}
+
+.text {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}

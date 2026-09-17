@@ -22,11 +22,18 @@ Un recorrido completo involucra al cliente en su celular, al bartender en la tab
 veces al cajero o al mozo. Modelalo con **varios browser contexts en el mismo test**, cada
 uno con su propio estado y viewport:
 
-    const cliente = await browser.newContext({ ...devices['iPhone 13'] });
-    const tablet  = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const customer = await browser.newContext({ ...devices['iPhone 13'] });
+    const tablet   = await browser.newContext({ viewport: { width: 1280, height: 800 } });
 
 Así el test verifica de verdad la coordinación en tiempo real entre pantallas, que es
 exactamente donde esta app puede romperse.
+
+## Nombres
+
+Igual que los unitarios del frontend: el `describe` nombra el sujeto y el `test` completa la
+oración, en minúscula y sin `should` — `test('opens the staff area for the seeded
+administrator')`. No se usa `Sujeto_Escenario_ResultadoEsperado`: ese formato es del backend,
+donde hay un método bajo prueba que nombrar. Ver `CLAUDE.md`.
 
 ## Selectores
 
@@ -54,10 +61,13 @@ Cero `waitForTimeout`. Usá los auto-waits de Playwright y asserts con `expect()
 ## Datos de test
 
 Cada spec crea sus propios datos vía API (no clickeando toda la UI para llegar al estado
-inicial) y limpia lo suyo. Los tests corren en paralelo: nunca dependan de datos
-compartidos ni del orden de ejecución.
+inicial) y limpia lo suyo. Nunca dependan de datos compartidos ni del orden de ejecución:
+hoy corren con un solo worker porque `ng serve` no aguanta varios (ver el comentario en
+`playwright.config.ts`), pero eso va a cambiar cuando corran contra el build de producción, y
+un test que asume orden se rompe justo ese día.
 
 ## Cuando un spec falla
 
-Leé el trace (`npx playwright show-trace`) antes de tocar el test. Si el test es correcto y
-la app está mal, el bug es de la app — no relajes el assert para que pase. Decilo.
+Leé el trace (`pnpm --prefix frontend exec playwright show-trace`) antes de tocar el test.
+Si el test es correcto y la app está mal, el bug es de la app — no relajes el assert para
+que pase. Decilo.

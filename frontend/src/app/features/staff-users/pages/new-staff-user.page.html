@@ -1,0 +1,111 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <form class="body" [formGroup]="form" (ngSubmit)="submit()">
+    <h1 class="title">Nuevo usuario interno</h1>
+
+    @if (store.status() === 'usernameTaken') {
+      <p class="note note-bad" role="alert">
+        Ya hay alguien con ese usuario en este boliche. Elegí otro.
+      </p>
+    }
+
+    @if (store.status() === 'passwordTooShort') {
+      <p class="note note-bad" role="alert">
+        La contraseña es demasiado corta. Tienen que ser al menos ocho caracteres.
+      </p>
+    }
+
+    @if (store.status() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos guardarlo. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    <div class="field">
+      <label class="label" for="username">Usuario</label>
+      <input
+        id="username"
+        class="input"
+        [class.input-bad]="usernameError() !== null"
+        [attr.aria-invalid]="usernameError() !== null ? 'true' : null"
+        [attr.aria-describedby]="usernameError() !== null ? 'username-error' : 'username-help'"
+        formControlName="username"
+        type="text"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
+        placeholder="martin.p"
+      />
+      @if (usernameError() !== null) {
+        <p id="username-error" class="bad">{{ usernameError() }}</p>
+      } @else {
+        <p id="username-help" class="help">
+          Con esto entra. Tiene que ser único en este venue; en otro local puede existir el mismo
+          nombre.
+        </p>
+      }
+    </div>
+
+    <div class="field">
+      <label class="label" for="password">Contraseña</label>
+      <div class="peeked">
+        <input
+          id="password"
+          class="input"
+          [class.input-bad]="passwordError() !== null"
+          [attr.aria-invalid]="passwordError() !== null ? 'true' : null"
+          [attr.aria-describedby]="passwordError() !== null ? 'password-error' : 'password-help'"
+          formControlName="password"
+          [type]="passwordType()"
+          autocomplete="new-password"
+          placeholder="Mínimo ocho caracteres"
+        />
+        <drinkit-password-eye [(visible)]="passwordVisible" [disabled]="store.isSending()" />
+      </div>
+      @if (passwordError() !== null) {
+        <p id="password-error" class="bad">{{ passwordError() }}</p>
+      } @else {
+        <p id="password-help" class="help">
+          Se la das en mano. Si se la olvida no se puede recuperar: le generás una nueva.
+        </p>
+      }
+    </div>
+
+    <fieldset
+      class="field roles"
+      [attr.aria-invalid]="roleError() !== null ? 'true' : null"
+      [attr.aria-describedby]="roleError() !== null ? 'role-error' : null"
+    >
+      <legend class="label">Rol</legend>
+      @for (option of roles; track option.role) {
+        <label class="role" [class.role-on]="form.controls.role.value === option.role">
+          <input
+            class="radio"
+            formControlName="role"
+            type="radio"
+            name="role"
+            [value]="option.role"
+          />
+          <span>
+            <span class="role-name">{{ option.name }}</span>
+            <span class="role-does">{{ option.does }}</span>
+          </span>
+        </label>
+      }
+      @if (roleError() !== null) {
+        <p id="role-error" class="bad">{{ roleError() }}</p>
+      }
+    </fieldset>
+
+    <button class="cta" type="submit" [disabled]="store.isSending()">
+      @if (store.isSending()) {
+        Creando
+      } @else {
+        Crear usuario
+      }
+    </button>
+
+    <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'users']">Cancelar</a>
+  </form>
+</div>

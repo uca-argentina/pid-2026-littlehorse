@@ -1,0 +1,14 @@
+<div class="frame">
+  <section class="card">
+    <drinkit-venue-brand [venue]="venueSlug()" />
+
+    <h1 class="title">Hola, {{ username() }}</h1>
+    <p class="role">{{ roleName() }}</p>
+
+    <p class="alert" role="status">
+      Todavía no hay pantallas para tu rol. La cola de la barra llega en el próximo sprint.
+    </p>
+
+    <drinkit-sign-out [venueSlug]="venueSlug()" />
+  </section>
+</div>

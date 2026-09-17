@@ -1,0 +1,122 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <section class="body">
+    <div class="bar">
+      <h1 class="title">Productos</h1>
+      <a class="cta" routerLink="new">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        <span>Nuevo producto</span>
+      </a>
+    </div>
+
+    <div class="filters">
+      <div class="field">
+        <label class="dk-sr-only" for="search">Buscar producto</label>
+        <input
+          id="search"
+          class="search"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Buscar producto"
+          [value]="search()"
+          (input)="searchFor($event)"
+        />
+      </div>
+
+      <div class="pills">
+        @for (pill of pills(); track pill.filter) {
+          <button
+            class="pill"
+            type="button"
+            [class.pill-on]="stockFilter() === pill.filter"
+            [attr.aria-pressed]="stockFilter() === pill.filter"
+            (click)="narrowTo(pill.filter)"
+          >
+            {{ pill.name }} · {{ pill.count }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (products.isLoading()) {
+      <p class="note" role="status">Cargando la carta…</p>
+    }
+
+    @if (failure() === 'forbidden') {
+      <p class="note note-bad" role="alert">
+        Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que te
+        la vuelva a dar.
+      </p>
+    } @else if (failure() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos traer la carta. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    @if (isEmpty()) {
+      <p class="note" role="status">
+        Todavía no hay ningún producto cargado. Cuando cargues el primero, el cliente lo va a ver en
+        la carta.
+      </p>
+    }
+
+    @if (nothingMatches()) {
+      <p class="note" role="status">Ningún producto coincide con lo que buscaste.</p>
+    }
+
+    @if (rows().length > 0) {
+      <ul class="rows">
+        @for (row of rows(); track row.id) {
+          <li class="row" [class.row-off]="!row.isActive" [attr.aria-label]="row.name">
+            <img
+              class="thumb"
+              [src]="row.imageUrl"
+              [alt]="row.name"
+              loading="lazy"
+              (error)="showPlaceholder($event)"
+            />
+            <span class="about">
+              <span class="name">{{ row.name }}</span>
+              @if (row.description !== null) {
+                <span class="description">{{ row.description }}</span>
+              }
+            </span>
+            <span class="price">{{ row.price }}</span>
+            <span class="stock" [class.stock-out]="row.isSoldOut">
+              @if (row.isSoldOut) {
+                Sin stock
+              } @else {
+                {{ row.stock }} en stock
+              }
+            </span>
+            @if (!row.isAvailable) {
+              <span class="chip">Apagado</span>
+            }
+            @if (!row.isActive) {
+              <span class="chip chip-off">Dado de baja</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <p class="hint">
+      Cuando el stock llega a cero el producto queda agotado solo y el cliente no lo puede pedir.
+      Cuando saques algo de la carta para siempre, lo das de baja: no se borra, porque los pedidos
+      viejos lo siguen necesitando.
+    </p>
+  </section>
+</div>

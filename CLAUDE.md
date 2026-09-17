@@ -16,6 +16,7 @@ leé también su consigna en `docs/sprints/` — define el alcance del sprint.
 | Backend | .NET 10 · Minimal APIs · EF Core · SignalR |
 | Frontend | Angular 22 (standalone + signals) · PWA (`@angular/service-worker`) |
 | Base de datos | Azure SQL (SQL Server local vía Docker para dev) |
+| Archivos | Azure Blob Storage para las fotos de la carta (Azurite local vía Docker para dev) |
 | Hosting | Azure Container Apps (API) + Static Web Apps (PWA) — ver ADR-0007 |
 | CI/CD | GitHub Actions · OIDC hacia Azure (sin secretos de larga vida) |
 
@@ -26,13 +27,14 @@ backend/
   src/
     DrinkIt.Domain/          # Entidades, value objects, reglas. CERO dependencias externas.
     DrinkIt.Application/     # Casos de uso (handlers), puertos (interfaces), DTOs.
-    DrinkIt.Infrastructure/  # EF Core, pasarela de pago, Web Push, SignalR, impresora.
+    DrinkIt.Infrastructure/  # EF Core, Blob Storage, pasarela de pago, Web Push, SignalR, impresora.
     DrinkIt.Api/             # Minimal API endpoints, DI, middleware. Capa fina.
   tests/
     DrinkIt.Domain.Tests/         # Unitarios puros, sin mocks, rapidísimos.
     DrinkIt.Application.Tests/    # Unitarios con dobles de prueba de los puertos.
+    DrinkIt.Infrastructure.Tests/ # Lógica de infraestructura sin servicios externos.
     DrinkIt.Api.IntegrationTests/ # WebApplicationFactory + Testcontainers.
-    DrinkIt.ArchitectureTests/    # NetArchTest: las reglas de abajo son ejecutables.
+    DrinkIt.ArchitectureTests/    # Reflexion sobre los ensamblados; las reglas de abajo son ejecutables.
 frontend/
   src/app/
     core/       # Servicios singleton, interceptors, guards.
@@ -51,19 +53,44 @@ docs/
 ## Comandos
 
 ```bash
+# Base de datos local — ANTES de correr la API
+docker compose up -d                    # SQL Server en localhost,1433 y Azurite (blobs) en :10000
+docker compose down                     # apagarla; el volumen conserva los datos
+
 # Backend
 dotnet test backend/DrinkIt.slnx                    # todos los tests
 dotnet test backend/tests/DrinkIt.Domain.Tests     # loop rápido de TDD
 dotnet format backend/DrinkIt.slnx --verify-no-changes
-dotnet run --project backend/src/DrinkIt.Api
+dotnet run --project backend/src/DrinkIt.Api        # necesita la base levantada
 
-# Frontend
-npm --prefix frontend run test          # Vitest, unitarios
-npm --prefix frontend run test:watch    # loop rápido de TDD
-npm --prefix frontend run lint
-npm --prefix frontend run e2e           # Playwright
-npm --prefix frontend start
+# Frontend — pnpm, no npm: la versión sale de "packageManager" en package.json
+pnpm --prefix frontend test             # Vitest en watch, loop rápido de TDD
+pnpm --prefix frontend run test:ci      # una sola pasada, lo que corre la CI
+pnpm --prefix frontend run lint
+pnpm --prefix frontend run format:check
+pnpm --prefix frontend start
+
+# Punta a punta — Playwright. Necesita la base levantada y nada más: la API y el
+# ng serve los arranca la prueba, y reutiliza los que ya estén corriendo.
+pnpm --prefix frontend run e2e          # sin ventana, lo que se corre normalmente
+pnpm --prefix frontend run e2e:headed   # viendo el navegador
+pnpm --prefix frontend run e2e:ui       # modo interactivo, para depurar un test
 ```
+
+**La API no arranca sin la base.** La cadena de conexión apunta a `localhost,1433` con las
+credenciales del `docker-compose.yml`. En Development se aplica las migraciones y siembra el
+boliche y el administrador sola: no hay que correr `dotnet ef database update` a mano.
+
+El mismo `docker compose` levanta **Azurite** (emulador de Blob Storage) para las fotos de los
+productos. La API arranca sin él, pero subir una foto falla hasta que esté corriendo. La foto
+se sirve desde `127.0.0.1:10000` directo al navegador, nunca a través de la API.
+
+Los tests son otra cosa y **no** usan ese contenedor: los de integración levantan el suyo con
+Testcontainers y lo tiran al terminar, así que sólo necesitan Docker corriendo.
+
+Los de punta a punta sí usan la base local: manejan un navegador contra la API y los datos
+que siembra Development. La primera vez hay que bajar el navegador con
+`pnpm --prefix frontend run e2e:install`. Todavía no corren en la CI.
 
 ## Regla de dependencias (verificada por `DrinkIt.ArchitectureTests`)
 
@@ -123,7 +150,7 @@ Decidido el 2026-09-03: la plataforma es multi-tenant aunque arranquemos con un 
 Esto **no** significa construir la administración de boliches ahora — significa que el modelo
 lo permite sin una migración dolorosa después.
 
-- Todo agregado raíz lleva `VenueId`: `Order`, `Drink`, `Table`, `VipAccount`, `BarStation`
+- Todo agregado raíz lleva `VenueId`: `Order`, `Product`, `Table`, `VipAccount`, `BarStation`
   y los usuarios internos.
 - Un **global query filter** de EF Core aplica el filtro solo. Nadie escribe ese `WHERE` a
   mano, así que nadie se lo puede olvidar.
@@ -147,21 +174,47 @@ lo permite sin una migración dolorosa después.
 No escribas implementación sin un test que la exija. Si te pido una feature, arrancá por el
 test. Si no tenés claro el comportamiento esperado, preguntá antes de inventar el assert.
 
-Nombres de test: `Method_Scenario_ExpectedResult`
-(`MarkAsReady_WhenOrderIsQueued_ThrowsInvalidTransition`).
+Nombres de test, y son dos convenciones distintas a propósito:
+
+- **Backend (xUnit)**: `Method_Scenario_ExpectedResult` —
+  `MarkAsReady_WhenOrderIsQueued_ThrowsInvalidTransition`. Hay un método bajo prueba y el
+  nombre empieza nombrándolo.
+- **Frontend (Vitest)**: `describe` nombra el sujeto e `it` completa la oración, en minúscula
+  y sin `should` — `it('cannot be submitted while the form is empty')`, que el runner imprime
+  como `StaffLoginPage > cannot be submitted while the form is empty`.
+
+No es inconsistencia: en un test de componente **no hay un método bajo prueba**. Forzar el
+formato de C# obliga a inventar un primer segmento, y lo que sale es el label del botón o un
+`Render_` que no dice nada. La disciplina es la misma en los dos casos — el nombre tiene que
+decir el escenario y el resultado esperado —; lo que cambia es la sintaxis.
 
 ## Convenciones
 
 - **Todo el código en inglés, sin excepciones.** Clases, métodos, variables, nombres de
-  tabla y columna, **nombres de archivo**, ramas, commits, mensajes de log, y **los
-  comentarios dentro de archivos de código y configuración** (`.cs`, `.ts`, `.props`,
-  `.csproj`, `.ps1`, `.json`, `.gitignore`, `.gitattributes`, workflows de CI).
-- **Sólo se escribe en español la documentación**: `docs/`, `README.md`, `CLAUDE.md` y los
-  archivos de `.claude/`. Si un archivo lo lee el compilador o una herramienta, va en inglés;
-  si lo lee una persona para entender el proyecto, va en español.
+  tabla y columna, **nombres de archivo**, mensajes de log, **los literales de texto y los
+  datos de prueba**, y **los comentarios dentro de archivos de código y configuración**
+  (`.cs`, `.ts`, `.props`, `.csproj`, `.ps1`, `.json`, `.gitignore`, `.gitattributes`,
+  workflows de CI).
+  - **Las rutas también van en inglés** (`/:venueSlug/staff/login`, no `/personal/ingresar`).
+    Una ruta la lee el router, no una persona: es código.
+  - La única excepción son los textos que **ve el usuario final** en la PWA, que van en
+    español porque el cliente está en un boliche argentino.
+  - **No montamos i18n.** Decidido el 2026-09-11: esos textos van escritos directo en las
+    plantillas de Angular, sin archivos de traducción. La app tiene un solo idioma y un solo
+    país, y la infraestructura de traducción costaría más de lo que resuelve. Si alguna vez
+    hay un segundo idioma, se monta ahí. Lo que **no** cambia: nada de español en `.ts`, `.cs`
+    ni en los `id` del DOM — sólo en el texto que se renderiza.
+- **Sólo se escribe en español la documentación**: `docs/`, `README.md`, `CLAUDE.md`, los
+  archivos de `.claude/`, **los mensajes de commit** y **la descripción de las ramas**. Si
+  un archivo lo lee el compilador o una herramienta, va en inglés; si lo lee una persona
+  para entender el proyecto, va en español.
 - Los documentos de diseño están en español, así que usá **siempre** el glosario de abajo
   para traducir. No inventes sinónimos: si el glosario dice `Order`, no escribas `Purchase`.
-- Commits: Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`).
+- Commits: Conventional Commits (`feat:`, `fix:`, `test:`, `refactor:`, `chore:`). El
+  prefijo y el scope son parte del formato y van en inglés; **el título y el cuerpo se
+  escriben en español**. Un commit explica *por qué* se hizo el cambio, y eso lo lee el
+  equipo, no el compilador: vale la misma regla que para `docs/`. El código que el mensaje
+  menciona conserva su nombre real (`LoginHandler`, no "el manejador de login").
 - Angular: componentes `standalone`, `signal()` para estado, `inject()` en vez de constructor
   injection, control flow nuevo (`@if`, `@for`). Nada de `NgModule` nuevo, nada de `any`,
   nada de `subscribe()` sin `takeUntilDestroyed`.
@@ -169,8 +222,8 @@ Nombres de test: `Method_Scenario_ExpectedResult`
   `if (name is null) return false;`. Nunca la variante de dos líneas sin llaves
   (`if (x)` y abajo la sentencia indentada): esa es la que produce el bug de agregar
   una segunda línea que parece estar adentro del `if` y no lo está.
-- **No escribas `ChangeDetectionStrategy.OnPush`: desde Angular 22 es el default.** Escribirlo
-  es ruido. Lo que sí hay que justificar en la revisión es un `ChangeDetectionStrategy.Eager`
+- **No escribas `standalone: true` ni `ChangeDetectionStrategy.OnPush`: los dos son el default.**
+  Escribirlos es ruido. Lo que sí hay que justificar en la revisión es un `ChangeDetectionStrategy.Eager`
   (la estrategia vieja, antes llamada `Default`): si aparece uno, preguntá por qué.
 - Para traer datos usá la **Resource API** (`httpResource()`, `resource()`, `rxResource()`),
   estable desde v22. Te da los estados de carga y error como signals, que es exactamente lo
@@ -187,14 +240,20 @@ falta, preguntá antes de inventar el término.
 |---|---|---|---|---|
 | Pedido | `Order` | | Boliche | `Venue` |
 | Ítem del pedido | `OrderItem` | | Barra / estación | `BarStation` |
-| Trago | `Drink` | | Ticket | `Ticket` |
+| Trago / producto | `Product` | | Ticket | `Ticket` |
 | Menú | `Menu` | | Cliente | `Customer` |
 | Mesa | `Table` | | Cajero | `Cashier` |
-| Cuenta VIP | `VipAccount` | | Bartender | `Bartender` |
+| Cuenta VIP | `VipAccount` | | KDS (estación de barra) | `Kds` |
 | Saldo | `Balance` | | Mozo | `Waiter` |
 | Método de pago | `PaymentMethod` | | Retiro en barra | `BarPickup` |
 | Efectivo | `Cash` | | Entrega en mesa | `TableDelivery` |
 | Pago digital | `DigitalPayment` | | Suscripción push | `PushSubscription` |
+| Usuario interno | `StaffUser` | | Rol | `StaffRole` |
+| Administrador | `Administrator` | | Baja lógica | `IsActive` |
+
+> **`Product`, no `Drink`.** Decidido el 2026-09-14: la carta vende tragos pero también
+> botellas, y el nombre tiene que cubrir las dos cosas. Los docs siguen diciendo "trago"
+> porque así lo dice la consigna; en el código es siempre `Product`.
 
 **Estados de `Order`** (§5 del diseño funcional):
 `Cart` · `AwaitingPayment` · `Paid` · `Queued` · `InPreparation` · `Ready` · `Delivered` · `Canceled`
@@ -233,7 +292,11 @@ feature  ──PR──►  dev  ──PR──►  main
   repo en GitHub, así ningún PR apunta a `main` por descuido.
 - `<prefijo>/<issue>-descripcion-corta` — sale de `dev` y vuelve a `dev` por PR.
 
-Prefijos: `feat/`, `fix/`, `chore/`, `refactor/`, `test/`.
+Prefijos: `feat/`, `fix/`, `chore/`, `refactor/`, `test/`. **El prefijo es la parte
+reservada y va siempre en inglés; la descripción que sigue se escribe en español**
+(`feat/12-autenticacion-de-personal`). Sin tildes ni `ñ`: el nombre de una rama viaja por
+URLs, nombres de archivo y consolas de tres sistemas operativos, y ahí un carácter no ASCII
+sólo trae problemas. Escribí `anio`, no `año`.
 
 > Hay **un solo ambiente** en Azure, alimentado desde `main`
 > ([ADR-0007](docs/adr/0007-hosting-en-azure-a-costo-cero.md)). Mantener un staging aparte
@@ -251,24 +314,10 @@ La rama se borra después del merge.
 acto**. Si eso se saltea, el arreglo desaparece en el próximo merge de `dev` a `main` y el
 bug vuelve a producción.
 
-> **Fase actual — bootstrap.** Se trabaja **directo en `main`**, por dos razones: un PR que
-> ningún check puede gatear no aporta nada, y el scaffolding de un stack son decenas de
-> archivos generados que nadie revisa de verdad.
->
-> El corte es verificable, no interpretable: **el bootstrap termina cuando los dos workflows
-> de CI están en verde** — `ci-backend.yml` (✅ ya) y `ci-frontend.yml` (pendiente) —, o sea
-> cuando backend y frontend compilan, pasan lint y corren sus tests desde una máquina limpia.
-> Ahí se crea `dev`, se la marca como rama por defecto en GitHub, y desde ese momento rige
-> todo lo de arriba.
->
-> La primera feature vertical —un endpoint real consumido por una pantalla real— **no** es
-> parte del bootstrap: es el primer PR a `dev`. Conviene que sea así: un primer PR chico y
-> revisable instala mejor hábito que uno con cuarenta archivos autogenerados.
-
 ## Definition of Done
 
 Una feature está lista cuando: tests unitarios verdes · test de integración si toca la DB
-o un servicio externo · `dotnet format` y `npm run lint` limpios · sin bajar la cobertura ·
+o un servicio externo · `dotnet format` y `pnpm run lint` limpios · sin bajar la cobertura ·
 tests de arquitectura verdes · si es una pantalla del flujo principal, tiene spec de Playwright.
 
 ## Cosas que NO tenés que hacer sin que te lo pida

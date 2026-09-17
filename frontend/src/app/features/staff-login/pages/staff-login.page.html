@@ -1,0 +1,75 @@
+<div class="frame">
+  <form class="card" [formGroup]="form" (ngSubmit)="submit()">
+    <drinkit-venue-brand [venue]="venueSlug()" />
+
+    @if (store.status() === 'sessionExpired') {
+      <h1 class="title">Se terminó tu sesión</h1>
+      <p class="subtitle">Pasaron ocho horas desde que entraste.</p>
+    } @else {
+      <h1 class="title">Iniciá tu turno</h1>
+      <p class="subtitle">Entrá con el usuario que te dio el administrador.</p>
+    }
+
+    @if (store.status() === 'invalidCredentials') {
+      <p id="login-error" class="alert alert-bad" role="alert">Usuario o contraseña incorrectos.</p>
+    }
+
+    @if (store.status() === 'unreachable') {
+      <p class="alert alert-bad" role="alert">
+        No pudimos conectarnos. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    @if (store.status() === 'sessionExpired') {
+      <p class="alert alert-info" role="status">
+        Volvé a entrar para seguir trabajando. No perdiste nada de lo que hiciste.
+      </p>
+    }
+
+    <div class="field">
+      <label class="label" for="username">Usuario</label>
+      <input
+        id="username"
+        class="input"
+        [class.input-bad]="store.status() === 'invalidCredentials'"
+        [attr.aria-invalid]="store.status() === 'invalidCredentials' ? 'true' : null"
+        [attr.aria-describedby]="store.status() === 'invalidCredentials' ? 'login-error' : null"
+        formControlName="username"
+        type="text"
+        autocomplete="username"
+        autocapitalize="none"
+        spellcheck="false"
+        placeholder="Tu usuario"
+      />
+    </div>
+
+    <div class="field">
+      <label class="label" for="password">Contraseña</label>
+      <div class="peeked">
+        <input
+          id="password"
+          class="input"
+          [class.input-bad]="store.status() === 'invalidCredentials'"
+          [attr.aria-invalid]="store.status() === 'invalidCredentials' ? 'true' : null"
+          [attr.aria-describedby]="store.status() === 'invalidCredentials' ? 'login-error' : null"
+          formControlName="password"
+          [type]="passwordType()"
+          autocomplete="current-password"
+          placeholder="Tu contraseña"
+        />
+        <drinkit-password-eye [(visible)]="passwordVisible" [disabled]="store.isSending()" />
+      </div>
+    </div>
+
+    <button class="cta" type="submit" [disabled]="!canSubmit()">
+      @if (store.isSending()) {
+        <span class="spinner" aria-hidden="true"></span>
+        Entrando
+      } @else if (store.status() === 'sessionExpired') {
+        Entrar de nuevo
+      } @else {
+        Entrar
+      }
+    </button>
+  </form>
+</div>

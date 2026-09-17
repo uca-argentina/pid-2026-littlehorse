@@ -1,0 +1,214 @@
+// The administration screens are the first ones that are not a single centred
+// card: this is a tablet or a laptop in an office, not a phone behind the bar.
+// The palette and the radii stay the same so it still reads as one product.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 900px;
+  padding: var(--dk-space-5);
+  margin: 0 auto;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 50px;
+  padding: 0 var(--dk-space-5);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 15.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cta:hover {
+  background: var(--dk-accent-hover);
+}
+
+// Search on one line with the role tabs while there is room, stacked when there
+// is not: this screen is used on a laptop and on the tablet behind the bar.
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+}
+
+.field {
+  display: flex;
+  min-width: 260px;
+  flex: 1;
+}
+
+.search {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // 16px exactly: anything smaller makes iOS Safari zoom into the field on
+  // focus, and the layout never comes back on its own.
+  font-size: 16px;
+}
+
+.search::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-2);
+}
+
+.pill {
+  padding: 9px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.pill-on {
+  border-color: var(--dk-pill-on-border);
+  background: var(--dk-pill-on-surface);
+  color: var(--dk-text);
+  font-weight: 600;
+}
+
+.pill:hover:not(.pill-on) {
+  color: var(--dk-text);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  padding: 13px var(--dk-space-4);
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+}
+
+// Half-faded rather than hidden: they still have to be readable to be brought
+// back, and legible enough that nobody mistakes one for an active account.
+.row-off {
+  opacity: 0.65;
+}
+
+.username {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, 'SF Mono', menlo, monospace;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.chip {
+  padding: 5px 11px;
+  border: 1.5px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  color: var(--dk-text-muted);
+  font-size: var(--dk-text-min);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// The one role that can change the venue's data, so it is the one that gets
+// the accent. Everything else stays neutral.
+.chip-admin {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}
+
+.chip-off {
+  color: var(--dk-text-faint);
+}
+
+// Quiet: correcting somebody is not what an administrator opens this screen to
+// do, so it never competes with the gold of "Nuevo usuario".
+.edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  color: var(--dk-text);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.edit:hover {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.hint {
+  margin: auto 0 0;
+  color: var(--dk-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
