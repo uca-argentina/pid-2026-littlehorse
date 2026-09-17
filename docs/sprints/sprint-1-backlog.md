@@ -596,6 +596,48 @@ líneas, la aclaración por trago, el subtotal y el total. Falta la prueba a man
 > **Nota:** el pago está simulado en este sprint, como habilita la consigna. Por eso confirmar
 > equivale a pagar.
 
+**Terminada.** Es la primera story que crea un pedido de verdad: hasta acá el pedido vivía en
+el navegador. `POST /{venueSlug}/orders` es anónimo como la carta —el boliche sale del slug
+del QR— y el cliente camina carta → pedido → `/{venueSlug}/checkout` → `/{venueSlug}/orders/A-1234`.
+
+| Decisión | Cómo queda |
+|---|---|
+| El pago | Simulado, como habilita la consigna ("los pagos pueden simularse mediante cambios de estado"). No hay pasarela y no se integra ninguna. "Pagar" muestra dos segundos de "procesando" y el pedido queda pago. |
+| Los dos segundos | Un piso, no una siesta: se espera lo que tarde la API o dos segundos, lo que sea más largo. Sin eso la pantalla salta de un toque al código y se lee como que no pasó nada. |
+| Métodos de pago | Los tres del wireframe. **Pago digital** elegido; **Efectivo en caja** y **Saldo de la mesa** dibujados y apagados. Están fuera del sprint, y una pantalla que gana dos filas después es una que hay que aprender dos veces. Pedirlos por API se responde, no se ignora. |
+| El código del pedido | **`A-1234`**: una letra, guion y cuatro dígitos. Corre en orden por boliche —`A-0000` … `A-9999`, después `B-0000`— y a los 260.000 vuelve a empezar. El guion separa la letra de los números, así la O de `O-0000` sólo puede ser la letra y sirve el abecedario entero. |
+| Quién reparte el código | La base, con un `UPDATE` condicional sobre el contador del boliche: "movete de K-4821 a K-4822, pero sólo si seguís en K-4821". Es la única forma de cumplir el criterio 4, y no se puede en memoria. |
+| Estado al confirmar | `Paid` y enseguida `Queued`. La pantalla dice "ya está pago y esperando en la barra", que es el criterio 5 literal. Nadie lo mueve de ahí hasta que exista el KDS. |
+| Doble toque (criterio 6) | Clave de idempotencia que genera la pantalla al abrirse y viaja en cada intento. La misma clave devuelve el mismo pedido. Viaja como columna sombra: es **cómo llegó** el pedido, no algo cierto sobre los tragos, y el dominio no la ve. |
+| Los precios | Los calcula el backend desde su propia carta. El celular manda ids y cantidades, nunca importes: si no, cualquiera paga lo que quiere editando el navegador. |
+| El stock | Confirmar descuenta, en la misma escritura que crea el pedido. Si un trago no alcanza o salió de la carta, se rechaza el pedido **entero** con 409 y se dice cuál: nadie paga por algo que no va a recibir. |
+| Dos clientes por el último trago | `Stock` es token de concurrencia, así que de dos carreras una sola escribe. La perdedora no se entera: el pedido se rearma contra la carta como quedó, hasta cinco veces, y sólo se avisa si el trago de verdad se agotó. |
+| El nombre | Nombre y apellido, sólo letras y espacios. Es más de lo que pide el criterio 3, y se tomó sabiendo que rechaza apellidos reales como D'Angelo. Se valida en las dos puntas: en la pantalla para no hacer esperar dos segundos por un "Euge", y en el servidor porque es quien manda. |
+| El método de pago en el contrato | Viaja como nombre —"Digital"— y no como el número del enum, igual que el rol del personal. El OpenAPI de un enum de .NET es un entero pelado, y un cliente generado que dice `method: number` no le dice nada a la pantalla. |
+| Al confirmar | El carrito del celular se vacía: el pedido es del servidor y tiene código propio. |
+| La confirmación | En `/{venueSlug}/orders/A-1234`, con el código sacado de la dirección: sobrevive a que bloqueen el teléfono y recarguen. Es la ruta que US-12 va a expandir con el estado en vivo. |
+| "Ver el estado" | Dibujado y **deshabilitado** hasta que exista US-12, igual que estuvo "Ir a pagar". |
+| "Pago protegido · [boliche]" del wireframe | **No entra.** No hay pasarela: prometer protección sobre un pago simulado sería la única mentira que esta pantalla no puede decir. Dice que el pago está simulado. |
+
+**Lo que encontró la revisión** (2026-09-17, agente `revisor-arquitectura` sobre los dos
+primeros commits). Los tres primeros eran defectos reales en código ya escrito:
+
+1. **Se vendía dos veces el último trago.** El stock se leía, se bajaba en memoria y se
+   escribía con un `UPDATE` que sólo nombraba la fila. Peor: un comentario del dominio
+   afirmaba lo contrario de lo que el código hacía.
+2. **La idempotencia sólo cubría el reintento secuencial.** El simultáneo —que es el que
+   produce una señal mala— moría con 500 contra el índice único.
+3. **Dos líneas del mismo trago** gastaban un código antes de ser rechazadas.
+4. Un puerto prometía guardar y no guardaba, y faltaban cuatro tests.
+
+Y uno que la revisión **no** vio y destapó el test nuevo al cambiar el timing: el `INSERT`
+que arranca el contador de un boliche tampoco era atómico bajo `READ COMMITTED`.
+
+**Deuda anotada.** Los comentarios XML de implementación de los endpoints se publican en el
+OpenAPI y terminan en el `schema.d.ts` del front. No es información sensible, pero son notas
+para el equipo en un contrato público: conviene separar `<summary>` de `<remarks>` o dejar de
+emitirlos.
+
 ### US-12 · Seguir mi pedido
 
 > **Como** cliente

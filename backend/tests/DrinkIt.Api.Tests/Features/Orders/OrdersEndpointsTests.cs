@@ -93,7 +93,7 @@ public class OrdersEndpointsTests
     public async Task ConfirmAsync_WhenTheBodyCarriesNoLines_RespondsWithBadRequest()
     {
         HttpResponseSnapshot response = await Confirm(
-            new ConfirmOrderRequest("María Quadro", PaymentMethod.Digital, "abc-123", null));
+            new ConfirmOrderRequest("María Quadro", "Digital", "abc-123", null));
 
         Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
         Assert.Equal("urn:drinkit:problem:order:empty", response.Text("type"));
@@ -106,7 +106,7 @@ public class OrdersEndpointsTests
     {
         HttpResponseSnapshot response = await Confirm(new ConfirmOrderRequest(
             "María Quadro",
-            PaymentMethod.Digital,
+            "Digital",
             "abc-123",
             [new OrderLineRequestBody(_gin.Id, 1, null), new OrderLineRequestBody(_gin.Id, 2, null)]));
 
@@ -119,10 +119,21 @@ public class OrdersEndpointsTests
     [Fact]
     public async Task ConfirmAsync_WhenPayingWithCash_RespondsWithBadRequest()
     {
-        HttpResponseSnapshot response = await Confirm(ARequestFor(1) with { Method = PaymentMethod.Cash });
+        HttpResponseSnapshot response = await Confirm(ARequestFor(1) with { Method = "Cash" });
 
         Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
         Assert.Equal("urn:drinkit:problem:order:payment-method-unavailable", response.Text("type"));
+    }
+
+    // A way of paying that does not exist at all, as opposed to one that exists
+    // and is not built yet. They are different answers about different things.
+    [Fact]
+    public async Task ConfirmAsync_WhenTheWayOfPayingHasNoName_RespondsWithBadRequest()
+    {
+        HttpResponseSnapshot response = await Confirm(ARequestFor(1) with { Method = "Bitcoin" });
+
+        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:order:payment-method-unknown", response.Text("type"));
     }
 
     // Nothing about how many are left leaves the building, here either.
@@ -136,7 +147,7 @@ public class OrdersEndpointsTests
 
     private ConfirmOrderRequest ARequestFor(int quantity) => new(
         "María Quadro",
-        PaymentMethod.Digital,
+        "Digital",
         "abc-123",
         [new OrderLineRequestBody(_gin.Id, quantity, null)]);
 

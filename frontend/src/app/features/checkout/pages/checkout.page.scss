@@ -1,0 +1,305 @@
+// Traced from design/wireframes/Pago.dc.html, in the product's tokens so it
+// holds in both themes. Where it departs from the wireframe, the rule says why.
+
+.frame {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+}
+
+.head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--dk-border);
+  background: var(--dk-ink);
+}
+
+.back {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dk-border);
+  border-radius: 13px;
+  color: var(--dk-text);
+  text-decoration: none;
+}
+
+.back:hover {
+  background: var(--dk-surface);
+}
+
+.ttl {
+  flex: 1;
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.mark {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 560px;
+  padding: 16px 20px 8px;
+  margin: 0 auto;
+}
+
+// The number first and biggest: the one thing somebody checks before paying.
+.amount {
+  padding: 16px;
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: 15px;
+  background: var(--dk-surface);
+}
+
+.amount-label {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 14px;
+}
+
+.amount-total {
+  margin: 2px 0 0;
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 0 0;
+  margin: 14px 0 0;
+  border-top: 1px solid var(--dk-border-subtle);
+  list-style: none;
+}
+
+.line {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.line-what {
+  min-width: 0;
+}
+
+.line-name {
+  margin: 0;
+  font-size: 15px;
+}
+
+.line-note {
+  margin: 1px 0 0;
+  color: var(--dk-text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.line-total {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.who-ttl,
+.ways-ttl {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.field {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 15px;
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: 14px;
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // 16 and not less: under it, iOS Safari zooms on focus and the layout never
+  // comes back. This screen is a phone.
+  font-size: 16px;
+}
+
+.field::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.field:focus-visible {
+  outline: 2px solid var(--dk-accent);
+  outline-offset: 2px;
+}
+
+.help {
+  margin: 8px 0 0;
+  color: var(--dk-text-muted);
+  font-size: 13px;
+}
+
+.ways {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.way {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: 14px;
+  background: var(--dk-surface);
+}
+
+// Drawn and dimmed rather than hidden: this is the screen somebody learns, and
+// one that grows two rows later is one they have to learn twice.
+.way-off {
+  opacity: 0.45;
+}
+
+.way input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--dk-accent);
+}
+
+.way-what {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.way-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.way-note {
+  color: var(--dk-text-muted);
+  font-size: 13px;
+}
+
+.foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px 20px 20px;
+  border-top: 1px solid var(--dk-border);
+  background: var(--dk-ink);
+}
+
+.cta {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
+.cta:disabled {
+  background: var(--dk-accent-disabled);
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--dk-accent-hover);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+// The wireframe says "Pago protegido · [boliche]". It cannot say that yet:
+// there is no gateway, and promising protection for a payment that is
+// simulated would be the one lie this screen must not tell.
+.safe {
+  margin: 0;
+  color: var(--dk-text-faint);
+  font-size: 13px;
+  text-align: center;
+}
+
+.note {
+  margin: 0;
+  padding: 14px 15px;
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: 14px;
+  background: var(--dk-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+.note-bad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-danger-alert-text);
+}
+
+.note-what {
+  margin: 0;
+}
+
+.ghost {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--dk-drop-border);
+  border-radius: 14px;
+  color: var(--dk-text);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ghost:hover {
+  border-color: var(--dk-accent);
+}

@@ -1,0 +1,97 @@
+// Traced from design/wireframes/PostPago.dc.html, minus the install-the-app
+// invitation and the push notice, which are out of Sprint 1.
+
+.frame {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.body {
+  display: flex;
+  width: 100%;
+  max-width: 420px;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 20px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.tick {
+  display: flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.ttl {
+  margin: 0;
+  font-family: var(--dk-font-serif);
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.what {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+// The one thing on the screen somebody has to read out loud across a loud
+// room, so it is the biggest thing on it by a long way.
+.code {
+  padding: 14px 26px;
+  border: 1px solid var(--dk-border);
+  border-radius: 18px;
+  margin: 2px 0;
+  background: var(--dk-surface);
+  font-size: 46px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+}
+
+.cta {
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 15px;
+  margin-top: 6px;
+  background: var(--dk-accent-disabled);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ghost {
+  display: flex;
+  width: 100%;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--dk-drop-border);
+  border-radius: 14px;
+  color: var(--dk-text);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ghost:hover {
+  border-color: var(--dk-accent);
+}

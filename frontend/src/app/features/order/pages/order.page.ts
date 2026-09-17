@@ -38,6 +38,8 @@ export class OrderPage {
   /** Back, and "Agregar más tragos": both land on the carta of this venue. */
   protected readonly menuLink = computed(() => ['/', this.venueSlug(), 'menu']);
 
+  protected readonly checkoutLink = computed(() => ['/', this.venueSlug(), 'checkout']);
+
   protected readonly lines = computed<OrderLine[]>(() =>
     this.cart.lines().map((line) => ({
       id: line.productId,

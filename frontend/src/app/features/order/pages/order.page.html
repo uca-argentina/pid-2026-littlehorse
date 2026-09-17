@@ -156,16 +156,22 @@
 
   <footer class="foot">
     <!--
-      Disabled until there is a payment screen to go to (US-11). Drawn and not
-      hidden so the screen is the one somebody will learn: a gold button that
-      leads nowhere is what reads as a broken app, and a button that appears
-      later moves everything under it.
+      A link now that there is a payment screen to reach. With nothing in the
+      order it is drawn switched off instead: paying for nothing would land on
+      a screen whose only move is to send them back here.
     -->
-    <button class="cta" type="button" disabled>
-      <span>Ir a pagar</span>
-      <span class="num">$ {{ total() }}</span>
-    </button>
+    @if (cart.isEmpty()) {
+      <p class="cta cta-off" aria-disabled="true">
+        <span>Ir a pagar</span>
+        <span class="num">$ {{ total() }}</span>
+      </p>
+    } @else {
+      <a class="cta" [routerLink]="checkoutLink()">
+        <span>Ir a pagar</span>
+        <span class="num">$ {{ total() }}</span>
+      </a>
+    }
 
-    <p class="safe">Vas a poder pagar desde acá en cuanto esté lista la pantalla de pago.</p>
+    <p class="safe">El pago está simulado: todavía no se cobra nada de verdad.</p>
   </footer>
 </div>
