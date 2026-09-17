@@ -18,20 +18,7 @@
     <h1 class="ttl">Tu pedido</h1>
 
     <div class="mark" aria-hidden="true">
-      <svg
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M5 4h14l-7 8z" />
-        <path d="M12 12v7" />
-        <path d="M8.5 19.5h7" />
-      </svg>
+      <drinkit-glass-mark [size]="23" [strokeWidth]="1.9" />
     </div>
   </header>
 
@@ -45,22 +32,14 @@
         @for (line of lines(); track line.id) {
           <li class="item">
             <div class="top">
-              <div class="thumb" aria-hidden="true">
-                <svg
-                  width="25"
-                  height="25"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M5 4h14l-7 8z" />
-                  <path d="M12 12v7" />
-                  <path d="M8.5 19.5h7" />
-                </svg>
-              </div>
+              <img
+                class="thumb"
+                [src]="line.image"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                (error)="useThePlaceholder($event)"
+              />
 
               <div class="what">
                 <h2 class="nm">{{ line.name }}</h2>

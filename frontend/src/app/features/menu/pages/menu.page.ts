@@ -5,6 +5,7 @@ import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
+import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 import { formatPrice } from '../../../shared/money/price';
 import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
@@ -29,7 +30,7 @@ interface MenuCard {
  */
 @Component({
   selector: 'drinkit-menu-page',
-  imports: [RouterLink, ThemeToggle],
+  imports: [GlassMark, RouterLink, ThemeToggle],
   styleUrl: './menu.page.scss',
   templateUrl: './menu.page.html',
 })
@@ -135,7 +136,7 @@ export class MenuPage {
   }
 
   protected addToOrder(card: MenuCard): void {
-    this.cart.add({ id: card.id, name: card.name, price: card.amount });
+    this.cart.add({ id: card.id, name: card.name, price: card.amount, imageUrl: card.image });
   }
 
   protected takeOneOut(card: MenuCard): void {

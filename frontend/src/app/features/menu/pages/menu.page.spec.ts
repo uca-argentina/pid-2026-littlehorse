@@ -253,6 +253,17 @@ describe('MenuPage', () => {
       expect(TestBed.inject(Cart).count()).toBe(1);
     });
 
+    // The order screen has no menu request of its own to get a photo from:
+    // whatever the card was showing has to travel with the line.
+    it('carries the picture the card was showing onto the line', async () => {
+      const rendered = await openScreenShowing(carta);
+
+      plus('Gin Tonic').click();
+      await rendered.fixture.whenStable();
+
+      expect(TestBed.inject(Cart).lines()[0].imageUrl).toBe('https://images.example.com/gin.png');
+    });
+
     it('raises the count on a second tap instead of opening a second line', async () => {
       const rendered = await openScreenShowing(carta);
 
@@ -333,9 +344,11 @@ describe('MenuPage', () => {
     });
 
     describe('the note on a card', () => {
+      // Matches either wording: "Escribir..." before there is a note,
+      // "Editar..." once there is one.
       function noteButton(name: string): HTMLButtonElement {
         return screen.getByRole('button', {
-          name: new RegExp(`escribir una nota para ${name}`, 'i'),
+          name: new RegExp(`(escribir una nota para|editar la nota de) ${name}`, 'i'),
         }) as HTMLButtonElement;
       }
 
@@ -383,6 +396,28 @@ describe('MenuPage', () => {
         await rendered.fixture.whenStable();
 
         expect(screen.getByTestId('note-Gin Tonic').textContent).toContain('sin hielo');
+      });
+
+      // Once there is something to edit, the button says so instead of
+      // offering to add a note that already exists.
+      it('offers to edit rather than add once a note exists', async () => {
+        store.entries.set(
+          `${CART_STORAGE_PREFIX}bar-alfa`,
+          JSON.stringify([
+            {
+              productId: 'id-1',
+              name: 'Gin Tonic',
+              unitPrice: 4500,
+              quantity: 1,
+              note: 'sin hielo',
+            },
+          ]),
+        );
+
+        await openScreenShowing(carta);
+
+        expect(screen.getByRole('button', { name: /editar la nota de Gin Tonic/i })).not.toBeNull();
+        expect(screen.queryByRole('button', { name: /escribir una nota/i })).toBeNull();
       });
 
       it('opens with what was already written in it', async () => {

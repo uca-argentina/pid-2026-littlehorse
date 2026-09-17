@@ -50,6 +50,29 @@ describe('OrderPage', () => {
     expect(lineNames()).toEqual(['Gin Tonic', 'Fernet con Coca']);
   });
 
+  // Queried by selector and not by role: the photo carries an empty alt
+  // because the name is right beside it, which makes it decorative and takes
+  // it out of the accessibility tree on purpose.
+  function thumb(rendered: { container: HTMLElement }): HTMLImageElement | null {
+    return rendered.container.querySelector('.thumb');
+  }
+
+  // The line has no menu request to fetch a photo from: it shows whatever
+  // the cart was carrying, real photo or placeholder.
+  it('shows the picture that was carried with the line', async () => {
+    const rendered = await openScreenWith((cart) =>
+      cart.add({ ...ginTonic, imageUrl: 'https://images.example.com/gin.png' }),
+    );
+
+    expect(thumb(rendered)?.src).toBe('https://images.example.com/gin.png');
+  });
+
+  it('falls back to the placeholder when the drink has no picture', async () => {
+    const rendered = await openScreenWith((cart) => cart.add(ginTonic));
+
+    expect(thumb(rendered)?.src).toContain('product-placeholder');
+  });
+
   it('shows how many of each and what that line costs', async () => {
     await openScreenWith((cart) => {
       cart.add(ginTonic);

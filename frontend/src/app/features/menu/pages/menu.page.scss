@@ -106,12 +106,10 @@ drinkit-theme-toggle {
   list-style: none;
 }
 
+// .qty (outside .left) centres against .left's whole height: the thumb+text
+// row and the note below it, not only against the thumb.
 .card {
   display: flex;
-
-  // Wraps so the note can take a row of its own under the drink, at the full
-  // width of the card: an aclaración shares the line with nothing.
-  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
   padding: 14px;
@@ -124,6 +122,23 @@ drinkit-theme-toggle {
 // sends somebody to ask at the bar, which is the walk this app exists to save.
 .card-off {
   opacity: 0.42;
+}
+
+// Stretches to .top's width by default (a column flex child), so the note
+// field below is as wide as the thumb+text row allows — narrower than that
+// and it is unusable on a phone this size.
+.left {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 6px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .thumb {
@@ -173,16 +188,13 @@ drinkit-theme-toggle {
 
 .note-row {
   display: flex;
-  width: 100%;
   align-items: center;
   gap: 10px;
 }
 
-// A quiet text button: writing a note is never the thing the menu is inviting,
-// so it is the opposite of the gold plus beside it.
 .note-open {
   padding: 6px 12px;
-  border: 1px solid var(--dk-border);
+  border: 1px solid var(--dk-accent);
   border-radius: 10px;
   background: none;
   color: var(--dk-text-muted);

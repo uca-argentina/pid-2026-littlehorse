@@ -1,12 +1,15 @@
 import { Component, computed, effect, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
+import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { formatPrice } from '../../../shared/money/price';
+import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 
 /** One line of the order, in the shape the template draws. */
 interface OrderLine {
   readonly id: string;
   readonly name: string;
+  readonly image: string;
   readonly note: string;
   readonly quantity: number;
   readonly total: string;
@@ -20,7 +23,7 @@ interface OrderLine {
  */
 @Component({
   selector: 'drinkit-order-page',
-  imports: [RouterLink],
+  imports: [GlassMark, RouterLink],
   styleUrl: './order.page.scss',
   templateUrl: './order.page.html',
 })
@@ -39,6 +42,7 @@ export class OrderPage {
     this.cart.lines().map((line) => ({
       id: line.productId,
       name: line.name,
+      image: line.imageUrl ?? PRODUCT_PLACEHOLDER,
       note: line.note ?? '',
       quantity: line.quantity,
       total: formatPrice(line.quantity * line.unitPrice),
@@ -61,13 +65,30 @@ export class OrderPage {
   }
 
   protected addOne(line: OrderLine): void {
-    // Price and name come from the line that is already in the order: this
-    // screen never saw the menu, and re-adding must not invent either.
+    // Price, name and image come from the line that is already in the order:
+    // this screen never saw the menu, and re-adding must not invent any of them.
     const existing = this.cart.lines().find((stored) => stored.productId === line.id);
 
     if (existing === undefined) return;
 
-    this.cart.add({ id: existing.productId, name: existing.name, price: existing.unitPrice });
+    this.cart.add({
+      id: existing.productId,
+      name: existing.name,
+      price: existing.unitPrice,
+      imageUrl: existing.imageUrl,
+    });
+  }
+
+  /**
+   * The address was good enough when the photo was added and stopped being
+   * one behind our back, or the storage never fails but a browser's own
+   * cache did. Criterion 5 of US-06: the drink shows anyway, never a broken
+   * image.
+   */
+  protected useThePlaceholder(event: Event): void {
+    const image = event.target as HTMLImageElement;
+
+    if (!image.src.endsWith(PRODUCT_PLACEHOLDER)) image.src = PRODUCT_PLACEHOLDER;
   }
 
   protected takeOneOut(line: OrderLine): void {

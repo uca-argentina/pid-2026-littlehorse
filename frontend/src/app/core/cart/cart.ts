@@ -5,6 +5,7 @@ import { BrowserStore } from '../storage/browser-store';
 export interface CartLine {
   readonly productId: string;
   readonly name: string;
+  readonly imageUrl: string | null;
   readonly unitPrice: number;
   readonly quantity: number;
   /** "sin hielo". Belongs to this drink and not to the whole order. */
@@ -16,6 +17,8 @@ export interface CartAddition {
   readonly id: string;
   readonly name: string;
   readonly price: number;
+  /** Whatever the card was showing — the real photo or the placeholder. */
+  readonly imageUrl?: string | null;
 }
 
 export const CART_STORAGE_PREFIX = 'drinkit.cart.';
@@ -80,6 +83,7 @@ export class Cart {
             {
               productId: product.id,
               name: product.name,
+              imageUrl: product.imageUrl ?? null,
               unitPrice: product.price,
               quantity: 1,
               note: null,

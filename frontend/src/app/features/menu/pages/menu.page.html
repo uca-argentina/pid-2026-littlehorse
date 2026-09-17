@@ -1,20 +1,7 @@
 <div class="frame">
   <header class="head">
     <div class="mark" aria-hidden="true">
-      <svg
-        width="23"
-        height="23"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.9"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M5 4h14l-7 8z" />
-        <path d="M12 12v7" />
-        <path d="M8.5 19.5h7" />
-      </svg>
+      <drinkit-glass-mark [size]="23" [strokeWidth]="1.9" />
     </div>
     <h1 class="venue">{{ venueName() || venueSlug() }}</h1>
 
@@ -79,35 +66,94 @@
       <ul class="list">
         @for (card of cards(); track card.id) {
           <li class="card" [class.card-off]="!card.isOrderable">
-            <img
-              class="thumb"
-              [src]="card.image"
-              alt=""
-              loading="lazy"
-              decoding="async"
-              (error)="useThePlaceholder($event)"
-            />
-            <div class="what">
-              <h2 class="name" [id]="'name-' + card.id">{{ card.name }}</h2>
+            <!--
+              .left holds the thumb+text row and the note below it, full width;
+              .qty sits outside and centres against .left's whole height, note
+              included, not only against the thumb and the name.
+            -->
+            <div class="left">
+              <div class="top">
+                <img
+                  class="thumb"
+                  [src]="card.image"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  (error)="useThePlaceholder($event)"
+                />
+                <div class="what">
+                  <h2 class="name" [id]="'name-' + card.id">{{ card.name }}</h2>
+
+                  <!--
+                    Under the name, where it reads as part of what was ordered,
+                    and only while the field is closed: open, the field is
+                    already showing it and the card would say the same thing
+                    twice.
+                  -->
+                  @if (!isWritingOn(card.id) && cart.noteOf(card.id); as note) {
+                    <p class="card-note" [attr.data-testid]="'note-' + card.name">{{ note }}</p>
+                  }
+
+                  @if (card.isOrderable) {
+                    @if (card.description !== null) {
+                      <p class="dsc">{{ card.description }}</p>
+                    }
+                    <p class="price">$ {{ card.price }}</p>
+                  } @else {
+                    <!-- In place of the description, and with no price: the
+                         design puts no number on something nobody can buy
+                         tonight. -->
+                    <p class="dsc">Sin stock por ahora</p>
+                  }
+                </div>
+              </div>
 
               <!--
-                Under the name, where it reads as part of what was ordered, and
-                only while the field is closed: open, the field is already
-                showing it and the card would say the same thing twice.
+                Only once the drink is in the order: the note travels with the
+                line, and until there is a line there is nothing to write on.
               -->
-              @if (!isWritingOn(card.id) && cart.noteOf(card.id); as note) {
-                <p class="card-note" [attr.data-testid]="'note-' + card.name">{{ note }}</p>
-              }
-
-              @if (card.isOrderable) {
-                @if (card.description !== null) {
-                  <p class="dsc">{{ card.description }}</p>
-                }
-                <p class="price">$ {{ card.price }}</p>
-              } @else {
-                <!-- In place of the description, and with no price: the design
-                     puts no number on something nobody can buy tonight. -->
-                <p class="dsc">Sin stock por ahora</p>
+              @if (card.isOrderable && cart.quantityOf(card.id) > 0) {
+                <div class="note-row">
+                  @if (isWritingOn(card.id)) {
+                    <input
+                      class="note-field"
+                      type="text"
+                      [id]="'note-field-' + card.id"
+                      [attr.aria-label]="'Nota para ' + card.name"
+                      [value]="cart.noteOf(card.id) ?? ''"
+                      [attr.maxlength]="noteMaxLength"
+                      placeholder="sin hielo, poco limón…"
+                      autocomplete="off"
+                      (input)="noteFor(card.id, $event)"
+                    />
+                    <button
+                      class="note-done"
+                      type="button"
+                      [attr.aria-label]="'Listo con la nota de ' + card.name"
+                      (click)="writeNoteOn(card.id)"
+                    >
+                      Listo
+                    </button>
+                  } @else if (cart.noteOf(card.id)) {
+                    <button
+                      class="note-open"
+                      type="button"
+                      [attr.aria-label]="'Editar la nota de ' + card.name"
+                      (click)="writeNoteOn(card.id)"
+                    >
+                      Editar nota
+                    </button>
+                  } @else {
+                    <button
+                      class="note-open"
+                      type="button"
+                      [attr.aria-label]="'Escribir una nota para ' + card.name"
+                      (click)="writeNoteOn(card.id)"
+                    >
+                      Agregar nota
+                    </button>
+                  }
+                </div>
               }
             </div>
             @if (card.isOrderable) {
@@ -165,45 +211,6 @@
                   </svg>
                 </button>
               </div>
-
-              <!--
-                Only once the drink is in the order: the note travels with the
-                line, and until there is a line there is nothing to write on.
-              -->
-              @if (cart.quantityOf(card.id) > 0) {
-                <div class="note-row">
-                  @if (isWritingOn(card.id)) {
-                    <input
-                      class="note-field"
-                      type="text"
-                      [id]="'note-field-' + card.id"
-                      [attr.aria-label]="'Nota para ' + card.name"
-                      [value]="cart.noteOf(card.id) ?? ''"
-                      [attr.maxlength]="noteMaxLength"
-                      placeholder="sin hielo, poco limón…"
-                      autocomplete="off"
-                      (input)="noteFor(card.id, $event)"
-                    />
-                    <button
-                      class="note-done"
-                      type="button"
-                      [attr.aria-label]="'Listo con la nota de ' + card.name"
-                      (click)="writeNoteOn(card.id)"
-                    >
-                      Listo
-                    </button>
-                  } @else {
-                    <button
-                      class="note-open"
-                      type="button"
-                      [attr.aria-label]="'Escribir una nota para ' + card.name"
-                      (click)="writeNoteOn(card.id)"
-                    >
-                      Nota
-                    </button>
-                  }
-                </div>
-              }
             }
           </li>
         }

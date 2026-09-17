@@ -21,7 +21,7 @@ La narrativa es apenas el título de la conversación. Lo que sigue es lo que im
 **Es la parte más importante de cada story.** La narrativa dice qué se quiere; los criterios
 de aceptación dicen **cómo sabemos que está cumplido**. Son las condiciones que el sistema
 tiene que satisfacer para que quien pidió la funcionalidad la dé por buena — Mike Cohn los
-llama *conditions of satisfaction*, y son tan definitorios que una story sin ellos no se
+llama _conditions of satisfaction_, y son tan definitorios que una story sin ellos no se
 puede aceptar ni discutir, sólo suponer.
 
 Ocho reglas que nos aplicamos:
@@ -45,8 +45,7 @@ Ocho reglas que nos aplicamos:
 
 ### Los dos formatos que usamos
 
-**Escenario — Dado / Cuando / Entonces.** Viene de BDD; lo propuso Daniel Terhorst-North en
-2003. Es el formato por defecto: sirve siempre que haya un disparador y un resultado
+**Escenario — Dado / Cuando / Entonces.** Viene de BDD; lo propuso Daniel Terhorst-North en 2003. Es el formato por defecto: sirve siempre que haya un disparador y un resultado
 observable.
 
 > **Dado** <el contexto de partida> · **cuando** <la acción> · **entonces** <lo que se ve>
@@ -66,37 +65,37 @@ depende de nada sin terminar. Si le falta algo, no entra.
 
 ## Quiénes usan el sistema en este sprint
 
-| Rol | Qué hace | Se autentica |
-|---|---|---|
-| **Cliente** | Pide tragos desde su celular | No. No se registra ni instala nada |
-| **Administrador** | Carga la carta y al personal de su local | Sí |
-| **KDS** | La cuenta de la estación de barra. Se le puede crear la cuenta; sus pantallas quedaron fuera de este sprint | Sí |
-| **Mozo** | Se le puede crear la cuenta, pero todavía no tiene pantalla propia | Sí |
+| Rol               | Qué hace                                                                                                    | Se autentica                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Cliente**       | Pide tragos desde su celular                                                                                | No. No se registra ni instala nada |
+| **Administrador** | Carga la carta y al personal de su local                                                                    | Sí                                 |
+| **KDS**           | La cuenta de la estación de barra. Se le puede crear la cuenta; sus pantallas quedaron fuera de este sprint | Sí                                 |
+| **Mozo**          | Se le puede crear la cuenta, pero todavía no tiene pantalla propia                                          | Sí                                 |
 
 ## Resumen
 
-| ID | Story | Depende de | Estado |
-|---|---|---|---|
-| US-01 | Iniciar sesión | — | ✅ **Terminada** |
-| US-02 | Poder entrar la primera vez | — | ✅ **Terminada** |
-| US-03 | Dar de alta al equipo | US-01 | ✅ **Terminada** |
-| US-04 | Ver y corregir al equipo | US-03 | ✅ **Terminada** |
-| US-05 | Dar de baja a quien se fue | US-03 | **3 de 4** — falta el criterio de los pedidos, que no existen todavía |
-| US-06 | Cargar un trago en la carta | US-01 | ✅ **Terminada** |
-| US-07 | Marcar que un trago se acabó | US-06 | Pendiente |
-| US-08 | Corregir y sacar tragos | US-06 | Pendiente |
-| US-09 | Ver la carta desde el celular | US-06 | ✅ **Terminada** |
-| US-10 | Armar el pedido | US-09 | **Terminada** — a falta de prueba a mano |
-| US-11 | Confirmar el pedido | US-10 | Pendiente |
-| US-12 | Seguir mi pedido | US-11 | Pendiente |
-| US-13 | Encontrar a alguien en el listado | US-03 | ✅ **Terminada** |
-| US-14 | Agrupar la carta por categoría | US-06, US-09 | Pendiente — planificada el 2026-09-15 |
+| ID    | Story                             | Depende de   | Estado                                                                |
+| ----- | --------------------------------- | ------------ | --------------------------------------------------------------------- |
+| US-01 | Iniciar sesión                    | —            | ✅ **Terminada**                                                      |
+| US-02 | Poder entrar la primera vez       | —            | ✅ **Terminada**                                                      |
+| US-03 | Dar de alta al equipo             | US-01        | ✅ **Terminada**                                                      |
+| US-04 | Ver y corregir al equipo          | US-03        | ✅ **Terminada**                                                      |
+| US-05 | Dar de baja a quien se fue        | US-03        | **3 de 4** — falta el criterio de los pedidos, que no existen todavía |
+| US-06 | Cargar un trago en la carta       | US-01        | ✅ **Terminada**                                                      |
+| US-07 | Marcar que un trago se acabó      | US-06        | Pendiente                                                             |
+| US-08 | Corregir y sacar tragos           | US-06        | Pendiente                                                             |
+| US-09 | Ver la carta desde el celular     | US-06        | ✅ **Terminada**                                                      |
+| US-10 | Armar el pedido                   | US-09        | **Terminada** — a falta de prueba a mano                              |
+| US-11 | Confirmar el pedido               | US-10        | Pendiente                                                             |
+| US-12 | Seguir mi pedido                  | US-11        | Pendiente                                                             |
+| US-13 | Encontrar a alguien en el listado | US-03        | ✅ **Terminada**                                                      |
+| US-14 | Agrupar la carta por categoría    | US-06, US-09 | Pendiente — planificada el 2026-09-15                                 |
 
 Las doce primeras son imprescindibles: cubren los seis puntos de la consigna y nada más.
 US-13 es la excepción, y entró por pedido del equipo el 2026-09-14 después de estar
 recortada: el detalle está en su ficha. Las
 pantallas de la barra quedaron fuera del sprint el 2026-09-10; el motivo y la consecuencia
-están en *Fuera del alcance*.
+están en _Fuera del alcance_.
 
 **Estado al sábado 12 de septiembre.** Tres stories terminadas y nueve sin empezar. US-03
 cerró de punta a punta y de paso cerró US-01: ahora un administrador entra y ve una pantalla
@@ -133,7 +132,7 @@ escrita a medias: el middleware daba prioridad al token siempre, también en rut
 así que un administrador que abría la carta de otro boliche recibía los tragos del suyo bajo
 el nombre del otro. Ahora en un endpoint anónimo gana el slug y en uno de personal gana el
 token. Y apareció `BrowserStore`, la costura que el almacenamiento del navegador no tenía:
-está en *Deuda anotada* por qué conviene que los dos servicios viejos también la usen.
+está en _Deuda anotada_ por qué conviene que los dos servicios viejos también la usen.
 
 Quedan seis: US-07 y US-08 cierran la carta del administrador, US-11 y US-12 cierran el
 pedido, y US-14 son las categorías. El camino crítico es el pedido.
@@ -176,7 +175,7 @@ pedido, y US-14 son las categorías. El camino crítico es el pedido.
 > la sesión dura ocho horas y vencer es un evento normal de fin de turno, no un error.
 
 ✅ **Terminada.** Los seis criterios están cumplidos y con test. El criterio 1 cerró con
-US-03: un administrador que entra ve el acceso a *Usuarios internos* en la pantalla de
+US-03: un administrador que entra ve el acceso a _Usuarios internos_ en la pantalla de
 inicio, y los demás roles siguen viendo el aviso de que su rol todavía no tiene pantallas.
 
 > Quedó anotado que este criterio ataba US-01 a una story posterior, y efectivamente cerró
@@ -343,8 +342,8 @@ consultarle quién lo preparó. La baja lógica ya deja el dato preparado.
 5. **Dado** que no coincide nadie, **cuando** miro el listado, **entonces** me lo dice con un
    mensaje distinto al de un boliche sin gente cargada.
 
-> **Estaba recortada a propósito y volvió.** Hasta el 2026-09-14 figuraba en *Fuera del
-> alcance* con el motivo "con la cantidad de datos de una demo no se nota". El equipo pidió
+> **Estaba recortada a propósito y volvió.** Hasta el 2026-09-14 figuraba en _Fuera del
+> alcance_ con el motivo "con la cantidad de datos de una demo no se nota". El equipo pidió
 > incorporarla igual. Entra como story propia y no dentro de US-04, para no reescribir
 > criterios ya acordados después de haberlos construido.
 >
@@ -476,13 +475,13 @@ foto, o cuya foto no carga, muestra el ícono de `public/images` en su lugar.
 
 **Decisiones tomadas el 2026-09-15, antes de construirla.**
 
-| Tema | Cómo queda |
-|---|---|
-| Dirección del QR | `/{venueSlug}/menu`. Deja `/{venueSlug}` libre por si más adelante hace falta una bienvenida antes de la carta. |
-| Encabezado | El nombre real del boliche, que la respuesta de la carta devuelve junto con los tragos. Hasta ahora la app sólo conocía el slug. |
-| Buscador | **Entra, y no era un criterio.** Lo pidió el equipo hoy. Es un elemento más de una pantalla que se construye de cero y no toca nada ya cerrado, así que va acá adentro en vez de en una ficha aparte. Filtra en el navegador sobre la carta ya cargada, sin endpoint nuevo. |
-| Precio | `$ 4.500,00`, formato argentino con los dos decimales siempre. |
-| Categorías | **No entran acá.** Están en el wireframe y no en los criterios, y la categoría vive en `Product`, no en la carta. Es US-14. |
+| Tema             | Cómo queda                                                                                                                                                                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dirección del QR | `/{venueSlug}/menu`. Deja `/{venueSlug}` libre por si más adelante hace falta una bienvenida antes de la carta.                                                                                                                                                             |
+| Encabezado       | El nombre real del boliche, que la respuesta de la carta devuelve junto con los tragos. Hasta ahora la app sólo conocía el slug.                                                                                                                                            |
+| Buscador         | **Entra, y no era un criterio.** Lo pidió el equipo hoy. Es un elemento más de una pantalla que se construye de cero y no toca nada ya cerrado, así que va acá adentro en vez de en una ficha aparte. Filtra en el navegador sobre la carta ya cargada, sin endpoint nuevo. |
+| Precio           | `$ 4.500,00`, formato argentino con los dos decimales siempre.                                                                                                                                                                                                              |
+| Categorías       | **No entran acá.** Están en el wireframe y no en los criterios, y la categoría vive en `Product`, no en la carta. Es US-14.                                                                                                                                                 |
 
 ✅ **Terminada.** Los cinco criterios están cumplidos y con prueba de punta a punta que abre
 la dirección del QR sin sesión. Es la primera pantalla de la app que no es de personal: no
@@ -492,7 +491,7 @@ leyendo el almacenamiento después de mirar la carta.
 > **Lo que la carta no cuenta.** La respuesta del cliente no lleva el stock ni el motivo por
 > el que algo no se puede pedir. Un trago agotado y uno que el boliche apagó esta noche se
 > ven iguales desde el teléfono, que es todo lo que necesita saber quien pide. Hay un test
-> que revisa que la palabra *stock* no aparezca en la respuesta.
+> que revisa que la palabra _stock_ no aparezca en la respuesta.
 >
 > **Un slug que no existe da 404**, distinto de un boliche que existe y todavía no cargó
 > nada, que da lista vacía. En el teléfono son dos pantallas completamente distintas y el
@@ -511,11 +510,11 @@ leyendo el almacenamiento después de mirar la carta.
 1. **Dado** que cargo un trago, **cuando** completo el formulario, **entonces** tengo que
    elegir una categoría entre tragos, cervezas y sin alcohol.
 2. **Dado** que abro la carta, **cuando** miro arriba, **entonces** tengo una solapa por
-   categoría más una de *Todos*, y la carta abre en *Todos*.
+   categoría más una de _Todos_, y la carta abre en _Todos_.
 3. **Dado** que elijo una solapa, **cuando** miro la carta, **entonces** sólo quedan los de
    esa categoría, agotados incluidos.
 4. **Dado** que había tragos cargados antes de que existieran las categorías, **cuando**
-   abro la carta, **entonces** aparecen en *Tragos*.
+   abro la carta, **entonces** aparecen en _Tragos_.
 
 > **Por qué ficha propia.** Se pidió el 2026-09-15, mientras se planificaba US-09. No es un
 > criterio de US-09 y tampoco entra reabriendo US-06: la categoría es una columna nueva en
@@ -523,7 +522,7 @@ leyendo el almacenamiento después de mirar la carta.
 > construida y cerrada. Mismo tratamiento que US-13.
 >
 > **Decidido:** lista fija en el código, como el enum de roles, sin tabla de categorías ni
-> texto libre. Obligatoria al cargar, y la migración le pone *Tragos* a lo que ya esté
+> texto libre. Obligatoria al cargar, y la migración le pone _Tragos_ a lo que ya esté
 > cargado. Las solapas del cliente van sin conteo, a diferencia de las de administración,
 > porque así lo dibuja el wireframe del cliente.
 >
@@ -555,21 +554,21 @@ leyendo el almacenamiento después de mirar la carta.
 tarjeta y el `−` con la cantidad; en `/{venueSlug}/order`, la pantalla del pedido con las
 líneas, la aclaración por trago, el subtotal y el total. Falta la prueba a mano.
 
-| Decisión | Cómo queda |
-|---|---|
-| Dónde vive el pedido a medio armar | En el navegador, con una clave por boliche. Sobrevive a que atiendan un llamado o cierren la pestaña, que es el criterio 4, y el pedido de un local nunca aparece en otro. Cuando exista el pedido de verdad, en US-11, se muda al servidor. |
-| Qué hace la barra de abajo | Lleva a la pantalla del pedido, y dice "Ver pedido · N ítems" con el total al lado. Es el último elemento de una carta que alguien terminó de leer, así que es lo que lo hace avanzar. |
-| Cambiar cantidades | En los dos lados. En la tarjeta de la carta, con el `−`, la cantidad y el `+`; en la línea del pedido, con el mismo par. Sacar el último saca el trago del pedido en vez de dejar una línea en cero. |
-| Sacar un trago entero | Con "Quitar" en la línea del pedido, además del `−`. El `−` baja de a uno; "Quitar" es para quien cambió de idea sobre el trago y no tiene por qué tocar cinco veces para decirlo. |
-| Dónde se escribe la aclaración | En los dos lados, y es la misma nota. En la tarjeta de la carta detrás de un botón "Nota" —abierta siempre, un campo bajo cada tarjeta convierte la carta en un formulario— y en la línea del pedido, en un campo siempre a la vista. Escrita, la tarjeta la muestra bajo el nombre del trago. |
-| Cuánto puede durar la aclaración | 120 caracteres. Entra "sin hielo, con mucho limón" y se lee de un vistazo en un ticket en un boliche oscuro; un párrafo no lo leería nadie y atrasaría la cola. |
-| Una nota por línea, no por unidad | El modelo la guarda en el ítem del pedido, así que dos Gin Tonic con la misma nota son una línea con cantidad 2. Pedir uno con hielo y otro sin hielo no se puede todavía; si aparece la necesidad, es una story propia. |
-| Subtotal **y** total | Los dos, como el wireframe, aunque hoy den el mismo número: entre ellos va a caer el cargo por servicio o la propina, y un resumen que gana una fila después es uno que hay que aprender dos veces. |
-| "Ir a pagar" | Dibujado y **deshabilitado** hasta que exista US-11. Un botón dorado que no lleva a ningún lado es lo que se lee como una app rota, y uno que aparece después mueve todo lo que está debajo. |
-| El pedido vacío | Muestra la pantalla igual, con el resumen en cero y un texto que explica cómo agregar. No se puede avanzar, que es el criterio 5. |
-| La foto del trago en la línea | No se guarda: la línea lleva el nombre y el precio, y la miniatura es el ícono de copa del wireframe. El wireframe dibuja el ícono, y guardar la imagen obligaría a que el pedido dependa de que la foto siga existiendo. |
-| El botón de usuario del encabezado | **No entra.** Llevaría a un login de cliente, y las cuentas de cliente están fuera del Sprint 1 porque la consigna pide expresamente poder pedir sin cuenta. Además el criterio 2 de US-09 está construido y con prueba de que la carta no ofrece iniciar sesión. |
-| Tocar dos veces el mismo trago | Sube la cantidad de esa línea, no abre una segunda. |
+| Decisión                           | Cómo queda                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dónde vive el pedido a medio armar | En el navegador, con una clave por boliche. Sobrevive a que atiendan un llamado o cierren la pestaña, que es el criterio 4, y el pedido de un local nunca aparece en otro. Cuando exista el pedido de verdad, en US-11, se muda al servidor.                                                                |
+| Qué hace la barra de abajo         | Lleva a la pantalla del pedido, y dice "Ver pedido · N ítems" con el total al lado. Es el último elemento de una carta que alguien terminó de leer, así que es lo que lo hace avanzar.                                                                                                                      |
+| Cambiar cantidades                 | En los dos lados. En la tarjeta de la carta, con el `−`, la cantidad y el `+`; en la línea del pedido, con el mismo par. Sacar el último saca el trago del pedido en vez de dejar una línea en cero.                                                                                                        |
+| Sacar un trago entero              | Con "Quitar" en la línea del pedido, además del `−`. El `−` baja de a uno; "Quitar" es para quien cambió de idea sobre el trago y no tiene por qué tocar cinco veces para decirlo.                                                                                                                          |
+| Dónde se escribe la aclaración     | En los dos lados, y es la misma nota. En la tarjeta de la carta detrás de un botón "Nota" —abierta siempre, un campo bajo cada tarjeta convierte la carta en un formulario— y en la línea del pedido, en un campo siempre a la vista. Escrita, la tarjeta la muestra bajo el nombre del trago.              |
+| Cuánto puede durar la aclaración   | 120 caracteres. Entra "sin hielo, con mucho limón" y se lee de un vistazo en un ticket en un boliche oscuro; un párrafo no lo leería nadie y atrasaría la cola.                                                                                                                                             |
+| Una nota por línea, no por unidad  | El modelo la guarda en el ítem del pedido, así que dos Gin Tonic con la misma nota son una línea con cantidad 2. Pedir uno con hielo y otro sin hielo no se puede todavía; si aparece la necesidad, es una story propia.                                                                                    |
+| Subtotal **y** total               | Los dos, como el wireframe, aunque hoy den el mismo número: entre ellos va a caer el cargo por servicio o la propina, y un resumen que gana una fila después es uno que hay que aprender dos veces.                                                                                                         |
+| "Ir a pagar"                       | Dibujado y **deshabilitado** hasta que exista US-11. Un botón dorado que no lleva a ningún lado es lo que se lee como una app rota, y uno que aparece después mueve todo lo que está debajo.                                                                                                                |
+| El pedido vacío                    | Muestra la pantalla igual, con el resumen en cero y un texto que explica cómo agregar. No se puede avanzar, que es el criterio 5.                                                                                                                                                                           |
+| La foto del trago en la línea      | Se guarda: la línea lleva la URL que la carta estaba mostrando al momento de agregar (la foto real, o el placeholder si el producto no tenía una), y con eso arma la miniatura. Si la foto se borra después en el ABM, la línea sigue mostrando lo que vio quien pidió; nada la vuelve a pedir al servidor. |
+| El botón de usuario del encabezado | **No entra.** Llevaría a un login de cliente, y las cuentas de cliente están fuera del Sprint 1 porque la consigna pide expresamente poder pedir sin cuenta. Además el criterio 2 de US-09 está construido y con prueba de que la carta no ofrece iniciar sesión.                                           |
+| Tocar dos veces el mismo trago     | Sube la cantidad de esa línea, no abre una segunda.                                                                                                                                                                                                                                                         |
 
 ### US-11 · Confirmar el pedido
 
@@ -636,12 +635,12 @@ líneas, la aclaración por trago, el subtotal y el total. Falta la prueba a man
 En cada caso se eligió la opción más barata que cumple lo que se pide. Ninguna cierra la
 puerta a la versión definitiva.
 
-| Tema | Cómo queda en este sprint | Cómo va a ser después |
-|---|---|---|
-| Foto del trago | Sube el archivo desde el formulario; va a Azure Blob Storage, con Azurite en desarrollo. Sin redimensionar | Miniaturas para la carta si el peso de las fotos se nota en el celular |
-| Aviso de "listo" | La pantalla del cliente consulta cada tres segundos | Notificación al celular, y SignalR en vez de consultar |
-| Pago | Confirmar el pedido equivale a pagarlo | Pago digital, efectivo en caja y saldo de mesa VIP |
-| Ticket de la barra | Se trabaja desde la pantalla del KDS | Se imprime el ticket y se escanea el QR |
+| Tema               | Cómo queda en este sprint                                                                                  | Cómo va a ser después                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Foto del trago     | Sube el archivo desde el formulario; va a Azure Blob Storage, con Azurite en desarrollo. Sin redimensionar | Miniaturas para la carta si el peso de las fotos se nota en el celular |
+| Aviso de "listo"   | La pantalla del cliente consulta cada tres segundos                                                        | Notificación al celular, y SignalR en vez de consultar                 |
+| Pago               | Confirmar el pedido equivale a pagarlo                                                                     | Pago digital, efectivo en caja y saldo de mesa VIP                     |
+| Ticket de la barra | Se trabaja desde la pantalla del KDS                                                                       | Se imprime el ticket y se escanea el QR                                |
 
 ## Trabajo que no es una story
 
@@ -671,19 +670,19 @@ story que lo necesita.
   algo se guarda. El carrito ya lo usa. `SessionStorage` y `LastVenue` siguen con su propio
   `try/catch` copiado adentro, de cuando no había costura.
 
-  No hay nada roto: los tres funcionan, y el `try/catch` está porque una ventana de incógnito
-  o un navegador que bloquea datos de sitio tiran al acceder. Lo que falta es que la idea
-  esté escrita una sola vez, y que esos dos tengan la prueba de persistencia que hoy no
-  tienen: sus tests pasan igual si el navegador se traga todo.
+    No hay nada roto: los tres funcionan, y el `try/catch` está porque una ventana de incógnito
+    o un navegador que bloquea datos de sitio tiran al acceder. Lo que falta es que la idea
+    esté escrita una sola vez, y que esos dos tengan la prueba de persistencia que hoy no
+    tienen: sus tests pasan igual si el navegador se traga todo.
 
-  **`LastVenue` es quince minutos**: dos métodos, tres usos, nadie le inyecta nada.
-  **`SessionStorage` es la que cuesta**, y no por el `try/catch` sino porque guarda en
-  `sessionStorage` y no en `localStorage`, a propósito — la tablet de la barra es compartida
-  y una sesión no debe sobrevivir a la pestaña. `BrowserStore` hoy sabe un solo
-  almacenamiento, así que primero hay que decidir si maneja los dos o si son dos servicios.
-  Cuelga de ahí toda la autenticación, así que se revisa con más cuidado.
+    **`LastVenue` es quince minutos**: dos métodos, tres usos, nadie le inyecta nada.
+    **`SessionStorage` es la que cuesta**, y no por el `try/catch` sino porque guarda en
+    `sessionStorage` y no en `localStorage`, a propósito — la tablet de la barra es compartida
+    y una sesión no debe sobrevivir a la pestaña. `BrowserStore` hoy sabe un solo
+    almacenamiento, así que primero hay que decidir si maneja los dos o si son dos servicios.
+    Cuelga de ahí toda la autenticación, así que se revisa con más cuidado.
 
-  **Después del hito**, y en ese orden. Si aparece un cuarto lugar, deja de ser prolijidad.
+    **Después del hito**, y en ese orden. Si aparece un cuarto lugar, deja de ser prolijidad.
 
 **Ya está hecho y no se rehace.** Del backend: el modelo de local y de personal, el
 aislamiento entre locales con su prueba, la base con su migración, la API armada
@@ -710,23 +709,23 @@ cambiar la foto.
 
 ## Calendario
 
-| Cuándo | Qué |
-|---|---|
-| **Jue 10 – Vie 11** | Cerrar US-01: sistema de diseño, andamiaje de Angular y pantalla de ingreso. Más la autorización por rol, que destraba US-03. |
-| **Sáb 12 – Lun 14** | Tres carriles en paralelo (abajo). |
-| **Lun 14** | **Hito duro: el recorrido camina entero.** Entrar → cargar un trago → pedirlo desde el celular → seguirlo. Congelamiento a la noche: nadie arranca nada nuevo. |
-| **Mar 15 – Mié 16** | Errores, prueba de punta a punta, README y ensayo de la demo. |
-| **Jue 17** | Entrega. |
+| Cuándo              | Qué                                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Jue 10 – Vie 11** | Cerrar US-01: sistema de diseño, andamiaje de Angular y pantalla de ingreso. Más la autorización por rol, que destraba US-03.                                  |
+| **Sáb 12 – Lun 14** | Tres carriles en paralelo (abajo).                                                                                                                             |
+| **Lun 14**          | **Hito duro: el recorrido camina entero.** Entrar → cargar un trago → pedirlo desde el celular → seguirlo. Congelamiento a la noche: nadie arranca nada nuevo. |
+| **Mar 15 – Mié 16** | Errores, prueba de punta a punta, README y ensayo de la demo.                                                                                                  |
+| **Jue 17**          | Entrega.                                                                                                                                                       |
 
 ### Carriles del sábado 12 al lunes 14
 
 Uno por persona, elegidos para no pisarse en los mismos archivos.
 
-| Carril | Stories |
-|---|---|
-| Pedidos | Lo que hay detrás de US-11 y US-12 |
-| Administración | US-03, US-04, US-05, US-06, US-07, US-08 |
-| Cliente | US-09, US-10 y las pantallas de US-11 y US-12 |
+| Carril         | Stories                                       |
+| -------------- | --------------------------------------------- |
+| Pedidos        | Lo que hay detrás de US-11 y US-12            |
+| Administración | US-03, US-04, US-05, US-06, US-07, US-08      |
+| Cliente        | US-09, US-10 y las pantallas de US-11 y US-12 |
 
 Quien termine primero su carril ayuda en el de pedidos, que es el más pesado.
 
@@ -749,16 +748,16 @@ Quien termine primero su carril ayuda en el de pedidos, que es el más pesado.
 
 Nada de esto lo pide la consigna del Sprint 1.
 
-| Qué | Por qué no |
-|---|---|
-| Notificación al celular e instalar la aplicación | La consigna permite simular las notificaciones. |
-| **Las pantallas de la barra (el KDS)** | Recortadas el 2026-09-10 para llegar a la fecha. No están entre los seis puntos de la consigna. Consecuencia asumida: el rol KDS se puede crear pero no tiene pantalla, y el pedido del cliente no avanza más allá de "esperando". |
-| Impresión del ticket y lectura de QR | Llegan con las pantallas de la barra. |
-| Pagar de verdad | La consigna permite simular el pago. |
-| Que el cliente se cree una cuenta | La consigna pide expresamente poder pedir sin cuenta. |
-| Mesas VIP, saldo de mesa y cajero | Este sprint es sólo retiro en barra. |
-| Las pantallas del mozo | El rol se puede elegir al dar de alta a alguien, pero la entrega en mesa llega con el sector VIP. |
-| Cancelar un pedido | No está entre los seis puntos de la consigna. |
-| Paginar los listados | Un boliche no tiene tanta gente ni tantos tragos como para necesitarlo. La búsqueda sí se incorporó: es US-13. |
-| Límite de intentos de ingreso | Pendiente reconocido en el ADR-0008; se resuelve con lo que ya trae el framework. |
-| Métricas y reportes | No están en la consigna. |
+| Qué                                              | Por qué no                                                                                                                                                                                                                         |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Notificación al celular e instalar la aplicación | La consigna permite simular las notificaciones.                                                                                                                                                                                    |
+| **Las pantallas de la barra (el KDS)**           | Recortadas el 2026-09-10 para llegar a la fecha. No están entre los seis puntos de la consigna. Consecuencia asumida: el rol KDS se puede crear pero no tiene pantalla, y el pedido del cliente no avanza más allá de "esperando". |
+| Impresión del ticket y lectura de QR             | Llegan con las pantallas de la barra.                                                                                                                                                                                              |
+| Pagar de verdad                                  | La consigna permite simular el pago.                                                                                                                                                                                               |
+| Que el cliente se cree una cuenta                | La consigna pide expresamente poder pedir sin cuenta.                                                                                                                                                                              |
+| Mesas VIP, saldo de mesa y cajero                | Este sprint es sólo retiro en barra.                                                                                                                                                                                               |
+| Las pantallas del mozo                           | El rol se puede elegir al dar de alta a alguien, pero la entrega en mesa llega con el sector VIP.                                                                                                                                  |
+| Cancelar un pedido                               | No está entre los seis puntos de la consigna.                                                                                                                                                                                      |
+| Paginar los listados                             | Un boliche no tiene tanta gente ni tantos tragos como para necesitarlo. La búsqueda sí se incorporó: es US-13.                                                                                                                     |
+| Límite de intentos de ingreso                    | Pendiente reconocido en el ADR-0008; se resuelve con lo que ya trae el framework.                                                                                                                                                  |
+| Métricas y reportes                              | No están en la consigna.                                                                                                                                                                                                           |

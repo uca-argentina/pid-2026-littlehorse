@@ -55,8 +55,26 @@ describe('Cart', () => {
     cart.add(ginTonic);
 
     expect(cart.lines()).toEqual([
-      { productId: 'id-1', name: 'Gin Tonic', unitPrice: 4500, quantity: 1, note: null },
+      {
+        productId: 'id-1',
+        name: 'Gin Tonic',
+        imageUrl: null,
+        unitPrice: 4500,
+        quantity: 1,
+        note: null,
+      },
     ]);
+  });
+
+  // The order screen shows this drink with no other source for its photo: the
+  // line has to carry what the card was showing when the plus was tapped.
+  it('keeps the picture the card was showing when it was added', () => {
+    const cart = aCart();
+    cart.open('bar-alfa');
+
+    cart.add({ ...ginTonic, imageUrl: 'https://images.example.com/gin.png' });
+
+    expect(cart.lines()[0].imageUrl).toBe('https://images.example.com/gin.png');
   });
 
   // Two taps on the same card mean two of that drink, not two entries for it:
