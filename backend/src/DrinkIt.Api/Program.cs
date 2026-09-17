@@ -50,10 +50,15 @@ builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
 
+// Every environment: a single venue, low traffic, and the Container App's managed
+// identity already holds db_ddladmin (see infra/README.md), so there's no separate
+// deploy step to run this from. See MigrationExtensions.ApplyMigrationsAsync for the
+// accepted risk with more than one replica applying migrations at the same time.
+await app.ApplyMigrationsAsync();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    await app.ApplyMigrationsAsync();
     await app.SeedDevelopmentDataAsync();
     app.MapScalarApiReference();
 }
