@@ -26,9 +26,15 @@ public sealed record ConfirmOrderRequest(
     IReadOnlyList<OrderLineRequestBody>? Lines);
 
 /// <summary>The order as the confirmation screen shows it.</summary>
+/// <summary>
+/// The confirmed order. This is the one and only answer that carries the
+/// tracking token: the phone needs it to build the link that watches the order,
+/// and nothing about the order says it again afterwards.
+/// </summary>
 public sealed record ConfirmedOrderResponse(
     Guid Id,
     string Code,
+    string TrackingToken,
     string CustomerName,
     decimal Total,
     string Status,
@@ -77,13 +83,14 @@ internal static class OrdersEndpoints
 
         ConfirmedOrder order = result.Value;
 
-        // 201 with the address the order can be read back at, which US-12 will
-        // answer. The body is what the confirmation screen draws right now.
+        // 201 with the address the order can be followed at, token included:
+        // that address is the customer's only way back to their order.
         return TypedResults.Created(
-            $"/{venueSlug}/orders/{order.Code}",
+            $"/{venueSlug}/orders/{order.Code}/{order.TrackingToken}",
             new ConfirmedOrderResponse(
                 order.Id,
                 order.Code,
+                order.TrackingToken,
                 order.CustomerName,
                 order.Total,
                 order.Status.ToString(),

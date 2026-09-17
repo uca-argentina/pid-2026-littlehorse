@@ -13,10 +13,19 @@ public sealed record ConfirmOrderCommand(
     string? IdempotencyKey,
     IReadOnlyCollection<OrderLineRequest> Lines);
 
-/// <summary>The order as the confirmation screen shows it.</summary>
+/// <summary>
+/// The order as the confirmation screen shows it.
+/// </summary>
+/// <remarks>
+/// <see cref="TrackingToken"/> is handed over exactly once, here, in the answer
+/// to the request that created the order: it is the only way the customer's
+/// phone can build the link that lets them watch it. Every later answer about
+/// this order leaves it out.
+/// </remarks>
 public sealed record ConfirmedOrder(
     Guid Id,
     string Code,
+    string TrackingToken,
     string CustomerName,
     decimal Total,
     OrderStatus Status,
@@ -206,6 +215,7 @@ public sealed class ConfirmOrderHandler(
     private static ConfirmedOrder Confirmation(Order order) => new(
         order.Id,
         order.Code.Value,
+        order.TrackingToken.Value,
         order.CustomerName,
         order.Total,
         order.Status,
