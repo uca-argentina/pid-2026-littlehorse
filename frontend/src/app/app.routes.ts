@@ -35,6 +35,16 @@ export const routes: Routes = [
   },
   // One tap on from the menu, and the same anonymous visit: the order lives on
   // the device, so there is nothing here a guard would protect.
+  // Before ':venueSlug/order', which would otherwise match this prefix first.
+  {
+    path: ':venueSlug/orders',
+    loadChildren: () =>
+      import('./features/checkout/checkout.routes').then((m) => m.confirmedOrderRoutes),
+  },
+  {
+    path: ':venueSlug/checkout',
+    loadChildren: () => import('./features/checkout/checkout.routes').then((m) => m.checkoutRoutes),
+  },
   {
     path: ':venueSlug/order',
     loadChildren: () => import('./features/order/order.routes').then((m) => m.orderRoutes),

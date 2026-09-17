@@ -119,12 +119,14 @@ test.describe('Order', () => {
     );
   });
 
-  // US-11 is the screen this leads to and it does not exist yet.
-  test('does not offer to pay yet', async ({ page, request }) => {
+  // US-11 exists now, so the gold bar is the way on to paying.
+  test('leads to the payment screen', async ({ page, request }) => {
     await anOrderWith(page, request, 1);
 
     await page.goto(orderPath);
+    await page.getByRole('link', { name: /ir a pagar/i }).click();
 
-    await expect(page.getByRole('button', { name: /ir a pagar/i })).toBeDisabled();
+    await expect(page).toHaveURL(new RegExp(`/${seededVenueSlug}/checkout$`));
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pagar');
   });
 });

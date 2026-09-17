@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,11 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
     public DbSet<StaffUser> StaffUsers => Set<StaffUser>();
 
     public DbSet<Product> Products => Set<Product>();
+
+    public DbSet<Order> Orders => Set<Order>();
+
+    /// <summary>Where each venue's order codes are up to. Not a domain aggregate.</summary>
+    internal DbSet<OrderCodeCounter> OrderCodeCounters => Set<OrderCodeCounter>();
 
     /// <summary>Read by the global query filters below.</summary>
     private Guid CurrentVenueId => currentVenue.Id;
@@ -30,6 +36,7 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
         // is known. Filtering it would make that lookup impossible.
         modelBuilder.Entity<StaffUser>().HasQueryFilter(user => user.VenueId == CurrentVenueId);
         modelBuilder.Entity<Product>().HasQueryFilter(product => product.VenueId == CurrentVenueId);
+        modelBuilder.Entity<Order>().HasQueryFilter(order => order.VenueId == CurrentVenueId);
 
         base.OnModelCreating(modelBuilder);
     }

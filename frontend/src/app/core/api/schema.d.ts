@@ -28,10 +28,32 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** The menu a customer reads after scanning the venue's QR. */
+    /**
+     * Both halves of the answer come from the one venue the middleware
+     *     resolved from the slug: the name from what it remembered, the products
+     *     from the query filter it set. Looking the venue up again here is how a
+     *     single response ends up naming one venue and listing another's drinks.
+     */
     get: operations['GetMenu'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/{venueSlug}/orders': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Confirms and pays for an order from the customer's phone. */
+    post: operations['ConfirmOrder'];
     delete?: never;
     options?: never;
     head?: never;
@@ -167,6 +189,25 @@ export interface components {
     ChangeStaffUserRoleRequest: {
       role: string;
     };
+    /** @description The order as the confirmation screen shows it. */
+    ConfirmedOrderResponse: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      customerName: string;
+      /** Format: double */
+      total: number;
+      status: string;
+      /** Format: date-time */
+      paidAt: string;
+    };
+    /** @description An order somebody is confirming from their phone. */
+    ConfirmOrderRequest: {
+      customerName: null | string;
+      method: null | string;
+      idempotencyKey: null | string;
+      lines: null | components['schemas']['OrderLineRequestBody'][];
+    };
     /**
      * @description What the administration screen posts. The image address is whatever the
      *     upload returned, or null while there is none.
@@ -221,6 +262,14 @@ export interface components {
     MenuResponse: {
       venueName: string;
       items: components['schemas']['MenuItemResponse'][];
+    };
+    /** @description One drink, as the phone asks for it. What it costs is not in here on purpose. */
+    OrderLineRequestBody: {
+      /** Format: uuid */
+      productId: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
     };
     ProblemDetails: {
       type?: null | string;
@@ -323,6 +372,59 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ConfirmOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        venueSlug: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfirmOrderRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ConfirmedOrderResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

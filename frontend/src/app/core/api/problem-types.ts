@@ -21,4 +21,10 @@ export const ProblemTypes = {
   venueNotFound: 'urn:drinkit:problem:venue:not-found',
 
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
+
+  // US-11. The three that mean the menu moved while somebody was ordering, as
+  // opposed to something being wrong with what they sent.
+  orderSoldOut: 'urn:drinkit:problem:order:sold-out',
+  orderNotOnTheMenu: 'urn:drinkit:problem:order:not-on-the-menu',
+  orderStockMoved: 'urn:drinkit:problem:order:stock-moved',
 } as const;

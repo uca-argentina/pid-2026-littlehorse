@@ -10,7 +10,12 @@ namespace DrinkIt.Api.Tests.Common;
 /// What the PWA actually receives: status, content type, the bytes as they went
 /// out, and those bytes parsed when they were JSON.
 /// </summary>
-public sealed record HttpResponseSnapshot(int StatusCode, string ContentType, string Raw, JsonElement Body)
+public sealed record HttpResponseSnapshot(
+    int StatusCode,
+    string ContentType,
+    string Raw,
+    JsonElement Body,
+    string Location)
 {
     public static HttpResponseSnapshot Of(HttpContext context, Stream body)
     {
@@ -20,7 +25,10 @@ public sealed record HttpResponseSnapshot(int StatusCode, string ContentType, st
             context.Response.StatusCode,
             context.Response.ContentType ?? string.Empty,
             raw,
-            raw.StartsWith('{') || raw.StartsWith('[') ? JsonDocument.Parse(raw).RootElement.Clone() : default);
+            raw.StartsWith('{') || raw.StartsWith('[') ? JsonDocument.Parse(raw).RootElement.Clone() : default,
+            // Part of the contract of a 201: where the thing that was just
+            // created can be read back.
+            context.Response.Headers.Location.ToString());
     }
 
     public string Text(string property) => Body.GetProperty(property).GetString()!;

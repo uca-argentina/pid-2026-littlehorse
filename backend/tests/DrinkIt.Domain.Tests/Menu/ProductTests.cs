@@ -203,4 +203,5 @@ public class ProductImageTests
         Assert.Equal(Product.ErrorCodes.ImageUrlInvalid, error.Code);
         Assert.Null(product.ImageUrl);
     }
+
 }

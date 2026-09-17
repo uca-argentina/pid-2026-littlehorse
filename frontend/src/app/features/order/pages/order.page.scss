@@ -48,12 +48,10 @@
   letter-spacing: -0.01em;
 }
 
-// The venue's mark at 28, not the 46 of the menu: there it says which bar you
-// are reading, here it is only a reminder of where the order is going.
 .mark {
   display: flex;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
@@ -297,16 +295,21 @@
   font-family: inherit;
   font-size: 16.5px;
   font-weight: 700;
+
+  // A link now, so it carries a paragraph's margin and a link's underline
+  // unless they are taken off.
+  margin: 0;
+  text-decoration: none;
 }
 
 // Dimmed rather than greyed out: it is still the thing this screen leads to.
 // Before the hover rule and not after it, which is what stylelint's
 // no-descending-specificity asks for: the more specific selector goes first.
-.cta:disabled {
+.cta-off {
   background: var(--dk-accent-disabled);
 }
 
-.cta:hover:not(:disabled) {
+.cta:hover:not(.cta-off) {
   background: var(--dk-accent-hover);
 }
 
