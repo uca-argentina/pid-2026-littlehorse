@@ -35,11 +35,11 @@ export const routes: Routes = [
   },
   // One tap on from the menu, and the same anonymous visit: the order lives on
   // the device, so there is nothing here a guard would protect.
-  // Before ':venueSlug/order', which would otherwise match this prefix first.
+  // Where an order lives once it is the venue's: code and token, which is the
+  // link the customer keeps. It is also where paying lands.
   {
     path: ':venueSlug/orders',
-    loadChildren: () =>
-      import('./features/checkout/checkout.routes').then((m) => m.confirmedOrderRoutes),
+    loadChildren: () => import('./features/tracking/tracking.routes').then((m) => m.trackingRoutes),
   },
   {
     path: ':venueSlug/checkout',

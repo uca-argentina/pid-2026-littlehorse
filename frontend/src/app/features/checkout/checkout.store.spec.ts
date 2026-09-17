@@ -12,6 +12,7 @@ import type { ConfirmedOrder } from './checkout.service';
 const confirmed: ConfirmedOrder = {
   id: 'ba5eba11-0000-4000-8000-000000000001',
   code: 'A-0000',
+  trackingToken: '9f3c2ba7d81e4c06a1b2c3d4e5f60718',
   customerName: 'María Quadro',
   total: 9000,
   status: 'Queued',
@@ -145,7 +146,13 @@ describe('CheckoutStore', () => {
     http.expectOne(ordersUrl('bar-alfa')).flush(confirmed);
     await theTimerFires();
 
-    expect(navigate).toHaveBeenCalledWith(['/', 'bar-alfa', 'orders', 'A-0000']);
+    expect(navigate).toHaveBeenCalledWith([
+      '/',
+      'bar-alfa',
+      'orders',
+      'A-0000',
+      '9f3c2ba7d81e4c06a1b2c3d4e5f60718',
+    ]);
   });
 
   // The order belongs to the server now. What is left on the phone is a copy

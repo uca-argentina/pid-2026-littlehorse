@@ -60,6 +60,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/{venueSlug}/orders/{code}/{token}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Answers 404 to every way of not getting in: a wrong token, a code that
+     *     belongs to nobody, another venue's order, and an order already handed
+     *     over. A 403 would confirm to somebody working through codes that this
+     *     one exists, which is the half of the answer worth hiding.
+     */
+    get: operations['FollowOrder'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/users': {
     parameters: {
       query?: never;
@@ -194,6 +216,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       code: string;
+      trackingToken: string;
       customerName: string;
       /** Format: double */
       total: number;
@@ -307,6 +330,24 @@ export interface components {
       username: string;
       role: string;
       isActive: boolean;
+    };
+    /** @description One drink of the order, as the tracking screen draws it. */
+    TrackedOrderItemResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+    };
+    /** @description Where an order is. */
+    TrackedOrderResponse: {
+      code: string;
+      customerName: string;
+      status: string;
+      /** Format: double */
+      total: number;
+      /** Format: date-time */
+      paidAt: null | string;
+      items: components['schemas']['TrackedOrderItemResponse'][];
     };
   };
   responses: never;
@@ -425,6 +466,39 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  FollowOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        venueSlug: string;
+        code: string;
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrackedOrderResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

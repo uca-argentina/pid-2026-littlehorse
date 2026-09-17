@@ -111,18 +111,24 @@ export class CheckoutStore {
    * The order is the server's now and has a code of its own, so what is left on
    * this phone is a copy that nobody should be able to pay for twice.
    *
-   * Emptied after the confirmation is on screen and not before: this screen is
-   * still the one showing while the next one's code downloads, and an empty
-   * cart turns it into "no hay nada para pagar" — announced out loud — in the
-   * second after a payment went through.
+   * The token goes in the address and nowhere else: it is the only thing that
+   * opens that order, and the one and only time the API hands it over is the
+   * answer that just arrived.
+   *
+   * Emptied after the next screen is on and not before: this one is still
+   * showing while that screen's code downloads, and an empty cart turns it into
+   * "no hay nada para pagar" — announced out loud — in the second after a
+   * payment went through.
    */
   private showTheConfirmation(venueSlug: string, order: ConfirmedOrder): void {
     this.state.set('idle');
 
-    void this.router.navigate(['/', venueSlug, 'orders', order.code]).then(() => {
-      this.cart.clear();
-      this.store.write(CHECKOUT_KEY_PREFIX + venueSlug, '');
-    });
+    void this.router
+      .navigate(['/', venueSlug, 'orders', order.code, order.trackingToken])
+      .then(() => {
+        this.cart.clear();
+        this.store.write(CHECKOUT_KEY_PREFIX + venueSlug, '');
+      });
   }
 
   private explain(error: unknown): void {
