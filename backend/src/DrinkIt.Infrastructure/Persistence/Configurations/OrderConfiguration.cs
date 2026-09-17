@@ -32,14 +32,24 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property<string>(IdempotencyKey).HasMaxLength(100).IsRequired();
 
+        // The secret half of the tracking link. Not indexed and never looked up
+        // on its own: the lookup is by code, within the venue, and this is
+        // compared afterwards — so an index on it would be an invitation to
+        // query by it that nothing needs.
+        builder.Property(order => order.TrackingToken)
+            .HasConversion(token => token.Value, value => TrackingToken.Parse(value))
+            .HasMaxLength(TrackingToken.Length)
+            .IsRequired();
+
         // Both composite with VenueId: codes run per venue, and so do the keys.
         // Two venues can hand out K-4821 the same night without meeting.
         builder.HasIndex(order => new { order.VenueId, order.Code }).IsUnique();
         builder.HasIndex(IdempotencyKey, nameof(Order.VenueId)).IsUnique();
 
-        // Derived from the lines, never stored: a stored total is one that can
-        // disagree with what it is a total of.
+        // Derived, never stored: both can only disagree with what they are
+        // derived from.
         builder.Ignore(order => order.Total);
+        builder.Ignore(order => order.IsFinished);
 
         // The lines are the order's own and reachable only through it, which is
         // what makes this an aggregate: they load with it and die with it.

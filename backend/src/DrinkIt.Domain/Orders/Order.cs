@@ -43,12 +43,13 @@ public sealed class Order : IBelongsToVenue
     /// parameter, so a constructor that asked for them would make the aggregate
     /// unloadable.
     /// </summary>
-    private Order(Guid id, Guid venueId, string customerName, OrderCode code)
+    private Order(Guid id, Guid venueId, string customerName, OrderCode code, TrackingToken trackingToken)
     {
         Id = id;
         VenueId = venueId;
         CustomerName = customerName;
         Code = code;
+        TrackingToken = trackingToken;
         Status = OrderStatus.Cart;
     }
 
@@ -62,6 +63,13 @@ public sealed class Order : IBelongsToVenue
     /// <summary>What the customer shouts at the bar to claim it.</summary>
     public OrderCode Code { get; }
 
+    /// <summary>
+    /// The secret that lets whoever placed it watch it. There is no account to
+    /// prove the order is theirs, so holding this is the proof. Never printed,
+    /// never said out loud, never logged.
+    /// </summary>
+    public TrackingToken TrackingToken { get; }
+
     public OrderStatus Status { get; private set; }
 
     /// <summary>When it was paid, or null while nobody has. Stamped once.</summary>
@@ -71,6 +79,9 @@ public sealed class Order : IBelongsToVenue
 
     /// <summary>Derived, never stored: a total kept apart from the lines is one that can disagree with them.</summary>
     public decimal Total => _items.Sum(item => item.Total);
+
+    /// <summary>Nobody is waiting on it any more, so its link stops working.</summary>
+    public bool IsFinished => Status.IsFinished();
 
     public static Order Place(
         Guid venueId,
@@ -87,7 +98,7 @@ public sealed class Order : IBelongsToVenue
         if (items.Count == 0) throw new DomainException(ErrorCodes.Empty, "An order with nothing in it cannot be placed.");
         if (items.Select(item => item.ProductId).Distinct().Count() != items.Count) throw new DomainException(ErrorCodes.DuplicateItem, "Each drink goes on one line, with a quantity beside it.");
 
-        Order order = new(Guid.CreateVersion7(), venueId, cleanName, code);
+        Order order = new(Guid.CreateVersion7(), venueId, cleanName, code, TrackingToken.New());
 
         order._items.AddRange(items.Select(ToItem));
 

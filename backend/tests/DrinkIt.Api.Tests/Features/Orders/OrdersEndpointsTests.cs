@@ -36,13 +36,26 @@ public class OrdersEndpointsTests
         Assert.Equal("Queued", response.Text("status"));
     }
 
-    // 201 carries where the order can be read back, which US-12 will answer.
+    // 201 carries the address the order can be followed at, token included:
+    // that address is the customer's only way back to their order.
     [Fact]
     public async Task ConfirmAsync_WhenTheOrderIsGood_PointsAtWhereItCanBeFollowed()
     {
         HttpResponseSnapshot response = await Confirm(ARequestFor(1));
 
-        Assert.Equal("/bar-alfa/orders/A-0000", response.Location);
+        Assert.Matches("^/bar-alfa/orders/A-0000/[0-9a-f]{32}$", response.Location);
+    }
+
+    /// <summary>
+    /// The one and only answer that carries the token. Without it the phone
+    /// cannot build the link that watches the order, and nothing says it again.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmAsync_WhenTheOrderIsGood_HandsOverTheTrackingTokenOnce()
+    {
+        HttpResponseSnapshot response = await Confirm(ARequestFor(1));
+
+        Assert.Matches("^[0-9a-f]{32}$", response.Text("trackingToken"));
     }
 
     // Criterion 3, as the phone receives it: a 400 whose type the screen can

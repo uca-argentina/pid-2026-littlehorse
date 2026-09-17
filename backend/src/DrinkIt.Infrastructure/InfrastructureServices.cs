@@ -57,6 +57,7 @@ public static class InfrastructureServices
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductsForOrdering, ProductsForOrdering>();
         services.AddScoped<IOrderCodeSequence, OrderCodeSequence>();
+        services.AddScoped<IOrderTrackingQueries, OrderTrackingQueries>();
 
         // Registered as a collection on purpose: the handler picks the strategy
         // that matches the method asked for, so adding cash or VIP balance is

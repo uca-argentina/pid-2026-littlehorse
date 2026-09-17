@@ -34,6 +34,56 @@ public class OrderTests
         Assert.Equal(2, order.Items.Count);
     }
 
+    // US-12: the order is born with the secret that lets whoever placed it
+    // watch it, because there is no account to prove it belongs to them.
+    [Fact]
+    public void Place_Always_GivesTheOrderATokenOfItsOwn()
+    {
+        Order one = AnOrder();
+        Order another = AnOrder();
+
+        Assert.Equal(TrackingToken.Length, one.TrackingToken.Value.Length);
+        Assert.NotEqual(one.TrackingToken.Value, another.TrackingToken.Value);
+    }
+
+    /// <summary>
+    /// A finished order is one nobody is waiting on any more, so its link stops
+    /// working: the one left in a browser's history on a shared phone stops
+    /// being a way in the moment the drinks are handed over.
+    /// </summary>
+    [Fact]
+    public void IsFinished_WhenTheOrderIsStillGoing_IsFalse()
+    {
+        Order order = AnOrder();
+
+        Assert.False(order.IsFinished);
+
+        order.Pay(DateTimeOffset.UtcNow);
+        order.Enqueue();
+
+        Assert.False(order.IsFinished);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Delivered)]
+    [InlineData(OrderStatus.Canceled)]
+    public void IsFinished_WhenNobodyIsWaitingOnItAnyMore_IsTrue(OrderStatus status)
+    {
+        Assert.True(status.IsFinished());
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Cart)]
+    [InlineData(OrderStatus.AwaitingPayment)]
+    [InlineData(OrderStatus.Paid)]
+    [InlineData(OrderStatus.Queued)]
+    [InlineData(OrderStatus.InPreparation)]
+    [InlineData(OrderStatus.Ready)]
+    public void IsFinished_WhenItIsStillOnItsWay_IsFalse(OrderStatus status)
+    {
+        Assert.False(status.IsFinished());
+    }
+
     // What the bar charges is the sum it can recompute from the lines: a total
     // stored apart from them is a total that can disagree with them.
     [Fact]

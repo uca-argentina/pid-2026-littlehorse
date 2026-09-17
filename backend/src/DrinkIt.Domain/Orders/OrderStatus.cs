@@ -31,3 +31,19 @@ public enum OrderStatus
 
     Canceled = 7,
 }
+
+/// <summary>Questions about a status that more than one place asks.</summary>
+public static class OrderStatuses
+{
+    /// <summary>
+    /// Nobody is waiting on it any more.
+    /// </summary>
+    /// <remarks>
+    /// An extension and not a property of <see cref="Order"/>, because the
+    /// query behind the tracking screen reads a status out of the database
+    /// without ever loading the aggregate. One answer to "is it over" rather
+    /// than two that can drift apart.
+    /// </remarks>
+    public static bool IsFinished(this OrderStatus status) =>
+        status is OrderStatus.Delivered or OrderStatus.Canceled;
+}

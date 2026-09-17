@@ -94,6 +94,7 @@ app.UseAuthorization();
 app.MapLogin();
 app.MapMenu();
 app.MapOrders();
+app.MapOrderTracking();
 app.MapStaffUsers();
 app.MapProducts();
 

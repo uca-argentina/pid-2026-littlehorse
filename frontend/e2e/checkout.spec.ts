@@ -62,8 +62,10 @@ test.describe('Checkout', () => {
     // The code the bar will ask for. Its shape is the contract: one letter, a
     // hyphen and four digits.
     await expect(page.getByTestId('order-code')).toHaveText(/^[A-Z]-\d{4}$/, { timeout: 15000 });
-    await expect(page).toHaveURL(new RegExp(`/${seededVenueSlug}/orders/[A-Z]-\\d{4}$`));
-    await expect(page.getByRole('status')).toContainText(/confirmado/i);
+    await expect(page).toHaveURL(
+      new RegExp(`/${seededVenueSlug}/orders/[A-Z]-\\d{4}/[0-9a-f]{32}$`),
+    );
+    await expect(page.getByRole('status')).toContainText(/pago/i);
   });
 
   // Criterion 3, in a real browser: no name, no order, and it is said before
@@ -130,14 +132,17 @@ test.describe('Checkout', () => {
     await expect(page.getByRole('link', { name: /revisar el pedido/i })).toBeVisible();
   });
 
-  // US-12 is what this leads to and it does not exist yet.
-  test('does not offer to follow the order yet', async ({ page, request }) => {
+  // US-12: paying lands on the order's own screen, which is also where it is
+  // followed from. The link carries the token, because that is the only thing
+  // that opens it.
+  test('lands on the screen that follows the order', async ({ page, request }) => {
     await anOrderReadyToPay(page, request);
 
     await page.getByRole('textbox', { name: /nombre/i }).fill('María Quadro');
     await page.getByRole('button', { name: /pagar/i }).click();
     await expect(page.getByTestId('order-code')).toBeVisible({ timeout: 15000 });
 
-    await expect(page.getByRole('button', { name: /ver el estado/i })).toBeDisabled();
+    await expect(page.getByRole('listitem').first()).toContainText('Esperando en la barra');
+    await expect(page).toHaveURL(/\/orders\/[A-Z]-\d{4}\/[0-9a-f]{32}$/);
   });
 });

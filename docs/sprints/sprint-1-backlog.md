@@ -86,8 +86,8 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-08 | Corregir y sacar tragos           | US-06        | Pendiente                                                             |
 | US-09 | Ver la carta desde el celular     | US-06        | ✅ **Terminada**                                                      |
 | US-10 | Armar el pedido                   | US-09        | **Terminada** — a falta de prueba a mano                              |
-| US-11 | Confirmar el pedido               | US-10        | Pendiente                                                             |
-| US-12 | Seguir mi pedido                  | US-11        | Pendiente                                                             |
+| US-11 | Confirmar el pedido               | US-10        | **Terminada** — a falta de prueba a mano                              |
+| US-12 | Seguir mi pedido                  | US-11        | **Terminada** — a falta de prueba a mano                              |
 | US-13 | Encontrar a alguien en el listado | US-03        | ✅ **Terminada**                                                      |
 | US-14 | Agrupar la carta por categoría    | US-06, US-09 | Pendiente — planificada el 2026-09-15                                 |
 
@@ -689,6 +689,28 @@ emitirlos.
 > criterio 3 se verifica cambiando el estado a mano en la base y viendo que la pantalla se
 > pone al día sola. Es una limitación de la demo, no del diseño: la pantalla ya muestra los
 > cuatro pasos y el mecanismo de actualización queda construido y probado.
+
+**Terminada.** El pedido vive en `/{venueSlug}/orders/{código}/{token}`, que es donde cae
+quien paga y el enlace que se guarda.
+
+| Decisión | Cómo queda |
+|---|---|
+| Una pantalla, no dos | La confirmación y el seguimiento eran el mismo lugar peleando por la misma dirección. Quedó una: arriba el tilde y el código grande —lo primero que hace falta al pagar— y abajo el recorrido. Volver más tarde al mismo enlace muestra lo mismo con el estado al día, que es el criterio 4. |
+| Cómo se protege el enlace | Un **token de seguimiento** de 128 bits, aparte del código. El código es el nombre del pedido: se grita en la barra, se puede loggear. El token es la llave, y es lo único que tiene quien no tiene cuenta. Se compara en **tiempo constante**: una comparación que corta en el primer carácter distinto le dice al que adivina cuánto acertó. |
+| Por qué el token y no el id del pedido | Con el id en la dirección, el identificador **es** la credencial: cualquier log o métrica que lo registre lo filtra. Y el día que existan las cuentas de cliente habría que mudar la ruta otra vez para que el registrado tenga direcciones limpias. Con el token, la regla pasa a ser "sos el dueño **o** traés el token" sin tocar nada. |
+| Dónde viaja el token | En el **path**, nunca en query string: las query strings son lo que proxies, logs y analíticas guardan por defecto. |
+| Un solo 404 | Token equivocado, código inexistente, pedido de otro boliche y pedido ya entregado responden lo mismo. Un 403 le confirmaría a alguien que va probando códigos que ése existe. |
+| El token se entrega una vez | En el 201 de la confirmación, y nunca más: la respuesta del seguimiento no lo lleva. Hay tests que verifican que la palabra no aparece en el cuerpo. |
+| Cuándo muere el enlace | Cuando el pedido se entrega o se cancela. El que quedó en el historial de un teléfono compartido deja de ser una puerta en el momento en que le dan los tragos. |
+| Cada cuánto consulta | Cada **tres segundos**, no SignalR. Para cuando el pedido termina, y descansa mientras la pestaña está en segundo plano: veinte consultas por minuto por algo que nadie está leyendo es batería que hace falta para el resto de la noche. |
+| Sin señal ≠ enlace roto | Son dos mensajes distintos. Si se cae la conexión, la pantalla **conserva lo último que supo** y avisa que está desactualizada; el pedido no dejó de existir. Eso es el criterio 6. |
+| Los pasos | Cuatro: esperando, en preparación, listo, entregado. Pagado y En cola son el mismo paso, porque para quien espera un trago son la misma cosa. Un pedido cancelado **no** dibuja el recorrido: cuatro pasos sin alcanzar dirían que todavía viene en camino. |
+| El criterio 3 de punta a punta | **No se prueba con Playwright.** Sin las pantallas de la barra nada mueve un pedido, y probarlo habría pedido un endpoint que existe sólo para ser probado o un test que entra a la base. Lo que hace el polling está cubierto en `tracking.store.spec.ts`, y el criterio se muestra a mano en la demo. |
+
+**Ojo con la US-05.** Su criterio 3 —que los pedidos sigan mostrando quién los preparó—
+estaba trabado porque los pedidos no existían. Ahora existen, pero sigue trabado por otra
+razón: **un pedido no registra quién lo preparó**, porque eso lo asigna el KDS, que está
+fuera del sprint.
 
 ---
 
