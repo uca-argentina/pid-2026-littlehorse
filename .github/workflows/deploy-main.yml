@@ -1,0 +1,155 @@
+name: Deploy to Azure
+
+# Single environment, fed only from main (see ADR-0007). dev never triggers this.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # OIDC to Azure, no long-lived secrets
+  packages: write # push the image to ghcr.io
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}-api
+  RESOURCE_GROUP: rg-drinkit
+  SQL_AAD_ADMIN_OBJECT_ID: b1452336-3995-46eb-b7f7-869c86e92783
+  SQL_AAD_ADMIN_LOGIN_NAME: lamelapaul_outlook.es#EXT#@lamelapauloutlook.onmicrosoft.com
+
+jobs:
+  build-and-push-api:
+    name: Build and push the API image
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.tag.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute the image tag
+        id: tag
+        run: echo "value=${{ env.IMAGE_NAME }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.tag.outputs.value }}
+            ${{ env.IMAGE_NAME }}:latest
+
+  build-pwa:
+    name: Build the PWA
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    outputs:
+      artifact-name: pwa-dist
+    steps:
+      - uses: actions/checkout@v4
+
+      # Must run before setup-node, which needs pnpm on PATH to resolve its store.
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pwa-dist
+          # @angular/build:application always nests the client bundle under /browser,
+          # even without SSR: it leaves room for a future /server without config changes.
+          path: frontend/dist/frontend/browser
+          retention-days: 1
+
+  deploy-infra:
+    name: Deploy infrastructure and the API
+    needs: build-and-push-api
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: az deployment group create
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment group create \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --template-file infra/main.bicep \
+              --parameters \
+                apiContainerImage=${{ needs.build-and-push-api.outputs.image-tag }} \
+                sqlAadAdminObjectId=${{ env.SQL_AAD_ADMIN_OBJECT_ID }} \
+                sqlAadAdminLoginName="${{ env.SQL_AAD_ADMIN_LOGIN_NAME }}" \
+                jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}"
+
+  deploy-pwa:
+    name: Deploy the PWA to Static Web Apps
+    needs: [build-pwa, deploy-infra]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pwa-dist
+          path: frontend/dist/frontend/browser
+
+      - name: Log in to Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Read the Static Web App's deployment token
+        id: swa-token
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            token=$(az staticwebapp secrets list \
+              --name swa-drinkit \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query properties.apiKey -o tsv)
+            echo "::add-mask::$token"
+            echo "value=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.value }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: frontend/dist/frontend/browser
+          output_location: /
+          skip_app_build: true
