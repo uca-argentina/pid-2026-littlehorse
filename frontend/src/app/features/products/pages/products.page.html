@@ -105,6 +105,17 @@
             @if (!row.isAvailable) {
               <span class="chip">Apagado</span>
             }
+            @if (row.isActive) {
+              <button
+                class="toggle"
+                type="button"
+                [disabled]="row.isToggling"
+                [attr.aria-label]="(row.isAvailable ? 'Apagar ' : 'Prender ') + row.name"
+                (click)="toggleAvailability(row)"
+              >
+                {{ row.isAvailable ? 'Apagar' : 'Prender' }}
+              </button>
+            }
             @if (!row.isActive) {
               <span class="chip chip-off">Dado de baja</span>
             }

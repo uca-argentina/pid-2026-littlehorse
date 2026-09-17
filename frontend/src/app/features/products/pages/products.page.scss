@@ -211,6 +211,28 @@
   color: var(--dk-text-faint);
 }
 
+.toggle {
+  min-height: 44px;
+  padding: 0 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.toggle:disabled {
+  color: var(--dk-text-faint);
+  opacity: 0.65;
+}
+
+.toggle:hover:not(:disabled) {
+  color: var(--dk-text);
+}
+
 .note {
   margin: 0;
   padding: 13px 15px;

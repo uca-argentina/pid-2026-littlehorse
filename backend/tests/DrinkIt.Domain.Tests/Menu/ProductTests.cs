@@ -160,6 +160,61 @@ public class ProductTests
     }
 }
 
+// US-07: the nightly switch, independent of Create and of Stock.
+public class ProductAvailabilityTests
+{
+    private static Product AGinTonic() =>
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+
+    [Fact]
+    public void MarkUnavailable_WhenAvailable_SetsIsAvailableFalse()
+    {
+        Product product = AGinTonic();
+
+        product.MarkUnavailable();
+
+        Assert.False(product.IsAvailable);
+    }
+
+    // Marking an already-unavailable product unavailable again is not an
+    // error: the administrator can click the switch without checking its
+    // current state first.
+    [Fact]
+    public void MarkUnavailable_WhenAlreadyUnavailable_StaysUnavailable()
+    {
+        Product product = AGinTonic();
+        product.MarkUnavailable();
+
+        product.MarkUnavailable();
+
+        Assert.False(product.IsAvailable);
+    }
+
+    [Fact]
+    public void MarkAvailable_WhenUnavailable_SetsIsAvailableTrue()
+    {
+        Product product = AGinTonic();
+        product.MarkUnavailable();
+
+        product.MarkAvailable();
+
+        Assert.True(product.IsAvailable);
+    }
+
+    // Running out of stock and the nightly switch are independent (decided
+    // 2026-09-14): re-enabling the switch does not restock the product.
+    [Fact]
+    public void MarkAvailable_WhenSoldOut_StaysSoldOut()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+
+        product.MarkAvailable();
+
+        Assert.True(product.IsAvailable);
+        Assert.True(product.IsSoldOut);
+    }
+}
+
 public class ProductImageTests
 {
     private static Product AGinTonicWithoutPicture() =>

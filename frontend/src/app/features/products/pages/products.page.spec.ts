@@ -156,6 +156,54 @@ describe('ProductsPage', () => {
     expect(screen.getByRole('status').textContent).toContain('Todavía no');
   });
 
+  // US-07: the nightly switch, separate from stock and from the soft delete.
+  describe('turning a product off and on', () => {
+    const aGinTonic: Product = {
+      id: 'id-1',
+      name: 'Gin Tonic',
+      description: null,
+      imageUrl: null,
+      price: 4500,
+      stock: 20,
+      isAvailable: true,
+      isSoldOut: false,
+      isActive: true,
+    };
+
+    it('lets the administrator turn a product off', async () => {
+      const rendered = await openScreenShowing([aGinTonic]);
+
+      screen.getByRole('button', { name: /apagar gin tonic/i }).click();
+
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-unavailable`)
+        .flush({ ...aGinTonic, isAvailable: false });
+      rendered.fixture.detectChanges();
+      TestBed.inject(HttpTestingController)
+        .expectOne(PRODUCTS_URL)
+        .flush([{ ...aGinTonic, isAvailable: false }]);
+      await rendered.fixture.whenStable();
+
+      expect(within(screen.getByRole('listitem')).getByText(/apagado/i)).not.toBeNull();
+    });
+
+    it('lets the administrator turn a product back on', async () => {
+      const anOffProduct: Product = { ...aGinTonic, isAvailable: false };
+      const rendered = await openScreenShowing([anOffProduct]);
+
+      screen.getByRole('button', { name: /prender gin tonic/i }).click();
+
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-available`)
+        .flush({ ...aGinTonic, isAvailable: true });
+      rendered.fixture.detectChanges();
+      TestBed.inject(HttpTestingController).expectOne(PRODUCTS_URL).flush([aGinTonic]);
+      await rendered.fixture.whenStable();
+
+      expect(within(screen.getByRole('listitem')).queryByText(/apagado/i)).toBeNull();
+    });
+  });
+
   describe('searching and filtering', () => {
     function search(term: string): void {
       fireEvent.input(screen.getByLabelText(/buscar/i), { target: { value: term } });

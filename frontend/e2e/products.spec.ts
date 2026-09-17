@@ -109,6 +109,28 @@ test.describe('Products', () => {
     await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText(/sin stock/i);
   });
 
+  // US-07, criteria 1 and 2: the switch is independent of everything else on
+  // the row, end to end against the real API.
+  test('turns a product off and back on from the listing', async ({ page }) => {
+    const name = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await fillTheForm(page, name, '4500', '20');
+    const row = page.getByRole('listitem').filter({ hasText: name });
+
+    await row.getByRole('button', { name: /apagar/i }).click();
+
+    await expect(row).toContainText('Apagado');
+    // The product is still there, and still sells its usual stock: turning
+    // it off is not the same thing as running out or taking it off the menu.
+    await expect(row).toContainText('20 en stock');
+
+    await row.getByRole('button', { name: /prender/i }).click();
+
+    await expect(row).not.toContainText('Apagado');
+  });
+
   // Criterion 2. The form stops it, so the venue's connection is never part of
   // finding out that the price was left at zero.
   test('does not save a price of zero, and says why', async ({ page }) => {

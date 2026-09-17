@@ -1,10 +1,11 @@
 import { httpResource } from '@angular/common/http';
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
-import { PRODUCTS_URL, PRODUCT_PLACEHOLDER } from '../products.service';
+import { PRODUCTS_URL, PRODUCT_PLACEHOLDER, ProductsService } from '../products.service';
 import type { Product } from '../products.service';
 
 /** One row of the listing, with the price already written the way the menu writes it. */
@@ -19,6 +20,7 @@ interface ProductRow {
   readonly isAvailable: boolean;
   readonly isSoldOut: boolean;
   readonly isActive: boolean;
+  readonly isToggling: boolean;
 }
 
 /** Which products the listing is narrowed to, or all of them. */
@@ -57,6 +59,10 @@ function pesos(amount: number): string {
   templateUrl: './products.page.html',
 })
 export class ProductsPage {
+  private readonly productsService = inject(ProductsService);
+
+  private readonly destroyRef = inject(DestroyRef);
+
   /** From the path. Bound by the router, so the screen never asks for a venue. */
   readonly venueSlug = input.required<string>();
 
@@ -76,6 +82,12 @@ export class ProductsPage {
 
   protected readonly stockFilter = signal<StockFilter>('all');
 
+  /**
+   * US-07: the id of the row waiting on the switch, so a second click on the
+   * same row is ignored instead of racing the first request.
+   */
+  private readonly togglingId = signal<string | null>(null);
+
   // hasValue() and not value(): reading the value of a failed resource throws,
   // and the template reads this on every change detection, error state included.
   private readonly everything = computed<ProductRow[]>(() =>
@@ -89,6 +101,7 @@ export class ProductsPage {
       isAvailable: product.isAvailable,
       isSoldOut: product.isSoldOut,
       isActive: product.isActive,
+      isToggling: this.togglingId() === product.id,
     })),
   );
 
@@ -171,5 +184,28 @@ export class ProductsPage {
 
   protected searchFor(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
+  }
+
+  /**
+   * US-07: flips the nightly switch. A full reload rather than patching the
+   * row by hand keeps this screen agreeing with whatever the API actually
+   * saved, at the cost of one extra request the venue's connection can afford.
+   */
+  protected toggleAvailability(row: ProductRow): void {
+    if (row.isToggling) return;
+
+    this.togglingId.set(row.id);
+
+    const request = row.isAvailable
+      ? this.productsService.markUnavailable(row.id)
+      : this.productsService.markAvailable(row.id);
+
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.togglingId.set(null);
+        this.products.reload();
+      },
+      error: () => this.togglingId.set(null),
+    });
   }
 }

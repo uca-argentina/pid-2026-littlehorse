@@ -56,6 +56,23 @@ internal static class ProductsEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        // POST and not DELETE or PUT: nothing is deleted, and the state is a
+        // switch, not a field the screen posts a new value for. Same shape as
+        // StaffUsersEndpoints' deactivate/reactivate. CLAUDE.md, State pattern.
+        group
+            .MapPost("/{id:guid}/mark-unavailable", MarkUnavailableAsync)
+            .WithName("MarkProductUnavailable")
+            .WithSummary("Turns a product's nightly switch off. The customer keeps seeing it, dimmed.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapPost("/{id:guid}/mark-available", MarkAvailableAsync)
+            .WithName("MarkProductAvailable")
+            .WithSummary("Turns the switch back on. Does not touch stock.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         group
             .MapPut("/{id:guid}/image", UploadImageAsync)
             .WithName("UploadProductImage")
@@ -123,6 +140,37 @@ internal static class ProductsEndpoints
                 created.IsActive));
     }
 
+    internal static async Task<IResult> MarkUnavailableAsync(
+        Guid id,
+        MarkProductUnavailableHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
+
+    internal static async Task<IResult> MarkAvailableAsync(
+        Guid id,
+        MarkProductAvailableHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
+
+    /// <summary>The updated product, or the failure named so the screen can branch on it.</summary>
+    private static IResult Answer(Result<ProductSummary> result)
+    {
+        if (!result.IsSuccess) return Rejected(result.Error!);
+
+        ProductSummary product = result.Value;
+
+        return TypedResults.Ok(new ProductResponse(
+            product.Id,
+            product.Name,
+            product.Description,
+            product.ImageUrl,
+            product.Price,
+            product.Stock,
+            product.IsAvailable,
+            product.IsSoldOut,
+            product.IsActive));
+    }
+
     internal static async Task<IResult> UploadImageAsync(
         Guid id,
         IFormFile? image,
@@ -164,6 +212,7 @@ internal static class ProductsEndpoints
         {
             _ when error == CreateProductHandler.NameTaken => ("Product name already taken", StatusCodes.Status409Conflict),
             _ when error == UploadProductImageHandler.ProductNotFound => ("Product not found", StatusCodes.Status404NotFound),
+            _ when error == ProductErrors.NotFound => ("Product not found", StatusCodes.Status404NotFound),
             _ when error == UploadProductImageHandler.ImageTooLarge => ("Picture too large", StatusCodes.Status413PayloadTooLarge),
             _ when error == UploadProductImageHandler.ImageFormatUnsupported => ("Picture format not supported", StatusCodes.Status415UnsupportedMediaType),
             _ => ("Invalid request", StatusCodes.Status400BadRequest),

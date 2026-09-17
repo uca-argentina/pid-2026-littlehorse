@@ -92,6 +92,61 @@ public class ProductsEndpointsTests
         Assert.False(response.Body[1].GetProperty("isActive").GetBoolean());
     }
 
+    // US-07, criterion 1: the client sees an unavailable product dimmed, not
+    // gone — so the endpoint hands back the updated product, not a bare 204.
+    [Fact]
+    public async Task MarkUnavailableAsync_WhenTheProductExists_RespondsWithItMarkedUnavailable()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        MarkProductUnavailableHandler handler = new(new Fake.Repository(null, product));
+
+        IResult result = await ProductsEndpoints.MarkUnavailableAsync(product.Id, handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/mark-unavailable", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.False(response.Body.GetProperty("isAvailable").GetBoolean());
+    }
+
+    [Fact]
+    public async Task MarkUnavailableAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        MarkProductUnavailableHandler handler = new(new Fake.Repository(null, product));
+
+        IResult result = await ProductsEndpoints.MarkUnavailableAsync(Guid.CreateVersion7(), handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{Guid.CreateVersion7()}/mark-unavailable", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task MarkAvailableAsync_WhenTheProductExists_RespondsWithItMarkedAvailable()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        product.MarkUnavailable();
+        MarkProductAvailableHandler handler = new(new Fake.Repository(null, product));
+
+        IResult result = await ProductsEndpoints.MarkAvailableAsync(product.Id, handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/mark-available", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.True(response.Body.GetProperty("isAvailable").GetBoolean());
+    }
+
+    [Fact]
+    public async Task MarkAvailableAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        MarkProductAvailableHandler handler = new(new Fake.Repository(null, product));
+
+        IResult result = await ProductsEndpoints.MarkAvailableAsync(Guid.CreateVersion7(), handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{Guid.CreateVersion7()}/mark-available", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
+    }
+
     private static readonly byte[] APng = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52];
 
     private static readonly byte[] APdf = [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A, 0x0A];

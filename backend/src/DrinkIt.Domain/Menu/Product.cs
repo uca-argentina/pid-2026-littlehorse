@@ -110,6 +110,15 @@ public sealed class Product : IBelongsToVenue
         return new Product(Guid.CreateVersion7(), venueId, cleanName, cleanDescription, cleanImageUrl, price, stock);
     }
 
+    /// <summary>US-07: the nightly switch. Independent of <see cref="Stock"/>.</summary>
+    public void MarkUnavailable() => IsAvailable = false;
+
+    /// <summary>
+    /// Turns the switch back on. Does not touch <see cref="Stock"/>: a
+    /// product with none left stays sold out until it is restocked.
+    /// </summary>
+    public void MarkAvailable() => IsAvailable = true;
+
     /// <summary>
     /// The picture arrives after the product exists — the upload needs an id to
     /// file it under — and can be swapped later. The address is whatever the
