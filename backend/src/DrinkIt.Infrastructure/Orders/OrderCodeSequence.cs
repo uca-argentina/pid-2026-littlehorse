@@ -1,3 +1,4 @@
+using System.Data.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Orders;
@@ -65,23 +66,39 @@ internal sealed class OrderCodeSequence(DrinkItDbContext context, ICurrentVenue 
     }
 
     /// <summary>
-    /// The venue's very first order, written with one statement that inserts
-    /// only if nobody has: false means another request got there first. Raw SQL
-    /// rather than Add plus SaveChanges, which would also write whatever else
-    /// the request has pending — see the note on the class.
+    /// The venue's very first order. False means another request got there
+    /// first, and the caller reads again.
     /// </summary>
+    /// <remarks>
+    /// The WHERE NOT EXISTS is a courtesy and not the guarantee: under READ
+    /// COMMITTED two sessions can both find no row and both insert, which is
+    /// exactly what happened the first time two customers opened a venue at the
+    /// same instant. The primary key is what settles it, so the duplicate it
+    /// throws is an answer here — "somebody else started this venue off" — and
+    /// not a failure.
+    ///
+    /// Raw SQL rather than Add plus SaveChanges, which would also write
+    /// whatever else the request has pending — see the note on the class.
+    /// </remarks>
     private async Task<bool> StartTheVenueOff(Guid venueId, CancellationToken cancellationToken)
     {
         string first = OrderCode.First.Value;
 
-        int inserted = await context.Database.ExecuteSqlAsync(
-            $"""
-            INSERT INTO OrderCodeCounters (VenueId, LastCode)
-            SELECT {venueId}, {first}
-            WHERE NOT EXISTS (SELECT 1 FROM OrderCodeCounters WHERE VenueId = {venueId})
-            """,
-            cancellationToken);
+        try
+        {
+            int inserted = await context.Database.ExecuteSqlAsync(
+                $"""
+                INSERT INTO OrderCodeCounters (VenueId, LastCode)
+                SELECT {venueId}, {first}
+                WHERE NOT EXISTS (SELECT 1 FROM OrderCodeCounters WHERE VenueId = {venueId})
+                """,
+                cancellationToken);
 
-        return inserted == 1;
+            return inserted == 1;
+        }
+        catch (DbException)
+        {
+            return false;
+        }
     }
 }

@@ -162,6 +162,54 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
     }
 
     /// <summary>
+    /// Two people reaching for the same last drink at the same instant. Exactly
+    /// one of them gets it: the other is told it ran out, and the shelf is left
+    /// at zero rather than at minus one.
+    /// </summary>
+    /// <remarks>
+    /// The review of 2026-09-17 found this open: the stock was read, lowered in
+    /// memory and written with an UPDATE that named only the row, so both
+    /// writers won and one drink was sold twice.
+    /// </remarks>
+    [Fact]
+    public async Task ConfirmOrder_WhenTwoPeopleTakeTheLastDrinkAtOnce_OnlyOneGetsIt()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 1);
+
+        Result<ConfirmedOrder>[] attempts = await Task.WhenAll(
+            Confirm(venue, [new OrderLineRequest(gin.Id, 1, null)], key: "first"),
+            Confirm(venue, [new OrderLineRequest(gin.Id, 1, null)], key: "second"));
+
+        await using DrinkItDbContext check = sql.CreateContext(venue.Id);
+
+        Assert.Equal(1, attempts.Count(attempt => attempt.IsSuccess));
+        Assert.Equal(1, await check.Orders.CountAsync());
+        Assert.Equal(0, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+    }
+
+    /// <summary>
+    /// Criterion 6 where it actually happens: a retry lands while the first
+    /// attempt is still in flight, which is what a bad signal produces. Both are
+    /// answered with the same order, and neither with a failure.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmOrder_WhenTheRetryArrivesBeforeTheFirstFinishes_BothGetTheSameOrder()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20);
+
+        Result<ConfirmedOrder>[] attempts = await Task.WhenAll(
+            Confirm(venue, [new OrderLineRequest(gin.Id, 2, null)], key: "the-same-key"),
+            Confirm(venue, [new OrderLineRequest(gin.Id, 2, null)], key: "the-same-key"));
+
+        await using DrinkItDbContext check = sql.CreateContext(venue.Id);
+
+        Assert.All(attempts, attempt => Assert.True(attempt.IsSuccess));
+        Assert.Equal(attempts[0].Value.Code, attempts[1].Value.Code);
+        Assert.Equal(1, await check.Orders.CountAsync());
+        Assert.Equal(18, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+    }
+
+    /// <summary>
     /// One handler over one context, the way a request gets it: every port in
     /// the use case shares the unit of work, which is what makes the order and
     /// its stock a single write.

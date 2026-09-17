@@ -76,6 +76,15 @@ public class OrderTests
     }
 
     [Fact]
+    public void Place_WhenTheNameIsLongerThanATicketFits_ThrowsNameLength()
+    {
+        DomainException error = Assert.Throws<DomainException>(
+            () => Order.Place(AVenue, new string('a', Order.CustomerNameMaxLength + 1), OrderCode.First, [AGinTonic()]));
+
+        Assert.Equal(Order.ErrorCodes.NameLength, error.Code);
+    }
+
+    [Fact]
     public void Place_WhenThereAreNoItems_ThrowsEmpty()
     {
         DomainException error = Assert.Throws<DomainException>(

@@ -1,3 +1,4 @@
+using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Infrastructure.Persistence;
@@ -25,11 +26,48 @@ internal sealed class OrderRepository(DrinkItDbContext context) : IOrderReposito
     /// transaction as the order that took it — an order without its stock
     /// movement is the one outcome that must never exist.
     /// </summary>
-    public async Task AddAsync(Order order, string idempotencyKey, CancellationToken cancellationToken)
+    public async Task<Result<Order>> AddAsync(
+        Order order,
+        string idempotencyKey,
+        CancellationToken cancellationToken)
     {
         context.Orders.Add(order);
         context.Entry(order).Property(OrderConfiguration.IdempotencyKey).CurrentValue = idempotencyKey;
 
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+
+            return order;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Stock is a concurrency token, so the UPDATE carried the value it
+            // was read at and matched no row: somebody else sold from the same
+            // product in between. Nothing was written, order included.
+            //
+            // The tracker is emptied so the caller can simply start again: what
+            // it holds is an order that does not exist and stock counts that
+            // are out of date, and reading the products again has to reach the
+            // database rather than these.
+            context.ChangeTracker.Clear();
+
+            return OrderErrors.StockMoved;
+        }
+        catch (DbUpdateException)
+        {
+            // A unique index refused the insert. If it was the idempotency one,
+            // a retry of this very order got there first while this attempt was
+            // in flight, and that order is the answer to both of them.
+            context.ChangeTracker.Clear();
+
+            Order? alreadyWritten = await FindByIdempotencyKeyAsync(idempotencyKey, cancellationToken);
+
+            // Any other index means something we have not thought about, and
+            // swallowing it would hide it.
+            if (alreadyWritten is null) throw;
+
+            return alreadyWritten;
+        }
     }
 }

@@ -97,6 +97,67 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(ConfirmOrderHandler.IdempotencyKeyRequired.Code, result.Error!.Code);
     }
 
+    /// <summary>
+    /// Two lines of the same drink. Refused before a code is asked for, because
+    /// asking spends one — and because the stock check reads the same number
+    /// twice and would let through more than there is.
+    /// </summary>
+    [Fact]
+    public async Task HandleAsync_WhenTheSameDrinkComesOnTwoLines_RefusesWithoutSpendingACode()
+    {
+        SequenceThatCounts sequence = new();
+
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, sequence).HandleAsync(
+            AnOrderOf(One(_menu.Gin), Two(_menu.Gin)), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.DuplicateLine.Code, result.Error!.Code);
+        Assert.Equal(0, sequence.TimesAsked);
+    }
+
+    /// <summary>
+    /// Somebody else sold from the same drink while this order was being
+    /// priced. A packed venue has everybody ordering the same three drinks at
+    /// once, so losing that race has to be invisible: the order is rebuilt
+    /// against the menu as it is now and goes through.
+    /// </summary>
+    [Fact]
+    public async Task HandleAsync_WhenTheStockMovedUnderneath_BuildsTheOrderAgainAndSucceeds()
+    {
+        _orders.RefusesTheFirst(OrderErrors.StockMoved);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, _orders.TimesAdded);
+    }
+
+    // The same code, not a fresh one per attempt: asking again would leave a
+    // hole in the venue's numbering for every race anybody loses.
+    [Fact]
+    public async Task HandleAsync_WhenItHasToTryAgain_KeepsTheCodeItWasGiven()
+    {
+        SequenceThatCounts sequence = new();
+        _orders.RefusesTheFirst(OrderErrors.StockMoved);
+
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, sequence).HandleAsync(
+            ATwoGinOrder(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, sequence.TimesAsked);
+    }
+
+    // And when it never stops moving, the customer is told to look at their
+    // order rather than kept waiting while we try for ever.
+    [Fact]
+    public async Task HandleAsync_WhenTheStockKeepsMoving_GivesUpAndSaysSo()
+    {
+        _orders.RefusesAlways(OrderErrors.StockMoved);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(OrderErrors.StockMoved.Code, result.Error!.Code);
+    }
+
     // She chose this on 2026-09-17: nobody pays for an order they will not get
     // in full. It is rejected whole, and the screen says which drink.
     [Fact]
@@ -227,10 +288,10 @@ public class ConfirmOrderHandlerTests
 
     private ConfirmOrderHandler AHandler() => AHandlerOver(_menu);
 
-    private ConfirmOrderHandler AHandlerOver(Catalog menu) =>
+    private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null) =>
         new(_orders,
             menu,
-            new SequenceThatAnswers("K-4821"),
+            codes ?? new SequenceThatAnswers("K-4821"),
             [new DigitalPaymentStrategy(new FixedClock(Tonight))],
             new TheVenueIsFixed(TheVenue));
 
@@ -250,9 +311,26 @@ public class ConfirmOrderHandlerTests
             Task.FromResult(OrderCode.Parse(code));
     }
 
+    /// <summary>Counts what it was asked, so a wasted code is visible.</summary>
+    private sealed class SequenceThatCounts : IOrderCodeSequence
+    {
+        public int TimesAsked { get; private set; }
+
+        public Task<OrderCode> NextAsync(CancellationToken cancellationToken)
+        {
+            TimesAsked += 1;
+
+            return Task.FromResult(OrderCode.Parse("K-4821"));
+        }
+    }
+
     private sealed class OrdersInMemory : IOrderRepository
     {
         private readonly Dictionary<string, Order> _byKey = [];
+
+        private Error? _refusal;
+
+        private bool _onlyOnce;
 
         public Order? Added { get; private set; }
 
@@ -261,13 +339,38 @@ public class ConfirmOrderHandlerTests
         public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
             Task.FromResult(_byKey.GetValueOrDefault(key));
 
-        public Task AddAsync(Order order, string idempotencyKey, CancellationToken cancellationToken)
+        /// <summary>Refuses the first write, the way a stock somebody else moved does.</summary>
+        public void RefusesTheFirst(Error refusal)
         {
+            _refusal = refusal;
+            _onlyOnce = true;
+        }
+
+        public void RefusesAlways(Error refusal)
+        {
+            _refusal = refusal;
+            _onlyOnce = false;
+        }
+
+        public Task<Result<Order>> AddAsync(
+            Order order,
+            string idempotencyKey,
+            CancellationToken cancellationToken)
+        {
+            if (_refusal is not null)
+            {
+                Error refusal = _refusal;
+
+                if (_onlyOnce) _refusal = null;
+
+                return Task.FromResult<Result<Order>>(refusal);
+            }
+
             Added = order;
             TimesAdded += 1;
             _byKey[idempotencyKey] = order;
 
-            return Task.CompletedTask;
+            return Task.FromResult<Result<Order>>(order);
         }
     }
 
@@ -298,9 +401,5 @@ public class ConfirmOrderHandlerTests
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Product>>(
                 [.. new[] { Gin, Fernet }.Where(product => ids.Contains(product.Id))]);
-
-        // The double holds the products themselves, so what the real one writes
-        // to the database has already happened here.
-        public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

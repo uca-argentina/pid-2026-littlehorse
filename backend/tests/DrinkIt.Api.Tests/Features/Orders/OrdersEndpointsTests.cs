@@ -1,6 +1,7 @@
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Api.Tests.Common;
+using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Venues;
 using DrinkIt.Domain.Menu;
@@ -98,6 +99,21 @@ public class OrdersEndpointsTests
         Assert.Equal("urn:drinkit:problem:order:empty", response.Text("type"));
     }
 
+    // The screen cannot produce this — its cart holds one line per drink — but
+    // a hand-rolled request can, and it is answered rather than thrown.
+    [Fact]
+    public async Task ConfirmAsync_WhenTheSameDrinkComesOnTwoLines_RespondsWithBadRequest()
+    {
+        HttpResponseSnapshot response = await Confirm(new ConfirmOrderRequest(
+            "María Quadro",
+            PaymentMethod.Digital,
+            "abc-123",
+            [new OrderLineRequestBody(_gin.Id, 1, null), new OrderLineRequestBody(_gin.Id, 2, null)]));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:order:duplicate-line", response.Text("type"));
+    }
+
     // The two the screen draws switched off. Asking the API for them directly
     // is answered rather than half-done.
     [Fact]
@@ -160,8 +176,11 @@ public class OrdersEndpointsTests
             public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
                 Task.FromResult<Order?>(null);
 
-            public Task AddAsync(Order order, string idempotencyKey, CancellationToken cancellationToken) =>
-                Task.CompletedTask;
+            public Task<Result<Order>> AddAsync(
+                Order order,
+                string idempotencyKey,
+                CancellationToken cancellationToken) =>
+                Task.FromResult<Result<Order>>(order);
         }
 
         public sealed class Menu(params Product[] products) : IProductsForOrdering
@@ -171,8 +190,6 @@ public class OrdersEndpointsTests
                 CancellationToken cancellationToken) =>
                 Task.FromResult<IReadOnlyList<Product>>(
                     [.. products.Where(product => ids.Contains(product.Id))]);
-
-            public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

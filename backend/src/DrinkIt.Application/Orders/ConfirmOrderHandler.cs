@@ -53,6 +53,17 @@ public sealed class ConfirmOrderHandler(
     public static readonly Error SoldOut =
         new("order.sold_out", "One of the drinks ran out.");
 
+    public static readonly Error DuplicateLine =
+        new("order.duplicate_line", "Each drink goes on one line, with a quantity beside it.");
+
+    /// <summary>
+    /// How many times an order will be rebuilt against a menu that moved
+    /// underneath it. A packed venue has everybody ordering the same three
+    /// drinks at once, so losing a race is ordinary and must not reach anybody:
+    /// what must reach them is running out, which is a different answer.
+    /// </summary>
+    private const int Attempts = 5;
+
     public async Task<Result<ConfirmedOrder>> HandleAsync(
         ConfirmOrderCommand command,
         CancellationToken cancellationToken)
@@ -71,38 +82,74 @@ public sealed class ConfirmOrderHandler(
         if (!name.IsSuccess) return name.Error!;
         if (command.Lines.Count == 0) return Empty;
 
+        // Before the code is asked for, because asking for it spends one. Two
+        // lines of the same drink also make the stock check below read the same
+        // number twice and let through more than there is.
+        if (command.Lines.Select(line => line.ProductId).Distinct().Count() != command.Lines.Count) return DuplicateLine;
+
         IPaymentStrategy? payment = paymentStrategies.FirstOrDefault(strategy => strategy.Method == command.Method);
 
         if (payment is null) return PaymentMethodUnavailable;
 
-        IReadOnlyList<Product> menu = await products.GetForOrderingAsync(
-            [.. command.Lines.Select(line => line.ProductId)],
-            cancellationToken);
+        // The code is asked for once, before any stock moves and outside the
+        // loop below. The sequence lives in the database and writes on its own,
+        // so asking for it with sold stock already pending would let that stock
+        // reach the table before the order that sold it exists — and asking
+        // again on every attempt would burn a code per attempt.
+        OrderCode code = await codes.NextAsync(cancellationToken);
+
+        Guid[] wanted = [.. command.Lines.Select(line => line.ProductId)];
+        Result<ConfirmedOrder> outcome = OrderErrors.StockMoved;
+
+        for (int attempt = 0; attempt < Attempts; attempt++)
+        {
+            outcome = await TryToConfirm(command, wanted, name.Value, code, payment, cancellationToken);
+
+            if (outcome.IsSuccess || outcome.Error!.Code != OrderErrors.StockMoved.Code) return outcome;
+        }
+
+        // Every attempt lost the race. Somebody is hammering the same drink and
+        // the honest answer is to look at the order again, not to keep trying.
+        return outcome;
+    }
+
+    /// <summary>
+    /// One go at it: read the menu as it is now, price the order against it,
+    /// take the drinks and write. Refused when the stock moved between the read
+    /// and the write, which the caller answers by going round again with a menu
+    /// that has moved too.
+    /// </summary>
+    private async Task<Result<ConfirmedOrder>> TryToConfirm(
+        ConfirmOrderCommand command,
+        Guid[] wanted,
+        string customerName,
+        OrderCode code,
+        IPaymentStrategy payment,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Product> menu = await products.GetForOrderingAsync(wanted, cancellationToken);
 
         Result<List<NewOrderItem>> items = Price(command.Lines, menu);
 
         if (!items.IsSuccess) return items.Error!;
-
-        // The code is asked for before any stock moves. The sequence lives in
-        // the database and writes on its own, so asking for it with sold stock
-        // already pending would let that stock reach the table before the order
-        // that sold it exists.
-        OrderCode code = await codes.NextAsync(cancellationToken);
 
         // Nothing has moved until here: every line was checked before the first
         // drink left the shelf, so a rejected order leaves the menu untouched.
         foreach (OrderLineRequest line in command.Lines)
             menu.Single(product => product.Id == line.ProductId).Take(line.Quantity);
 
-        Order order = Order.Place(currentVenue.Id, name.Value, code, items.Value);
+        Order order = Order.Place(currentVenue.Id, customerName, code, items.Value);
 
         payment.Pay(order);
         order.Enqueue();
 
-        await products.SaveChangesAsync(cancellationToken);
-        await orders.AddAsync(order, key, cancellationToken);
+        // The one write of the use case: the order and the stock it sold. It
+        // can come back refused, because somebody else sold from the same
+        // product while this order was being priced, or carrying the order that
+        // a retry of this very request wrote first.
+        Result<Order> written = await orders.AddAsync(order, TheKeyOf(command), cancellationToken);
 
-        return Confirmation(order);
+        return written.IsSuccess ? Confirmation(written.Value) : written.Error!;
     }
 
     /// <summary>
@@ -141,6 +188,9 @@ public sealed class ConfirmOrderHandler(
 
     private static Error OutOfStock(Product product) =>
         new(SoldOut.Code, $"{product.Name} ran out while you were ordering.");
+
+    private static string TheKeyOf(ConfirmOrderCommand command) =>
+        (command.IdempotencyKey ?? string.Empty).Trim();
 
     private static ConfirmedOrder Confirmation(Order order) => new(
         order.Id,

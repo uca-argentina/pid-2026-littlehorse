@@ -134,8 +134,12 @@ public sealed class Product : IBelongsToVenue
     /// <remarks>
     /// Throws rather than answering how many were left, because by the time a
     /// caller gets here the stock was already checked and reported on: what is
-    /// left to guard is the invariant that stock never goes negative, and two
-    /// orders racing for the last drink cannot both win it.
+    /// left to guard is the invariant that stock never goes negative within one
+    /// order.
+    ///
+    /// Two orders racing for the last drink are not settled here and cannot be:
+    /// this object only knows the number it was read with. What stops them is
+    /// the concurrency token on the column — see ProductConfiguration.
     /// </remarks>
     public void Take(int quantity)
     {

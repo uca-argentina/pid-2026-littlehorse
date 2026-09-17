@@ -10,6 +10,12 @@ namespace DrinkIt.Application.Orders;
 /// Separate from IProductRepository, which serves the administration screens.
 /// This one exists so that confirming an order cannot reach the operations that
 /// edit the menu: the only thing it can do to a product is sell it.
+///
+/// It has no save of its own, deliberately: what is sold from these products is
+/// written by IOrderRepository.AddAsync, in the same unit of work as the order
+/// that sold it. A port promising to save here would be a port that can break
+/// that, and the review of 2026-09-17 was right that one that says it saves and
+/// does not is worse than none at all.
 /// </remarks>
 public interface IProductsForOrdering
 {
@@ -21,6 +27,4 @@ public interface IProductsForOrdering
     Task<IReadOnlyList<Product>> GetForOrderingAsync(
         IReadOnlyCollection<Guid> ids,
         CancellationToken cancellationToken);
-
-    Task SaveChangesAsync(CancellationToken cancellationToken);
 }
