@@ -158,65 +158,6 @@ public class ProductTests
 
         Assert.Equal(Product.ErrorCodes.ImageUrlInvalid, error.Code);
     }
-
-    /// <summary>
-    /// Selling is what takes stock down: US-11 confirms an order and the drinks
-    /// in it leave the shelf. Before this, the number only moved when somebody
-    /// edited it by hand.
-    /// </summary>
-    public class TakingFromStock
-    {
-        [Fact]
-        public void Take_WhenThereIsEnough_LowersTheStock()
-        {
-            Product product = Product.Create(AVenue, "Gin Tonic", null, null, 4500m, 20);
-
-            product.Take(3);
-
-            Assert.Equal(17, product.Stock);
-        }
-
-        // Zero is sold out, which the menu already knows how to draw. Nothing
-        // special happens here beyond the number reaching it.
-        [Fact]
-        public void Take_WhenItTakesTheLastOne_SellsItOut()
-        {
-            Product product = Product.Create(AVenue, "Gin Tonic", null, null, 4500m, 2);
-
-            product.Take(2);
-
-            Assert.Equal(0, product.Stock);
-            Assert.True(product.IsSoldOut);
-        }
-
-        /// <summary>
-        /// The handler checks the stock and answers with a readable error before
-        /// getting here. This is the invariant underneath that check: two orders
-        /// racing for the last drink cannot both win.
-        /// </summary>
-        [Fact]
-        public void Take_WhenThereIsNotEnough_ThrowsNotEnoughStock()
-        {
-            Product product = Product.Create(AVenue, "Gin Tonic", null, null, 4500m, 1);
-
-            DomainException error = Assert.Throws<DomainException>(() => product.Take(2));
-
-            Assert.Equal(Product.ErrorCodes.NotEnoughStock, error.Code);
-            Assert.Equal(1, product.Stock);
-        }
-
-        [Theory]
-        [InlineData(0)]
-        [InlineData(-1)]
-        public void Take_WhenTheQuantityIsNotPositive_ThrowsQuantityNotPositive(int quantity)
-        {
-            Product product = Product.Create(AVenue, "Gin Tonic", null, null, 4500m, 20);
-
-            DomainException error = Assert.Throws<DomainException>(() => product.Take(quantity));
-
-            Assert.Equal(Product.ErrorCodes.TakeQuantityNotPositive, error.Code);
-        }
-    }
 }
 
 public class ProductImageTests

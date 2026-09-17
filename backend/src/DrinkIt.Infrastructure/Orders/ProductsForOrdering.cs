@@ -8,19 +8,17 @@ namespace DrinkIt.Infrastructure.Orders;
 internal sealed class ProductsForOrdering(DrinkItDbContext context) : IProductsForOrdering
 {
     /// <summary>
-    /// Tracked, because these are about to be sold from. The venue filter
-    /// applies: an id this venue does not sell simply does not come back.
+    /// Read-only, on purpose. These say what each drink is called, what it
+    /// costs and whether there is any left; taking the stock down is done by
+    /// IOrderRepository.AddAsync with a conditional statement, so nothing here
+    /// is ever written back. The venue filter applies: an id this venue does
+    /// not sell simply does not come back.
     /// </summary>
-    /// <remarks>
-    /// What is taken from these is written by IOrderRepository.AddAsync, which
-    /// shares this context: one save, one transaction, order and stock
-    /// together. Stock is a concurrency token, so a product somebody else sold
-    /// from in between refuses the write instead of overwriting their count.
-    /// </remarks>
     public async Task<IReadOnlyList<Product>> GetForOrderingAsync(
         IReadOnlyCollection<Guid> ids,
         CancellationToken cancellationToken) =>
         await context.Products
+            .AsNoTracking()
             .Where(product => ids.Contains(product.Id))
             .ToListAsync(cancellationToken);
 }

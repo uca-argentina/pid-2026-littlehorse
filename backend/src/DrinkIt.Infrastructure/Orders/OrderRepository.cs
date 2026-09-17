@@ -4,6 +4,7 @@ using DrinkIt.Domain.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DrinkIt.Infrastructure.Orders;
 
@@ -21,44 +22,65 @@ internal sealed class OrderRepository(DrinkItDbContext context) : IOrderReposito
                 cancellationToken);
 
     /// <summary>
-    /// One SaveChanges for the whole use case. The stock the handler took off
-    /// the shelf is tracked by this same context, so it is written in the same
-    /// transaction as the order that took it — an order without its stock
-    /// movement is the one outcome that must never exist.
+    /// The order and the stock it sold, in one transaction. An order that
+    /// exists without its stock movement, or the other way round, is the one
+    /// outcome this must never produce.
     /// </summary>
+    /// <remarks>
+    /// The stock comes down with one conditional statement per drink — "take
+    /// two off, but only if there are two" — rather than by writing back a
+    /// number that was read seconds ago. That is what settles two customers
+    /// reaching for the last one: exactly one of the two statements matches a
+    /// row. It is also why Stock is not a concurrency token; making it one put
+    /// it in the WHERE of every edit of a product, and uploading a photo while
+    /// the bar sold that drink failed with a 500.
+    /// </remarks>
     public async Task<Result<Order>> AddAsync(
         Order order,
         string idempotencyKey,
         CancellationToken cancellationToken)
     {
+        await using IDbContextTransaction transaction =
+            await context.Database.BeginTransactionAsync(cancellationToken);
+
+        foreach (OrderItem item in order.Items)
+        {
+            int quantity = item.Quantity;
+
+            // The venue filter applies to this too, so no order can take stock
+            // off a product that is not its venue's.
+            int sold = await context.Products
+                .Where(product => product.Id == item.ProductId && product.Stock >= quantity)
+                .ExecuteUpdateAsync(
+                    row => row.SetProperty(product => product.Stock, product => product.Stock - quantity),
+                    cancellationToken);
+
+            if (sold == 1) continue;
+
+            // Somebody else got there in the seconds this order took to price.
+            // Nothing is written, and the caller may try the whole thing again
+            // against the menu as it is now.
+            await transaction.RollbackAsync(cancellationToken);
+
+            return OrderErrors.StockMoved;
+        }
+
         context.Orders.Add(order);
         context.Entry(order).Property(OrderConfiguration.IdempotencyKey).CurrentValue = idempotencyKey;
 
         try
         {
             await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
 
             return order;
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            // Stock is a concurrency token, so the UPDATE carried the value it
-            // was read at and matched no row: somebody else sold from the same
-            // product in between. Nothing was written, order included.
-            //
-            // The tracker is emptied so the caller can simply start again: what
-            // it holds is an order that does not exist and stock counts that
-            // are out of date, and reading the products again has to reach the
-            // database rather than these.
-            context.ChangeTracker.Clear();
-
-            return OrderErrors.StockMoved;
         }
         catch (DbUpdateException)
         {
             // A unique index refused the insert. If it was the idempotency one,
             // a retry of this very order got there first while this attempt was
             // in flight, and that order is the answer to both of them.
+            await transaction.RollbackAsync(cancellationToken);
             context.ChangeTracker.Clear();
 
             Order? alreadyWritten = await FindByIdempotencyKeyAsync(idempotencyKey, cancellationToken);

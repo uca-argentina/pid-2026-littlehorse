@@ -56,6 +56,9 @@ public sealed class ConfirmOrderHandler(
     public static readonly Error DuplicateLine =
         new("order.duplicate_line", "Each drink goes on one line, with a quantity beside it.");
 
+    public static readonly Error QuantityNotPositive =
+        new("order.quantity_not_positive", "Every drink in the order needs a quantity of at least one.");
+
     /// <summary>
     /// How many times an order will be rebuilt against a menu that moved
     /// underneath it. A packed venue has everybody ordering the same three
@@ -86,6 +89,12 @@ public sealed class ConfirmOrderHandler(
         // lines of the same drink also make the stock check below read the same
         // number twice and let through more than there is.
         if (command.Lines.Select(line => line.ProductId).Distinct().Count() != command.Lines.Count) return DuplicateLine;
+
+        // A line asking for none of something, or for minus one. The screen
+        // cannot produce it, a hand-rolled request can, and nothing is ever
+        // less than zero in stock — so it would slip past the check below and
+        // break inside the domain, with a problem type written for us.
+        if (command.Lines.Any(line => line.Quantity <= 0)) return QuantityNotPositive;
 
         IPaymentStrategy? payment = paymentStrategies.FirstOrDefault(strategy => strategy.Method == command.Method);
 
@@ -133,11 +142,6 @@ public sealed class ConfirmOrderHandler(
 
         if (!items.IsSuccess) return items.Error!;
 
-        // Nothing has moved until here: every line was checked before the first
-        // drink left the shelf, so a rejected order leaves the menu untouched.
-        foreach (OrderLineRequest line in command.Lines)
-            menu.Single(product => product.Id == line.ProductId).Take(line.Quantity);
-
         Order order = Order.Place(currentVenue.Id, customerName, code, items.Value);
 
         payment.Pay(order);
@@ -157,6 +161,13 @@ public sealed class ConfirmOrderHandler(
     /// on the first drink that cannot be served: she chose that on 2026-09-17,
     /// because nobody should pay for an order they will not get in full.
     /// </summary>
+    /// <remarks>
+    /// The stock read here is a few seconds old by the time anything is
+    /// written, which is what makes this a message and not a guarantee: it
+    /// exists so the customer is told which drink ran out, in a sentence. What
+    /// actually stops one drink being sold twice is the conditional update in
+    /// the repository.
+    /// </remarks>
     private static Result<List<NewOrderItem>> Price(
         IReadOnlyCollection<OrderLineRequest> lines,
         IReadOnlyList<Product> menu)

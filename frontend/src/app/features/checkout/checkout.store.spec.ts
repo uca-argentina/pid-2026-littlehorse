@@ -29,11 +29,20 @@ function theTimerFires(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/** The timer, the response, and the navigation that follows them. */
+async function itAllSettles(): Promise<void> {
+  await theTimerFires();
+  await theTimerFires();
+}
+
 function aStore(): { checkout: CheckoutStore; http: HttpTestingController; cart: Cart } {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([]),
+      // A route that matches anything: the store empties the cart once the
+      // confirmation is actually on screen, and a navigation to a path the
+      // test router does not know would never get there.
+      provideRouter([{ path: '**', children: [] }]),
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: BrowserStore, useValue: store },
@@ -91,6 +100,42 @@ describe('CheckoutStore', () => {
     expect(second.request.body.idempotencyKey).toBeTruthy();
   });
 
+  /**
+   * The one the review caught: somebody pays, the answer is lost on the way
+   * back, and they do what anybody does on a bad signal — reload and pay again.
+   * A key that lived only in the screen would be a new key, and the second
+   * attempt a second paid order, which is exactly what the screen promises
+   * will not happen.
+   */
+  it('keeps the same key across a reload of the screen', async () => {
+    const first = aStore();
+    first.checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+    const before = first.http.expectOne(ordersUrl('bar-alfa')).request.body.idempotencyKey;
+
+    // A new store over the same browser storage is what a reload produces.
+    const after = aStore();
+    after.checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+
+    expect(after.http.expectOne(ordersUrl('bar-alfa')).request.body.idempotencyKey).toBe(before);
+  });
+
+  // And it is let go of once the order exists, so the next round of the night
+  // is a new order and not an answer about the last one.
+  it('lets the key go once the order is confirmed', async () => {
+    const paid = aStore();
+    paid.checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+    const used = paid.http.expectOne(ordersUrl('bar-alfa'));
+    used.flush(confirmed);
+    await itAllSettles();
+
+    const next = aStore();
+    next.checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+
+    expect(next.http.expectOne(ordersUrl('bar-alfa')).request.body.idempotencyKey).not.toBe(
+      used.request.body.idempotencyKey,
+    );
+  });
+
   it('shows the confirmation of the order it was given', async () => {
     const { checkout, http } = aStore();
     const router = TestBed.inject(Router);
@@ -110,7 +155,7 @@ describe('CheckoutStore', () => {
 
     checkout.pay('bar-alfa', 'María Quadro', 'Digital');
     http.expectOne(ordersUrl('bar-alfa')).flush(confirmed);
-    await theTimerFires();
+    await itAllSettles();
 
     expect(cart.isEmpty()).toBe(true);
   });

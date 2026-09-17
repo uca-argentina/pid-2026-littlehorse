@@ -36,6 +36,23 @@ public class CustomerNamePolicyTests
         Assert.Equal("María Quadro", result.Value);
     }
 
+    /// <summary>
+    /// A name pasted from somewhere that joined it with a non-breaking space,
+    /// which is what a phone keyboard and half the web produce. The screen
+    /// accepts it — its own check counts any whitespace — so this one has to as
+    /// well, or the two disagree and the customer is told after paying.
+    /// </summary>
+    [Theory]
+    [InlineData("María\u00A0Quadro")]
+    [InlineData("María\tQuadro")]
+    public void Read_WhenTheWordsAreJoinedByAnyKindOfSpace_HandsItBack(string name)
+    {
+        Result<string> result = CustomerNamePolicy.Read(name);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("María Quadro", result.Value);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

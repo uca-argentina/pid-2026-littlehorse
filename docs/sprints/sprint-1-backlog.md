@@ -611,7 +611,8 @@ del QR— y el cliente camina carta → pedido → `/{venueSlug}/checkout` → `
 | Doble toque (criterio 6) | Clave de idempotencia que genera la pantalla al abrirse y viaja en cada intento. La misma clave devuelve el mismo pedido. Viaja como columna sombra: es **cómo llegó** el pedido, no algo cierto sobre los tragos, y el dominio no la ve. |
 | Los precios | Los calcula el backend desde su propia carta. El celular manda ids y cantidades, nunca importes: si no, cualquiera paga lo que quiere editando el navegador. |
 | El stock | Confirmar descuenta, en la misma escritura que crea el pedido. Si un trago no alcanza o salió de la carta, se rechaza el pedido **entero** con 409 y se dice cuál: nadie paga por algo que no va a recibir. |
-| Dos clientes por el último trago | `Stock` es token de concurrencia, así que de dos carreras una sola escribe. La perdedora no se entera: el pedido se rearma contra la carta como quedó, hasta cinco veces, y sólo se avisa si el trago de verdad se agotó. |
+| Dos clientes por el último trago | El descuento es una sentencia condicional por trago —"bajá 2 si hay al menos 2"— dentro de la transacción del pedido, así que de dos carreras una sola toca fila. La perdedora no se entera: el pedido se rearma contra la carta como quedó, hasta cinco veces, y sólo se avisa si el trago de verdad se agotó. |
+| Por qué no un token de concurrencia sobre `Stock` | Se probó y se sacó el 2026-09-17: ponía `Stock` en el `WHERE` de **toda** escritura de un producto. Subir una foto tarda segundos de red, y si alguien compraba ese trago en el medio la subida fallaba con 500, perdía la foto y dejaba el blob huérfano. US-07 y US-08 habrían heredado la misma trampa. |
 | El nombre | Nombre y apellido, sólo letras y espacios. Es más de lo que pide el criterio 3, y se tomó sabiendo que rechaza apellidos reales como D'Angelo. Se valida en las dos puntas: en la pantalla para no hacer esperar dos segundos por un "Euge", y en el servidor porque es quien manda. |
 | El método de pago en el contrato | Viaja como nombre —"Digital"— y no como el número del enum, igual que el rol del personal. El OpenAPI de un enum de .NET es un entero pelado, y un cliente generado que dice `method: number` no le dice nada a la pantalla. |
 | Al confirmar | El carrito del celular se vacía: el pedido es del servidor y tiene código propio. |
@@ -632,6 +633,25 @@ primeros commits). Los tres primeros eran defectos reales en código ya escrito:
 
 Y uno que la revisión **no** vio y destapó el test nuevo al cambiar el timing: el `INSERT`
 que arranca el contador de un boliche tampoco era atómico bajo `READ COMMITTED`.
+
+**La segunda revisión** (2026-09-17, `/code-review` sobre la rama entera) encontró seis cosas
+más, todas reales:
+
+1. **El token de concurrencia sobre `Stock` rompía cualquier edición de un producto** mientras
+   el bar vendía. Es lo que llevó a cambiar el mecanismo por la sentencia condicional; hay un
+   test de integración que sube una foto mientras alguien compra.
+2. **`.cta-off` no existía en ninguna hoja de estilo**: el "Ir a pagar" de un pedido vacío se
+   veía dorado y activo, pero no hacía nada.
+3. **La clave de idempotencia vivía sólo en la pantalla.** Recargar —lo que cualquiera hace
+   con mala señal— generaba otra, y pagar de nuevo habría creado un segundo pedido pago,
+   justo lo que la pantalla promete que no pasa. Ahora vive en el navegador y se suelta al
+   confirmar.
+4. **Una cantidad de cero o negativa** no se validaba: pasaba el chequeo de stock y explotaba
+   en el dominio con un tipo de problema escrito para nosotros, no para el cliente.
+5. **El carrito se vaciaba antes de navegar**, así que la pantalla de pago decía "no hay nada
+   para pagar" —en voz alta, por `role="status"`— en el segundo posterior a un pago exitoso.
+6. **El servidor partía el nombre sólo por `' '` y la pantalla por cualquier espacio.** Un
+   nombre pegado con un espacio duro habilitaba el botón y fallaba después de pagar.
 
 **Deuda anotada.** Los comentarios XML de implementación de los endpoints se publican en el
 OpenAPI y terminan en el `schema.d.ts` del front. No es información sensible, pero son notas

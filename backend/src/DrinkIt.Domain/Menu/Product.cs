@@ -27,8 +27,6 @@ public sealed class Product : IBelongsToVenue
         public const string PriceNotPositive = "product.price_not_positive";
         public const string StockNegative = "product.stock_negative";
         public const string ImageUrlInvalid = "product.image_url_invalid";
-        public const string NotEnoughStock = "product.not_enough_stock";
-        public const string TakeQuantityNotPositive = "product.take_quantity_not_positive";
     }
 
     /// <summary>Read on a phone, at night, in a hurry: a name has to fit on one line of a card.</summary>
@@ -125,28 +123,6 @@ public sealed class Product : IBelongsToVenue
         EnsureAbsoluteHttpUrl(cleanImageUrl);
 
         ImageUrl = cleanImageUrl;
-    }
-
-    /// <summary>
-    /// Sold: an order took these off the shelf. Reaching zero sells the product
-    /// out on its own, which the menu already knows how to draw.
-    /// </summary>
-    /// <remarks>
-    /// Throws rather than answering how many were left, because by the time a
-    /// caller gets here the stock was already checked and reported on: what is
-    /// left to guard is the invariant that stock never goes negative within one
-    /// order.
-    ///
-    /// Two orders racing for the last drink are not settled here and cannot be:
-    /// this object only knows the number it was read with. What stops them is
-    /// the concurrency token on the column — see ProductConfiguration.
-    /// </remarks>
-    public void Take(int quantity)
-    {
-        if (quantity <= 0) throw new DomainException(ErrorCodes.TakeQuantityNotPositive, "The quantity taken has to be at least one.");
-        if (quantity > Stock) throw new DomainException(ErrorCodes.NotEnoughStock, $"There is not enough {Name} left.");
-
-        Stock -= quantity;
     }
 
     private static string? BlankToNull(string? value) =>

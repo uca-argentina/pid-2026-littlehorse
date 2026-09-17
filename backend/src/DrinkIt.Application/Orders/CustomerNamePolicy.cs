@@ -37,8 +37,13 @@ public static class CustomerNamePolicy
     /// </summary>
     public static Result<string> Read(string? name)
     {
-        string[] words = (name ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries
-            | StringSplitOptions.TrimEntries);
+        // Split on any whitespace and not on ' ' alone: a name pasted from a
+        // phone keyboard can be joined by a non-breaking space, and the screen
+        // counts that as a space too. The two have to agree, or somebody is
+        // told their name is wrong only after watching the payment go through.
+        string[] words = (name ?? string.Empty).Split(
+            (char[]?)null,
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         if (words.Length == 0) return Required;
 

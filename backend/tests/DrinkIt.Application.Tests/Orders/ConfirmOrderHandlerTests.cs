@@ -55,14 +55,13 @@ public class ConfirmOrderHandlerTests
         Assert.Equal("sin hielo", _orders.Added!.Items.Single().Note);
     }
 
-    [Fact]
-    public async Task HandleAsync_WhenItIsConfirmed_TakesTheDrinksOutOfStock()
-    {
-        await AHandler().HandleAsync(AnOrderOf(Two(_menu.Gin), One(_menu.Fernet)), CancellationToken.None);
-
-        Assert.Equal(18, _menu.Gin.Stock);
-        Assert.Equal(19, _menu.Fernet.Stock);
-    }
+    /*
+     * Taking the drinks off the shelf is not tested here any more: the handler
+     * decides that the order can be served and the repository writes it, with
+     * one conditional statement per drink. What that statement does belongs to
+     * a real database, and ConfirmOrderTests in the integration suite is where
+     * it is proved — together with two customers reaching for the last one.
+     */
 
     [Fact]
     public async Task HandleAsync_WhenTheNameIsNotAFullName_FailsWithoutTouchingAnything()
@@ -72,7 +71,6 @@ public class ConfirmOrderHandlerTests
 
         Assert.Equal(CustomerNamePolicy.NeedsASurname.Code, result.Error!.Code);
         Assert.Null(_orders.Added);
-        Assert.Equal(20, _menu.Gin.Stock);
     }
 
     [Fact]
@@ -158,6 +156,24 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(OrderErrors.StockMoved.Code, result.Error!.Code);
     }
 
+    /// <summary>
+    /// A line asking for none of something, or for minus one. The screen cannot
+    /// produce it, a hand-rolled request can, and it used to slip past the
+    /// stock check — nothing is ever less than zero — and blow up inside the
+    /// domain with a problem type meant for us rather than for the customer.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-3)]
+    public async Task HandleAsync_WhenALineAsksForNothing_Refuses(int quantity)
+    {
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            AnOrderOf(new OrderLineRequest(_menu.Gin.Id, quantity, null)), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.QuantityNotPositive.Code, result.Error!.Code);
+        Assert.Null(_orders.Added);
+    }
+
     // She chose this on 2026-09-17: nobody pays for an order they will not get
     // in full. It is rejected whole, and the screen says which drink.
     [Fact]
@@ -171,19 +187,6 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
         Assert.Contains("Gin Tonic", result.Error.Message, StringComparison.Ordinal);
         Assert.Null(_orders.Added);
-    }
-
-    // And nothing else moves either: the Fernet that was fine stays on the
-    // shelf, because the order it belonged to never happened.
-    [Fact]
-    public async Task HandleAsync_WhenOneDrinkIsShort_LeavesTheOthersOnTheShelf()
-    {
-        Catalog menu = new(gin: 1, fernet: 5);
-
-        await AHandlerOver(menu).HandleAsync(
-            AnOrderOf(Two(menu.Gin), One(menu.Fernet)), CancellationToken.None);
-
-        Assert.Equal(5, menu.Fernet.Stock);
     }
 
     [Fact]
@@ -233,17 +236,6 @@ public class ConfirmOrderHandlerTests
 
         Assert.Equal(first.Value.Code, second.Value.Code);
         Assert.Equal(1, _orders.TimesAdded);
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenTheKeyWasAlreadyUsed_DoesNotTakeTheDrinksTwice()
-    {
-        ConfirmOrderHandler handler = AHandler();
-
-        await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
-        await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
-
-        Assert.Equal(18, _menu.Gin.Stock);
     }
 
     // A different key is a different order, even with the same drinks: the

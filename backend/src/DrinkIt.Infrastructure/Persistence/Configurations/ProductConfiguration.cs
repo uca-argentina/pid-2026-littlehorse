@@ -18,12 +18,12 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(product => product.ImageUrl).HasMaxLength(2048);
         // Pesos with cents. Ten digits leaves room for a bottle at eight figures.
         builder.Property(product => product.Price).HasPrecision(10, 2).IsRequired();
-        // A concurrency token, and this is what keeps the last drink from being
-        // sold twice: the UPDATE carries the stock it was read at, so of two
-        // orders racing for it exactly one matches a row and the other is
-        // refused. Found missing in the review of 2026-09-17, with a comment in
-        // the domain claiming the opposite.
-        builder.Property(product => product.Stock).IsRequired().IsConcurrencyToken();
+        // Not a concurrency token, and that was tried: it put Stock in the
+        // WHERE of every UPDATE of a product, so uploading a photo while the
+        // bar sold that drink failed with a 500 and lost the photo. What keeps
+        // the last drink from being sold twice is the conditional update in
+        // OrderRepository, which only the sale performs.
+        builder.Property(product => product.Stock).IsRequired();
         builder.Property(product => product.IsAvailable).IsRequired();
         builder.Property(product => product.IsActive).IsRequired();
 
