@@ -106,6 +106,8 @@ drinkit-theme-toggle {
   list-style: none;
 }
 
+// .qty (outside .left) centres against .left's whole height: the thumb+text
+// row and the note below it, not only against the thumb.
 .card {
   display: flex;
   align-items: center;
@@ -120,6 +122,23 @@ drinkit-theme-toggle {
 // sends somebody to ask at the bar, which is the walk this app exists to save.
 .card-off {
   opacity: 0.42;
+}
+
+// Stretches to .top's width by default (a column flex child), so the note
+// field below is as wide as the thumb+text row allows — narrower than that
+// and it is unusable on a phone this size.
+.left {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 6px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .thumb {
@@ -156,6 +175,77 @@ drinkit-theme-toggle {
   font-size: 17px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+// What was written on this drink, under its name and in the muted voice of the
+// description: part of what was ordered, not a second title.
+.card-note {
+  margin: 2px 0 0;
+  color: var(--dk-text-muted);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.note-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.note-open {
+  padding: 6px 12px;
+  border: 1px solid var(--dk-accent);
+  border-radius: 10px;
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.note-open:hover {
+  border-color: var(--dk-accent);
+  color: var(--dk-text);
+}
+
+.note-field {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--dk-border);
+  border-radius: 11px;
+  background: var(--dk-note-surface);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // 16 for the same reason as the search field: under it, iOS Safari zooms on
+  // focus and the layout never comes back.
+  font-size: 16px;
+}
+
+.note-field::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.note-field:focus-visible {
+  outline: 2px solid var(--dk-accent);
+  outline-offset: 1px;
+}
+
+.note-done {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--dk-surface-raised);
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.note-done:hover {
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
 }
 
 // Stacked, not in a row: +, count, - top to bottom. Uses less width than a
@@ -226,9 +316,9 @@ drinkit-theme-toggle {
 }
 
 // The wireframe's bar, to the pixel: gold, 58 high, radius 15, the count on
-// one side and the total on the other. It says "Tu pedido" and not "Ver
-// pedido" until there is a screen to see: gold invites a tap, and a tap that
-// does nothing is what reads as a broken app.
+// one side and the total on the other. A link now that there is an order
+// screen to reach: it is the last thing on a menu somebody is done reading, so
+// it is what takes them forward.
 .order {
   display: flex;
   min-height: 58px;
@@ -242,6 +332,14 @@ drinkit-theme-toggle {
   color: var(--dk-on-accent);
   font-size: 16.5px;
   font-weight: 700;
+
+  // A link, but it is the screen's own button: the underline the stylesheet
+  // gives links belongs to text, not to a gold strip across the bottom.
+  text-decoration: none;
+}
+
+.order:hover {
+  background: var(--dk-accent-hover);
 }
 
 .order-total {

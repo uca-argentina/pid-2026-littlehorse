@@ -5,6 +5,7 @@ import { BrowserStore } from '../storage/browser-store';
 export interface CartLine {
   readonly productId: string;
   readonly name: string;
+  readonly imageUrl: string | null;
   readonly unitPrice: number;
   readonly quantity: number;
   /** "sin hielo". Belongs to this drink and not to the whole order. */
@@ -16,9 +17,18 @@ export interface CartAddition {
   readonly id: string;
   readonly name: string;
   readonly price: number;
+  /** Whatever the card was showing — the real photo or the placeholder. */
+  readonly imageUrl?: string | null;
 }
 
 export const CART_STORAGE_PREFIX = 'drinkit.cart.';
+
+/**
+ * How long an aclaración can be. Enough for "sin hielo, con mucho limón" and
+ * short enough to be read at a glance on a ticket in a dark bar: a paragraph
+ * would be read by nobody and would slow the whole queue down.
+ */
+export const NOTE_MAX_LENGTH = 120;
 
 /**
  * The order somebody is putting together, before there is any order on the
@@ -73,6 +83,7 @@ export class Cart {
             {
               productId: product.id,
               name: product.name,
+              imageUrl: product.imageUrl ?? null,
               unitPrice: product.price,
               quantity: 1,
               note: null,
@@ -98,6 +109,35 @@ export class Cart {
         return [{ ...line, quantity: line.quantity - 1 }];
       }),
     );
+  }
+
+  /**
+   * Takes the drink out altogether, however many there were. The minus walks a
+   * quantity down one at a time; this is for somebody who changed their mind
+   * about the drink and should not have to tap it away five times.
+   */
+  remove(productId: string): void {
+    this.save(this.stored().filter((line) => line.productId !== productId));
+  }
+
+  /**
+   * Writes the aclaración onto one drink. Blank takes it back rather than
+   * leaving an empty one: the bar would be handed a line with a blank remark on
+   * it and have to wonder what was meant.
+   */
+  setNote(productId: string, note: string): void {
+    const written = note.trim().slice(0, NOTE_MAX_LENGTH);
+
+    this.save(
+      this.stored().map((line) =>
+        line.productId === productId ? { ...line, note: written === '' ? null : written } : line,
+      ),
+    );
+  }
+
+  /** What was written on one drink. Null when nothing was. */
+  noteOf(productId: string): string | null {
+    return this.stored().find((line) => line.productId === productId)?.note ?? null;
   }
 
   /** How many of one drink are in the order. Zero when it is not. */

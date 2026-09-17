@@ -1,4 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { CART_STORAGE_PREFIX, Cart } from '../../../core/cart/cart';
@@ -44,6 +45,7 @@ async function openScreen() {
   const rendered = await render(MenuPage, {
     inputs: { venueSlug: 'bar-alfa' },
     providers: [
+      provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: BrowserStore, useValue: store },
@@ -251,6 +253,17 @@ describe('MenuPage', () => {
       expect(TestBed.inject(Cart).count()).toBe(1);
     });
 
+    // The order screen has no menu request of its own to get a photo from:
+    // whatever the card was showing has to travel with the line.
+    it('carries the picture the card was showing onto the line', async () => {
+      const rendered = await openScreenShowing(carta);
+
+      plus('Gin Tonic').click();
+      await rendered.fixture.whenStable();
+
+      expect(TestBed.inject(Cart).lines()[0].imageUrl).toBe('https://images.example.com/gin.png');
+    });
+
     it('raises the count on a second tap instead of opening a second line', async () => {
       const rendered = await openScreenShowing(carta);
 
@@ -298,19 +311,17 @@ describe('MenuPage', () => {
       expect(summary()?.textContent).not.toContain('1 ítems');
     });
 
-    /**
-     * The screen that shows the order is not built yet, so the summary is a
-     * summary and nothing more. A button that does nothing reads as an app that
-     * broke, which is worse than a strip that never promised anything.
-     */
-    it('does not pretend the order can be opened yet', async () => {
+    // The strip is the way on to the order now that there is an order screen
+    // to reach: it is the only thing at the bottom of a menu somebody is done
+    // reading, so it has to be the thing that takes them forward.
+    it('leads to the order of this venue', async () => {
       const rendered = await openScreenShowing(carta);
 
       plus('Gin Tonic').click();
       await rendered.fixture.whenStable();
 
-      expect(summary()?.querySelector('button, a')).toBeNull();
-      expect(screen.queryByRole('button', { name: /ver pedido/i })).toBeNull();
+      expect(summary()?.textContent).toContain('Ver pedido');
+      expect(summary()?.getAttribute('href')).toBe('/bar-alfa/order');
     });
 
     /**
@@ -330,6 +341,108 @@ describe('MenuPage', () => {
 
       expect(summary()?.textContent).toContain('2 ítems');
       expect(summary()?.textContent).toContain('$ 9.000,00');
+    });
+
+    describe('the note on a card', () => {
+      // Matches either wording: "Escribir..." before there is a note,
+      // "Editar..." once there is one.
+      function noteButton(name: string): HTMLButtonElement {
+        return screen.getByRole('button', {
+          name: new RegExp(`(escribir una nota para|editar la nota de) ${name}`, 'i'),
+        }) as HTMLButtonElement;
+      }
+
+      // US-10, criterion 5. Behind a button and not always open: a field under
+      // every card turns a menu somebody is reading into a form to fill in.
+      it('is written from the card itself', async () => {
+        const rendered = await openScreenShowing(carta);
+
+        plus('Gin Tonic').click();
+        await rendered.fixture.whenStable();
+
+        noteButton('Gin Tonic').click();
+        await rendered.fixture.whenStable();
+
+        fireEvent.input(screen.getByLabelText('Nota para Gin Tonic'), {
+          target: { value: 'sin hielo' },
+        });
+
+        expect(TestBed.inject(Cart).noteOf('id-1')).toBe('sin hielo');
+      });
+
+      // Nothing to write a note on until the drink is in the order: the note
+      // travels with the line, and there is no line yet.
+      it('cannot be written on a drink that was not added', async () => {
+        await openScreenShowing(carta);
+
+        expect(
+          screen.queryByRole('button', { name: /escribir una nota para Gin Tonic/i }),
+        ).toBeNull();
+      });
+
+      it('shows on the card once it is written', async () => {
+        const rendered = await openScreenShowing(carta);
+
+        plus('Gin Tonic').click();
+        await rendered.fixture.whenStable();
+
+        noteButton('Gin Tonic').click();
+        await rendered.fixture.whenStable();
+
+        fireEvent.input(screen.getByLabelText('Nota para Gin Tonic'), {
+          target: { value: 'sin hielo' },
+        });
+        screen.getByRole('button', { name: /listo con la nota de Gin Tonic/i }).click();
+        await rendered.fixture.whenStable();
+
+        expect(screen.getByTestId('note-Gin Tonic').textContent).toContain('sin hielo');
+      });
+
+      // Once there is something to edit, the button says so instead of
+      // offering to add a note that already exists.
+      it('offers to edit rather than add once a note exists', async () => {
+        store.entries.set(
+          `${CART_STORAGE_PREFIX}bar-alfa`,
+          JSON.stringify([
+            {
+              productId: 'id-1',
+              name: 'Gin Tonic',
+              unitPrice: 4500,
+              quantity: 1,
+              note: 'sin hielo',
+            },
+          ]),
+        );
+
+        await openScreenShowing(carta);
+
+        expect(screen.getByRole('button', { name: /editar la nota de Gin Tonic/i })).not.toBeNull();
+        expect(screen.queryByRole('button', { name: /escribir una nota/i })).toBeNull();
+      });
+
+      it('opens with what was already written in it', async () => {
+        store.entries.set(
+          `${CART_STORAGE_PREFIX}bar-alfa`,
+          JSON.stringify([
+            {
+              productId: 'id-1',
+              name: 'Gin Tonic',
+              unitPrice: 4500,
+              quantity: 1,
+              note: 'sin hielo',
+            },
+          ]),
+        );
+
+        const rendered = await openScreenShowing(carta);
+
+        noteButton('Gin Tonic').click();
+        await rendered.fixture.whenStable();
+
+        expect(screen.getByLabelText<HTMLInputElement>('Nota para Gin Tonic').value).toBe(
+          'sin hielo',
+        );
+      });
     });
 
     function minus(name: string): HTMLButtonElement {

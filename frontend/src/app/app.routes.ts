@@ -33,6 +33,12 @@ export const routes: Routes = [
     path: ':venueSlug/menu',
     loadChildren: () => import('./features/menu/menu.routes').then((m) => m.menuRoutes),
   },
+  // One tap on from the menu, and the same anonymous visit: the order lives on
+  // the device, so there is nothing here a guard would protect.
+  {
+    path: ':venueSlug/order',
+    loadChildren: () => import('./features/order/order.routes').then((m) => m.orderRoutes),
+  },
   {
     path: ':venueSlug/staff',
     canActivate: [rememberVenueGuard],

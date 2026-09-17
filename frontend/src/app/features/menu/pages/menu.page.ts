@@ -1,22 +1,16 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
-import { Cart } from '../../../core/cart/cart';
+import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
+import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
+import { formatPrice } from '../../../shared/money/price';
 import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
 import { menuUrl } from '../menu.service';
 import type { Menu, MenuItem } from '../menu.service';
-
-/**
- * Argentine format, with both decimals always. Built once rather than per card:
- * a menu redraws on every keystroke of the search, and a formatter is not free.
- */
-const PRICE = new Intl.NumberFormat('es-AR', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 
 /** One card, with everything already in the shape the template draws. */
 interface MenuCard {
@@ -36,7 +30,7 @@ interface MenuCard {
  */
 @Component({
   selector: 'drinkit-menu-page',
-  imports: [ThemeToggle],
+  imports: [GlassMark, RouterLink, ThemeToggle],
   styleUrl: './menu.page.scss',
   templateUrl: './menu.page.html',
 })
@@ -97,7 +91,7 @@ export class MenuPage {
         description: item.description,
         image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
         amount: item.price,
-        price: PRICE.format(item.price),
+        price: formatPrice(item.price),
         isOrderable: item.isOrderable,
       }));
   });
@@ -107,7 +101,29 @@ export class MenuPage {
     this.cart.count() === 1 ? '1 ítem' : `${this.cart.count()} ítems`,
   );
 
-  protected readonly orderTotal = computed(() => PRICE.format(this.cart.total()));
+  protected readonly orderTotal = computed(() => formatPrice(this.cart.total()));
+
+  protected readonly orderLink = computed(() => ['/', this.venueSlug(), 'order']);
+
+  protected readonly noteMaxLength = NOTE_MAX_LENGTH;
+
+  /**
+   * Which card has its note field open, if any. One at a time: a field under
+   * every card turns a menu somebody is reading into a form to fill in.
+   */
+  private readonly writingOn = signal<string | null>(null);
+
+  protected isWritingOn(productId: string): boolean {
+    return this.writingOn() === productId;
+  }
+
+  protected writeNoteOn(productId: string): void {
+    this.writingOn.update((open) => (open === productId ? null : productId));
+  }
+
+  protected noteFor(productId: string, event: Event): void {
+    this.cart.setNote(productId, (event.target as HTMLInputElement).value);
+  }
 
   constructor() {
     // The order belongs to the venue whose address is open, and switching
@@ -120,7 +136,7 @@ export class MenuPage {
   }
 
   protected addToOrder(card: MenuCard): void {
-    this.cart.add({ id: card.id, name: card.name, price: card.amount });
+    this.cart.add({ id: card.id, name: card.name, price: card.amount, imageUrl: card.image });
   }
 
   protected takeOneOut(card: MenuCard): void {
