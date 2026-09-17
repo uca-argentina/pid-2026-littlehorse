@@ -22,6 +22,9 @@ public interface IPaymentStrategy
 /// Card or Mercado Pago. Simulated in Sprint 1, which the brief allows: there
 /// is no gateway to call, so confirming settles the money there and then.
 /// </summary>
+// Lives here, not in Infrastructure, because it has no external dependency
+// yet (just TimeProvider). Once a real gateway is wired in, move this class
+// to DrinkIt.Infrastructure so only its IPaymentStrategy port stays here.
 public sealed class DigitalPaymentStrategy(TimeProvider clock) : IPaymentStrategy
 {
     public PaymentMethod Method => PaymentMethod.Digital;

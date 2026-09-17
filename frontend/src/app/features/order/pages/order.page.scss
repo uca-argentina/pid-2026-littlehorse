@@ -48,12 +48,10 @@
   letter-spacing: -0.01em;
 }
 
-// The venue's mark at 28, not the 46 of the menu: there it says which bar you
-// are reading, here it is only a reminder of where the order is going.
 .mark {
   display: flex;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;

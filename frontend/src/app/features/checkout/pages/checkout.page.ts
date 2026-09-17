@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Cart } from '../../../core/cart/cart';
 import { formatPrice } from '../../../shared/money/price';
+import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { CheckoutStore } from '../checkout.store';
 import type { PaymentMethod } from '../checkout.service';
 
@@ -38,7 +39,7 @@ const FULL_NAME = /^\p{L}+(?:\s+\p{L}+)+$/u;
  */
 @Component({
   selector: 'drinkit-checkout-page',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, GlassMark],
   providers: [CheckoutStore],
   styleUrl: './checkout.page.scss',
   templateUrl: './checkout.page.html',
