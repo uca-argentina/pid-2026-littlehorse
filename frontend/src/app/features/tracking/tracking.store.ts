@@ -20,15 +20,14 @@ export const TRACKING_INTERVAL_MS = new InjectionToken<number>('TRACKING_INTERVA
 /**
  * What the screen is doing.
  *
- * 'nowhere' and 'unreachable' are worth telling apart: the first means the link
- * leads to no order and never will, so asking again is pointless; the second
- * means the venue's wifi dropped, the order is fine, and asking again is the
- * whole answer.
+ * Three of these come from the same 404 and are worth telling apart. 'nowhere'
+ * is a link that leads to no order and never did, so asking again is pointless.
+ * 'over' is the same answer arriving about an order that was on screen a moment
+ * ago: the API stops showing an order once it is handed over or cancelled, so
+ * this is the journey ending, not a broken link. 'unreachable' is the venue's
+ * wifi dropping, where the order is fine and asking again is the whole answer.
  */
-export type TrackingStatus = 'starting' | 'following' | 'unreachable' | 'nowhere';
-
-/** The statuses nobody is waiting on any more. Mirrors OrderStatuses.IsFinished. */
-const FINISHED = ['Delivered', 'Canceled'];
+export type TrackingStatus = 'starting' | 'following' | 'unreachable' | 'nowhere' | 'over';
 
 @Injectable()
 export class TrackingStore {
@@ -53,23 +52,31 @@ export class TrackingStore {
   /** The last thing the server said. Kept through a dropped connection. */
   readonly order = this.known.asReadonly();
 
-  readonly isOver = computed(() => {
-    const status = this.known()?.status;
+  /** Whether there is anything left to ask about. Nobody outside needs this:
+   * the screen draws the status, and this is only what stops the timer. */
+  private readonly isOver = computed(() => this.state() === 'nowhere' || this.state() === 'over');
 
-    return status !== undefined && FINISHED.includes(status);
-  });
+  constructor() {
+    // Registered once, here, rather than on every follow: there is one store per
+    // screen and one timer at a time, and hanging a callback off each call left
+    // the older ones pointing at a handle that stopping had already replaced.
+    this.destroyRef.onDestroy(() => this.stop());
+  }
 
   /** Starts watching one order, and keeps watching until there is no point. */
   follow(venueSlug: string, code: string, token: string): void {
     this.where = { venueSlug, code, token };
 
-    this.askAgain();
-
     // The screen is left asking on a timer rather than on a stream of its own,
-    // so nothing accumulates: one interval, cleared when the component dies.
+    // so nothing accumulates: one interval, replaced if it is asked to follow
+    // again and cleared when the component dies. Two of them would drift apart
+    // and turn one round of asking into two.
+    this.stop();
     this.timer = setInterval(() => this.askAgain(), this.every);
 
-    this.destroyRef.onDestroy(() => this.stop());
+    // Last, so that an order already over stops the timer that was just set
+    // instead of leaving it running for a round.
+    this.askAgain();
   }
 
   /**
@@ -83,7 +90,7 @@ export class TrackingStore {
    */
   askAgain(): void {
     if (this.where === null || this.asking) return;
-    if (this.isOver() || this.state() === 'nowhere') return this.stop();
+    if (this.isOver()) return this.stop();
     if (document.visibilityState === 'hidden') return;
 
     this.asking = true;
@@ -96,14 +103,17 @@ export class TrackingStore {
           this.asking = false;
           this.known.set(order);
           this.state.set('following');
-
-          if (this.isOver()) this.stop();
         },
         error: (error: unknown) => {
           this.asking = false;
-          this.state.set(theLinkLeadsNowhere(error) ? 'nowhere' : 'unreachable');
 
-          if (this.state() === 'nowhere') this.stop();
+          if (!theLinkLeadsNowhere(error)) return this.state.set('unreachable');
+
+          // Having shown the order once is what tells the two apart: the same
+          // 404 means the journey ended if it was on screen, and that the link
+          // never led anywhere if it was not.
+          this.state.set(this.known() === null ? 'nowhere' : 'over');
+          this.stop();
         },
       });
   }
@@ -118,7 +128,8 @@ export class TrackingStore {
 /**
  * A 404 is every way of not getting in: a wrong token, a code nobody has,
  * another venue's order, one already handed over. The API answers them all the
- * same on purpose, and so does the screen.
+ * same on purpose — telling them apart would confirm to somebody working
+ * through codes that one of them exists.
  */
 function theLinkLeadsNowhere(error: unknown): boolean {
   return error instanceof HttpErrorResponse && error.status === 404;

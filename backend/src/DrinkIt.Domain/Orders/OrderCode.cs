@@ -56,6 +56,25 @@ public sealed record OrderCode
     }
 
     /// <summary>
+    /// Reads a code that somebody else typed, without throwing when it is not
+    /// one.
+    /// </summary>
+    /// <remarks>
+    /// A code arriving from a URL is not a broken invariant: it is a stranger
+    /// working through codes, or a link cut in half by a chat app. Both deserve
+    /// the same "no such order" as a code nobody has, so whatever asks can say
+    /// that instead of having to catch an exception to do it.
+    /// </remarks>
+    public static bool TryParse(string? value, out OrderCode? code)
+    {
+        code = value is not null && IsWellShaped(value)
+            ? new OrderCode(value[0], int.Parse(value[2..], CultureInfo.InvariantCulture))
+            : null;
+
+        return code is not null;
+    }
+
+    /// <summary>
     /// The code after this one. The four digits are a block and never grow a
     /// fifth: full, they roll over and the letter moves on.
     /// </summary>

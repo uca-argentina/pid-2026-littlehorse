@@ -1,9 +1,13 @@
 <div class="frame">
   <main class="body">
     @if (store.status() === 'nowhere') {
+      <!--
+        Only a link that never worked reaches this. One that stops working on an
+        order already on screen is the journey ending, and is drawn as one.
+      -->
       <p class="note note-bad" role="alert">
-        Ese enlace no lleva a ningún pedido. Puede que ya te lo hayan entregado, o que el enlace
-        esté incompleto.
+        Ese enlace no lleva a ningún pedido. Puede que esté incompleto: fijate que hayas copiado la
+        dirección entera.
       </p>
 
       <a class="ghost" [routerLink]="menuLink()">Ver la carta</a>
@@ -31,20 +35,14 @@
 
       <p class="what what-now" role="status">{{ whatIsHappening() }}</p>
 
-      <!--
-        A cancelled order is not a journey that stalled at a step: drawing the
-        four with none of them reached would say it is still coming.
-      -->
-      @if (!wasCancelled()) {
-        <ol class="journey">
-          @for (step of steps(); track step.name) {
-            <li class="step" [class.step-done]="step.reached" [attr.data-reached]="step.reached">
-              <span class="dot" aria-hidden="true"></span>
-              <span class="step-name">{{ step.name }}</span>
-            </li>
-          }
-        </ol>
-      }
+      <ol class="journey">
+        @for (step of steps(); track step.name) {
+          <li class="step" [class.step-done]="step.reached" [attr.data-reached]="step.reached">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="step-name">{{ step.name }}</span>
+          </li>
+        }
+      </ol>
 
       <!--
         Said once, quietly, and only while the connection is down: the order is
