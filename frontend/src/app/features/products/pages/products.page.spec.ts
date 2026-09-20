@@ -187,6 +187,48 @@ describe('ProductsPage', () => {
       expect(within(screen.getByRole('listitem')).getByText(/apagado/i)).not.toBeNull();
     });
 
+    // The venue's wifi drops mid-tap. Saying nothing leaves the administrator
+    // sure they took a drink off sale while the bar keeps selling it.
+    it('says so when the switch could not be saved', async () => {
+      const rendered = await openScreenShowing([aGinTonic]);
+
+      screen.getByRole('button', { name: /apagar gin tonic/i }).click();
+
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-unavailable`)
+        .error(new ProgressEvent('error'), { status: 0, statusText: '' });
+      rendered.fixture.detectChanges();
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos');
+      // Still says "Apagar": nothing was saved, so the row must not read as if
+      // it had been, and the button has to be there to try again.
+      expect(screen.getByRole('button', { name: /apagar gin tonic/i })).not.toBeNull();
+    });
+
+    it('clears the warning when the switch is tried again and works', async () => {
+      const rendered = await openScreenShowing([aGinTonic]);
+
+      screen.getByRole('button', { name: /apagar gin tonic/i }).click();
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-unavailable`)
+        .error(new ProgressEvent('error'), { status: 0, statusText: '' });
+      rendered.fixture.detectChanges();
+      await rendered.fixture.whenStable();
+
+      screen.getByRole('button', { name: /apagar gin tonic/i }).click();
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-unavailable`)
+        .flush({ ...aGinTonic, isAvailable: false });
+      rendered.fixture.detectChanges();
+      TestBed.inject(HttpTestingController)
+        .expectOne(PRODUCTS_URL)
+        .flush([{ ...aGinTonic, isAvailable: false }]);
+      await rendered.fixture.whenStable();
+
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
     it('lets the administrator turn a product back on', async () => {
       const anOffProduct: Product = { ...aGinTonic, isAvailable: false };
       const rendered = await openScreenShowing([anOffProduct]);

@@ -13,11 +13,11 @@ namespace DrinkIt.Api.IntegrationTests.Menu;
 /// with no session, so what it leaves out matters as much as what it brings.
 /// </summary>
 /// <remarks>
-/// The two flags are written straight through EF here. Nothing in the domain
-/// turns a product off yet: that arrives with US-07 (sold out) and US-08 (taken
-/// off the menu). What is being tested is the WHERE this query runs, and the
-/// row states it has to survive exist in the table long before a screen can
-/// produce them.
+/// The nightly switch is flipped through the domain, with US-07's
+/// Product.MarkUnavailable. The soft delete still goes straight through EF:
+/// US-08 has not built the method for it, and what is being tested is the
+/// WHERE this query runs, which the row state has to survive however it got
+/// written.
 /// </remarks>
 [Collection(nameof(SqlServerCollection))]
 public sealed class MenuQueriesTests(SqlServerFixture sql)
@@ -50,7 +50,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         Product gone = Product.Create(mine.Id, "Daiquiri", null, null, 4000m, 5);
         seed.Products.AddRange(gone, Product.Create(mine.Id, "Negroni", null, null, 5000m, 5));
-        Off(seed, gone, product => product.IsActive);
+        TakeOffTheMenu(seed, gone);
         await seed.SaveChangesAsync();
 
         IReadOnlyList<MenuItem> menu = await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None);
@@ -79,7 +79,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Product product = Product.Create(mine.Id, "Aperol Spritz", null, null, 6000m, stock);
         seed.Products.Add(product);
 
-        if (!available) Off(seed, product, p => p.IsAvailable);
+        if (!available) product.MarkUnavailable();
 
         await seed.SaveChangesAsync();
 
@@ -118,12 +118,12 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
             property => property.Name.Contains("Stock", StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>Writes a flag the domain cannot turn off yet. See the class remarks.</summary>
-    private static void Off(
-        DrinkItDbContext context,
-        Product product,
-        System.Linq.Expressions.Expression<Func<Product, bool>> flag) =>
-        context.Entry(product).Property(flag).CurrentValue = false;
+    /// <summary>
+    /// The soft delete, written straight to the row: US-08 has not built the
+    /// domain method for it. The nightly switch no longer comes through here.
+    /// </summary>
+    private static void TakeOffTheMenu(DrinkItDbContext context, Product product) =>
+        context.Entry(product).Property(item => item.IsActive).CurrentValue = false;
 
     private async Task<Venue> SeedVenue()
     {

@@ -115,29 +115,16 @@ internal static class ProductsEndpoints
         // A broken invariant (price at zero, blank name) is not caught here:
         // the domain throws and the global handler turns it into a 400 with the
         // rule's own problem type.
-        Result<CreatedProduct> result = await handler.HandleAsync(
+        Result<ProductSummary> result = await handler.HandleAsync(
             new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.Stock),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
 
-        CreatedProduct created = result.Value;
-
         // No Location header: there is no endpoint that serves one product on
         // its own yet, and pointing at the collection would be a lie about
         // what the URI identifies.
-        return TypedResults.Created(
-            (string?)null,
-            new ProductResponse(
-                created.Id,
-                created.Name,
-                created.Description,
-                created.ImageUrl,
-                created.Price,
-                created.Stock,
-                created.IsAvailable,
-                created.IsSoldOut,
-                created.IsActive));
+        return TypedResults.Created((string?)null, Shown(result.Value));
     }
 
     internal static async Task<IResult> MarkUnavailableAsync(
@@ -153,23 +140,23 @@ internal static class ProductsEndpoints
         Answer(await handler.HandleAsync(id, cancellationToken));
 
     /// <summary>The updated product, or the failure named so the screen can branch on it.</summary>
-    private static IResult Answer(Result<ProductSummary> result)
-    {
-        if (!result.IsSuccess) return Rejected(result.Error!);
+    private static IResult Answer(Result<ProductSummary> result) =>
+        result.IsSuccess ? TypedResults.Ok(Shown(result.Value)) : Rejected(result.Error!);
 
-        ProductSummary product = result.Value;
-
-        return TypedResults.Ok(new ProductResponse(
-            product.Id,
-            product.Name,
-            product.Description,
-            product.ImageUrl,
-            product.Price,
-            product.Stock,
-            product.IsAvailable,
-            product.IsSoldOut,
-            product.IsActive));
-    }
+    /// <summary>
+    /// The one place a written product becomes the JSON the screen reads. The
+    /// Angular client is generated from this shape, so it is written once.
+    /// </summary>
+    private static ProductResponse Shown(ProductSummary product) => new(
+        product.Id,
+        product.Name,
+        product.Description,
+        product.ImageUrl,
+        product.Price,
+        product.Stock,
+        product.IsAvailable,
+        product.IsSoldOut,
+        product.IsActive);
 
     internal static async Task<IResult> UploadImageAsync(
         Guid id,
@@ -211,7 +198,6 @@ internal static class ProductsEndpoints
         (string title, int status) = error switch
         {
             _ when error == CreateProductHandler.NameTaken => ("Product name already taken", StatusCodes.Status409Conflict),
-            _ when error == UploadProductImageHandler.ProductNotFound => ("Product not found", StatusCodes.Status404NotFound),
             _ when error == ProductErrors.NotFound => ("Product not found", StatusCodes.Status404NotFound),
             _ when error == UploadProductImageHandler.ImageTooLarge => ("Picture too large", StatusCodes.Status413PayloadTooLarge),
             _ when error == UploadProductImageHandler.ImageFormatUnsupported => ("Picture format not supported", StatusCodes.Status415UnsupportedMediaType),

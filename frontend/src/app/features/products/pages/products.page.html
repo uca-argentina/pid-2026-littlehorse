@@ -119,6 +119,11 @@
             @if (!row.isActive) {
               <span class="chip chip-off">Dado de baja</span>
             }
+            @if (row.toggleFailed) {
+              <span class="switch-bad" role="alert">
+                No pudimos cambiarlo. Fijate la señal y probá de nuevo.
+              </span>
+            }
           </li>
         }
       </ul>
@@ -126,8 +131,10 @@
 
     <p class="hint">
       Cuando el stock llega a cero el producto queda agotado solo y el cliente no lo puede pedir.
-      Cuando saques algo de la carta para siempre, lo das de baja: no se borra, porque los pedidos
-      viejos lo siguen necesitando.
+      "Apagar" es para cuando hay stock pero esta noche no lo podés preparar: el cliente lo sigue
+      viendo en la carta, atenuado, y lo volvés a prender cuando quieras sin tocar el stock. Cuando
+      saques algo de la carta para siempre, lo das de baja: no se borra, porque los pedidos viejos
+      lo siguen necesitando.
     </p>
   </section>
 </div>

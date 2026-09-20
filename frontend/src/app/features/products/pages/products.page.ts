@@ -1,5 +1,6 @@
 import { httpResource } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import type { WritableSignal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
@@ -21,6 +22,7 @@ interface ProductRow {
   readonly isSoldOut: boolean;
   readonly isActive: boolean;
   readonly isToggling: boolean;
+  readonly toggleFailed: boolean;
 }
 
 /** Which products the listing is narrowed to, or all of them. */
@@ -83,10 +85,19 @@ export class ProductsPage {
   protected readonly stockFilter = signal<StockFilter>('all');
 
   /**
-   * US-07: the id of the row waiting on the switch, so a second click on the
-   * same row is ignored instead of racing the first request.
+   * US-07: the rows waiting on the switch, so a second tap on one of them is
+   * ignored instead of racing the first request. A set and not a single id:
+   * turning three drinks off in a row is one tap after another, and the second
+   * tap must not re-enable the button of the first while it is still in flight.
    */
-  private readonly togglingId = signal<string | null>(null);
+  private readonly toggling = signal<ReadonlySet<string>>(new Set());
+
+  /**
+   * The rows whose last switch never reached the API. Kept per row rather than
+   * as one message for the screen, because the warning has to sit where the
+   * thumb already is: on a long menu a note at the top is off-screen.
+   */
+  private readonly toggleFailures = signal<ReadonlySet<string>>(new Set());
 
   // hasValue() and not value(): reading the value of a failed resource throws,
   // and the template reads this on every change detection, error state included.
@@ -101,7 +112,8 @@ export class ProductsPage {
       isAvailable: product.isAvailable,
       isSoldOut: product.isSoldOut,
       isActive: product.isActive,
-      isToggling: this.togglingId() === product.id,
+      isToggling: this.toggling().has(product.id),
+      toggleFailed: this.toggleFailures().has(product.id),
     })),
   );
 
@@ -190,11 +202,16 @@ export class ProductsPage {
    * US-07: flips the nightly switch. A full reload rather than patching the
    * row by hand keeps this screen agreeing with whatever the API actually
    * saved, at the cost of one extra request the venue's connection can afford.
+   *
+   * A failure is said out loud and not swallowed: silence here leaves somebody
+   * walking away sure they took a drink off sale while the bar keeps selling
+   * it, which is the exact thing this story exists to prevent.
    */
   protected toggleAvailability(row: ProductRow): void {
     if (row.isToggling) return;
 
-    this.togglingId.set(row.id);
+    this.markAs(this.toggling, row.id, true);
+    this.markAs(this.toggleFailures, row.id, false);
 
     const request = row.isAvailable
       ? this.productsService.markUnavailable(row.id)
@@ -202,10 +219,25 @@ export class ProductsPage {
 
     request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
-        this.togglingId.set(null);
+        this.markAs(this.toggling, row.id, false);
         this.products.reload();
       },
-      error: () => this.togglingId.set(null),
+      error: () => {
+        this.markAs(this.toggling, row.id, false);
+        this.markAs(this.toggleFailures, row.id, true);
+      },
+    });
+  }
+
+  /** A new set every time, so the computed rows above see the change. */
+  private markAs(which: WritableSignal<ReadonlySet<string>>, id: string, member: boolean): void {
+    which.update((ids) => {
+      const next = new Set(ids);
+
+      if (member) next.add(id);
+      else next.delete(id);
+
+      return next;
     });
   }
 }

@@ -212,14 +212,14 @@
 }
 
 .toggle {
-  min-height: 44px;
+  min-height: var(--dk-tap-min);
   padding: 0 15px;
   border: 1px solid var(--dk-border);
   border-radius: var(--dk-radius-pill);
   background: none;
   color: var(--dk-text-muted);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -231,6 +231,22 @@
 
 .toggle:hover:not(:disabled) {
   color: var(--dk-text);
+}
+
+// Full width so it drops to its own line of the wrapping row, under the
+// button it is talking about, instead of squeezing the name out of view.
+.switch-bad {
+  flex-basis: 100%;
+  padding: 9px 13px;
+  border: 1px solid var(--dk-danger);
+  border-radius: var(--dk-radius-md);
+
+  // The pair the alert notes already use, so the contrast is the one that was
+  // checked in both themes rather than a new one invented for this line.
+  background: var(--dk-danger-surface);
+  color: var(--dk-danger-alert-text);
+  font-size: 14.5px;
+  font-weight: 600;
 }
 
 .note {
