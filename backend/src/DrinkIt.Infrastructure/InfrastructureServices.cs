@@ -1,10 +1,12 @@
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Orders;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
 using DrinkIt.Application.Venues;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Menu;
+using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Seeding;
 using DrinkIt.Infrastructure.Security;
@@ -52,6 +54,15 @@ public static class InfrastructureServices
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IProductQueries, ProductQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IProductsForOrdering, ProductsForOrdering>();
+        services.AddScoped<IOrderCodeSequence, OrderCodeSequence>();
+        services.AddScoped<IOrderTrackingQueries, OrderTrackingQueries>();
+
+        // Registered as a collection on purpose: the handler picks the strategy
+        // that matches the method asked for, so adding cash or VIP balance is
+        // adding a class here and touching nothing else.
+        services.AddScoped<IPaymentStrategy, DigitalPaymentStrategy>();
 
         return services;
     }

@@ -1,0 +1,63 @@
+<div class="frame">
+  <main class="body">
+    @if (store.status() === 'nowhere') {
+      <p class="note note-bad" role="alert">
+        Ese enlace no lleva a ningún pedido. Puede que ya te lo hayan entregado, o que el enlace
+        esté incompleto.
+      </p>
+
+      <a class="ghost" [routerLink]="menuLink()">Ver la carta</a>
+    } @else if (store.order() === null) {
+      <p class="note" role="status">Buscando tu pedido…</p>
+    } @else {
+      <div class="tick" aria-hidden="true">
+        <svg
+          width="34"
+          height="34"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M4 12.5l5.5 5.5L20 7" />
+        </svg>
+      </div>
+
+      <p class="what">Mostrá este código en la barra cuando te llamen.</p>
+
+      <p class="code" data-testid="order-code">{{ store.order()!.code }}</p>
+
+      <p class="what what-now" role="status">{{ whatIsHappening() }}</p>
+
+      <!--
+        A cancelled order is not a journey that stalled at a step: drawing the
+        four with none of them reached would say it is still coming.
+      -->
+      @if (!wasCancelled()) {
+        <ol class="journey">
+          @for (step of steps(); track step.name) {
+            <li class="step" [class.step-done]="step.reached" [attr.data-reached]="step.reached">
+              <span class="dot" aria-hidden="true"></span>
+              <span class="step-name">{{ step.name }}</span>
+            </li>
+          }
+        </ol>
+      }
+
+      <!--
+        Said once, quietly, and only while the connection is down: the order is
+        fine and so is the link, and what is on screen is still true — it is
+        just a few seconds old.
+      -->
+      @if (store.status() === 'unreachable') {
+        <p class="stale" role="status">
+          Sin señal. Lo que ves es de hace un momento y se pone al día solo.
+        </p>
+      }
+
+      <a class="ghost" [routerLink]="menuLink()">Pedir algo más</a>
+    }
+  </main>
+</div>

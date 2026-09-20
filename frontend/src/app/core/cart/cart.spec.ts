@@ -366,6 +366,35 @@ describe('Cart', () => {
     });
   });
 
+  describe('once the order is confirmed', () => {
+    // US-11: the order belongs to the server now and has its own code. Going
+    // back to the menu starts a new one, which is what somebody going for the
+    // second round wants.
+    it('is emptied', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+      cart.add(fernet);
+
+      cart.clear();
+
+      expect(cart.isEmpty()).toBe(true);
+      expect(cart.lines()).toEqual([]);
+    });
+
+    it('is still empty when the app is opened again', () => {
+      const before = aCart();
+      before.open('bar-alfa');
+      before.add(ginTonic);
+      before.clear();
+
+      const after = aCart();
+      after.open('bar-alfa');
+
+      expect(after.isEmpty()).toBe(true);
+    });
+  });
+
   it('answers how many of a drink are in the order', () => {
     const cart = aCart();
     cart.open('bar-alfa');

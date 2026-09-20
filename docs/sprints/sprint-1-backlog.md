@@ -86,8 +86,8 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-08 | Corregir y sacar tragos           | US-06        | Pendiente                                                             |
 | US-09 | Ver la carta desde el celular     | US-06        | ✅ **Terminada**                                                      |
 | US-10 | Armar el pedido                   | US-09        | **Terminada** — a falta de prueba a mano                              |
-| US-11 | Confirmar el pedido               | US-10        | Pendiente                                                             |
-| US-12 | Seguir mi pedido                  | US-11        | Pendiente                                                             |
+| US-11 | Confirmar el pedido               | US-10        | **Terminada** — a falta de prueba a mano                              |
+| US-12 | Seguir mi pedido                  | US-11        | **Terminada** — a falta de prueba a mano                              |
 | US-13 | Encontrar a alguien en el listado | US-03        | ✅ **Terminada**                                                      |
 | US-14 | Agrupar la carta por categoría    | US-06, US-09 | Pendiente — planificada el 2026-09-15                                 |
 
@@ -596,6 +596,68 @@ líneas, la aclaración por trago, el subtotal y el total. Falta la prueba a man
 > **Nota:** el pago está simulado en este sprint, como habilita la consigna. Por eso confirmar
 > equivale a pagar.
 
+**Terminada.** Es la primera story que crea un pedido de verdad: hasta acá el pedido vivía en
+el navegador. `POST /{venueSlug}/orders` es anónimo como la carta —el boliche sale del slug
+del QR— y el cliente camina carta → pedido → `/{venueSlug}/checkout` → `/{venueSlug}/orders/A-1234`.
+
+| Decisión | Cómo queda |
+|---|---|
+| El pago | Simulado, como habilita la consigna ("los pagos pueden simularse mediante cambios de estado"). No hay pasarela y no se integra ninguna. "Pagar" muestra dos segundos de "procesando" y el pedido queda pago. |
+| Los dos segundos | Un piso, no una siesta: se espera lo que tarde la API o dos segundos, lo que sea más largo. Sin eso la pantalla salta de un toque al código y se lee como que no pasó nada. |
+| Métodos de pago | Los tres del wireframe. **Pago digital** elegido; **Efectivo en caja** y **Saldo de la mesa** dibujados y apagados. Están fuera del sprint, y una pantalla que gana dos filas después es una que hay que aprender dos veces. Pedirlos por API se responde, no se ignora. |
+| El código del pedido | **`A-1234`**: una letra, guion y cuatro dígitos. Corre en orden por boliche —`A-0000` … `A-9999`, después `B-0000`— y a los 260.000 vuelve a empezar. El guion separa la letra de los números, así la O de `O-0000` sólo puede ser la letra y sirve el abecedario entero. |
+| Quién reparte el código | La base, con un `UPDATE` condicional sobre el contador del boliche: "movete de K-4821 a K-4822, pero sólo si seguís en K-4821". Es la única forma de cumplir el criterio 4, y no se puede en memoria. |
+| Estado al confirmar | `Paid` y enseguida `Queued`. La pantalla dice "ya está pago y esperando en la barra", que es el criterio 5 literal. Nadie lo mueve de ahí hasta que exista el KDS. |
+| Doble toque (criterio 6) | Clave de idempotencia que genera la pantalla al abrirse y viaja en cada intento. La misma clave devuelve el mismo pedido. Viaja como columna sombra: es **cómo llegó** el pedido, no algo cierto sobre los tragos, y el dominio no la ve. |
+| Los precios | Los calcula el backend desde su propia carta. El celular manda ids y cantidades, nunca importes: si no, cualquiera paga lo que quiere editando el navegador. |
+| El stock | Confirmar descuenta, en la misma escritura que crea el pedido. Si un trago no alcanza o salió de la carta, se rechaza el pedido **entero** con 409 y se dice cuál: nadie paga por algo que no va a recibir. |
+| Dos clientes por el último trago | El descuento es una sentencia condicional por trago —"bajá 2 si hay al menos 2"— dentro de la transacción del pedido, así que de dos carreras una sola toca fila. La perdedora no se entera: el pedido se rearma contra la carta como quedó, hasta cinco veces, y sólo se avisa si el trago de verdad se agotó. |
+| Por qué no un token de concurrencia sobre `Stock` | Se probó y se sacó el 2026-09-17: ponía `Stock` en el `WHERE` de **toda** escritura de un producto. Subir una foto tarda segundos de red, y si alguien compraba ese trago en el medio la subida fallaba con 500, perdía la foto y dejaba el blob huérfano. US-07 y US-08 habrían heredado la misma trampa. |
+| El nombre | Nombre y apellido, sólo letras y espacios. Es más de lo que pide el criterio 3, y se tomó sabiendo que rechaza apellidos reales como D'Angelo. Se valida en las dos puntas: en la pantalla para no hacer esperar dos segundos por un "Euge", y en el servidor porque es quien manda. |
+| El método de pago en el contrato | Viaja como nombre —"Digital"— y no como el número del enum, igual que el rol del personal. El OpenAPI de un enum de .NET es un entero pelado, y un cliente generado que dice `method: number` no le dice nada a la pantalla. |
+| Al confirmar | El carrito del celular se vacía: el pedido es del servidor y tiene código propio. |
+| La confirmación | En `/{venueSlug}/orders/A-1234`, con el código sacado de la dirección: sobrevive a que bloqueen el teléfono y recarguen. Es la ruta que US-12 va a expandir con el estado en vivo. |
+| "Ver el estado" | Dibujado y **deshabilitado** hasta que exista US-12, igual que estuvo "Ir a pagar". |
+| "Pago protegido · [boliche]" del wireframe | **No entra.** No hay pasarela: prometer protección sobre un pago simulado sería la única mentira que esta pantalla no puede decir. Dice que el pago está simulado. |
+
+**Lo que encontró la revisión** (2026-09-17, agente `revisor-arquitectura` sobre los dos
+primeros commits). Los tres primeros eran defectos reales en código ya escrito:
+
+1. **Se vendía dos veces el último trago.** El stock se leía, se bajaba en memoria y se
+   escribía con un `UPDATE` que sólo nombraba la fila. Peor: un comentario del dominio
+   afirmaba lo contrario de lo que el código hacía.
+2. **La idempotencia sólo cubría el reintento secuencial.** El simultáneo —que es el que
+   produce una señal mala— moría con 500 contra el índice único.
+3. **Dos líneas del mismo trago** gastaban un código antes de ser rechazadas.
+4. Un puerto prometía guardar y no guardaba, y faltaban cuatro tests.
+
+Y uno que la revisión **no** vio y destapó el test nuevo al cambiar el timing: el `INSERT`
+que arranca el contador de un boliche tampoco era atómico bajo `READ COMMITTED`.
+
+**La segunda revisión** (2026-09-17, `/code-review` sobre la rama entera) encontró seis cosas
+más, todas reales:
+
+1. **El token de concurrencia sobre `Stock` rompía cualquier edición de un producto** mientras
+   el bar vendía. Es lo que llevó a cambiar el mecanismo por la sentencia condicional; hay un
+   test de integración que sube una foto mientras alguien compra.
+2. **`.cta-off` no existía en ninguna hoja de estilo**: el "Ir a pagar" de un pedido vacío se
+   veía dorado y activo, pero no hacía nada.
+3. **La clave de idempotencia vivía sólo en la pantalla.** Recargar —lo que cualquiera hace
+   con mala señal— generaba otra, y pagar de nuevo habría creado un segundo pedido pago,
+   justo lo que la pantalla promete que no pasa. Ahora vive en el navegador y se suelta al
+   confirmar.
+4. **Una cantidad de cero o negativa** no se validaba: pasaba el chequeo de stock y explotaba
+   en el dominio con un tipo de problema escrito para nosotros, no para el cliente.
+5. **El carrito se vaciaba antes de navegar**, así que la pantalla de pago decía "no hay nada
+   para pagar" —en voz alta, por `role="status"`— en el segundo posterior a un pago exitoso.
+6. **El servidor partía el nombre sólo por `' '` y la pantalla por cualquier espacio.** Un
+   nombre pegado con un espacio duro habilitaba el botón y fallaba después de pagar.
+
+**Deuda anotada.** Los comentarios XML de implementación de los endpoints se publican en el
+OpenAPI y terminan en el `schema.d.ts` del front. No es información sensible, pero son notas
+para el equipo en un contrato público: conviene separar `<summary>` de `<remarks>` o dejar de
+emitirlos.
+
 ### US-12 · Seguir mi pedido
 
 > **Como** cliente
@@ -627,6 +689,28 @@ líneas, la aclaración por trago, el subtotal y el total. Falta la prueba a man
 > criterio 3 se verifica cambiando el estado a mano en la base y viendo que la pantalla se
 > pone al día sola. Es una limitación de la demo, no del diseño: la pantalla ya muestra los
 > cuatro pasos y el mecanismo de actualización queda construido y probado.
+
+**Terminada.** El pedido vive en `/{venueSlug}/orders/{código}/{token}`, que es donde cae
+quien paga y el enlace que se guarda.
+
+| Decisión | Cómo queda |
+|---|---|
+| Una pantalla, no dos | La confirmación y el seguimiento eran el mismo lugar peleando por la misma dirección. Quedó una: arriba el tilde y el código grande —lo primero que hace falta al pagar— y abajo el recorrido. Volver más tarde al mismo enlace muestra lo mismo con el estado al día, que es el criterio 4. |
+| Cómo se protege el enlace | Un **token de seguimiento** de 128 bits, aparte del código. El código es el nombre del pedido: se grita en la barra, se puede loggear. El token es la llave, y es lo único que tiene quien no tiene cuenta. Se compara en **tiempo constante**: una comparación que corta en el primer carácter distinto le dice al que adivina cuánto acertó. |
+| Por qué el token y no el id del pedido | Con el id en la dirección, el identificador **es** la credencial: cualquier log o métrica que lo registre lo filtra. Y el día que existan las cuentas de cliente habría que mudar la ruta otra vez para que el registrado tenga direcciones limpias. Con el token, la regla pasa a ser "sos el dueño **o** traés el token" sin tocar nada. |
+| Dónde viaja el token | En el **path**, nunca en query string: las query strings son lo que proxies, logs y analíticas guardan por defecto. |
+| Un solo 404 | Token equivocado, código inexistente, pedido de otro boliche y pedido ya entregado responden lo mismo. Un 403 le confirmaría a alguien que va probando códigos que ése existe. |
+| El token se entrega una vez | En el 201 de la confirmación, y nunca más: la respuesta del seguimiento no lo lleva. Hay tests que verifican que la palabra no aparece en el cuerpo. |
+| Cuándo muere el enlace | Cuando el pedido se entrega o se cancela. El que quedó en el historial de un teléfono compartido deja de ser una puerta en el momento en que le dan los tragos. |
+| Cada cuánto consulta | Cada **tres segundos**, no SignalR. Para cuando el pedido termina, y descansa mientras la pestaña está en segundo plano: veinte consultas por minuto por algo que nadie está leyendo es batería que hace falta para el resto de la noche. |
+| Sin señal ≠ enlace roto | Son dos mensajes distintos. Si se cae la conexión, la pantalla **conserva lo último que supo** y avisa que está desactualizada; el pedido no dejó de existir. Eso es el criterio 6. |
+| Los pasos | Cuatro: esperando, en preparación, listo, entregado. Pagado y En cola son el mismo paso, porque para quien espera un trago son la misma cosa. Un pedido cancelado **no** dibuja el recorrido: cuatro pasos sin alcanzar dirían que todavía viene en camino. |
+| El criterio 3 de punta a punta | **No se prueba con Playwright.** Sin las pantallas de la barra nada mueve un pedido, y probarlo habría pedido un endpoint que existe sólo para ser probado o un test que entra a la base. Lo que hace el polling está cubierto en `tracking.store.spec.ts`, y el criterio se muestra a mano en la demo. |
+
+**Ojo con la US-05.** Su criterio 3 —que los pedidos sigan mostrando quién los preparó—
+estaba trabado porque los pedidos no existían. Ahora existen, pero sigue trabado por otra
+razón: **un pedido no registra quién lo preparó**, porque eso lo asigna el KDS, que está
+fuera del sprint.
 
 ---
 

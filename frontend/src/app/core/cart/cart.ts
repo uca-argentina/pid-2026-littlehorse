@@ -135,6 +135,15 @@ export class Cart {
     );
   }
 
+  /**
+   * Empties it. Called once the order is the server's and has a code of its
+   * own: going back to the carta then starts a new one rather than showing the
+   * one that was already paid for.
+   */
+  clear(): void {
+    this.save([]);
+  }
+
   /** What was written on one drink. Null when nothing was. */
   noteOf(productId: string): string | null {
     return this.stored().find((line) => line.productId === productId)?.note ?? null;

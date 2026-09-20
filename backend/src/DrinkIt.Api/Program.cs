@@ -3,11 +3,13 @@ using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
 using DrinkIt.Api.Features.Menu;
+using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Orders;
 using DrinkIt.Application.Staff;
 using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
@@ -26,6 +28,7 @@ builder.Services.AddScoped<CreateProductHandler>();
 builder.Services.AddScoped<UploadProductImageHandler>();
 builder.Services.AddScoped<MarkProductUnavailableHandler>();
 builder.Services.AddScoped<MarkProductAvailableHandler>();
+builder.Services.AddScoped<ConfirmOrderHandler>();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
@@ -92,6 +95,8 @@ app.UseAuthorization();
 
 app.MapLogin();
 app.MapMenu();
+app.MapOrders();
+app.MapOrderTracking();
 app.MapStaffUsers();
 app.MapProducts();
 

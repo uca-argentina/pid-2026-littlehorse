@@ -43,6 +43,45 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/{venueSlug}/orders': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Confirms and pays for an order from the customer's phone. */
+    post: operations['ConfirmOrder'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/{venueSlug}/orders/{code}/{token}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Answers 404 to every way of not getting in: a wrong token, a code that
+     *     belongs to nobody, another venue's order, and an order already handed
+     *     over. A 403 would confirm to somebody working through codes that this
+     *     one exists, which is the half of the answer worth hiding.
+     */
+    get: operations['FollowOrder'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/users': {
     parameters: {
       query?: never;
@@ -206,6 +245,26 @@ export interface components {
     ChangeStaffUserRoleRequest: {
       role: string;
     };
+    /** @description The order as the confirmation screen shows it. */
+    ConfirmedOrderResponse: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      trackingToken: string;
+      customerName: string;
+      /** Format: double */
+      total: number;
+      status: string;
+      /** Format: date-time */
+      paidAt: string;
+    };
+    /** @description An order somebody is confirming from their phone. */
+    ConfirmOrderRequest: {
+      customerName: null | string;
+      method: null | string;
+      idempotencyKey: null | string;
+      lines: null | components['schemas']['OrderLineRequestBody'][];
+    };
     /**
      * @description What the administration screen posts. The image address is whatever the
      *     upload returned, or null while there is none.
@@ -261,6 +320,14 @@ export interface components {
       venueName: string;
       items: components['schemas']['MenuItemResponse'][];
     };
+    /** @description One drink, as the phone asks for it. What it costs is not in here on purpose. */
+    OrderLineRequestBody: {
+      /** Format: uuid */
+      productId: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+    };
     ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -297,6 +364,24 @@ export interface components {
       username: string;
       role: string;
       isActive: boolean;
+    };
+    /** @description One drink of the order, as the tracking screen draws it. */
+    TrackedOrderItemResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+    };
+    /** @description Where an order is. */
+    TrackedOrderResponse: {
+      code: string;
+      customerName: string;
+      status: string;
+      /** Format: double */
+      total: number;
+      /** Format: date-time */
+      paidAt: null | string;
+      items: components['schemas']['TrackedOrderItemResponse'][];
     };
   };
   responses: never;
@@ -358,6 +443,92 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['MenuResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ConfirmOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        venueSlug: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfirmOrderRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ConfirmedOrderResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  FollowOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        venueSlug: string;
+        code: string;
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TrackedOrderResponse'];
         };
       };
       /** @description Not Found */
