@@ -170,11 +170,53 @@ export class Cart {
     if (stored === null) return [];
 
     try {
-      return JSON.parse(stored) as CartLine[];
+      const parsed: unknown = JSON.parse(stored);
+
+      if (!Array.isArray(parsed)) return [];
+
+      return parsed.map(asCartLine).filter((line) => line !== null);
     } catch {
       // Something half-written, or left by an older version of the app.
       // Starting clean beats rendering an order nobody can explain.
       return [];
     }
   }
+}
+
+/**
+ * One line of an order as read back out of the browser, or null if what was
+ * there is not one.
+ *
+ * What is in storage was written by whatever version of the app this phone
+ * opened last, and it outlives the code that wrote it. Parsing is not the same
+ * as being an order: a line that lost its price would add up to NaN on screen,
+ * and one that lost its id would break the stepper — so those four are
+ * demanded. The picture and the note are not: a line written before either
+ * existed is still a drink somebody chose, and reading it as "no picture, no
+ * note" keeps their order instead of throwing it away over a field that was
+ * added later.
+ *
+ * Lines that do not survive are dropped one by one rather than emptying the
+ * whole order, which is the gentler of the two failures for somebody standing
+ * at a bar.
+ */
+function asCartLine(value: unknown): CartLine | null {
+  if (typeof value !== 'object' || value === null) return null;
+
+  const line = value as Partial<Record<keyof CartLine, unknown>>;
+
+  if (typeof line.productId !== 'string' || line.productId === '') return null;
+  if (typeof line.name !== 'string') return null;
+  if (typeof line.unitPrice !== 'number' || !Number.isFinite(line.unitPrice)) return null;
+  if (typeof line.quantity !== 'number' || !Number.isInteger(line.quantity)) return null;
+  if (line.quantity <= 0) return null;
+
+  return {
+    productId: line.productId,
+    name: line.name,
+    imageUrl: typeof line.imageUrl === 'string' ? line.imageUrl : null,
+    unitPrice: line.unitPrice,
+    quantity: line.quantity,
+    note: typeof line.note === 'string' ? line.note : null,
+  };
 }

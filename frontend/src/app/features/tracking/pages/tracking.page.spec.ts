@@ -173,4 +173,31 @@ describe('TrackingPage', () => {
 
     http.expectNone(url);
   });
+
+  /**
+   * The signal dropped before the very first answer arrived.
+   *
+   * This is the screen somebody lands on the instant they pay, so it is exactly
+   * where bad wifi finds them. The order is fine and the screen keeps asking on
+   * its own, but saying nothing leaves them staring at "Buscando tu pedido…"
+   * with no idea whether it is working — the one state the four-state rule
+   * exists to prevent.
+   */
+  it('says the connection is down when the first answer never arrives', async () => {
+    const rendered = await render(TrackingPage, {
+      inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
+      ],
+    });
+
+    TestBed.inject(HttpTestingController).expectOne(url).error(new ProgressEvent('error'));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/sin se[ñn]al|conexi[óo]n/i);
+    expect(screen.queryByText(/buscando tu pedido/i)).toBeNull();
+  });
 });

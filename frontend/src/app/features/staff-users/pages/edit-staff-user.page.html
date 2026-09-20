@@ -129,10 +129,22 @@
             class="danger-button"
             type="button"
             [disabled]="store.isBusy()"
-            (click)="deactivate()"
+            (click)="armBaja()"
           >
             Dar de baja
           </button>
+
+          @if (bajaArmed()) {
+            <p class="danger-what" role="alert">
+              Se queda sin entrar al sistema hasta que alguien lo reactive.
+            </p>
+
+            <button class="cta" type="button" [disabled]="store.isBusy()" (click)="deactivate()">
+              Confirmar la baja
+            </button>
+
+            <button class="ghost" type="button" (click)="cancelBaja()">Mejor no</button>
+          }
         } @else {
           <p class="danger-what">
             El usuario no tiene acceso al sistema. Al reactivarlo vuelve con su usuario, su

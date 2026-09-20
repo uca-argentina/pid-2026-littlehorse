@@ -12,7 +12,21 @@
 
       <a class="ghost" [routerLink]="menuLink()">Ver la carta</a>
     } @else if (store.order() === null) {
-      <p class="note" role="status">Buscando tu pedido…</p>
+      <!--
+        Nothing on screen yet and the connection is down. Once there is an order
+        to show, the quiet note at the bottom covers this instead: what is on
+        screen is still true, just a few seconds old. Here there is nothing, so
+        staying on "Buscando…" would look like the app is working when it is not.
+      -->
+      @if (store.status() === 'unreachable') {
+        <p class="note note-bad" role="alert">
+          Sin señal. No pudimos traer el estado de tu pedido todavía. Seguimos intentando solos.
+        </p>
+
+        <button class="ghost" type="button" (click)="store.askAgain()">Reintentar ahora</button>
+      } @else {
+        <p class="note" role="status">Buscando tu pedido…</p>
+      }
     } @else {
       <div class="tick" aria-hidden="true">
         <svg

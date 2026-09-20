@@ -69,6 +69,9 @@ export class EditStaffUserPage {
 
   private readonly passwordAttempted = signal(false);
 
+  /** Whether the baja has been asked for once and is waiting to be confirmed. */
+  protected readonly bajaArmed = signal(false);
+
   /**
    * Checked here as well as on the server, because the venue's connection is
    * the slowest part of this screen and eight characters is not worth a round
@@ -113,7 +116,23 @@ export class EditStaffUserPage {
     this.passwordAttempted.set(false);
   }
 
+  /**
+   * Arms the baja instead of doing it.
+   *
+   * Nothing on this screen undoes it in one step, and it sits in the same run
+   * of buttons as saving a role and changing a password. Asking twice costs a
+   * touch; getting it wrong costs somebody their access mid-shift.
+   */
+  protected armBaja(): void {
+    this.bajaArmed.set(true);
+  }
+
+  protected cancelBaja(): void {
+    this.bajaArmed.set(false);
+  }
+
   protected deactivate(): void {
+    this.bajaArmed.set(false);
     this.store.deactivate(this.id());
   }
 
