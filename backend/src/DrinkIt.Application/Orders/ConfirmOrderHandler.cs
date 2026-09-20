@@ -153,8 +153,9 @@ public sealed class ConfirmOrderHandler(
 
         Order order = Order.Place(currentVenue.Id, customerName, code, items.Value);
 
-        payment.Pay(order);
-        order.Enqueue();
+        // How far this goes is the payment method's call, not this handler's:
+        // digital settles and queues, cash will stop at the till.
+        payment.Settle(order);
 
         // The one write of the use case: the order and the stock it sold. It
         // can come back refused, because somebody else sold from the same
