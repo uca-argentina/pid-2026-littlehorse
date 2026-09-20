@@ -463,6 +463,18 @@ y como chip— y la columna de stock lo decía una tercera. Quedó sólo el rót
 que es además el que explica por qué no se puede mover; la columna de stock volvió a ser un
 número ("0 en stock") y los chips quedaron para la baja lógica.
 
+**La pestaña "Dados de baja" pasó a llamarse "No disponibles"** y junta lo que el cliente no
+puede pedir por algo que no sea el stock: lo apagado esta noche y lo dado de baja. Antes
+contaba sólo la baja lógica, que hasta US-08 no existe, así que era una pestaña que decía cero
+siempre. El rótulo de la fila y la pestaña salen ahora del mismo `ProductState` —`available`,
+`soldOut`, `unavailable`—, así que una pestaña no puede juntar filas que digan otra cosa. Los
+dos casos se siguen distinguiendo por el chip "Dado de baja", que es lo que le importa a quien
+está atrás de la barra; para el cliente son lo mismo.
+
+Y se fue el párrafo de ayuda del pie. Explicaba que "disponible esta noche" no es lo mismo que
+dar de baja, que era cierto cuando la pestaña separaba las dos cosas y dejó de serlo cuando
+las juntó.
+
 Dos cosas que conviene tener escritas. La primera: **un administrador no puede apagar un trago
 de otro boliche**, aunque conozca el id y lo ponga en la URL; el filtro global lo deja en un 404,
 y hay test de integración de los dos sentidos. La segunda está abajo, en _Deuda anotada_: el

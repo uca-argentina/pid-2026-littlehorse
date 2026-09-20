@@ -341,13 +341,13 @@ describe('ProductsPage', () => {
     });
 
     // The two states an administrator goes looking for at night: what ran
-    // out, and what was taken off the menu.
-    it('counts everything, what is sold out and what was deactivated', async () => {
+    // out, and what the customer cannot order for any other reason.
+    it('counts everything, what is sold out and what is not available', async () => {
       await openScreenShowing(theMenu);
 
       expect(pill(/todos/i).textContent).toContain('3');
       expect(pill(/sin stock/i).textContent).toContain('1');
-      expect(pill(/dados de baja/i).textContent).toContain('1');
+      expect(pill(/no disponibles/i).textContent).toContain('1');
     });
 
     it('shows only what is sold out when that filter is on', async () => {
@@ -359,13 +359,53 @@ describe('ProductsPage', () => {
       expect(listed()).toEqual(['Aperol Spritz']);
     });
 
-    it('shows only what was deactivated when that filter is on', async () => {
+    it('shows only what is not available when that filter is on', async () => {
       const rendered = await openScreenShowing(theMenu);
 
-      pill(/dados de baja/i).click();
+      pill(/no disponibles/i).click();
       await rendered.fixture.whenStable();
 
       expect(listed()).toEqual(['Daiquiri']);
+    });
+
+    /**
+     * The pill collects whatever the row says is "No disponible", which since
+     * US-07 is mostly the nightly switch and not the soft delete: running out
+     * of tonic is the everyday case, and being taken off the menu for good is
+     * the rare one. Both read the same to the customer, so both are here.
+     */
+    it('gathers what was switched off tonight, not only what left the menu', async () => {
+      const switchedOff: Product = {
+        ...theMenu[0],
+        id: 'off',
+        name: 'Negroni',
+        isAvailable: false,
+      };
+      const rendered = await openScreenShowing([...theMenu, switchedOff]);
+
+      expect(pill(/no disponibles/i).textContent).toContain('2');
+
+      pill(/no disponibles/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(listed()).toEqual(['Daiquiri', 'Negroni']);
+    });
+
+    // Sold out wins: a drink that ran out AND was switched off is one the bar
+    // cannot serve because there is none, and that is the pill that says so.
+    it('counts a drink that ran out once, under sold out', async () => {
+      const both: Product = {
+        ...theMenu[0],
+        id: 'both',
+        name: 'Negroni',
+        stock: 0,
+        isSoldOut: true,
+        isAvailable: false,
+      };
+      await openScreenShowing([both]);
+
+      expect(pill(/sin stock/i).textContent).toContain('1');
+      expect(pill(/no disponibles/i).textContent).toContain('0');
     });
 
     it('narrows by filter and by what was typed at once', async () => {

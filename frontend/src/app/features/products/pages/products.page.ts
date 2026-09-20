@@ -27,23 +27,40 @@ interface ProductRow {
   /** Where the nightly switch of the wireframe sits, and what is written beside it. */
   readonly isOn: boolean;
   readonly canSwitch: boolean;
+  readonly state: ProductState;
   readonly switchLabel: string;
 }
 
 /**
- * What is written next to the switch. Running out is named rather than lumped
- * in with the rest, because it is the one reason the switch cannot be moved and
- * the administrator has to know why it is locked.
+ * What the customer can do with this product right now, in one word.
+ *
+ * Running out is named apart from the rest because it is the one reason the
+ * switch cannot be moved, and the administrator has to know why it is locked.
+ * Being switched off for tonight and being taken off the menu for good are the
+ * same answer here on purpose: from the customer's side they are, and the chip
+ * beside the row is what tells the two apart for whoever is behind the bar.
  */
-function switchLabelFor(product: Product): string {
-  if (product.isSoldOut) return 'Sin stock';
-  if (!product.isAvailable || !product.isActive) return 'No disponible';
+type ProductState = 'available' | 'soldOut' | 'unavailable';
 
-  return 'Disponible';
+function stateOf(product: Product): ProductState {
+  if (product.isSoldOut) return 'soldOut';
+  if (!product.isAvailable || !product.isActive) return 'unavailable';
+
+  return 'available';
 }
 
+/**
+ * What is written next to the switch. One map for the label and one filter over
+ * the same state, so a pill can never collect rows that say something else.
+ */
+const SWITCH_LABEL: Readonly<Record<ProductState, string>> = {
+  available: 'Disponible',
+  soldOut: 'Sin stock',
+  unavailable: 'No disponible',
+};
+
 /** Which products the listing is narrowed to, or all of them. */
-type StockFilter = 'all' | 'soldOut' | 'inactive';
+type StockFilter = 'all' | ProductState;
 
 /** One of the pills above the list, with what it would leave on screen. */
 interface FilterPill {
@@ -133,7 +150,8 @@ export class ProductsPage {
       toggleFailed: this.toggleFailures().has(product.id),
       isOn: product.isAvailable && !product.isSoldOut && product.isActive,
       canSwitch: product.isActive && !product.isSoldOut,
-      switchLabel: switchLabelFor(product),
+      state: stateOf(product),
+      switchLabel: SWITCH_LABEL[stateOf(product)],
     })),
   );
 
@@ -151,9 +169,7 @@ export class ProductsPage {
 
     if (filter === 'all') return this.matchingTheSearch();
 
-    return this.matchingTheSearch().filter((row) =>
-      filter === 'soldOut' ? row.isSoldOut : !row.isActive,
-    );
+    return this.matchingTheSearch().filter((row) => row.state === filter);
   });
 
   /**
@@ -168,12 +184,12 @@ export class ProductsPage {
       {
         filter: 'soldOut',
         name: 'Sin stock',
-        count: matching.filter((row) => row.isSoldOut).length,
+        count: matching.filter((row) => row.state === 'soldOut').length,
       },
       {
-        filter: 'inactive',
-        name: 'Dados de baja',
-        count: matching.filter((row) => !row.isActive).length,
+        filter: 'unavailable',
+        name: 'No disponibles',
+        count: matching.filter((row) => row.state === 'unavailable').length,
       },
     ];
   });
