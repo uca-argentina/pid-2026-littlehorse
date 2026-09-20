@@ -23,6 +23,23 @@ interface ProductRow {
   readonly isActive: boolean;
   readonly isToggling: boolean;
   readonly toggleFailed: boolean;
+
+  /** Where the nightly switch of the wireframe sits, and what is written beside it. */
+  readonly isOn: boolean;
+  readonly canSwitch: boolean;
+  readonly switchLabel: string;
+}
+
+/**
+ * What is written next to the switch. Running out is named rather than lumped
+ * in with the rest, because it is the one reason the switch cannot be moved and
+ * the administrator has to know why it is locked.
+ */
+function switchLabelFor(product: Product): string {
+  if (product.isSoldOut) return 'Sin stock';
+  if (!product.isAvailable || !product.isActive) return 'No disponible';
+
+  return 'Disponible';
 }
 
 /** Which products the listing is narrowed to, or all of them. */
@@ -114,6 +131,9 @@ export class ProductsPage {
       isActive: product.isActive,
       isToggling: this.toggling().has(product.id),
       toggleFailed: this.toggleFailures().has(product.id),
+      isOn: product.isAvailable && !product.isSoldOut && product.isActive,
+      canSwitch: product.isActive && !product.isSoldOut,
+      switchLabel: switchLabelFor(product),
     })),
   );
 
@@ -208,12 +228,14 @@ export class ProductsPage {
    * it, which is the exact thing this story exists to prevent.
    */
   protected toggleAvailability(row: ProductRow): void {
-    if (row.isToggling) return;
+    // The template disables it too. Repeated here because a disabled button is
+    // a rule about a pointer, and this is the rule about the product.
+    if (row.isToggling || !row.canSwitch) return;
 
     this.markAs(this.toggling, row.id, true);
     this.markAs(this.toggleFailures, row.id, false);
 
-    const request = row.isAvailable
+    const request = row.isOn
       ? this.productsService.markUnavailable(row.id)
       : this.productsService.markAvailable(row.id);
 

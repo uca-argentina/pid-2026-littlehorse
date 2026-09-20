@@ -97,8 +97,8 @@ test.describe('Product availability', () => {
     ).toBeVisible();
 
     const row = await theRowFor(tablet, name);
-    await row.getByRole('button', { name: new RegExp(`apagar ${name}`, 'i') }).click();
-    await expect(row).toContainText('Apagado');
+    await row.getByRole('switch').click();
+    await expect(row.getByRole('switch')).not.toBeChecked();
 
     // Criterion 1. Shown and not hidden: a card that disappeared would read as
     // a mistake and send somebody to ask at the bar, which is the walk this
@@ -112,8 +112,8 @@ test.describe('Product availability', () => {
     ).toHaveCount(0);
 
     // Criterion 2: they restocked, and nobody had to load the drink again.
-    await row.getByRole('button', { name: new RegExp(`prender ${name}`, 'i') }).click();
-    await expect(row).not.toContainText('Apagado');
+    await row.getByRole('switch').click();
+    await expect(row.getByRole('switch')).toBeChecked();
 
     await phone.reload();
     await expect(
@@ -149,8 +149,8 @@ test.describe('Product availability', () => {
 
     // The ice machine breaks while the phone is still deciding.
     const row = await theRowFor(tablet, name);
-    await row.getByRole('button', { name: new RegExp(`apagar ${name}`, 'i') }).click();
-    await expect(row).toContainText('Apagado');
+    await row.getByRole('switch').click();
+    await expect(row.getByRole('switch')).not.toBeChecked();
 
     await phone.getByTestId('order-summary').click();
     await phone.getByRole('link', { name: /ir a pagar/i }).click();

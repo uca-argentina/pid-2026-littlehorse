@@ -211,30 +211,88 @@
   color: var(--dk-text-faint);
 }
 
-.toggle {
+// "Disponible esta noche" del wireframe. El botón es el área táctil completa
+// y la pista de 52x30 va adentro, así el blanco de arriba y abajo cuenta para
+// el dedo sin que el dibujo crezca.
+.switch-cell {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.sw {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 52px;
   min-height: var(--dk-tap-min);
-  padding: 0 15px;
-  border: 1px solid var(--dk-border);
+  padding: 0;
+  border: none;
   border-radius: var(--dk-radius-pill);
   background: none;
+}
+
+// La pista. Va detrás y centrada, para que el área táctil del botón sea más
+// alta que el dibujo sin estirarlo.
+.sw::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 52px;
+  height: 30px;
+  transform: translateY(-50%);
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-accent);
+}
+
+.sw-knob {
+  position: relative;
+  margin-left: 25px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-on-accent);
+  transition: margin-left 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-knob {
+    transition: none;
+  }
+}
+
+.sw-off::before {
+  background: var(--dk-border);
+}
+
+.sw-off .sw-knob {
+  margin-left: 3px;
+  background: var(--dk-text-faint);
+}
+
+// Trabado y no sólo apagado: el stock en cero lo apaga y sólo cargar stock lo
+// devuelve. Se atenúa para que se lea como "no se puede", no como "está en no".
+.sw:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.swl {
+  min-width: 96px;
   color: var(--dk-text-muted);
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  white-space: nowrap;
+  font-size: 13.5px;
 }
 
-.toggle:disabled {
-  color: var(--dk-text-faint);
-  opacity: 0.65;
+// El único lugar que avisa que se acabó, así que lleva el peso que antes tenía
+// la columna de stock: es lo que hay que ver de una pasada a las tres de la
+// mañana.
+.swl-out {
+  color: var(--dk-danger);
+  font-weight: 700;
 }
 
-.toggle:hover:not(:disabled) {
-  color: var(--dk-text);
-}
-
-// Full width so it drops to its own line of the wrapping row, under the
-// button it is talking about, instead of squeezing the name out of view.
 .switch-bad {
   flex-basis: 100%;
   padding: 9px 13px;

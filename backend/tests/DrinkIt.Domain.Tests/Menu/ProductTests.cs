@@ -201,17 +201,58 @@ public class ProductAvailabilityTests
         Assert.True(product.IsAvailable);
     }
 
-    // Running out of stock and the nightly switch are independent (decided
-    // 2026-09-14): re-enabling the switch does not restock the product.
+    /// <summary>
+    /// Running out is not something the switch can undo. Putting a drink back
+    /// on sale with none left would promise the customer something the bar
+    /// cannot pour: the only way back is restocking it, which is US-08's job.
+    /// </summary>
     [Fact]
-    public void MarkAvailable_WhenSoldOut_StaysSoldOut()
+    public void MarkAvailable_WhenSoldOut_ThrowsSoldOutCannotBeAvailable()
     {
         Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
 
-        product.MarkAvailable();
+        DomainException error = Assert.Throws<DomainException>(product.MarkAvailable);
+
+        Assert.Equal(Product.ErrorCodes.SoldOutCannotBeAvailable, error.Code);
+    }
+
+    // Turning it off is always allowed, sold out included: the administrator
+    // taps the switch without first working out what state it was in.
+    [Fact]
+    public void MarkUnavailable_WhenSoldOut_TurnsTheSwitchOff()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+
+        product.MarkUnavailable();
+
+        Assert.False(product.IsAvailable);
+    }
+
+    // The rule the customer's menu runs as SQL, owned here.
+    [Fact]
+    public void IsOrderable_WhenSwitchedOnAndInStock_IsTrue()
+    {
+        Assert.True(AGinTonic().IsOrderable);
+    }
+
+    [Fact]
+    public void IsOrderable_WhenSwitchedOff_IsFalse()
+    {
+        Product product = AGinTonic();
+        product.MarkUnavailable();
+
+        Assert.False(product.IsOrderable);
+    }
+
+    // Sold out and never switched off by anybody: the switch says yes and the
+    // shelf says no, and the shelf wins.
+    [Fact]
+    public void IsOrderable_WhenSoldOut_IsFalse()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
 
         Assert.True(product.IsAvailable);
-        Assert.True(product.IsSoldOut);
+        Assert.False(product.IsOrderable);
     }
 }
 

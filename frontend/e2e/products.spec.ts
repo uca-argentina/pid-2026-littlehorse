@@ -118,17 +118,36 @@ test.describe('Products', () => {
     await page.goto(`${productsPath}/new`);
     await fillTheForm(page, name, '4500', '20');
     const row = page.getByRole('listitem').filter({ hasText: name });
+    const nightly = row.getByRole('switch');
 
-    await row.getByRole('button', { name: /apagar/i }).click();
+    await expect(nightly).toBeChecked();
 
-    await expect(row).toContainText('Apagado');
+    await nightly.click();
+
+    await expect(nightly).not.toBeChecked();
+    await expect(row).toContainText('No disponible');
     // The product is still there, and still sells its usual stock: turning
     // it off is not the same thing as running out or taking it off the menu.
     await expect(row).toContainText('20 en stock');
 
-    await row.getByRole('button', { name: /prender/i }).click();
+    await nightly.click();
 
-    await expect(row).not.toContainText('Apagado');
+    await expect(nightly).toBeChecked();
+    await expect(row).toContainText('Disponible');
+  });
+
+  // Running out locks the switch. The drink comes back by being restocked,
+  // which is US-08, and not by anybody tapping this.
+  test('locks the nightly switch of a product that has no stock', async ({ page }) => {
+    const name = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await fillTheForm(page, name, '4500', '0');
+    const row = page.getByRole('listitem').filter({ hasText: name });
+
+    await expect(row.getByRole('switch')).not.toBeChecked();
+    await expect(row.getByRole('switch')).toBeDisabled();
   });
 
   // Criterion 2. The form stops it, so the venue's connection is never part of

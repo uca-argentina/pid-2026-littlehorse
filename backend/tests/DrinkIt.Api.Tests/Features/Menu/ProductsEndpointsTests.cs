@@ -147,6 +147,20 @@ public class ProductsEndpointsTests
         Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
     }
 
+    // The switch cannot undo running out. The endpoint does not check it: the
+    // domain throws and the global handler answers with the rule's own type.
+    [Fact]
+    public async Task MarkAvailableAsync_WhenTheProductRanOut_LetsTheDomainExceptionThrough()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        MarkProductAvailableHandler handler = new(new Fake.Repository(null, product));
+
+        DomainException error = await Assert.ThrowsAsync<DomainException>(
+            () => ProductsEndpoints.MarkAvailableAsync(product.Id, handler, CancellationToken.None));
+
+        Assert.Equal(Product.ErrorCodes.SoldOutCannotBeAvailable, error.Code);
+    }
+
     private static readonly byte[] APng = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52];
 
     private static readonly byte[] APdf = [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A, 0x0A];

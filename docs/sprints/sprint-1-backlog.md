@@ -441,10 +441,27 @@ foto, o cuya foto no carga, muestra el ícono de `public/images` en su lugar.
 de dos actores —la tablet de la barra y el celular del cliente en el mismo test— que es lo
 único que prueba que apagar en una pantalla cambia lo que se puede hacer en la otra.
 
-El interruptor vive en el listado de productos, al lado del chip "Apagado" que ya existía:
-un botón que dice "Apagar" o "Prender" según el estado, y que no pide confirmación porque se
-deshace con otro toque. No toca el stock ni la baja lógica, que son las otras dos preguntas
-—las tres decididas el 2026-09-14—, y eso está probado contra la base de verdad.
+El interruptor es el del wireframe `AdminProductos`: la columna "Disponible esta noche", un
+switch y al lado por qué está donde está. No pide confirmación porque se deshace con otro
+toque. No toca el stock ni la baja lógica, que son las otras dos preguntas —las tres decididas
+el 2026-09-14—, y eso está probado contra la base de verdad.
+
+**Con el stock en cero el interruptor se apaga solo y queda trabado.** Se decidió el
+2026-09-19: volver a prender algo que no hay sería prometerle al cliente un trago que la barra
+no puede servir. No alcanza con deshabilitar el botón —una pantalla vieja o un pedido hecho a
+mano llegan igual—, así que la regla vive en `Product.MarkAvailable()`, que tira excepción de
+dominio, y la pantalla sólo refleja lo que el dominio ya no deja hacer. Se destraba cargando
+stock, que es US-08.
+
+De ahí salió `Product.IsOrderable`, que es "el interruptor dice que sí y queda algo". Era la
+regla que la carta del cliente venía calculando sola en SQL desde US-09; ahora el dominio la
+posee y tiene su test, y la query la restata porque ni `IsSoldOut` ni `IsOrderable` son
+columnas mapeadas.
+
+**Un solo aviso por fila.** El wireframe dibuja "Sin stock" dos veces —al lado del interruptor
+y como chip— y la columna de stock lo decía una tercera. Quedó sólo el rótulo del interruptor,
+que es además el que explica por qué no se puede mover; la columna de stock volvió a ser un
+número ("0 en stock") y los chips quedaron para la baja lógica.
 
 Dos cosas que conviene tener escritas. La primera: **un administrador no puede apagar un trago
 de otro boliche**, aunque conozca el id y lo ponga en la URL; el filtro global lo deja en un 404,

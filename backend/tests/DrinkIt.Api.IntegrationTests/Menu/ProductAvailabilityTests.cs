@@ -1,6 +1,7 @@
 using DrinkIt.Api.IntegrationTests.Persistence;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
+using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Menu;
@@ -154,6 +155,35 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
             .Single(item => item.Name == "Gin Tonic");
 
         Assert.True(card.IsOrderable);
+    }
+
+    /// <summary>
+    /// Running out locks the switch. Only stock can unlock it, and putting
+    /// stock back is US-08: until then the drink stays off the menu, and the
+    /// attempt leaves the row exactly as it was.
+    /// </summary>
+    [Fact]
+    public async Task MarkAvailableAsync_WhenTheProductRanOut_IsRefusedAndWritesNothing()
+    {
+        Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
+        Product empty = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 0);
+
+        await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
+        seed.Venues.Add(mine);
+        seed.Products.Add(empty);
+        await seed.SaveChangesAsync();
+
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+        MarkProductAvailableHandler handler = new(new ProductRepository(asMine));
+
+        await Assert.ThrowsAsync<DomainException>(
+            () => handler.HandleAsync(empty.Id, CancellationToken.None));
+
+        await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
+        Product stored = await fresh.Products.SingleAsync(product => product.Id == empty.Id);
+
+        Assert.Equal(0, stored.Stock);
+        Assert.False(stored.IsOrderable);
     }
 
     private async Task<(Venue Mine, Venue Theirs, Product Gin, Product Foreign)> SeedTwoVenues()
