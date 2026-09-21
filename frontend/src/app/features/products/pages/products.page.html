@@ -115,11 +115,18 @@
                 [attr.aria-checked]="row.isOn"
                 [disabled]="!row.canSwitch || row.isToggling"
                 [attr.aria-label]="'Disponible esta noche: ' + row.name"
+                [attr.aria-describedby]="'switch-label-' + row.id"
                 (click)="toggleAvailability(row)"
               >
                 <span class="sw-knob" aria-hidden="true"></span>
               </button>
-              <span class="swl" [class.swl-out]="row.isSoldOut">{{ row.switchLabel }}</span>
+              <span
+                class="swl"
+                [id]="'switch-label-' + row.id"
+                [class.swl-out]="row.isSoldOut"
+                [class.swl-off]="row.state === 'unavailable'"
+                >{{ row.switchLabel }}</span
+              >
             </span>
             @if (!row.isActive) {
               <span class="chip chip-off">Dado de baja</span>
