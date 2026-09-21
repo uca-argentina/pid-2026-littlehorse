@@ -38,11 +38,14 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
             // What can be ordered first, so the reachable part of the menu is
             // what a thumb lands on. Sold out stays visible, further down.
             //
-            // Ordering after projecting to MenuItem would read better (sort on
-            // the already-computed IsOrderable instead of repeating the
-            // expression), but EF Core cannot translate an OrderBy over a
-            // property read back off a constructed record — it has to be a SQL
-            // ORDER BY over the raw columns, so the condition is written twice.
+            // Product.IsOrderable is the same rule and owns the test for it,
+            // but it is not a mapped column, so it cannot cross into SQL and is
+            // restated here. Ordering after projecting to MenuItem would read
+            // better (sort on the already-computed IsOrderable instead of
+            // repeating the expression), but EF Core cannot translate an
+            // OrderBy over a property read back off a constructed record — it
+            // has to be a SQL ORDER BY over the raw columns, so the condition
+            // is written twice.
             .OrderByDescending(product => product.IsAvailable && product.Stock > 0)
             .ThenBy(product => product.Name)
             .Select(product => new MenuItem(

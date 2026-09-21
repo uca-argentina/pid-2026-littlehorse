@@ -95,28 +95,50 @@
               }
             </span>
             <span class="price">{{ row.price }}</span>
-            <span class="stock" [class.stock-out]="row.isSoldOut">
-              @if (row.isSoldOut) {
-                Sin stock
-              } @else {
-                {{ row.stock }} en stock
-              }
+            <!--
+              Cuántos quedan y nada más. Que se haya acabado lo dice el rótulo
+              del interruptor, una sola vez: repetirlo acá y en un chip hacía
+              que la misma fila dijera "sin stock" tres veces.
+            -->
+            <span class="stock">{{ row.stock }} en stock</span>
+            <!--
+              "Disponible esta noche" del wireframe: un interruptor y, al lado,
+              por qué está donde está. Ese rótulo es el único lugar de la fila
+              que dice que un trago se acabó o que no se puede servir.
+            -->
+            <span class="switch-cell">
+              <button
+                class="sw"
+                type="button"
+                role="switch"
+                [class.sw-off]="!row.isOn"
+                [attr.aria-checked]="row.isOn"
+                [disabled]="!row.canSwitch || row.isToggling"
+                [attr.aria-label]="'Disponible esta noche: ' + row.name"
+                [attr.aria-describedby]="'switch-label-' + row.id"
+                (click)="toggleAvailability(row)"
+              >
+                <span class="sw-knob" aria-hidden="true"></span>
+              </button>
+              <span
+                class="swl"
+                [id]="'switch-label-' + row.id"
+                [class.swl-out]="row.isSoldOut"
+                [class.swl-off]="row.state === 'unavailable'"
+                >{{ row.switchLabel }}</span
+              >
             </span>
-            @if (!row.isAvailable) {
-              <span class="chip">Apagado</span>
-            }
             @if (!row.isActive) {
               <span class="chip chip-off">Dado de baja</span>
+            }
+            @if (row.toggleFailed) {
+              <span class="switch-bad" role="alert">
+                No pudimos cambiarlo. Fijate la señal y probá de nuevo.
+              </span>
             }
           </li>
         }
       </ul>
     }
-
-    <p class="hint">
-      Cuando el stock llega a cero el producto queda agotado solo y el cliente no lo puede pedir.
-      Cuando saques algo de la carta para siempre, lo das de baja: no se borra, porque los pedidos
-      viejos lo siguen necesitando.
-    </p>
   </section>
 </div>

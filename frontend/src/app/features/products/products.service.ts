@@ -43,4 +43,14 @@ export class ProductsService {
 
     return this.http.put<ProductImage>(`${PRODUCTS_URL}/${productId}/image`, form);
   }
+
+  /** US-07: the nightly switch off. The customer keeps seeing the product, dimmed. */
+  markUnavailable(productId: string): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-unavailable`, {});
+  }
+
+  /** US-07: the switch back on, e.g. after restocking. Does not touch stock. */
+  markAvailable(productId: string): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-available`, {});
+  }
 }

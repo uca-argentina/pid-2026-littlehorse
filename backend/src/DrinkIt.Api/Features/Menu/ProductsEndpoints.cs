@@ -56,6 +56,23 @@ internal static class ProductsEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        // POST and not DELETE or PUT: nothing is deleted, and the state is a
+        // switch, not a field the screen posts a new value for. Same shape as
+        // StaffUsersEndpoints' deactivate/reactivate. CLAUDE.md, State pattern.
+        group
+            .MapPost("/{id:guid}/mark-unavailable", MarkUnavailableAsync)
+            .WithName("MarkProductUnavailable")
+            .WithSummary("Turns a product's nightly switch off. The customer keeps seeing it, dimmed.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapPost("/{id:guid}/mark-available", MarkAvailableAsync)
+            .WithName("MarkProductAvailable")
+            .WithSummary("Turns the switch back on. Does not touch stock.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         group
             .MapPut("/{id:guid}/image", UploadImageAsync)
             .WithName("UploadProductImage")
@@ -98,30 +115,48 @@ internal static class ProductsEndpoints
         // A broken invariant (price at zero, blank name) is not caught here:
         // the domain throws and the global handler turns it into a 400 with the
         // rule's own problem type.
-        Result<CreatedProduct> result = await handler.HandleAsync(
+        Result<ProductSummary> result = await handler.HandleAsync(
             new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.Stock),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
 
-        CreatedProduct created = result.Value;
-
         // No Location header: there is no endpoint that serves one product on
         // its own yet, and pointing at the collection would be a lie about
         // what the URI identifies.
-        return TypedResults.Created(
-            (string?)null,
-            new ProductResponse(
-                created.Id,
-                created.Name,
-                created.Description,
-                created.ImageUrl,
-                created.Price,
-                created.Stock,
-                created.IsAvailable,
-                created.IsSoldOut,
-                created.IsActive));
+        return TypedResults.Created((string?)null, Shown(result.Value));
     }
+
+    internal static async Task<IResult> MarkUnavailableAsync(
+        Guid id,
+        MarkProductUnavailableHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
+
+    internal static async Task<IResult> MarkAvailableAsync(
+        Guid id,
+        MarkProductAvailableHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
+
+    /// <summary>The updated product, or the failure named so the screen can branch on it.</summary>
+    private static IResult Answer(Result<ProductSummary> result) =>
+        result.IsSuccess ? TypedResults.Ok(Shown(result.Value)) : Rejected(result.Error!);
+
+    /// <summary>
+    /// The one place a written product becomes the JSON the screen reads. The
+    /// Angular client is generated from this shape, so it is written once.
+    /// </summary>
+    private static ProductResponse Shown(ProductSummary product) => new(
+        product.Id,
+        product.Name,
+        product.Description,
+        product.ImageUrl,
+        product.Price,
+        product.Stock,
+        product.IsAvailable,
+        product.IsSoldOut,
+        product.IsActive);
 
     internal static async Task<IResult> UploadImageAsync(
         Guid id,
@@ -163,7 +198,7 @@ internal static class ProductsEndpoints
         (string title, int status) = error switch
         {
             _ when error == CreateProductHandler.NameTaken => ("Product name already taken", StatusCodes.Status409Conflict),
-            _ when error == UploadProductImageHandler.ProductNotFound => ("Product not found", StatusCodes.Status404NotFound),
+            _ when error == ProductErrors.NotFound => ("Product not found", StatusCodes.Status404NotFound),
             _ when error == UploadProductImageHandler.ImageTooLarge => ("Picture too large", StatusCodes.Status413PayloadTooLarge),
             _ when error == UploadProductImageHandler.ImageFormatUnsupported => ("Picture format not supported", StatusCodes.Status415UnsupportedMediaType),
             _ => ("Invalid request", StatusCodes.Status400BadRequest),

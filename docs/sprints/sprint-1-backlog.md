@@ -82,7 +82,7 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-04 | Ver y corregir al equipo          | US-03        | ✅ **Terminada**                                                      |
 | US-05 | Dar de baja a quien se fue        | US-03        | **3 de 4** — falta el criterio de los pedidos, que no existen todavía |
 | US-06 | Cargar un trago en la carta       | US-01        | ✅ **Terminada**                                                      |
-| US-07 | Marcar que un trago se acabó      | US-06        | Pendiente                                                             |
+| US-07 | Marcar que un trago se acabó      | US-06        | ✅ **Terminada**                                                      |
 | US-08 | Corregir y sacar tragos           | US-06        | Pendiente                                                             |
 | US-09 | Ver la carta desde el celular     | US-06        | ✅ **Terminada**                                                      |
 | US-10 | Armar el pedido                   | US-09        | **Terminada** — a falta de prueba a mano                              |
@@ -136,6 +136,22 @@ está en _Deuda anotada_ por qué conviene que los dos servicios viejos también
 
 Quedan seis: US-07 y US-08 cierran la carta del administrador, US-11 y US-12 cierran el
 pedido, y US-14 son las categorías. El camino crítico es el pedido.
+
+**Estado al sábado 19 de septiembre.** US-07 cerró, y cerró chica: de sus tres criterios ya
+había dos construidos sin que fueran de ninguna story. El backend del criterio 1 entró con
+US-09 —la carta del cliente ya calculaba `IsOrderable` como "hay stock y está prendido"— y el
+criterio 3 entró con US-11, porque confirmar un pedido ya rechazaba el pedido entero nombrando
+el trago que no se puede preparar. Lo que faltaba de verdad era el interruptor del
+administrador, que es lo que se construyó.
+
+De paso se saldaron dos deudas que estaban esperando justamente esta story. Dos tests apagaban
+`IsAvailable` por reflexión, con un comentario que decía "hasta que exista US-07": ahora llaman
+a `Product.MarkUnavailable()`. Y `product.not_found` estaba declarado dos veces, en dos
+handlers distintos; como `Error` es un record, las dos constantes comparaban iguales y el
+segundo brazo del switch de la API era código muerto.
+
+Queda US-08, que es la última de la carta, y US-14. El interruptor y la baja lógica se parecen
+en la pantalla y no se parecen en nada más: uno es de esta noche y el otro es para siempre.
 
 ---
 
@@ -420,6 +436,49 @@ foto, o cuya foto no carga, muestra el ícono de `public/images` en su lugar.
 > la carta, el cliente pensaría que se cargó mal e iría a preguntar a la barra, que es
 > exactamente la caminata que el producto quiere evitar. El diseño ya lo resuelve: la tarjeta
 > aparece atenuada y sin el botón de agregar.
+
+✅ **Terminada.** Los tres criterios están cumplidos y con test, incluido un spec de Playwright
+de dos actores —la tablet de la barra y el celular del cliente en el mismo test— que es lo
+único que prueba que apagar en una pantalla cambia lo que se puede hacer en la otra.
+
+El interruptor es el del wireframe `AdminProductos`: la columna "Disponible esta noche", un
+switch y al lado por qué está donde está. No pide confirmación porque se deshace con otro
+toque. No toca el stock ni la baja lógica, que son las otras dos preguntas —las tres decididas
+el 2026-09-14—, y eso está probado contra la base de verdad.
+
+**Con el stock en cero el interruptor se apaga solo y queda trabado.** Se decidió el
+2026-09-19: volver a prender algo que no hay sería prometerle al cliente un trago que la barra
+no puede servir. No alcanza con deshabilitar el botón —una pantalla vieja o un pedido hecho a
+mano llegan igual—, así que la regla vive en `Product.MarkAvailable()`, que tira excepción de
+dominio, y la pantalla sólo refleja lo que el dominio ya no deja hacer. Se destraba cargando
+stock, que es US-08.
+
+De ahí salió `Product.IsOrderable`, que es "el interruptor dice que sí y queda algo". Era la
+regla que la carta del cliente venía calculando sola en SQL desde US-09; ahora el dominio la
+posee y tiene su test, y la query la restata porque ni `IsSoldOut` ni `IsOrderable` son
+columnas mapeadas.
+
+**Un solo aviso por fila.** El wireframe dibuja "Sin stock" dos veces —al lado del interruptor
+y como chip— y la columna de stock lo decía una tercera. Quedó sólo el rótulo del interruptor,
+que es además el que explica por qué no se puede mover; la columna de stock volvió a ser un
+número ("0 en stock") y los chips quedaron para la baja lógica.
+
+**La pestaña "Dados de baja" pasó a llamarse "No disponibles"** y junta lo que el cliente no
+puede pedir por algo que no sea el stock: lo apagado esta noche y lo dado de baja. Antes
+contaba sólo la baja lógica, que hasta US-08 no existe, así que era una pestaña que decía cero
+siempre. El rótulo de la fila y la pestaña salen ahora del mismo `ProductState` —`available`,
+`soldOut`, `unavailable`—, así que una pestaña no puede juntar filas que digan otra cosa. Los
+dos casos se siguen distinguiendo por el chip "Dado de baja", que es lo que le importa a quien
+está atrás de la barra; para el cliente son lo mismo.
+
+Y se fue el párrafo de ayuda del pie. Explicaba que "disponible esta noche" no es lo mismo que
+dar de baja, que era cierto cuando la pestaña separaba las dos cosas y dejó de serlo cuando
+las juntó.
+
+Dos cosas que conviene tener escritas. La primera: **un administrador no puede apagar un trago
+de otro boliche**, aunque conozca el id y lo ponga en la URL; el filtro global lo deja en un 404,
+y hay test de integración de los dos sentidos. La segunda está abajo, en _Deuda anotada_: el
+criterio 3 avisa, nombra el trago y no cobra, pero la frase le llega al cliente en inglés.
 
 ### US-08 · Corregir y sacar tragos
 
@@ -767,6 +826,21 @@ story que lo necesita.
     Cuelga de ahí toda la autenticación, así que se revisa con más cuidado.
 
     **Después del hito**, y en ese orden. Si aparece un cuarto lugar, deja de ser prolijidad.
+
+- **El cliente recibe en inglés el aviso de que un trago no se puede preparar.** Es el
+  criterio 3 de US-07 y sale de US-11: cuando confirmar el pedido se rechaza, la pantalla de
+  pago muestra tal cual el `detail` del problem document, y ese `detail` es el mensaje del
+  `Error`, que va en inglés como todo el backend. O sea que quien está en el boliche lee
+  "Gin Tonic is not on the menu any more.".
+
+    El criterio se cumple igual —se entera, sabe cuál es el trago y no se le cobra—, y por eso
+    US-07 quedó cerrada. Pero es el único texto en inglés que ve un cliente, y contradice la
+    regla de `CLAUDE.md` de que la PWA le habla en español.
+
+    **No se arregla poniendo español en el `.cs`**, que es la otra mitad de la misma regla. El
+    camino es que el problem document lleve el nombre del trago aparte del mensaje, y que la
+    frase la escriba la plantilla de Angular. Eso toca un endpoint de US-11, así que va en su
+    propia rama y no en la de US-07.
 
 **Ya está hecho y no se rehace.** Del backend: el modelo de local y de personal, el
 aislamiento entre locales con su prueba, la base con su migración, la API armada
