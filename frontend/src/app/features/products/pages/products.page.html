@@ -131,6 +131,11 @@
             @if (!row.isActive) {
               <span class="chip chip-off">Dado de baja</span>
             }
+            @if (row.isActive) {
+              <a class="edit" [routerLink]="['/', venueSlug(), 'staff', 'products', row.id]"
+                >Editar</a
+              >
+            }
             @if (row.toggleFailed) {
               <span class="switch-bad" role="alert">
                 No pudimos cambiarlo. Fijate la señal y probá de nuevo.

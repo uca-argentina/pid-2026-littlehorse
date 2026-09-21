@@ -8,6 +8,8 @@ export type Product = components['schemas']['ProductResponse'];
 
 export type NewProduct = components['schemas']['CreateProductRequest'];
 
+export type ProductCorrection = components['schemas']['UpdateProductRequest'];
+
 export type ProductImage = components['schemas']['ProductImageResponse'];
 
 /**
@@ -42,6 +44,16 @@ export class ProductsService {
     form.append('image', image, image.name);
 
     return this.http.put<ProductImage>(`${PRODUCTS_URL}/${productId}/image`, form);
+  }
+
+  /** US-08: corrects name, description and price. Stock, the picture and the two switches each have their own action. */
+  update(productId: string, correction: ProductCorrection): Observable<Product> {
+    return this.http.put<Product>(`${PRODUCTS_URL}/${productId}`, correction);
+  }
+
+  /** US-08: off the menu for good. The row stays for the orders that point at it. */
+  deactivate(productId: string): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/deactivate`, {});
   }
 
   /** US-07: the nightly switch off. The customer keeps seeing the product, dimmed. */

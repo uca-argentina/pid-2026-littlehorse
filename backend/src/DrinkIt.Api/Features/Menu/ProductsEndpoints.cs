@@ -19,6 +19,13 @@ public sealed record CreateProductRequest(
 /// <summary>Where the picture ended up. The listing shows it from here on.</summary>
 public sealed record ProductImageResponse(string ImageUrl);
 
+/// <summary>
+/// US-08: what the correction form posts. No stock, no picture, no switches —
+/// each of those has its own action, so a screen that only touches one of them
+/// cannot accidentally overwrite the rest.
+/// </summary>
+public sealed record UpdateProductRequest(string Name, string? Description, decimal Price);
+
 public sealed record ProductResponse(
     Guid Id,
     string Name,
@@ -70,6 +77,25 @@ internal static class ProductsEndpoints
             .MapPost("/{id:guid}/mark-available", MarkAvailableAsync)
             .WithName("MarkProductAvailable")
             .WithSummary("Turns the switch back on. Does not touch stock.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapPut("/{id:guid}", UpdateAsync)
+            .WithName("UpdateProduct")
+            .WithSummary("Corrects a product's name, description and price.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        // POST and not DELETE: nothing is deleted. The row stays so the orders
+        // that pointed at it keep showing it as it was, exactly the same shape
+        // as StaffUsersEndpoints' deactivate. CLAUDE.md, State pattern.
+        group
+            .MapPost("/{id:guid}/deactivate", DeactivateAsync)
+            .WithName("DeactivateProduct")
+            .WithSummary("Takes a product off the menu for good. Old orders keep pointing at it.")
             .Produces<ProductResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -126,6 +152,27 @@ internal static class ProductsEndpoints
         // what the URI identifies.
         return TypedResults.Created((string?)null, Shown(result.Value));
     }
+
+    internal static async Task<IResult> UpdateAsync(
+        Guid id,
+        UpdateProductRequest request,
+        UpdateProductHandler handler,
+        CancellationToken cancellationToken)
+    {
+        // A broken invariant (price at zero, blank name) is not caught here:
+        // the domain throws and the global handler answers, same as CreateAsync.
+        Result<ProductSummary> result = await handler.HandleAsync(
+            new UpdateProductCommand(id, request.Name, request.Description, request.Price),
+            cancellationToken);
+
+        return Answer(result);
+    }
+
+    internal static async Task<IResult> DeactivateAsync(
+        Guid id,
+        DeactivateProductHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
 
     internal static async Task<IResult> MarkUnavailableAsync(
         Guid id,

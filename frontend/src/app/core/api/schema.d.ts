@@ -220,6 +220,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/products/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Corrects a product's name, description and price. */
+    put: operations['UpdateProduct'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/products/{id}/deactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Takes a product off the menu for good. Old orders keep pointing at it. */
+    post: operations['DeactivateProduct'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/products/{id}/image': {
     parameters: {
       query?: never;
@@ -382,6 +416,17 @@ export interface components {
       /** Format: date-time */
       paidAt: null | string;
       items: components['schemas']['TrackedOrderItemResponse'][];
+    };
+    /**
+     * @description US-08: what the correction form posts. No stock, no picture, no switches —
+     *     each of those has its own action, so a screen that only touches one of them
+     *     cannot accidentally overwrite the rest.
+     */
+    UpdateProductRequest: {
+      name: string;
+      description: null | string;
+      /** Format: double */
+      price: number;
     };
   };
   responses: never;
@@ -866,6 +911,90 @@ export interface operations {
     };
   };
   MarkProductAvailable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UpdateProduct: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateProductRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  DeactivateProduct: {
     parameters: {
       query?: never;
       header?: never;

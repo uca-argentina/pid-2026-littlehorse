@@ -173,6 +173,63 @@ test.describe('Products', () => {
     await expect(page).toHaveURL(new RegExp(`${productsPath}/new$`));
   });
 
+  // US-08, criterion 1: end to end against the real API and the seeded
+  // database, correcting the name, description and price of a product that
+  // already exists.
+  test('corrects a product and the listing shows the new data', async ({ page }) => {
+    const name = aNewProductName();
+    const newName = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await fillTheForm(page, name, '4500', '20');
+
+    await page
+      .getByRole('listitem')
+      .filter({ hasText: name })
+      .getByRole('link', { name: /editar/i })
+      .click();
+    await page.getByRole('textbox', { name: /^nombre/i }).fill(newName);
+    await page.getByRole('spinbutton', { name: /precio/i }).fill('3800');
+    await page.getByRole('button', { name: /guardar/i }).click();
+
+    await expect(page.getByText(/guardad/i)).toBeVisible();
+    await page.goto(productsPath);
+    const row = page.getByRole('listitem').filter({ hasText: newName });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('3.800');
+  });
+
+  // US-08, criterion 3: the customer stops seeing it, and the administration
+  // listing keeps showing it, marked as dado de baja. The half this spec does
+  // not cover — an old order still showing the product as it was ordered —
+  // is not testable yet: orders do not exist on this branch. Same limitation
+  // US-07 noted for its own untestable criterion.
+  test('takes a product off the menu, and it stops showing up for the customer', async ({
+    page,
+  }) => {
+    const name = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await fillTheForm(page, name, '4500', '20');
+
+    await page
+      .getByRole('listitem')
+      .filter({ hasText: name })
+      .getByRole('link', { name: /editar/i })
+      .click();
+    await page.getByRole('button', { name: /dar de baja/i }).click();
+
+    // Waits for the API to actually answer before moving on: the danger
+    // section only flips to this note once the product came back deactivated.
+    await expect(page.getByText(/ya está dado de baja/i)).toBeVisible();
+    await page.goto(productsPath);
+    const row = page.getByRole('listitem').filter({ hasText: name });
+    await expect(row).toContainText(/dado de baja/i);
+    await expect(row.getByRole('link', { name: /editar/i })).toHaveCount(0);
+  });
+
   // The administrator has to be able to fix it on the spot, so the message has
   // to say what is wrong rather than that something failed.
   test('refuses a name that this venue already sells', async ({ page }) => {

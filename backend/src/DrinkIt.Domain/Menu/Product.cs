@@ -104,17 +104,12 @@ public sealed class Product : IBelongsToVenue
         int stock)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Products must belong to a venue.");
-        if (string.IsNullOrWhiteSpace(name)) throw new DomainException(ErrorCodes.NameRequired, "The product needs a name.");
-
-        string cleanName = name.Trim();
-
-        if (cleanName.Length > NameMaxLength) throw new DomainException(ErrorCodes.NameLength, $"The name cannot be longer than {NameMaxLength} characters.");
-
-        string? cleanDescription = BlankToNull(description);
-
-        if (cleanDescription?.Length > DescriptionMaxLength) throw new DomainException(ErrorCodes.DescriptionLength, $"The description cannot be longer than {DescriptionMaxLength} characters.");
-        if (price <= 0) throw new DomainException(ErrorCodes.PriceNotPositive, "The price has to be greater than zero.");
         if (stock < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
+
+        string cleanName = ValidateName(name);
+        string? cleanDescription = ValidateDescription(description);
+
+        ValidatePrice(price);
 
         string? cleanImageUrl = BlankToNull(imageUrl);
 
@@ -140,6 +135,52 @@ public sealed class Product : IBelongsToVenue
         if (IsSoldOut) throw new DomainException(ErrorCodes.SoldOutCannotBeAvailable, "A product with no stock left cannot be put back on sale. Add stock first.");
 
         IsAvailable = true;
+    }
+
+    /// <summary>
+    /// US-08: the name, description and price a customer reads. Stock, the
+    /// picture and the two switches each have their own dedicated method — a
+    /// single "update everything" invites forgetting one of them halfway
+    /// through a screen.
+    /// </summary>
+    public void Update(string name, string? description, decimal price)
+    {
+        string cleanName = ValidateName(name);
+        string? cleanDescription = ValidateDescription(description);
+
+        ValidatePrice(price);
+
+        Name = cleanName;
+        Description = cleanDescription;
+        Price = price;
+    }
+
+    /// <summary>US-08: off the menu for good. The row stays for the orders that already point at it.</summary>
+    public void Deactivate() => IsActive = false;
+
+    private static string ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new DomainException(ErrorCodes.NameRequired, "The product needs a name.");
+
+        string cleanName = name.Trim();
+
+        if (cleanName.Length > NameMaxLength) throw new DomainException(ErrorCodes.NameLength, $"The name cannot be longer than {NameMaxLength} characters.");
+
+        return cleanName;
+    }
+
+    private static string? ValidateDescription(string? description)
+    {
+        string? cleanDescription = BlankToNull(description);
+
+        if (cleanDescription?.Length > DescriptionMaxLength) throw new DomainException(ErrorCodes.DescriptionLength, $"The description cannot be longer than {DescriptionMaxLength} characters.");
+
+        return cleanDescription;
+    }
+
+    private static void ValidatePrice(decimal price)
+    {
+        if (price <= 0) throw new DomainException(ErrorCodes.PriceNotPositive, "The price has to be greater than zero.");
     }
 
     /// <summary>
