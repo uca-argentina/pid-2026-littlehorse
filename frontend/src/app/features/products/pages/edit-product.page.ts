@@ -7,7 +7,12 @@ import { RouterLink } from '@angular/router';
 import { trimmedMinLength } from '../../../shared/forms/trimmed-min-length';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { EditProductStore } from '../edit-product.store';
-import { PRODUCTS_URL } from '../products.service';
+import {
+  IMAGE_MAX_BYTES,
+  IMAGE_TYPES,
+  PRODUCTS_URL,
+  PRODUCT_PLACEHOLDER,
+} from '../products.service';
 import type { Product } from '../products.service';
 
 /** Kept in step with Product's own rules in the domain. */
@@ -18,6 +23,11 @@ const DESCRIPTION_MAX_LENGTH = 200;
 /** Strictly above zero: a free product is a mistake, not an offer. */
 function positive(control: AbstractControl): ValidationErrors | null {
   return typeof control.value === 'number' && control.value > 0 ? null : { positive: true };
+}
+
+/** Whole units: half a bottle is not something the bar can sell. */
+function wholeNumber(control: AbstractControl): ValidationErrors | null {
+  return Number.isInteger(control.value) ? null : { wholeNumber: true };
 }
 
 type Field = 'name' | 'description' | 'price';
@@ -94,6 +104,35 @@ export class EditProductPage {
     this.errorOf('price', 'El precio tiene que ser mayor a cero.'),
   );
 
+  /**
+   * How many arrived, not the new total: the API adds them to what is left.
+   * Empty until somebody types, so a 0 left in place by accident cannot be sent.
+   */
+  protected readonly units = new FormControl<number | null>(null, {
+    validators: [Validators.required, Validators.min(1), wholeNumber],
+  });
+
+  private readonly unitsTyped = toSignal(this.units.valueChanges, { initialValue: null });
+
+  private readonly stockAttempted = signal(false);
+
+  protected readonly unitsError = computed(() => {
+    this.unitsTyped();
+
+    if (!this.stockAttempted() || this.store.isBusy()) return null;
+
+    return this.units.invalid ? 'Ingresá un número entero mayor a cero.' : null;
+  });
+
+  /** The picture on screen: the product's own, or the placeholder while it has none. */
+  protected readonly photoUrl = computed(() => this.product()?.imageUrl ?? PRODUCT_PLACEHOLDER);
+
+  /**
+   * Checked here, before a byte goes up: the API would answer 415 and 413 to
+   * these, but only after the whole file crossed the venue's connection.
+   */
+  protected readonly photoProblem = signal<string | null>(null);
+
   constructor() {
     // What is there today fills the form once it arrives, so an administrator
     // sees what they are changing rather than a blank one.
@@ -111,8 +150,13 @@ export class EditProductPage {
     // Reactive forms are not signal-aware, so enabling and disabling is driven
     // from here rather than bound in the template.
     effect(() => {
-      if (this.store.isBusy()) this.form.disable();
-      else this.form.enable();
+      if (this.store.isBusy()) {
+        this.form.disable();
+        this.units.disable();
+      } else {
+        this.form.enable();
+        this.units.enable();
+      }
     });
   }
 
@@ -144,6 +188,47 @@ export class EditProductPage {
       description: description.trim() === '' ? null : description.trim(),
       price,
     });
+  }
+
+  protected choosePhoto(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    const product = this.product();
+
+    // Cleared so that choosing the same file again — after a failure, say —
+    // still fires a change.
+    input.value = '';
+
+    if (file === undefined || product === undefined) return;
+
+    if (!IMAGE_TYPES.includes(file.type)) {
+      this.photoProblem.set('La foto tiene que ser JPEG, PNG o WebP.');
+      return;
+    }
+
+    if (file.size > IMAGE_MAX_BYTES) {
+      this.photoProblem.set('La foto no puede pesar más de 5 MB.');
+      return;
+    }
+
+    this.photoProblem.set(null);
+    this.store.uploadImage(product, file);
+  }
+
+  protected restock(): void {
+    this.stockAttempted.set(true);
+
+    if (this.units.invalid || this.store.isBusy()) return;
+
+    const units = this.units.value;
+
+    // Validators.required already rejected this above; this is only what the
+    // compiler needs to see.
+    if (units === null) return;
+
+    this.store.restock(this.id(), units);
+    this.units.reset();
+    this.stockAttempted.set(false);
   }
 
   protected deactivate(): void {

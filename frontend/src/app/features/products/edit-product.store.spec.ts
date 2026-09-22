@@ -29,6 +29,8 @@ describe('EditProductStore', () => {
     products = {
       update: vi.fn().mockReturnValue(of({ ...ginTonic, name: 'Fernet con Coca', price: 3800 })),
       deactivate: vi.fn().mockReturnValue(of({ ...ginTonic, isActive: false })),
+      uploadImage: vi.fn().mockReturnValue(of({ imageUrl: 'https://images.example.com/new.png' })),
+      restock: vi.fn().mockReturnValue(of({ ...ginTonic, stock: 32 })),
       ...overrides,
     };
 
@@ -119,6 +121,83 @@ describe('EditProductStore', () => {
       store.deactivate('id-1');
 
       expect(store.accessStatus()).toBe('unreachable');
+    });
+  });
+
+  describe('changing the photo', () => {
+    const aPhoto = new File([new Uint8Array([0x89, 0x50])], 'gin.png', { type: 'image/png' });
+
+    it('sends the file that was chosen', () => {
+      open();
+
+      store.uploadImage(ginTonic, aPhoto);
+
+      expect(products['uploadImage']).toHaveBeenCalledWith('id-1', aPhoto);
+      expect(store.photoStatus()).toBe('saved');
+    });
+
+    // The upload answers with the address only: the screen keeps the rest of
+    // the product as it was and swaps the picture.
+    it('shows the new picture on the product that was already on screen', () => {
+      open();
+
+      store.uploadImage(ginTonic, aPhoto);
+
+      expect(store.updated()?.imageUrl).toBe('https://images.example.com/new.png');
+      expect(store.updated()?.name).toBe('Gin Tonic');
+    });
+
+    it('does not send twice while a request is in flight', () => {
+      open({ uploadImage: vi.fn().mockReturnValue(new Subject<{ imageUrl: string }>()) });
+
+      store.uploadImage(ginTonic, aPhoto);
+      store.uploadImage(ginTonic, aPhoto);
+
+      expect(products['uploadImage']).toHaveBeenCalledTimes(1);
+    });
+
+    it('says so when the picture did not go up', () => {
+      open({ uploadImage: rejectedWith(415, 'about:blank') });
+
+      store.uploadImage(ginTonic, aPhoto);
+
+      expect(store.photoStatus()).toBe('unreachable');
+    });
+  });
+
+  describe('bringing stock back', () => {
+    it('sends the units that arrived', () => {
+      open();
+
+      store.restock('id-1', 12);
+
+      expect(products['restock']).toHaveBeenCalledWith('id-1', 12);
+      expect(store.stockStatus()).toBe('saved');
+    });
+
+    it('hands back what the API answered, so the screen shows the new count', () => {
+      open();
+
+      store.restock('id-1', 12);
+
+      expect(store.updated()?.stock).toBe(32);
+    });
+
+    it('does not send twice while a request is in flight', () => {
+      open({ restock: vi.fn().mockReturnValue(new Subject<Product>()) });
+
+      store.restock('id-1', 12);
+      store.restock('id-1', 12);
+
+      expect(products['restock']).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to a single failure for anything else', () => {
+      open({ restock: rejectedWith(500, 'about:blank') });
+
+      store.restock('id-1', 12);
+
+      expect(store.stockStatus()).toBe('unreachable');
     });
   });
 

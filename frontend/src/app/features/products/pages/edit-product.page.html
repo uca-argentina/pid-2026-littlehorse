@@ -91,6 +91,81 @@
         </form>
       </section>
 
+      <section class="card">
+        <h2 class="card-title">Foto</h2>
+
+        @if (store.photoStatus() === 'saved') {
+          <p class="note note-good" role="status">Foto guardada.</p>
+        }
+        @if (store.photoStatus() === 'unreachable') {
+          <p class="note note-bad" role="alert">No pudimos subir la foto. Probá de nuevo.</p>
+        }
+
+        <div class="photo">
+          <img class="photo-now" [src]="photoUrl()" [alt]="'Foto actual de ' + product()!.name" />
+          <div class="field">
+            <span class="label" id="photo-label">Foto</span>
+            <input
+              class="file"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              aria-labelledby="photo-label"
+              [attr.aria-invalid]="photoProblem() !== null ? 'true' : null"
+              [attr.aria-describedby]="photoProblem() !== null ? 'photo-error' : 'photo-help'"
+              [disabled]="store.isBusy()"
+              (change)="choosePhoto($event)"
+            />
+            @if (photoProblem() !== null) {
+              <p id="photo-error" class="bad">{{ photoProblem() }}</p>
+            } @else {
+              <p id="photo-help" class="help">JPEG, PNG o WebP, hasta 5 MB. Se sube al elegirla.</p>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card-title">Stock</h2>
+
+        <p class="now-stock">
+          Hoy hay {{ product()!.stock }}
+          @if (product()!.isSoldOut) {
+            · sin stock
+          }
+        </p>
+
+        @if (store.stockStatus() === 'saved') {
+          <p class="note note-good" role="status">Stock repuesto.</p>
+        }
+        @if (store.stockStatus() === 'unreachable') {
+          <p class="note note-bad" role="alert">No pudimos reponer el stock. Probá de nuevo.</p>
+        }
+
+        <div class="field">
+          <label class="label" for="units">Unidades que llegaron</label>
+          <input
+            id="units"
+            class="input"
+            [class.input-bad]="unitsError() !== null"
+            [attr.aria-invalid]="unitsError() !== null ? 'true' : null"
+            [attr.aria-describedby]="unitsError() !== null ? 'units-error' : 'units-help'"
+            [formControl]="units"
+            type="number"
+            min="1"
+            step="1"
+          />
+          @if (unitsError() !== null) {
+            <p id="units-error" class="bad">{{ unitsError() }}</p>
+          } @else {
+            <p id="units-help" class="help">Se suman a las que ya hay.</p>
+          }
+        </div>
+
+        <button class="cta" type="button" [disabled]="store.isBusy()" (click)="restock()">
+          Reponer
+        </button>
+      </section>
+
       @if (product()!.isActive) {
         <section class="danger">
           <h2 class="danger-title">Fuera de la carta</h2>

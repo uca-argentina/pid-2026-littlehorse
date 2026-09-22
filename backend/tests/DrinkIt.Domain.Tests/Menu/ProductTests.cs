@@ -425,3 +425,59 @@ public class ProductDeactivationTests
         Assert.False(product.IsActive);
     }
 }
+
+// Bringing stock back in: the way out of "sold out" that the nightly switch
+// cannot give.
+public class ProductRestockTests
+{
+    private static Product ASoldOutGinTonic() =>
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+
+    [Fact]
+    public void Restock_WhenSoldOut_AddsTheUnitsAndIsNoLongerSoldOut()
+    {
+        Product product = ASoldOutGinTonic();
+
+        product.Restock(12);
+
+        Assert.Equal(12, product.Stock);
+        Assert.False(product.IsSoldOut);
+    }
+
+    // Units are added, not typed over: what was left plus what arrived.
+    [Fact]
+    public void Restock_WhenThereWasStock_AddsToIt()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5);
+
+        product.Restock(10);
+
+        Assert.Equal(15, product.Stock);
+    }
+
+    // The nightly switch is a separate thing: restocking does not turn it on.
+    [Fact]
+    public void Restock_WhenTheSwitchWasOff_LeavesItOff()
+    {
+        Product product = ASoldOutGinTonic();
+        product.MarkUnavailable();
+
+        product.Restock(12);
+
+        Assert.False(product.IsAvailable);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(-20)]
+    public void Restock_WhenTheUnitsAreNotPositive_ThrowsRestockNotPositiveAndKeepsTheStock(int units)
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5);
+
+        DomainException error = Assert.Throws<DomainException>(() => product.Restock(units));
+
+        Assert.Equal(Product.ErrorCodes.RestockNotPositive, error.Code);
+        Assert.Equal(5, product.Stock);
+    }
+}

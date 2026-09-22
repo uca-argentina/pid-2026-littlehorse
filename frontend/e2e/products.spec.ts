@@ -230,6 +230,49 @@ test.describe('Products', () => {
     await expect(row.getByRole('link', { name: /editar/i })).toHaveCount(0);
   });
 
+  // US-08, criterion 1, the photo half: the product already exists, so the
+  // picture goes up on its own request as soon as it is chosen.
+  test('changes the photo of a product that already exists', async ({ page }) => {
+    const name = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await fillTheForm(page, name, '4500', '20');
+
+    await page
+      .getByRole('listitem')
+      .filter({ hasText: name })
+      .getByRole('link', { name: /editar/i })
+      .click();
+    await page.getByLabel(/^foto/i).setInputFiles(aPhoto);
+
+    await expect(page.getByText(/foto guardada/i)).toBeVisible();
+    await page.goto(productsPath);
+    const picture = page.getByRole('listitem').filter({ hasText: name }).getByRole('img', { name });
+    await expect(picture).toHaveAttribute('src', /product-images\/products\//);
+  });
+
+  // The way out of "sold out" that the nightly switch cannot give: the units
+  // that arrived are added, and the product can be sold again.
+  test('brings stock back to a product that ran out', async ({ page }) => {
+    const name = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await fillTheForm(page, name, '4500', '0');
+    const row = page.getByRole('listitem').filter({ hasText: name });
+    await expect(row).toContainText(/sin stock/i);
+
+    await row.getByRole('link', { name: /editar/i }).click();
+    await page.getByRole('spinbutton', { name: /unidades que llegaron/i }).fill('12');
+    await page.getByRole('button', { name: /reponer/i }).click();
+
+    await expect(page.getByText(/stock repuesto/i)).toBeVisible();
+    await expect(page.getByText(/hoy hay 12/i)).toBeVisible();
+    await page.goto(productsPath);
+    await expect(row).not.toContainText(/sin stock/i);
+  });
+
   // The administrator has to be able to fix it on the spot, so the message has
   // to say what is wrong rather than that something failed.
   test('refuses a name that this venue already sells', async ({ page }) => {

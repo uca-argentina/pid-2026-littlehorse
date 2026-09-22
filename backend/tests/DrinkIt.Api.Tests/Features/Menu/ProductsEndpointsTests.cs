@@ -250,6 +250,49 @@ public class ProductsEndpointsTests
         return await EndpointResponse.Execute(result, $"{Path}/{productId}", HttpMethods.Put);
     }
 
+    // Bringing stock back: the response is the product, so the screen shows
+    // the new count and unlocks the nightly switch without asking again.
+    [Fact]
+    public async Task RestockAsync_WhenTheUnitsAreValid_RespondsWithTheProductWithMoreStock()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        RestockProductHandler handler = new(new Fake.Repository(null, product));
+
+        IResult result = await ProductsEndpoints.RestockAsync(product.Id, new RestockProductRequest(12), handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/restock", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Equal(12, response.Body.GetProperty("stock").GetInt32());
+        Assert.False(response.Body.GetProperty("isSoldOut").GetBoolean());
+    }
+
+    [Fact]
+    public async Task RestockAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        RestockProductHandler handler = new(new Fake.Repository(null, product));
+
+        IResult result = await ProductsEndpoints.RestockAsync(Guid.CreateVersion7(), new RestockProductRequest(12), handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{Guid.CreateVersion7()}/restock", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
+    }
+
+    // The endpoint does not check the units itself: the domain throws and the
+    // global handler answers with the rule's own problem type.
+    [Fact]
+    public async Task RestockAsync_WhenTheUnitsAreNotPositive_LetsTheDomainExceptionThrough()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        RestockProductHandler handler = new(new Fake.Repository(null, product));
+
+        DomainException error = await Assert.ThrowsAsync<DomainException>(
+            () => ProductsEndpoints.RestockAsync(product.Id, new RestockProductRequest(0), handler, CancellationToken.None));
+
+        Assert.Equal(Product.ErrorCodes.RestockNotPositive, error.Code);
+    }
+
     private static readonly byte[] APng = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52];
 
     private static readonly byte[] APdf = [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A, 0x0A];

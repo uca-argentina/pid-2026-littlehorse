@@ -205,3 +205,41 @@ textarea.input {
 .danger-button:hover:not(:disabled) {
   background: var(--dk-danger-surface);
 }
+
+.photo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-4);
+  align-items: center;
+}
+
+// The same square as the listing, so the picture reads as the same thing here.
+.photo-now {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface-raised);
+  object-fit: cover;
+}
+
+.file {
+  width: 100%;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 14.5px;
+}
+
+.help {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 12.5px;
+}
+
+.now-stock {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+}

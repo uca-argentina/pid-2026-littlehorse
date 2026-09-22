@@ -56,6 +56,11 @@ export class ProductsService {
     return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/deactivate`, {});
   }
 
+  /** Stock that arrived. The API adds the units to what was left; it does not replace it. */
+  restock(productId: string, units: number): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/restock`, { units });
+  }
+
   /** US-07: the nightly switch off. The customer keeps seeing the product, dimmed. */
   markUnavailable(productId: string): Observable<Product> {
     return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-unavailable`, {});

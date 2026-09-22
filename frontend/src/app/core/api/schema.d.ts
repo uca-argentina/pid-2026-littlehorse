@@ -237,6 +237,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/products/{id}/restock': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Adds units that arrived to a product's stock. */
+    post: operations['RestockProduct'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/products/{id}/deactivate': {
     parameters: {
       query?: never;
@@ -391,6 +408,14 @@ export interface components {
     /** @description What it sends to hand somebody a new password. */
     ResetStaffUserPasswordRequest: {
       password: string;
+    };
+    /**
+     * @description The units that arrived, to add to what is left. Not the new total: adding is
+     *     what keeps a restock from overwriting a sale made while the screen was open.
+     */
+    RestockProductRequest: {
+      /** Format: int32 */
+      units: number;
     };
     StaffUserResponse: {
       /** Format: uuid */
@@ -985,6 +1010,50 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RestockProduct: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RestockProductRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

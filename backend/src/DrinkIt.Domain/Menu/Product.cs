@@ -26,6 +26,7 @@ public sealed class Product : IBelongsToVenue
         public const string DescriptionLength = "product.description_length";
         public const string PriceNotPositive = "product.price_not_positive";
         public const string StockNegative = "product.stock_negative";
+        public const string RestockNotPositive = "product.restock_not_positive";
         public const string ImageUrlInvalid = "product.image_url_invalid";
         public const string SoldOutCannotBeAvailable = "product.sold_out_cannot_be_available";
     }
@@ -153,6 +154,19 @@ public sealed class Product : IBelongsToVenue
         Name = cleanName;
         Description = cleanDescription;
         Price = price;
+    }
+
+    /// <summary>
+    /// Stock arrives: the units are added to what was left, not typed over it.
+    /// It is the way out of "sold out", which the nightly switch cannot give.
+    /// It does not touch <see cref="IsAvailable"/>: whether the venue serves the
+    /// drink tonight is the switch's business, not the stock's.
+    /// </summary>
+    public void Restock(int units)
+    {
+        if (units <= 0) throw new DomainException(ErrorCodes.RestockNotPositive, "The units to add have to be more than zero.");
+
+        Stock += units;
     }
 
     /// <summary>US-08: off the menu for good. The row stays for the orders that already point at it.</summary>

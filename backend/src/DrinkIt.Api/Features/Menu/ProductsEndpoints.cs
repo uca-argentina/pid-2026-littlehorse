@@ -26,6 +26,12 @@ public sealed record ProductImageResponse(string ImageUrl);
 /// </summary>
 public sealed record UpdateProductRequest(string Name, string? Description, decimal Price);
 
+/// <summary>
+/// The units that arrived, to add to what is left. Not the new total: adding is
+/// what keeps a restock from overwriting a sale made while the screen was open.
+/// </summary>
+public sealed record RestockProductRequest(int Units);
+
 public sealed record ProductResponse(
     Guid Id,
     string Name,
@@ -88,6 +94,16 @@ internal static class ProductsEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        // POST and not PUT: it adds to the stock, it does not replace it, so
+        // sending it twice is not the same as sending it once.
+        group
+            .MapPost("/{id:guid}/restock", RestockAsync)
+            .WithName("RestockProduct")
+            .WithSummary("Adds units that arrived to a product's stock.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         // POST and not DELETE: nothing is deleted. The row stays so the orders
         // that pointed at it keep showing it as it was, exactly the same shape
@@ -167,6 +183,13 @@ internal static class ProductsEndpoints
 
         return Answer(result);
     }
+
+    internal static async Task<IResult> RestockAsync(
+        Guid id,
+        RestockProductRequest request,
+        RestockProductHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(new RestockProductCommand(id, request.Units), cancellationToken));
 
     internal static async Task<IResult> DeactivateAsync(
         Guid id,

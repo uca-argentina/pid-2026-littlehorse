@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { ProblemTypes } from '../../../core/api/problem-types';
-import { PRODUCTS_URL, ProductsService } from '../products.service';
+import { PRODUCTS_URL, PRODUCT_PLACEHOLDER, ProductsService } from '../products.service';
 import type { Product } from '../products.service';
 import { EditProductPage } from './edit-product.page';
 
@@ -33,6 +33,8 @@ async function openScreenFor(id: string, overrides: Record<string, unknown> = {}
   const products = {
     update: vi.fn().mockReturnValue(of({ ...ginTonic, name: 'Fernet con Coca', price: 3800 })),
     deactivate: vi.fn().mockReturnValue(of({ ...ginTonic, isActive: false })),
+    uploadImage: vi.fn().mockReturnValue(of({ imageUrl: 'https://images.example.com/new.png' })),
+    restock: vi.fn().mockReturnValue(of({ ...ginTonic, stock: 32 })),
     ...overrides,
   };
 
@@ -54,6 +56,14 @@ async function openScreenFor(id: string, overrides: Record<string, unknown> = {}
 
 function field(label: RegExp): HTMLInputElement | HTMLTextAreaElement {
   return screen.getByLabelText(label) as HTMLInputElement | HTMLTextAreaElement;
+}
+
+function aFile(name: string, type: string, bytes = 4): File {
+  return new File([new Uint8Array(bytes)], name, { type });
+}
+
+function choosePhoto(file: File): void {
+  fireEvent.change(screen.getByLabelText(/^foto/i), { target: { files: [file] } });
 }
 
 function press(name: RegExp): void {
@@ -162,6 +172,139 @@ describe('EditProductPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('status').textContent).toContain('No encontramos');
+  });
+
+  describe('the photo', () => {
+    it('shows the picture the product has now', async () => {
+      await openScreenFor('id-2');
+
+      expect(screen.getByRole('img', { name: /foto actual/i }).getAttribute('src')).toBe(
+        PRODUCT_PLACEHOLDER,
+      );
+    });
+
+    // The upload starts as soon as a file is chosen: the product already
+    // exists, so there is no form to finish first.
+    it('sends the file that was chosen', async () => {
+      const { products } = await openScreenFor('id-2');
+      const photo = aFile('gin-tonic.png', 'image/png');
+
+      choosePhoto(photo);
+
+      expect(products['uploadImage']).toHaveBeenCalledWith('id-2', photo);
+    });
+
+    it('shows the new picture and confirms it', async () => {
+      const { rendered } = await openScreenFor('id-2');
+
+      choosePhoto(aFile('gin-tonic.png', 'image/png'));
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('img', { name: /foto actual/i }).getAttribute('src')).toBe(
+        'https://images.example.com/new.png',
+      );
+      expect(screen.getByText(/foto guardada/i)).not.toBeNull();
+    });
+
+    // The API would answer 415 to this, after the whole file crossed the
+    // venue's connection. The screen says so first, and nothing is sent.
+    it('does not send a file that is not a picture', async () => {
+      const { rendered, products } = await openScreenFor('id-2');
+
+      choosePhoto(aFile('menu.pdf', 'application/pdf'));
+      await rendered.fixture.whenStable();
+
+      expect(products['uploadImage']).not.toHaveBeenCalled();
+      expect(screen.getByText(/JPEG, PNG o WebP/i)).not.toBeNull();
+    });
+
+    it('does not send a file over five megabytes', async () => {
+      const { rendered, products } = await openScreenFor('id-2');
+
+      choosePhoto(aFile('huge.jpg', 'image/jpeg', 5 * 1024 * 1024 + 1));
+      await rendered.fixture.whenStable();
+
+      expect(products['uploadImage']).not.toHaveBeenCalled();
+      expect(screen.getByText(/5 MB/i)).not.toBeNull();
+    });
+
+    it('says so when the picture did not go up', async () => {
+      const { rendered } = await openScreenFor('id-2', {
+        uploadImage: rejectedWith(415, 'about:blank'),
+      });
+
+      choosePhoto(aFile('gin-tonic.png', 'image/png'));
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos subir la foto');
+    });
+  });
+
+  describe('the stock', () => {
+    it('says how many there are now', async () => {
+      await openScreenFor('id-2');
+
+      expect(screen.getByText(/hoy hay 20/i)).not.toBeNull();
+    });
+
+    // Units are added to what was left: the field is not "the new total".
+    it('sends the units that arrived', async () => {
+      const { rendered, products } = await openScreenFor('id-2');
+
+      fireEvent.input(field(/unidades que llegaron/i), { target: { value: '12' } });
+      await rendered.fixture.whenStable();
+      press(/reponer/i);
+
+      expect(products['restock']).toHaveBeenCalledWith('id-2', 12);
+    });
+
+    it('shows the new count once it was saved', async () => {
+      const { rendered } = await openScreenFor('id-2');
+
+      fireEvent.input(field(/unidades que llegaron/i), { target: { value: '12' } });
+      await rendered.fixture.whenStable();
+      press(/reponer/i);
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByText(/hoy hay 32/i)).not.toBeNull();
+      expect(screen.getByText(/stock repuesto/i)).not.toBeNull();
+    });
+
+    it('does not send zero, and says why', async () => {
+      const { rendered, products } = await openScreenFor('id-2');
+
+      fireEvent.input(field(/unidades que llegaron/i), { target: { value: '0' } });
+      await rendered.fixture.whenStable();
+      press(/reponer/i);
+      await rendered.fixture.whenStable();
+
+      expect(products['restock']).not.toHaveBeenCalled();
+      expect(screen.getByText(/número entero mayor a cero/i)).not.toBeNull();
+    });
+
+    it('does not send half a bottle', async () => {
+      const { rendered, products } = await openScreenFor('id-2');
+
+      fireEvent.input(field(/unidades que llegaron/i), { target: { value: '2.5' } });
+      await rendered.fixture.whenStable();
+      press(/reponer/i);
+      await rendered.fixture.whenStable();
+
+      expect(products['restock']).not.toHaveBeenCalled();
+    });
+
+    it('says so when it could not be saved', async () => {
+      const { rendered } = await openScreenFor('id-2', {
+        restock: rejectedWith(500, 'about:blank'),
+      });
+
+      fireEvent.input(field(/unidades que llegaron/i), { target: { value: '12' } });
+      await rendered.fixture.whenStable();
+      press(/reponer/i);
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos reponer');
+    });
   });
 
   it('offers the way back to the listing', async () => {
