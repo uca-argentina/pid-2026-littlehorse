@@ -151,7 +151,7 @@ describe('EditStaffUserPage', () => {
     expect(screen.getByRole('button', { name: /confirmar la baja/i })).not.toBeNull();
   });
 
-  it('lets whoever armed the baja back out of it', async () => {
+  it('lets whoever asked to deactivate back out of it', async () => {
     const { rendered, staffUsers } = await openScreenFor('id-2');
 
     press(/dar de baja/i);
@@ -162,6 +162,21 @@ describe('EditStaffUserPage', () => {
 
     expect(staffUsers['deactivate']).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: /dar de baja/i })).not.toBeNull();
+  });
+
+  // A double tap lands its second touch where the first one was: that spot
+  // has to back out, not confirm.
+  it('puts the way back first, where the first tap landed', async () => {
+    const { rendered } = await openScreenFor('id-2');
+
+    press(/dar de baja/i);
+    await rendered.fixture.whenStable();
+
+    const [first] = screen
+      .getAllByRole('button')
+      .filter((button) => /dar de baja|mejor no|confirmar la baja/i.test(button.textContent ?? ''));
+
+    expect(first.textContent).toMatch(/mejor no/i);
   });
 
   // US-05, criterion 1.

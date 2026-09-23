@@ -69,8 +69,8 @@ export class EditStaffUserPage {
 
   private readonly passwordAttempted = signal(false);
 
-  /** Whether the baja has been asked for once and is waiting to be confirmed. */
-  protected readonly bajaArmed = signal(false);
+  /** Whether the deactivation has been asked for once and is waiting to be confirmed. */
+  protected readonly isConfirmingDeactivation = signal(false);
 
   /**
    * Checked here as well as on the server, because the venue's connection is
@@ -117,22 +117,22 @@ export class EditStaffUserPage {
   }
 
   /**
-   * Arms the baja instead of doing it.
+   * Asks before deactivating instead of doing it.
    *
    * Nothing on this screen undoes it in one step, and it sits in the same run
    * of buttons as saving a role and changing a password. Asking twice costs a
    * touch; getting it wrong costs somebody their access mid-shift.
    */
-  protected armBaja(): void {
-    this.bajaArmed.set(true);
+  protected askToDeactivate(): void {
+    this.isConfirmingDeactivation.set(true);
   }
 
-  protected cancelBaja(): void {
-    this.bajaArmed.set(false);
+  protected cancelDeactivation(): void {
+    this.isConfirmingDeactivation.set(false);
   }
 
   protected deactivate(): void {
-    this.bajaArmed.set(false);
+    this.isConfirmingDeactivation.set(false);
     this.store.deactivate(this.id());
   }
 

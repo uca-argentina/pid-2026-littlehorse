@@ -125,25 +125,32 @@
             El usuario pierde acceso al sistema, pero no se borra nada: sigue en el listado y los
             pedidos que preparó siguen apuntando a su usuario.
           </p>
-          <button
-            class="danger-button"
-            type="button"
-            [disabled]="store.isBusy()"
-            (click)="armBaja()"
-          >
-            Dar de baja
-          </button>
-
-          @if (bajaArmed()) {
+          @if (isConfirmingDeactivation()) {
             <p class="danger-what" role="alert">
               Se queda sin entrar al sistema hasta que alguien lo reactive.
             </p>
 
-            <button class="cta" type="button" [disabled]="store.isBusy()" (click)="deactivate()">
-              Confirmar la baja
+            <!-- The way back sits where the first tap landed, so a double tap backs out. -->
+            <div class="danger-actions">
+              <button class="ghost" type="button" (click)="cancelDeactivation()">Mejor no</button>
+              <button
+                class="danger-button"
+                type="button"
+                [disabled]="store.isBusy()"
+                (click)="deactivate()"
+              >
+                Confirmar la baja
+              </button>
+            </div>
+          } @else {
+            <button
+              class="danger-button"
+              type="button"
+              [disabled]="store.isBusy()"
+              (click)="askToDeactivate()"
+            >
+              Dar de baja
             </button>
-
-            <button class="ghost" type="button" (click)="cancelBaja()">Mejor no</button>
           }
         } @else {
           <p class="danger-what">
