@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input } from '@angular/core';
+import { Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TrackingStore } from '../tracking.store';
 
@@ -13,8 +13,9 @@ interface Step {
  * reached each one.
  *
  * Paid and Queued are one step: for somebody holding a phone they are the same
- * thing — already paid, still waiting. The two statuses that end the journey
- * are not here: Delivered is the last step, and Canceled is not a step at all.
+ * thing — already paid, still waiting. Delivered never arrives as an answer —
+ * the API stops showing an order once it is handed over — so the screen supplies
+ * it itself when the link stops working on an order it was already showing.
  */
 const JOURNEY = [
   {
@@ -33,7 +34,6 @@ const WHAT_IS_HAPPENING: Record<string, string> = {
   InPreparation: 'Lo están preparando.',
   Ready: '¡Está listo! Acercate a la barra y decí tu código.',
   Delivered: 'Entregado. ¡Que lo disfrutes!',
-  Canceled: 'Este pedido fue cancelado.',
 };
 
 /**
@@ -67,9 +67,17 @@ export class TrackingPage {
 
   protected readonly menuLink = computed(() => ['/', this.venueSlug(), 'menu']);
 
-  private readonly status = computed(() => this.store.order()?.status ?? '');
-
-  protected readonly wasCancelled = computed(() => this.status() === 'Canceled');
+  /**
+   * The status to draw, which is not always the last one the server sent.
+   *
+   * An order that finished stops being shown at all, so the end of the journey
+   * arrives as the link going dead rather than as a status. Somebody who has
+   * been watching their order deserves to see it arrive, not an alert saying
+   * their link is broken at the moment their drinks reached them.
+   */
+  private readonly status = computed(() =>
+    this.store.status() === 'over' ? 'Delivered' : (this.store.order()?.status ?? ''),
+  );
 
   protected readonly whatIsHappening = computed(() => WHAT_IS_HAPPENING[this.status()] ?? '');
 
@@ -78,6 +86,15 @@ export class TrackingPage {
   );
 
   constructor() {
-    effect(() => this.store.follow(this.venueSlug(), this.code(), this.token()));
+    effect(() => {
+      const venueSlug = this.venueSlug();
+      const code = this.code();
+      const token = this.token();
+
+      // Only the address is worth reacting to. Following reads the store's own
+      // signals on the way in, and tracking those would make every answer start
+      // the polling over again — a loop that feeds itself, one timer per round.
+      untracked(() => this.store.follow(venueSlug, code, token));
+    });
   }
 }

@@ -12,13 +12,19 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
         string? token,
         CancellationToken cancellationToken)
     {
+        // Read before the query rather than inside it: what arrives here is a
+        // path segment somebody typed, and a code that is not a code is a link
+        // leading nowhere — the same answer as a code nobody has — not an
+        // exception on the way to asking the database.
+        if (!OrderCode.TryParse(code, out OrderCode? wanted)) return null;
+
         // The venue filter scopes this, so the same code in another bar is
         // simply not here. Read-only and projected straight to the shape the
         // screen draws: this runs every three seconds on every phone in a
         // packed venue.
         var found = await context.Orders
             .AsNoTracking()
-            .Where(order => order.Code == OrderCode.Parse(code))
+            .Where(order => order.Code == wanted)
             .Select(order => new
             {
                 order.Code,

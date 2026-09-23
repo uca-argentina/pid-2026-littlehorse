@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { problemTypeOf } from '../../core/api/problem-type-of';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { SessionStorage } from '../../core/auth/session-storage';
 import { staffLandingFor } from '../../core/auth/staff-landing';
@@ -88,6 +89,6 @@ function isInvalidCredentials(error: unknown): boolean {
   return (
     error instanceof HttpErrorResponse &&
     error.status === 401 &&
-    error.error?.type === ProblemTypes.invalidCredentials
+    problemTypeOf(error) === ProblemTypes.invalidCredentials
   );
 }

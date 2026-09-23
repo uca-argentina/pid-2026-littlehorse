@@ -26,8 +26,8 @@
 .back {
   display: flex;
   text-decoration: none;
-  width: 42px;
-  height: 42px;
+  width: var(--dk-tap-min);
+  height: var(--dk-tap-min);
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
@@ -173,8 +173,8 @@
 
 .sbtn {
   display: flex;
-  width: 42px;
-  height: 42px;
+  width: var(--dk-tap-min);
+  height: var(--dk-tap-min);
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
@@ -198,8 +198,14 @@
 
 // Pushed to the far end by the auto margin, as the wireframe's spacer does:
 // away from the stepper, so nobody taps it reaching for the minus.
+// It reads as a link but it is a control, so it gets a control's touch area:
+// the padding grows the target without moving the underline, which stays on
+// the text where the wireframe put it.
 .rm {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-2);
   border: 0;
   margin-left: auto;
   background: none;

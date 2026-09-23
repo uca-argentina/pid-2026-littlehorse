@@ -264,6 +264,29 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(ConfirmOrderHandler.PaymentMethodUnavailable.Code, result.Error!.Code);
     }
 
+    /// <summary>
+    /// How far the order gets is the strategy's call, not the handler's.
+    /// </summary>
+    /// <remarks>
+    /// The three ways of paying do not end in the same place. Digital and VIP
+    /// settle there and then and the drinks go straight to the bar; cash leaves
+    /// the order waiting at the till (§6 of the functional design), and putting
+    /// it in the queue before the cashier has taken the money would send drinks
+    /// to the bar that nobody paid for. If the handler is the one that enqueues,
+    /// building the cash method means editing the handler — which is the one
+    /// thing the Strategy is here to prevent.
+    /// </remarks>
+    [Fact]
+    public async Task HandleAsync_WhenTheStrategyDoesNotQueueTheOrder_LeavesItWhereTheStrategyPutIt()
+    {
+        ConfirmOrderHandler handler = AHandlerPaidBy(new SettlesWithoutQueueing(Tonight));
+
+        Result<ConfirmedOrder> result = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(OrderStatus.Paid, _orders.Added!.Status);
+    }
+
     private static OrderLineRequest One(Product product) => new(product.Id, 1, null);
 
     private static OrderLineRequest Two(Product product) => new(product.Id, 2, null);
@@ -280,12 +303,30 @@ public class ConfirmOrderHandlerTests
 
     private ConfirmOrderHandler AHandler() => AHandlerOver(_menu);
 
+    private ConfirmOrderHandler AHandlerPaidBy(IPaymentStrategy payment) =>
+        new(_orders,
+            _menu,
+            new SequenceThatAnswers("K-4821"),
+            [payment],
+            new TheVenueIsFixed(TheVenue));
+
     private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null) =>
         new(_orders,
             menu,
             codes ?? new SequenceThatAnswers("K-4821"),
             [new DigitalPaymentStrategy(new FixedClock(Tonight))],
             new TheVenueIsFixed(TheVenue));
+
+    /// <summary>
+    /// Stands in for the cash method until it exists: settles the money and
+    /// stops, without sending the order to the bar.
+    /// </summary>
+    private sealed class SettlesWithoutQueueing(DateTimeOffset now) : IPaymentStrategy
+    {
+        public PaymentMethod Method => PaymentMethod.Digital;
+
+        public void Settle(Order order) => order.Pay(now);
+    }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {

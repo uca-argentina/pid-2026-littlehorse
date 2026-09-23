@@ -84,6 +84,33 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
     }
 
     /// <summary>
+    /// A code that is not even a code answers the same as a code nobody has.
+    /// </summary>
+    /// <remarks>
+    /// This arrives from the address bar, so it is whatever somebody pasted: a
+    /// link a chat app cut in half, a phone keyboard that lowercased the letter,
+    /// somebody working through codes by hand. None of that is a broken
+    /// invariant — it is a link that leads nowhere, which is the one answer this
+    /// endpoint gives. Reading it as a code first turned it into an exception,
+    /// and the screen, which only knows 404, kept asking forever.
+    /// </remarks>
+    [Theory]
+    [InlineData("k-4821")]
+    [InlineData("K-482")]
+    [InlineData("K4821")]
+    [InlineData("K-48211")]
+    [InlineData("1-4821")]
+    [InlineData("")]
+    [InlineData("undefined")]
+    public async Task FindAsync_WhenTheCodeIsNotEvenACode_FindsNothing(string code)
+    {
+        (Venue venue, Order order) = await AVenueWithAnOrderFor("María Quadro");
+
+        Assert.Null(await Tracking(venue)
+            .FindAsync(code, order.TrackingToken.Value, CancellationToken.None));
+    }
+
+    /// <summary>
     /// She chose this on 2026-09-17: the link stops working once the drinks are
     /// handed over, so the one left in a shared phone's history stops being a
     /// way in.

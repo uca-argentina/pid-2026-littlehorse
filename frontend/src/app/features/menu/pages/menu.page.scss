@@ -266,8 +266,8 @@ drinkit-theme-toggle {
 .step {
   display: flex;
   order: 3;
-  width: 42px;
-  height: 42px;
+  width: var(--dk-tap-min);
+  height: var(--dk-tap-min);
   align-items: center;
   justify-content: center;
   border: 1px solid var(--dk-border);
@@ -285,13 +285,13 @@ drinkit-theme-toggle {
   font-variant-numeric: tabular-nums;
 }
 
-// Solid gold, same 42px as .step so the pair reads as one control. The only
+// Solid gold, the same size as .step so the pair reads as one control. The only
 // thing on a card that does something, so it is the only thing that is gold.
 .add {
   display: flex;
   order: 1;
-  width: 42px;
-  height: 42px;
+  width: var(--dk-tap-min);
+  height: var(--dk-tap-min);
   flex-shrink: 0;
   align-items: center;
   justify-content: center;

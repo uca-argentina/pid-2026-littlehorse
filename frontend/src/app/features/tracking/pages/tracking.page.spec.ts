@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { render, screen } from '@testing-library/angular';
-import { TRACKING_INTERVAL_MS } from '../tracking.store';
+import { TRACKING_INTERVAL_MS, TrackingStore } from '../tracking.store';
 import { trackingUrl } from '../tracking.service';
 import type { TrackedOrder } from '../tracking.service';
 import { TrackingPage } from './tracking.page';
@@ -30,7 +30,8 @@ async function openScreenShowing(status: string) {
       provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
-      // Never fires: what these tests are about is what each answer draws.
+      // Never fires on its own: what these tests are about is what each answer
+      // draws, so the answers are handed over by hand.
       { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
     ],
   });
@@ -39,7 +40,11 @@ async function openScreenShowing(status: string) {
   http.expectOne(url).flush(anOrder(status));
   await rendered.fixture.whenStable();
 
-  return { rendered, http };
+  // The store belongs to the component, not to the TestBed: a test that needs a
+  // second round asks for it here rather than waiting on the timer.
+  const store = rendered.fixture.debugElement.injector.get(TrackingStore);
+
+  return { rendered, http, store };
 }
 
 /** The four steps, in order, each with whether it is reached. */
@@ -90,13 +95,30 @@ describe('TrackingPage', () => {
     expect(screen.getByRole('status').textContent).toMatch(/pago/i);
   });
 
-  // A cancelled order is not a journey that stalled: the steps would be a lie,
-  // so they are not drawn at all.
-  it('says so instead of drawing the steps when the order was cancelled', async () => {
-    await openScreenShowing('Canceled');
+  /**
+   * The drinks were handed over, which is the end of the journey and has to
+   * look like one.
+   *
+   * The API stops showing an order the moment it is finished, so what arrives
+   * is a 404 — the same one a bad link gets. Showing the red alert to somebody
+   * who has been watching their order the whole time would tell them something
+   * went wrong at the exact moment nothing did.
+   */
+  it('closes the journey when the order is handed over', async () => {
+    const { rendered, http, store } = await openScreenShowing('Ready');
 
-    expect(screen.queryAllByRole('listitem')).toEqual([]);
-    expect(screen.getByRole('status').textContent).toMatch(/cancelado/i);
+    store.askAgain();
+    http
+      .expectOne(url)
+      .flush(
+        { type: 'urn:drinkit:problem:order:not-found', detail: 'no existe' },
+        { status: 404, statusText: 'Not Found' },
+      );
+    await rendered.fixture.whenStable();
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('status').textContent).toMatch(/entregado/i);
+    expect(steps().every((step) => step.reached)).toBe(true);
   });
 
   it('offers the way back to the menu of this venue', async () => {
@@ -140,4 +162,42 @@ describe('TrackingPage', () => {
    * says, and the store is what decides to keep the last answer and go on
    * asking. Reaching in here to fake a dropped request would test the mock.
    */
+
+  /**
+   * The screen asks on its timer, and only on its timer. Reading what the
+   * server said must not be what makes it ask again: that turns one round of
+   * polling into a loop that feeds itself, with a timer left over each time.
+   */
+  it('does not ask again just because an answer arrived', async () => {
+    const { http } = await openScreenShowing('Queued');
+
+    http.expectNone(url);
+  });
+
+  /**
+   * The signal dropped before the very first answer arrived.
+   *
+   * This is the screen somebody lands on the instant they pay, so it is exactly
+   * where bad wifi finds them. The order is fine and the screen keeps asking on
+   * its own, but saying nothing leaves them staring at "Buscando tu pedido…"
+   * with no idea whether it is working — the one state the four-state rule
+   * exists to prevent.
+   */
+  it('says the connection is down when the first answer never arrives', async () => {
+    const rendered = await render(TrackingPage, {
+      inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
+      ],
+    });
+
+    TestBed.inject(HttpTestingController).expectOne(url).error(new ProgressEvent('error'));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/sin se[ñn]al|conexi[óo]n/i);
+    expect(screen.queryByText(/buscando tu pedido/i)).toBeNull();
+  });
 });

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { problemTypeOf } from '../../core/api/problem-type-of';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { StaffUsersService } from './staff-users.service';
 import type { NewStaffUser } from './staff-users.service';
@@ -71,8 +72,10 @@ export class NewStaffUserStore {
 function reasonFor(error: unknown): NewStaffUserStatus {
   if (!(error instanceof HttpErrorResponse)) return 'unreachable';
 
-  if (error.error?.type === ProblemTypes.usernameTaken) return 'usernameTaken';
-  if (error.error?.type === ProblemTypes.passwordTooShort) return 'passwordTooShort';
+  const type = problemTypeOf(error);
+
+  if (type === ProblemTypes.usernameTaken) return 'usernameTaken';
+  if (type === ProblemTypes.passwordTooShort) return 'passwordTooShort';
 
   return 'unreachable';
 }

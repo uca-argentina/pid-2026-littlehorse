@@ -23,15 +23,16 @@ function anOrder(status: string): TrackedOrder {
 /** Whether the page is being looked at. The store asks this, the browser answers it. */
 let looking: boolean;
 
-function aStore(): { tracking: TrackingStore; http: HttpTestingController } {
+function aStore(every = 0): { tracking: TrackingStore; http: HttpTestingController } {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
       // Asked for by hand in these tests rather than on a timer: what is under
-      // test is what each answer does, not that setInterval counts.
-      { provide: TRACKING_INTERVAL_MS, useValue: 0 },
+      // test is what each answer does, not that setInterval counts. The one
+      // test about the timer itself passes a real interval.
+      { provide: TRACKING_INTERVAL_MS, useValue: every },
       TrackingStore,
     ],
   });
@@ -80,8 +81,9 @@ describe('TrackingStore', () => {
     expect(tracking.order()?.status).toBe('InPreparation');
   });
 
-  // The link leads nowhere: a wrong token, somebody else's code, an order
-  // already handed over. One answer for all of them, and no retrying.
+  // The link leads nowhere: a wrong token, somebody else's code, a code nobody
+  // has. One answer for all of them, and no retrying. Told apart from an order
+  // that finished by this being the first thing the server ever said.
   it('stops asking when the link leads nowhere', () => {
     const { tracking, http } = aStore();
 
@@ -124,14 +126,32 @@ describe('TrackingStore', () => {
     expect(tracking.order()?.status).toBe('Ready');
   });
 
-  // Nobody is waiting on it any more, so there is nothing left to ask about.
-  it('stops asking once the order is over', () => {
+  /**
+   * The order was handed over.
+   *
+   * There is no answer that says so: the API stops showing an order the moment
+   * it is finished, so what arrives is the same 404 as a bad link. Which of the
+   * two it is depends on whether the order was ever on screen — it was, so the
+   * journey is over rather than the link being wrong, and there is nothing left
+   * to ask about.
+   */
+  it('calls it over when the link stops working after showing the order', () => {
     const { tracking, http } = aStore();
 
     tracking.follow('bar-alfa', 'K-4821', token);
-    http.expectOne(url).flush(anOrder('Delivered'));
+    http.expectOne(url).flush(anOrder('Ready'));
 
-    expect(tracking.isOver()).toBe(true);
+    tracking.askAgain();
+    http
+      .expectOne(url)
+      .flush(
+        { type: 'urn:drinkit:problem:order:not-found', detail: 'no existe' },
+        { status: 404, statusText: 'Not Found' },
+      );
+
+    expect(tracking.status()).toBe('over');
+    // And what it last knew stays, because that is what the screen draws.
+    expect(tracking.order()?.code).toBe('K-4821');
 
     tracking.askAgain();
     http.expectNone(url);
@@ -163,5 +183,37 @@ describe('TrackingStore', () => {
     tracking.askAgain();
 
     http.expectOne(url).flush(anOrder('Queued'));
+  });
+
+  /**
+   * Following again replaces the timer instead of adding one. The two would
+   * drift apart — they start at different moments — so the screen would end up
+   * asking twice per round, and the second timer would outlive the component:
+   * stopping only ever reached the newest one.
+   */
+  it('leaves no timer behind when it is asked to follow again', () => {
+    vi.useFakeTimers();
+
+    try {
+      const { tracking, http } = aStore(3000);
+
+      tracking.follow('bar-alfa', 'K-4821', token);
+      http.expectOne(url).flush(anOrder('Queued'));
+
+      // A second later, which is what makes the two timers drift apart.
+      vi.advanceTimersByTime(1000);
+      tracking.follow('bar-alfa', 'K-4821', token);
+      http.expectOne(url).flush(anOrder('Queued'));
+
+      // The replaced timer's round, if it were still running.
+      vi.advanceTimersByTime(2000);
+      http.expectNone(url);
+
+      // The surviving timer's round, one second behind the one it replaced.
+      vi.advanceTimersByTime(1000);
+      http.expectOne(url).flush(anOrder('Queued'));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
