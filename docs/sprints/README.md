@@ -14,4 +14,5 @@ archivo aparte del enunciado, nunca mezclado con él.
 
 | Sprint | Consigna | Backlog | Estado |
 |---|---|---|---|
-| 1 | `sprint-1.md` | `sprint-1-backlog.md` | en curso — entrega el 2026-09-17 |
+| 1 | `sprint-1.md` | `sprint-1-backlog.md` | entregado el 2026-09-17 |
+| 2 | `sprint-2.md` | `sprint-2-backlog.md` | en curso — la consigna fija el formato, el alcance es nuestro |
