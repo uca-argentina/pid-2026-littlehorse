@@ -65,7 +65,7 @@ public class UploadProductImageHandlerTests
             new UploadProductImageCommand(Guid.CreateVersion7(), new MemoryStream(APng), APng.Length),
             CancellationToken.None);
 
-        Assert.Equal(UploadProductImageHandler.ProductNotFound, result.Error);
+        Assert.Equal(ProductErrors.NotFound, result.Error);
         Assert.Null(images.SavedAs);
     }
 

@@ -21,6 +21,11 @@ export const productsRoutes: Routes = [
         path: 'new',
         loadComponent: () => import('./pages/new-product.page').then((m) => m.NewProductPage),
       },
+      // After 'new', which would otherwise be read as somebody's id.
+      {
+        path: ':id',
+        loadComponent: () => import('./pages/edit-product.page').then((m) => m.EditProductPage),
+      },
     ],
   },
 ];

@@ -192,7 +192,7 @@ public class ConfirmOrderHandlerTests
     [Fact]
     public async Task HandleAsync_WhenTheDrinkIsNotOnTheMenuAnyMore_RejectsTheWholeOrder()
     {
-        Catalog.TurnOff(_menu.Gin, nameof(Product.IsActive));
+        Catalog.TakeOffTheMenu(_menu.Gin);
 
         Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
 
@@ -203,7 +203,7 @@ public class ConfirmOrderHandlerTests
     [Fact]
     public async Task HandleAsync_WhenTheDrinkIsOffTonight_RejectsTheWholeOrder()
     {
-        Catalog.TurnOff(_menu.Gin, nameof(Product.IsAvailable));
+        _menu.Gin.MarkUnavailable();
 
         Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
 
@@ -419,13 +419,13 @@ public class ConfirmOrderHandlerTests
         public Product Fernet { get; } = Product.Create(TheVenue, "Fernet con Coca", null, null, 4000m, fernet);
 
         /// <summary>
-        /// Takes a product off the menu, the way US-07 and US-08 will once they
-        /// are built. Until then the domain has no method for it, and inventing
-        /// one so that a test can call it would be writing the next story's
-        /// code today.
+        /// The soft delete, written from outside because US-08 has not built
+        /// the domain method yet. US-07's switch no longer needs this: it is
+        /// Product.MarkUnavailable, and the test below calls it. This one goes
+        /// the same way once a product can be taken off the menu for good.
         /// </summary>
-        public static void TurnOff(Product product, string flag) =>
-            typeof(Product).GetProperty(flag)!
+        public static void TakeOffTheMenu(Product product) =>
+            typeof(Product).GetProperty(nameof(Product.IsActive))!
                 .GetSetMethod(nonPublic: true)!
                 .Invoke(product, [false]);
 

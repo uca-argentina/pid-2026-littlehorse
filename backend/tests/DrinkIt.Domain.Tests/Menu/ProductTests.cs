@@ -160,6 +160,102 @@ public class ProductTests
     }
 }
 
+// US-07: the nightly switch, independent of Create and of Stock.
+public class ProductAvailabilityTests
+{
+    private static Product AGinTonic() =>
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+
+    [Fact]
+    public void MarkUnavailable_WhenAvailable_SetsIsAvailableFalse()
+    {
+        Product product = AGinTonic();
+
+        product.MarkUnavailable();
+
+        Assert.False(product.IsAvailable);
+    }
+
+    // Marking an already-unavailable product unavailable again is not an
+    // error: the administrator can click the switch without checking its
+    // current state first.
+    [Fact]
+    public void MarkUnavailable_WhenAlreadyUnavailable_StaysUnavailable()
+    {
+        Product product = AGinTonic();
+        product.MarkUnavailable();
+
+        product.MarkUnavailable();
+
+        Assert.False(product.IsAvailable);
+    }
+
+    [Fact]
+    public void MarkAvailable_WhenUnavailable_SetsIsAvailableTrue()
+    {
+        Product product = AGinTonic();
+        product.MarkUnavailable();
+
+        product.MarkAvailable();
+
+        Assert.True(product.IsAvailable);
+    }
+
+    /// <summary>
+    /// Running out is not something the switch can undo. Putting a drink back
+    /// on sale with none left would promise the customer something the bar
+    /// cannot pour: the only way back is restocking it, which is US-08's job.
+    /// </summary>
+    [Fact]
+    public void MarkAvailable_WhenSoldOut_ThrowsSoldOutCannotBeAvailable()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+
+        DomainException error = Assert.Throws<DomainException>(product.MarkAvailable);
+
+        Assert.Equal(Product.ErrorCodes.SoldOutCannotBeAvailable, error.Code);
+    }
+
+    // Turning it off is always allowed, sold out included: the administrator
+    // taps the switch without first working out what state it was in.
+    [Fact]
+    public void MarkUnavailable_WhenSoldOut_TurnsTheSwitchOff()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+
+        product.MarkUnavailable();
+
+        Assert.False(product.IsAvailable);
+    }
+
+    // The rule the customer's menu runs as SQL, owned here.
+    [Fact]
+    public void IsOrderable_WhenSwitchedOnAndInStock_IsTrue()
+    {
+        Assert.True(AGinTonic().IsOrderable);
+    }
+
+    [Fact]
+    public void IsOrderable_WhenSwitchedOff_IsFalse()
+    {
+        Product product = AGinTonic();
+        product.MarkUnavailable();
+
+        Assert.False(product.IsOrderable);
+    }
+
+    // Sold out and never switched off by anybody: the switch says yes and the
+    // shelf says no, and the shelf wins.
+    [Fact]
+    public void IsOrderable_WhenSoldOut_IsFalse()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+
+        Assert.True(product.IsAvailable);
+        Assert.False(product.IsOrderable);
+    }
+}
+
 public class ProductImageTests
 {
     private static Product AGinTonicWithoutPicture() =>
@@ -204,4 +300,128 @@ public class ProductImageTests
         Assert.Null(product.ImageUrl);
     }
 
+}
+
+// US-08: correcting a product. The picture is not here — ReplaceImage already
+// covers it, and UploadProductImageHandler reuses it as-is.
+public class ProductUpdateTests
+{
+    private static Product AGinTonic() =>
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", "Gin, tonic and a slice of lime.", null, 4500m, 20);
+
+    [Fact]
+    public void Update_WhenValid_ReplacesNameDescriptionAndPrice()
+    {
+        Product product = AGinTonic();
+
+        product.Update("Fernet con Coca", "Medida doble.", 3800m);
+
+        Assert.Equal("Fernet con Coca", product.Name);
+        Assert.Equal("Medida doble.", product.Description);
+        Assert.Equal(3800m, product.Price);
+    }
+
+    // Same rule as at creation: padding is not part of the name.
+    [Fact]
+    public void Update_WhenNameHasPadding_TrimsIt()
+    {
+        Product product = AGinTonic();
+
+        product.Update("  Fernet con Coca  ", null, 3800m);
+
+        Assert.Equal("Fernet con Coca", product.Name);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Update_WhenNameIsBlank_ThrowsNameRequiredAndKeepsTheOldOne(string name)
+    {
+        Product product = AGinTonic();
+
+        DomainException error = Assert.Throws<DomainException>(() => product.Update(name, null, 3800m));
+
+        Assert.Equal(Product.ErrorCodes.NameRequired, error.Code);
+        Assert.Equal("Gin Tonic", product.Name);
+    }
+
+    [Fact]
+    public void Update_WhenNameIsLongerThanTheLimit_ThrowsNameLength()
+    {
+        string tooLong = new('a', Product.NameMaxLength + 1);
+        Product product = AGinTonic();
+
+        DomainException error = Assert.Throws<DomainException>(() => product.Update(tooLong, null, 3800m));
+
+        Assert.Equal(Product.ErrorCodes.NameLength, error.Code);
+    }
+
+    [Fact]
+    public void Update_WhenDescriptionIsLongerThanTheLimit_ThrowsDescriptionLengthAndKeepsTheOldOne()
+    {
+        string tooLong = new('a', Product.DescriptionMaxLength + 1);
+        Product product = AGinTonic();
+
+        DomainException error = Assert.Throws<DomainException>(() => product.Update("Fernet con Coca", tooLong, 3800m));
+
+        Assert.Equal(Product.ErrorCodes.DescriptionLength, error.Code);
+        Assert.Equal("Gin, tonic and a slice of lime.", product.Description);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Update_WhenDescriptionIsBlank_StoresNoDescription(string? description)
+    {
+        Product product = AGinTonic();
+
+        product.Update("Fernet con Coca", description, 3800m);
+
+        Assert.Null(product.Description);
+    }
+
+    // US-08, criterion 2 (the half that lives in the domain): a broken price
+    // does not touch the price the product had before the attempt.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Update_WhenPriceIsNotPositive_ThrowsPriceNotPositiveAndKeepsTheOldOne(decimal price)
+    {
+        Product product = AGinTonic();
+
+        DomainException error = Assert.Throws<DomainException>(() => product.Update("Fernet con Coca", null, price));
+
+        Assert.Equal(Product.ErrorCodes.PriceNotPositive, error.Code);
+        Assert.Equal(4500m, product.Price);
+    }
+}
+
+// US-08: taking a product off the menu for good, without losing the row that
+// old orders point at.
+public class ProductDeactivationTests
+{
+    private static Product AGinTonic() =>
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+
+    [Fact]
+    public void Deactivate_WhenActive_SetsIsActiveFalse()
+    {
+        Product product = AGinTonic();
+
+        product.Deactivate();
+
+        Assert.False(product.IsActive);
+    }
+
+    [Fact]
+    public void Deactivate_WhenAlreadyDeactivated_StaysDeactivated()
+    {
+        Product product = AGinTonic();
+        product.Deactivate();
+
+        product.Deactivate();
+
+        Assert.False(product.IsActive);
+    }
 }

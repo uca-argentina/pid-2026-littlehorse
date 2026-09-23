@@ -76,10 +76,7 @@
   // dark room with the screen at arm's length.
   --dk-text-min: 13px;
 
-  // The smallest a control may be to be touched. Same idea as --dk-text-min,
-  // for fingers: this app is used with one hand, in the dark, while somebody
-  // is being pushed from behind, so a control below this is a control that
-  // takes two tries.
+  // The smallest tap target anyone may use.
   --dk-tap-min: 44px;
 
   color-scheme: dark;

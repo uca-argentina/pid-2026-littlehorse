@@ -92,7 +92,10 @@ describe('ProductsPage', () => {
 
     const row = screen.getByRole('listitem', { name: /aperol spritz/i });
 
-    expect(within(row).getByText(/sin stock/i)).not.toBeNull();
+    // Once, and only once: beside the switch, where it also explains why the
+    // switch will not move. The stock column says how many are left and the
+    // chips are for the soft delete, so nothing else in the row repeats it.
+    expect(within(row).getByText('Sin stock')).not.toBeNull();
   });
 
   // US-08 keeps deactivated products in the listing so old orders still point
@@ -156,6 +159,144 @@ describe('ProductsPage', () => {
     expect(screen.getByRole('status').textContent).toContain('Todavía no');
   });
 
+  // US-07: the nightly switch, separate from stock and from the soft delete.
+  // US-07: the nightly switch of the wireframe, separate from stock and from
+  // the soft delete. "Disponible esta noche".
+  describe('the nightly switch', () => {
+    const aGinTonic: Product = {
+      id: 'id-1',
+      name: 'Gin Tonic',
+      description: null,
+      imageUrl: null,
+      price: 4500,
+      stock: 20,
+      isAvailable: true,
+      isSoldOut: false,
+      isActive: true,
+    };
+
+    function theSwitch(): HTMLElement {
+      return screen.getByRole('switch', { name: /gin tonic/i });
+    }
+
+    it('is on for a drink the venue can serve tonight', async () => {
+      await openScreenShowing([aGinTonic]);
+
+      expect(theSwitch().getAttribute('aria-checked')).toBe('true');
+      expect(screen.getByText('Disponible')).not.toBeNull();
+    });
+
+    it('lets the administrator turn a product off', async () => {
+      const rendered = await openScreenShowing([aGinTonic]);
+
+      theSwitch().click();
+
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-unavailable`)
+        .flush({ ...aGinTonic, isAvailable: false });
+      rendered.fixture.detectChanges();
+      TestBed.inject(HttpTestingController)
+        .expectOne(PRODUCTS_URL)
+        .flush([{ ...aGinTonic, isAvailable: false }]);
+      await rendered.fixture.whenStable();
+
+      expect(theSwitch().getAttribute('aria-checked')).toBe('false');
+      expect(screen.getByText('No disponible')).not.toBeNull();
+    });
+
+    it('lets the administrator turn a product back on', async () => {
+      const anOffProduct: Product = { ...aGinTonic, isAvailable: false };
+      const rendered = await openScreenShowing([anOffProduct]);
+
+      theSwitch().click();
+
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-available`)
+        .flush(aGinTonic);
+      rendered.fixture.detectChanges();
+      TestBed.inject(HttpTestingController).expectOne(PRODUCTS_URL).flush([aGinTonic]);
+      await rendered.fixture.whenStable();
+
+      expect(theSwitch().getAttribute('aria-checked')).toBe('true');
+    });
+
+    /**
+     * Running out is not something the switch can undo, so the screen does not
+     * offer to try: the drink comes back by being restocked, which is US-08.
+     * The API refuses it too — this is the half that stops the tap happening.
+     */
+    it('is off and locked for a drink that ran out', async () => {
+      const soldOut: Product = { ...aGinTonic, stock: 0, isSoldOut: true };
+      await openScreenShowing([soldOut]);
+
+      expect(theSwitch().getAttribute('aria-checked')).toBe('false');
+      expect((theSwitch() as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByText('Sin stock')).not.toBeNull();
+    });
+
+    it('does not ask the API anything when the locked switch is tapped', async () => {
+      const soldOut: Product = { ...aGinTonic, stock: 0, isSoldOut: true };
+      await openScreenShowing([soldOut]);
+
+      theSwitch().click();
+
+      TestBed.inject(HttpTestingController).verify();
+    });
+
+    // Taken off the menu for good: the switch is about tonight, and there is no
+    // tonight for something that is not on the menu any more.
+    it('is off and locked for a drink that was taken off the menu', async () => {
+      const gone: Product = { ...aGinTonic, isActive: false };
+      await openScreenShowing([gone]);
+
+      expect(theSwitch().getAttribute('aria-checked')).toBe('false');
+      expect((theSwitch() as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    // The venue's wifi drops mid-tap. Saying nothing leaves the administrator
+    // sure they took a drink off sale while the bar keeps selling it.
+    it('says so when the switch could not be saved', async () => {
+      const rendered = await openScreenShowing([aGinTonic]);
+
+      theSwitch().click();
+
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-unavailable`)
+        .error(new ProgressEvent('error'), { status: 0, statusText: '' });
+      rendered.fixture.detectChanges();
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos');
+      // Nothing was saved, so the switch must not read as if it had been, and
+      // it has to still be usable to try again.
+      expect(theSwitch().getAttribute('aria-checked')).toBe('true');
+      expect((theSwitch() as HTMLButtonElement).disabled).toBe(false);
+    });
+
+    it('clears the warning when the switch is tried again and works', async () => {
+      const rendered = await openScreenShowing([aGinTonic]);
+
+      theSwitch().click();
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-unavailable`)
+        .error(new ProgressEvent('error'), { status: 0, statusText: '' });
+      rendered.fixture.detectChanges();
+      await rendered.fixture.whenStable();
+
+      theSwitch().click();
+      TestBed.inject(HttpTestingController)
+        .expectOne(`${PRODUCTS_URL}/id-1/mark-unavailable`)
+        .flush({ ...aGinTonic, isAvailable: false });
+      rendered.fixture.detectChanges();
+      TestBed.inject(HttpTestingController)
+        .expectOne(PRODUCTS_URL)
+        .flush([{ ...aGinTonic, isAvailable: false }]);
+      await rendered.fixture.whenStable();
+
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+  });
+
   describe('searching and filtering', () => {
     function search(term: string): void {
       fireEvent.input(screen.getByLabelText(/buscar/i), { target: { value: term } });
@@ -200,13 +341,13 @@ describe('ProductsPage', () => {
     });
 
     // The two states an administrator goes looking for at night: what ran
-    // out, and what was taken off the menu.
-    it('counts everything, what is sold out and what was deactivated', async () => {
+    // out, and what the customer cannot order for any other reason.
+    it('counts everything, what is sold out and what is not available', async () => {
       await openScreenShowing(theMenu);
 
       expect(pill(/todos/i).textContent).toContain('3');
       expect(pill(/sin stock/i).textContent).toContain('1');
-      expect(pill(/dados de baja/i).textContent).toContain('1');
+      expect(pill(/no disponibles/i).textContent).toContain('1');
     });
 
     it('shows only what is sold out when that filter is on', async () => {
@@ -218,13 +359,53 @@ describe('ProductsPage', () => {
       expect(listed()).toEqual(['Aperol Spritz']);
     });
 
-    it('shows only what was deactivated when that filter is on', async () => {
+    it('shows only what is not available when that filter is on', async () => {
       const rendered = await openScreenShowing(theMenu);
 
-      pill(/dados de baja/i).click();
+      pill(/no disponibles/i).click();
       await rendered.fixture.whenStable();
 
       expect(listed()).toEqual(['Daiquiri']);
+    });
+
+    /**
+     * The pill collects whatever the row says is "No disponible", which since
+     * US-07 is mostly the nightly switch and not the soft delete: running out
+     * of tonic is the everyday case, and being taken off the menu for good is
+     * the rare one. Both read the same to the customer, so both are here.
+     */
+    it('gathers what was switched off tonight, not only what left the menu', async () => {
+      const switchedOff: Product = {
+        ...theMenu[0],
+        id: 'off',
+        name: 'Negroni',
+        isAvailable: false,
+      };
+      const rendered = await openScreenShowing([...theMenu, switchedOff]);
+
+      expect(pill(/no disponibles/i).textContent).toContain('2');
+
+      pill(/no disponibles/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(listed()).toEqual(['Daiquiri', 'Negroni']);
+    });
+
+    // Sold out wins: a drink that ran out AND was switched off is one the bar
+    // cannot serve because there is none, and that is the pill that says so.
+    it('counts a drink that ran out once, under sold out', async () => {
+      const both: Product = {
+        ...theMenu[0],
+        id: 'both',
+        name: 'Negroni',
+        stock: 0,
+        isSoldOut: true,
+        isAvailable: false,
+      };
+      await openScreenShowing([both]);
+
+      expect(pill(/sin stock/i).textContent).toContain('1');
+      expect(pill(/no disponibles/i).textContent).toContain('0');
     });
 
     it('narrows by filter and by what was typed at once', async () => {

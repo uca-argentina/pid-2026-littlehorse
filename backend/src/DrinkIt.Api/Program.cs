@@ -25,7 +25,11 @@ builder.Services.AddScoped<ResetStaffUserPasswordHandler>();
 builder.Services.AddScoped<DeactivateStaffUserHandler>();
 builder.Services.AddScoped<ReactivateStaffUserHandler>();
 builder.Services.AddScoped<CreateProductHandler>();
+builder.Services.AddScoped<UpdateProductHandler>();
+builder.Services.AddScoped<DeactivateProductHandler>();
 builder.Services.AddScoped<UploadProductImageHandler>();
+builder.Services.AddScoped<MarkProductUnavailableHandler>();
+builder.Services.AddScoped<MarkProductAvailableHandler>();
 builder.Services.AddScoped<ConfirmOrderHandler>();
 
 // Both names resolve to the same per-request instance: the middleware writes to
