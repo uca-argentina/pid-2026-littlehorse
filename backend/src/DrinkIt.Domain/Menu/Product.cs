@@ -105,12 +105,12 @@ public sealed class Product : IBelongsToVenue
         int stock)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Products must belong to a venue.");
-        if (stock < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
-
         string cleanName = ValidateName(name);
         string? cleanDescription = ValidateDescription(description);
 
         ValidatePrice(price);
+
+        if (stock < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
 
         string? cleanImageUrl = BlankToNull(imageUrl);
 

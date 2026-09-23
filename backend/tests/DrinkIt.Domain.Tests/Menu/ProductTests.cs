@@ -92,6 +92,16 @@ public class ProductTests
         Assert.Equal(Product.ErrorCodes.StockNegative, error.Code);
     }
 
+    // The form shows one error at a time, so the order is what the administrator
+    // is told to fix first: the fields in the order they are filled in.
+    [Fact]
+    public void Create_WhenNameAndStockAreBothInvalid_ThrowsNameRequired()
+    {
+        DomainException error = Assert.Throws<DomainException>(() => AGinTonic(name: "", stock: -1));
+
+        Assert.Equal(Product.ErrorCodes.NameRequired, error.Code);
+    }
+
     // Decided on 2026-09-14: running out of stock sells a product out on its
     // own. The availability switch is a separate thing, for turning a product
     // off while there is still stock.
