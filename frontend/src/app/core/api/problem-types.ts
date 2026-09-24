@@ -22,6 +22,9 @@ export const ProblemTypes = {
 
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
+  /** Sales left less stock than an adjustment takes away. */
+  productStockMoved: 'urn:drinkit:problem:product:stock-moved',
+
   // US-11. The three that mean the menu moved while somebody was ordering, as
   // opposed to something being wrong with what they sent.
   orderSoldOut: 'urn:drinkit:problem:order:sold-out',

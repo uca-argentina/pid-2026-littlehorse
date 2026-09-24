@@ -1,97 +1,45 @@
 <div class="frame">
   <drinkit-admin-header [venueSlug]="venueSlug()" />
 
-  <section class="body">
-    <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'products']">Volver a la carta</a>
+  @if (product(); as product) {
+    <drinkit-product-form
+      [venueSlug]="venueSlug()"
+      [product]="product"
+      heading="Editar producto"
+      submitLabel="Guardar cambios"
+      sendingLabel="Guardando"
+      [isSending]="store.isBusy()"
+      [stockAdjusted]="store.stockAdjustments()"
+      (submitted)="save($event)"
+    >
+      @if (store.status() === 'nameTaken') {
+        <p class="note note-bad" role="alert">
+          Ya hay un producto con ese nombre en este boliche. Elegí otro.
+        </p>
+      }
 
-    @if (products.isLoading()) {
-      <p class="note" role="status">Buscando este producto…</p>
-    }
+      @if (store.status() === 'unreachable') {
+        <p class="note note-bad" role="alert">
+          No pudimos guardarlo. Fijate la señal y probá de nuevo.
+        </p>
+      }
 
-    @if (isMissing()) {
-      <p class="note" role="status">No encontramos ningún producto con ese id en este boliche.</p>
-    }
+      @if (store.status() === 'stockMoved') {
+        <p class="note note-bad" role="alert">
+          Se vendió mientras tanto y ahora hay {{ product.stock }}: no alcanza para restar lo que
+          pusiste. El stock no se tocó; revisá el ajuste y guardá de nuevo.
+        </p>
+      }
 
-    @if (product() !== undefined) {
-      <h1 class="title">{{ product()!.name }}</h1>
-      <p class="now">
-        $ {{ product()!.price }}
-        @if (!product()!.isActive) {
-          · dado de baja
-        }
-      </p>
+      @if (store.status() === 'partial') {
+        <p class="note note-bad" role="alert">
+          Se guardó una parte de los cambios, pero no todos. Revisá cómo quedó y guardá de nuevo.
+        </p>
+      }
+    </drinkit-product-form>
 
-      <section class="card">
-        <h2 class="card-title">Datos</h2>
-
-        @if (store.detailsStatus() === 'saved') {
-          <p class="note note-good" role="status">Cambios guardados.</p>
-        }
-        @if (store.detailsStatus() === 'nameTaken') {
-          <p class="note note-bad" role="alert">
-            Ya hay un producto con ese nombre en este boliche.
-          </p>
-        }
-        @if (store.detailsStatus() === 'unreachable') {
-          <p class="note note-bad" role="alert">No pudimos guardarlo. Probá de nuevo.</p>
-        }
-
-        <form [formGroup]="form" (ngSubmit)="save()">
-          <div class="field">
-            <label class="label" for="name">Nombre</label>
-            <input
-              id="name"
-              class="input"
-              [class.input-bad]="nameError() !== null"
-              [attr.aria-invalid]="nameError() !== null ? 'true' : null"
-              [attr.aria-describedby]="nameError() !== null ? 'name-error' : null"
-              formControlName="name"
-              type="text"
-            />
-            @if (nameError() !== null) {
-              <p id="name-error" class="bad">{{ nameError() }}</p>
-            }
-          </div>
-
-          <div class="field">
-            <label class="label" for="description">Descripción</label>
-            <textarea
-              id="description"
-              class="input"
-              [class.input-bad]="descriptionError() !== null"
-              [attr.aria-invalid]="descriptionError() !== null ? 'true' : null"
-              [attr.aria-describedby]="descriptionError() !== null ? 'description-error' : null"
-              formControlName="description"
-              rows="3"
-            ></textarea>
-            @if (descriptionError() !== null) {
-              <p id="description-error" class="bad">{{ descriptionError() }}</p>
-            }
-          </div>
-
-          <div class="field">
-            <label class="label" for="price">Precio</label>
-            <input
-              id="price"
-              class="input"
-              [class.input-bad]="priceError() !== null"
-              [attr.aria-invalid]="priceError() !== null ? 'true' : null"
-              [attr.aria-describedby]="priceError() !== null ? 'price-error' : null"
-              formControlName="price"
-              type="number"
-              min="0"
-              step="1"
-            />
-            @if (priceError() !== null) {
-              <p id="price-error" class="bad">{{ priceError() }}</p>
-            }
-          </div>
-
-          <button class="cta" type="submit" [disabled]="store.isBusy()">Guardar cambios</button>
-        </form>
-      </section>
-
-      @if (product()!.isActive) {
+    <div class="below">
+      @if (product.isActive) {
         <section class="danger">
           <h2 class="danger-title">Fuera de la carta</h2>
 
@@ -103,18 +51,48 @@
             El cliente deja de verlo en la carta, pero no se borra nada: los pedidos que ya lo
             tenían lo siguen mostrando tal como se pidió.
           </p>
-          <button
-            class="danger-button"
-            type="button"
-            [disabled]="store.isBusy()"
-            (click)="deactivate()"
-          >
-            Dar de baja
-          </button>
+          @if (isConfirmingDeactivation()) {
+            <p class="danger-confirm" role="status">
+              ¿Seguro? Desde esta pantalla no se puede volver a poner en la carta.
+            </p>
+            <!-- The way back sits where the first tap landed, so a double tap backs out. -->
+            <div class="danger-actions">
+              <button class="ghost" type="button" (click)="cancelDeactivation()">Mejor no</button>
+              <button
+                class="danger-button"
+                type="button"
+                [disabled]="store.isBusy()"
+                (click)="deactivate()"
+              >
+                Confirmar la baja
+              </button>
+            </div>
+          } @else {
+            <button
+              class="danger-button"
+              type="button"
+              [disabled]="store.isBusy()"
+              (click)="askToDeactivate()"
+            >
+              Dar de baja
+            </button>
+          }
         </section>
       } @else {
         <p class="note">Este producto ya está dado de baja y no aparece en la carta del cliente.</p>
       }
-    }
-  </section>
+    </div>
+  } @else {
+    <section class="below">
+      <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'products']">Volver al listado</a>
+
+      @if (products.isLoading()) {
+        <p class="note" role="status">Buscando este producto…</p>
+      }
+
+      @if (isMissing()) {
+        <p class="note" role="status">No encontramos ningún producto con ese id en este boliche.</p>
+      }
+    </section>
+  }
 </div>

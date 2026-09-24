@@ -26,6 +26,7 @@ public sealed class Product : IBelongsToVenue
         public const string DescriptionLength = "product.description_length";
         public const string PriceNotPositive = "product.price_not_positive";
         public const string StockNegative = "product.stock_negative";
+        public const string StockChangeZero = "product.stock_change_zero";
         public const string ImageUrlInvalid = "product.image_url_invalid";
         public const string SoldOutCannotBeAvailable = "product.sold_out_cannot_be_available";
     }
@@ -104,12 +105,12 @@ public sealed class Product : IBelongsToVenue
         int stock)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Products must belong to a venue.");
-        if (stock < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
-
         string cleanName = ValidateName(name);
         string? cleanDescription = ValidateDescription(description);
 
         ValidatePrice(price);
+
+        if (stock < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
 
         string? cleanImageUrl = BlankToNull(imageUrl);
 
@@ -154,6 +155,28 @@ public sealed class Product : IBelongsToVenue
         Description = cleanDescription;
         Price = price;
     }
+
+    /// <summary>
+    /// Moves the stock by hand: up when a delivery arrives — the way out of
+    /// "sold out" the nightly switch cannot give — and down when it was loaded
+    /// wrong. A change and never a new total, so a sale made meanwhile is kept.
+    /// It does not touch <see cref="IsAvailable"/>: whether the venue serves the
+    /// drink tonight is the switch's business, not the stock's.
+    /// </summary>
+    public void AdjustStock(int change)
+    {
+        if (change == 0) throw new DomainException(ErrorCodes.StockChangeZero, "The stock has to change by at least one unit.");
+        if (!CanAdjustStock(change)) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
+
+        Stock += change;
+    }
+
+    /// <summary>
+    /// Whether what is left covers the change. Asked before adjusting: sales
+    /// made while the screen was open can leave less than a correction takes
+    /// away, and that is something that happens, not a broken rule.
+    /// </summary>
+    public bool CanAdjustStock(int change) => Stock + change >= 0;
 
     /// <summary>US-08: off the menu for good. The row stays for the orders that already point at it.</summary>
     public void Deactivate() => IsActive = false;

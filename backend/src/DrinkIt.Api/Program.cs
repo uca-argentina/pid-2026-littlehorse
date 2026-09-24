@@ -27,6 +27,7 @@ builder.Services.AddScoped<ReactivateStaffUserHandler>();
 builder.Services.AddScoped<CreateProductHandler>();
 builder.Services.AddScoped<UpdateProductHandler>();
 builder.Services.AddScoped<DeactivateProductHandler>();
+builder.Services.AddScoped<AdjustProductStockHandler>();
 builder.Services.AddScoped<UploadProductImageHandler>();
 builder.Services.AddScoped<MarkProductUnavailableHandler>();
 builder.Services.AddScoped<MarkProductAvailableHandler>();
