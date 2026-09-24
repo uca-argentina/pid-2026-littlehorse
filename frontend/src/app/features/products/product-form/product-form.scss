@@ -83,6 +83,45 @@
   gap: var(--dk-space-4);
 }
 
+// An equal share of the row, not the width of their own text: otherwise a
+// message appearing under one of them widens it and pushes it onto its own line.
+.pair > .field {
+  flex: 1 1 0;
+}
+
+// Adjusting the stock takes the whole row: the two modes do not fit in half.
+.pair > .field-wide {
+  flex-basis: 100%;
+}
+
+.modes {
+  display: flex;
+  padding: 4px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-ink);
+}
+
+.mode {
+  flex: 1;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--dk-radius-pill);
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mode-on {
+  border-color: var(--dk-pill-on-border);
+  background: var(--dk-pill-on-surface);
+  color: var(--dk-text);
+  font-weight: 700;
+}
+
 .label {
   color: var(--dk-text-muted);
   font-size: 13.5px;
@@ -98,9 +137,6 @@
   padding: 9px 0;
 }
 
-// Purely visual for now: US-07 is what makes this switch mean something to
-// the customer's menu. Until then it holds its place and its state, and the
-// form does not send it.
 .sw {
   position: relative;
   width: 52px;
@@ -200,6 +236,72 @@
   color: var(--dk-text-muted);
   font-size: 13.5px;
   line-height: 1.45;
+}
+
+.stock-row {
+  display: flex;
+  gap: var(--dk-space-3);
+  align-items: stretch;
+}
+
+.stock-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+// Read, not typed: same height as the fields around it, but no field chrome.
+.stock-now {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-height: 54px;
+  margin: 0;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-surface-raised);
+  color: var(--dk-text);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.stock-out {
+  color: var(--dk-danger);
+}
+
+.stock-action {
+  flex-shrink: 0;
+  min-height: 54px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.stock-action:disabled {
+  opacity: 0.6;
+}
+
+.stock-action:hover:not(:disabled) {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}
+
+// Units are added, not set: the total they land on is what has to be checked
+// before saving, so it reads louder than the help around it.
+.total {
+  display: block;
+  margin-top: 2px;
+  color: var(--dk-text);
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .bad {

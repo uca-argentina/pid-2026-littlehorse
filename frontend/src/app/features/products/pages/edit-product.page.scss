@@ -1,111 +1,25 @@
-// Same header and the same column as the rest of the administration, so this
-// reads as a step inside the listing and not as a different place.
-
 .frame {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
 }
 
-.body {
+// Same column as the form above, so the danger zone reads as part of it.
+.below {
   display: flex;
   flex-direction: column;
   gap: var(--dk-space-4);
   width: 100%;
-  max-width: 620px;
-  padding: var(--dk-space-5);
+  max-width: 1100px;
+  padding: 0 var(--dk-space-5) var(--dk-space-5);
   margin: 0 auto;
 }
 
 .back {
   align-self: flex-start;
+  margin-top: var(--dk-space-5);
   color: var(--dk-text-muted);
   font-size: 14.5px;
-}
-
-.title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
-.now {
-  margin: calc(var(--dk-space-3) * -1) 0 0;
-  color: var(--dk-text-muted);
-  font-size: 14.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--dk-space-3);
-  padding: var(--dk-space-5);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius-lg);
-  background: var(--dk-surface);
-}
-
-.card-title {
-  margin: 0;
-  color: var(--dk-text-muted);
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--dk-space-3);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.label {
-  color: var(--dk-text-muted);
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.input {
-  width: 100%;
-  min-height: 54px;
-  padding: 0 var(--dk-space-4);
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius-sm);
-  background: var(--dk-ink);
-  color: var(--dk-text);
-  font-family: inherit;
-
-  // 16px exactly: anything smaller makes iOS Safari zoom into the field on
-  // focus, and the layout never comes back on its own.
-  font-size: 16px;
-}
-
-textarea.input {
-  min-height: 88px;
-  padding-top: 14px;
-  padding-bottom: 14px;
-  resize: vertical;
-}
-
-.input-bad {
-  border-color: var(--dk-danger);
-}
-
-.bad {
-  margin: 0;
-  color: var(--dk-danger);
-  font-size: 13px;
 }
 
 .note {
@@ -116,12 +30,6 @@ textarea.input {
   background: var(--dk-note-surface);
   color: var(--dk-text-muted);
   font-size: 14.5px;
-  line-height: 1.45;
-}
-
-.note-good {
-  border-color: var(--dk-accent);
-  color: var(--dk-text);
 }
 
 .note-bad {
@@ -130,32 +38,8 @@ textarea.input {
   color: var(--dk-text);
 }
 
-.cta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: flex-start;
-  min-height: 50px;
-  padding: 0 var(--dk-space-5);
-  border: 0;
-  border-radius: var(--dk-radius-md);
-  background: var(--dk-accent);
-  color: var(--dk-on-accent);
-  font-family: inherit;
-  font-size: 15.5px;
-  font-weight: 700;
-}
-
-.cta:disabled {
-  opacity: 0.6;
-}
-
-.cta:hover:not(:disabled) {
-  background: var(--dk-accent-hover);
-}
-
-// Dashed and apart from the card above: this is the only thing on the screen
-// that takes something away, even though it takes nothing away for good.
+// Dashed and apart from the form: this is the only thing on the screen that
+// takes something away, even though it takes nothing away for good.
 .danger {
   display: flex;
   flex-direction: column;
@@ -204,42 +88,4 @@ textarea.input {
 
 .danger-button:hover:not(:disabled) {
   background: var(--dk-danger-surface);
-}
-
-.photo {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dk-space-4);
-  align-items: center;
-}
-
-// The same square as the listing, so the picture reads as the same thing here.
-.photo-now {
-  width: 96px;
-  height: 96px;
-  flex-shrink: 0;
-  border: 1px solid var(--dk-border);
-  border-radius: var(--dk-radius-md);
-  background: var(--dk-surface-raised);
-  object-fit: cover;
-}
-
-.file {
-  width: 100%;
-  color: var(--dk-text-muted);
-  font-family: inherit;
-  font-size: 14.5px;
-}
-
-.help {
-  margin: 0;
-  color: var(--dk-text-muted);
-  font-size: 12.5px;
-}
-
-.now-stock {
-  margin: 0;
-  color: var(--dk-text-muted);
-  font-size: 14.5px;
-  font-variant-numeric: tabular-nums;
 }

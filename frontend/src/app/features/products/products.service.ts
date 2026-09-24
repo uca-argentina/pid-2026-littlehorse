@@ -56,9 +56,9 @@ export class ProductsService {
     return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/deactivate`, {});
   }
 
-  /** Stock that arrived. The API adds the units to what was left; it does not replace it. */
-  restock(productId: string, units: number): Observable<Product> {
-    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/restock`, { units });
+  /** Moves the stock by a number of units, up or down. Never a new total: the API adds it to what is there. */
+  adjustStock(productId: string, change: number): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/adjust-stock`, { change });
   }
 
   /** US-07: the nightly switch off. The customer keeps seeing the product, dimmed. */
@@ -66,7 +66,7 @@ export class ProductsService {
     return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-unavailable`, {});
   }
 
-  /** US-07: the switch back on, e.g. after restocking. Does not touch stock. */
+  /** US-07: the switch back on, e.g. after the stock comes back. Does not touch stock. */
   markAvailable(productId: string): Observable<Product> {
     return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-available`, {});
   }

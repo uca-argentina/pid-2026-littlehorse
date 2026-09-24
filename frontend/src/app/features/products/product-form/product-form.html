@@ -74,27 +74,117 @@
           }
         </div>
 
-        <div class="field">
-          <label class="label" for="stock">Stock</label>
-          <input
-            id="stock"
-            class="input"
-            [class.input-bad]="stockError() !== null"
-            [attr.aria-invalid]="stockError() !== null ? 'true' : null"
-            [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
-            formControlName="stock"
-            type="number"
-            inputmode="numeric"
-            min="0"
-            step="1"
-            placeholder="20"
-          />
-          @if (stockError() !== null) {
-            <p id="stock-error" class="bad">{{ stockError() }}</p>
+        <div class="field" [class.field-wide]="isAdjusting()">
+          @if (!isEditing()) {
+            <label class="label" for="stock">Stock</label>
+            <input
+              id="stock"
+              class="input"
+              [class.input-bad]="stockError() !== null"
+              [attr.aria-invalid]="stockError() !== null ? 'true' : null"
+              [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
+              formControlName="stock"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1"
+              placeholder="20"
+            />
+            @if (stockError() !== null) {
+              <p id="stock-error" class="bad">{{ stockError() }}</p>
+            } @else {
+              <p id="stock-help" class="help">
+                Cuántos hay para vender. En cero queda como sin stock.
+              </p>
+            }
+          } @else if (isAdjusting()) {
+            <label class="label" for="stock">{{
+              stockMode() === 'add' ? 'Unidades que llegaron' : 'Stock real'
+            }}</label>
+            <div class="modes" role="group" aria-label="Qué querés hacer con el stock">
+              <button
+                class="mode"
+                type="button"
+                [class.mode-on]="stockMode() === 'add'"
+                [attr.aria-pressed]="stockMode() === 'add'"
+                [disabled]="isSending()"
+                (click)="chooseStockMode('add')"
+              >
+                Llegaron unidades
+              </button>
+              <button
+                class="mode"
+                type="button"
+                [class.mode-on]="stockMode() === 'set'"
+                [attr.aria-pressed]="stockMode() === 'set'"
+                [disabled]="isSending()"
+                (click)="chooseStockMode('set')"
+              >
+                Corregir el total
+              </button>
+            </div>
+            <div class="stock-row">
+              <input
+                #stockField
+                id="stock"
+                class="input"
+                [class.input-bad]="stockError() !== null"
+                [attr.aria-invalid]="stockError() !== null ? 'true' : null"
+                [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
+                formControlName="stock"
+                type="number"
+                inputmode="numeric"
+                [attr.min]="stockMode() === 'add' ? 1 : 0"
+                step="1"
+                [attr.placeholder]="stockMode() === 'add' ? '12' : product()!.stock"
+              />
+              <button
+                class="stock-action"
+                type="button"
+                [disabled]="isSending()"
+                (click)="closeAdjust()"
+              >
+                No ajustar
+              </button>
+            </div>
+            @if (stockError() !== null) {
+              <p id="stock-error" class="bad">{{ stockError() }}</p>
+            } @else if (stockMode() === 'add') {
+              <p id="stock-help" class="help">
+                Hoy hay {{ product()!.stock }}.
+                @if (stockAfter() !== product()!.stock) {
+                  <strong class="total">Quedan {{ stockAfter() }} en total.</strong>
+                } @else {
+                  Las que pongas se suman.
+                }
+              </p>
+            } @else {
+              <p id="stock-help" class="help">
+                Hoy hay {{ product()!.stock }}. Usalo si se cargó mal.
+                @if (hasStockTyped() && stockAfter() !== product()!.stock) {
+                  <strong class="total"
+                    >Pasa a {{ stockAfter() }} ({{ stockDifference() }}).</strong
+                  >
+                } @else if (hasStockTyped()) {
+                  <strong class="total">Es el que hay hoy: no cambia nada.</strong>
+                }
+              </p>
+            }
           } @else {
-            <p id="stock-help" class="help">
-              Cuántos hay para vender. En cero queda como sin stock.
-            </p>
+            <span class="label">Stock</span>
+            <div class="stock-row">
+              <p class="stock-now" [class.stock-out]="product()!.isSoldOut">
+                {{ product()!.stock }} en stock
+              </p>
+              <button
+                class="stock-action"
+                type="button"
+                [disabled]="isSending()"
+                (click)="openAdjust()"
+              >
+                Ajustar
+              </button>
+            </div>
           }
         </div>
       </div>
@@ -109,14 +199,18 @@
             role="switch"
             [attr.aria-checked]="isAvailable()"
             aria-labelledby="available-label available-desc"
-            [disabled]="isSending()"
+            [disabled]="isSending() || !canSwitch()"
             (click)="toggleAvailability()"
           >
             <span class="sw-knob"></span>
           </button>
           <span id="available-desc" class="switch-text">Se puede pedir</span>
         </div>
-        <p class="help">Apagalo cuando quieras que no aparezca mas en la menu que ve el cliente.</p>
+        @if (canSwitch()) {
+          <p class="help">Apagado, el cliente lo ve en la carta pero no lo puede pedir.</p>
+        } @else {
+          <p class="help">Sin stock: reponé para poder prenderlo.</p>
+        }
       </div>
     </div>
 
@@ -144,12 +238,17 @@
           @if (photoPreview() !== null) {
             <img class="drop-preview" [src]="photoPreview()" alt="Vista previa de la foto" />
             <span class="drop-hint">Tocá para elegir otra</span>
+          } @else if (product()?.imageUrl) {
+            <img class="drop-preview" [src]="product()!.imageUrl" alt="Foto actual" />
+            <span class="drop-hint">Tocá para elegir otra</span>
           } @else {
             <span class="drop-file">Arrastrá una foto o tocá para elegirla</span>
           }
         </label>
         @if (photoError() !== null) {
           <p id="photo-error" class="bad">{{ photoError() }}</p>
+        } @else if (isEditing()) {
+          <p id="photo-help" class="help">Si elegís otra, reemplaza a la actual cuando guardes.</p>
         } @else {
           <p id="photo-help" class="help">
             Opcional. Si no cargás ninguna, en la carta se muestra un ícono en su lugar.

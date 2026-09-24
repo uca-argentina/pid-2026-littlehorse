@@ -1,19 +1,32 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
+import { Router } from '@angular/router';
+import { concatMap, from, map, tap } from 'rxjs';
 import type { Observable } from 'rxjs';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { ProductsService } from './products.service';
 import type { Product, ProductCorrection } from './products.service';
 
 /**
- * How one of the four things this screen can do ended up. Tracked apart on
- * purpose, same reasoning as EditStaffUserStore: a correction that gets
- * refused must not make the deactivation, the photo or the stock next to it
- * look like it failed too.
+ * How saving ended up. 'partial' is the odd one: the correction went through
+ * and something after it did not, so "nothing was saved" would be a lie.
+ * 'stockMoved' is a partial with its own answer: sales left less than the
+ * adjustment takes away, and looking at the stock again is the fix.
  */
-type ActionStatus = 'idle' | 'sending' | 'saved' | 'nameTaken' | 'unreachable';
+type SaveStatus = 'idle' | 'sending' | 'nameTaken' | 'unreachable' | 'partial' | 'stockMoved';
+
+type AccessStatus = 'idle' | 'sending' | 'unreachable';
+
+/** Everything one press of "Guardar cambios" asks for. */
+export interface ProductChanges {
+  readonly correction: ProductCorrection;
+  readonly photo: File | null;
+  /** How much the stock moves, up or down. 0 leaves it alone. */
+  readonly stockChange: number;
+  /** null leaves the nightly switch where it is. */
+  readonly isAvailable: boolean | null;
+}
 
 /**
  * State of the screen that corrects a product. Provided by the page
@@ -24,84 +37,113 @@ type ActionStatus = 'idle' | 'sending' | 'saved' | 'nameTaken' | 'unreachable';
 export class EditProductStore {
   private readonly products = inject(ProductsService);
 
+  private readonly router = inject(Router);
+
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly details = signal<ActionStatus>('idle');
+  private readonly saving = signal<SaveStatus>('idle');
 
-  private readonly access = signal<ActionStatus>('idle');
-
-  private readonly photo = signal<ActionStatus>('idle');
-
-  private readonly stock = signal<ActionStatus>('idle');
+  private readonly access = signal<AccessStatus>('idle');
 
   /** The product as the API last returned it, so the screen shows the new state. */
   private readonly current = signal<Product | null>(null);
 
-  readonly detailsStatus = this.details.asReadonly();
+  private readonly adjusted = signal(0);
+
+  readonly status = this.saving.asReadonly();
 
   readonly accessStatus = this.access.asReadonly();
 
-  readonly photoStatus = this.photo.asReadonly();
-
-  readonly stockStatus = this.stock.asReadonly();
-
   readonly updated = this.current.asReadonly();
 
-  readonly isBusy = computed(
-    () =>
-      this.details() === 'sending' ||
-      this.access() === 'sending' ||
-      this.photo() === 'sending' ||
-      this.stock() === 'sending',
-  );
+  /** How many adjustments reached the API, so the form never sends one twice. */
+  readonly stockAdjustments = this.adjusted.asReadonly();
 
-  update(id: string, correction: ProductCorrection): void {
-    this.run(this.details, () => this.products.update(id, correction));
+  readonly isBusy = computed(() => this.saving() === 'sending' || this.access() === 'sending');
+
+  /**
+   * One request per thing that changed, one after the other. The correction
+   * goes first, because a taken name is the one refusal the administrator can
+   * fix and nothing else should be sent past it. The stock goes before the
+   * switch: the domain refuses to turn on a product with nothing to sell.
+   */
+  save(venueSlug: string, id: string, changes: ProductChanges): void {
+    if (this.isBusy()) return;
+
+    this.saving.set('sending');
+
+    const steps: (() => Observable<Product>)[] = [
+      () => this.products.update(id, changes.correction),
+    ];
+
+    const { photo, stockChange, isAvailable } = changes;
+
+    // The upload answers with the address alone; the rest is what the
+    // correction just returned.
+    if (photo !== null)
+      steps.push(() =>
+        this.products
+          .uploadImage(id, photo)
+          .pipe(map(({ imageUrl }) => ({ ...(this.current() as Product), imageUrl }))),
+      );
+
+    if (stockChange !== 0)
+      steps.push(() =>
+        this.products
+          .adjustStock(id, stockChange)
+          .pipe(tap(() => this.adjusted.update((count) => count + 1))),
+      );
+
+    if (isAvailable !== null)
+      steps.push(() =>
+        isAvailable ? this.products.markAvailable(id) : this.products.markUnavailable(id),
+      );
+
+    let done = 0;
+
+    from(steps)
+      .pipe(
+        concatMap((step) => step()),
+        tap((product) => {
+          this.current.set(product);
+          done++;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        complete: () => this.showTheListing(venueSlug),
+        error: (error: unknown) =>
+          this.saving.set(done === 0 ? reasonFor(error) : laterReasonFor(error)),
+      });
   }
 
   deactivate(id: string): void {
-    this.run(this.access, () => this.products.deactivate(id));
-  }
+    if (this.isBusy()) return;
 
-  restock(id: string, units: number): void {
-    this.run(this.stock, () => this.products.restock(id, units));
-  }
+    this.access.set('sending');
 
-  /**
-   * The upload answers with the new address and nothing else, so the product
-   * that was on screen is kept and only its picture is swapped. Passing the
-   * product in, and not just its id, is what makes that possible without the
-   * store holding a second copy of it.
-   */
-  uploadImage(product: Product, image: File): void {
-    this.run(this.photo, () =>
-      this.products
-        .uploadImage(product.id, image)
-        .pipe(map(({ imageUrl }) => ({ ...product, imageUrl }))),
-    );
-  }
-
-  /**
-   * The actions differ only in which request they send. Writing them out
-   * four times would be four places to forget the in-flight guard.
-   */
-  private run(
-    status: ReturnType<typeof signal<ActionStatus>>,
-    send: () => Observable<Product>,
-  ): void {
-    if (status() === 'sending') return;
-
-    status.set('sending');
-
-    send()
+    this.products
+      .deactivate(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (product) => {
           this.current.set(product);
-          status.set('saved');
+          this.access.set('idle');
         },
-        error: (error: unknown) => status.set(reasonFor(error)),
+        error: () => this.access.set('unreachable'),
       });
+  }
+
+  /** Straight back to the listing, like a new product: that is where the change shows. */
+  private showTheListing(venueSlug: string): void {
+    this.saving.set('idle');
+
+    this.router.navigate([venueSlug, 'staff', 'products']).then(
+      (navigated) => {
+        if (!navigated) this.saving.set('unreachable');
+      },
+      () => this.saving.set('unreachable'),
+    );
   }
 }
 
@@ -110,8 +152,15 @@ export class EditProductStore {
  * rest — a dropped connection, a 500, a rule the form did not catch — are the
  * same thing from the screen's point of view: nothing changed.
  */
-function reasonFor(error: unknown): ActionStatus {
+function reasonFor(error: unknown): SaveStatus {
   if (!(error instanceof HttpErrorResponse)) return 'unreachable';
 
   return error.error?.type === ProblemTypes.productNameTaken ? 'nameTaken' : 'unreachable';
+}
+
+/** After the correction went through: something was saved, whatever failed. */
+function laterReasonFor(error: unknown): SaveStatus {
+  if (!(error instanceof HttpErrorResponse)) return 'partial';
+
+  return error.error?.type === ProblemTypes.productStockMoved ? 'stockMoved' : 'partial';
 }
