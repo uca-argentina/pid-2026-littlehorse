@@ -250,16 +250,16 @@ public class ProductsEndpointsTests
         return await EndpointResponse.Execute(result, $"{Path}/{productId}", HttpMethods.Put);
     }
 
-    // Bringing stock back: the response is the product, so the screen shows
-    // the new count and unlocks the nightly switch without asking again.
+    // The response is the product, so the screen shows the new count and
+    // unlocks the nightly switch without asking again.
     [Fact]
-    public async Task RestockAsync_WhenTheUnitsAreValid_RespondsWithTheProductWithMoreStock()
+    public async Task AdjustStockAsync_WhenTheChangeIsValid_RespondsWithTheProductAndItsNewStock()
     {
         Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
-        RestockProductHandler handler = new(new Fake.Repository(null, product));
+        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
 
-        IResult result = await ProductsEndpoints.RestockAsync(product.Id, new RestockProductRequest(12), handler, CancellationToken.None);
-        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/restock", HttpMethods.Post);
+        IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(12), handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
 
         Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
         Assert.Equal(12, response.Body.GetProperty("stock").GetInt32());
@@ -267,30 +267,46 @@ public class ProductsEndpointsTests
     }
 
     [Fact]
-    public async Task RestockAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
+    public async Task AdjustStockAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
     {
         Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
-        RestockProductHandler handler = new(new Fake.Repository(null, product));
+        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
 
-        IResult result = await ProductsEndpoints.RestockAsync(Guid.CreateVersion7(), new RestockProductRequest(12), handler, CancellationToken.None);
-        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{Guid.CreateVersion7()}/restock", HttpMethods.Post);
+        IResult result = await ProductsEndpoints.AdjustStockAsync(Guid.CreateVersion7(), new AdjustProductStockRequest(12), handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{Guid.CreateVersion7()}/adjust-stock", HttpMethods.Post);
 
         Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
         Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
     }
 
-    // The endpoint does not check the units itself: the domain throws and the
-    // global handler answers with the rule's own problem type.
+    // Sales left less than the change takes away: a conflict with what
+    // happened meanwhile, not a malformed request.
     [Fact]
-    public async Task RestockAsync_WhenTheUnitsAreNotPositive_LetsTheDomainExceptionThrough()
+    public async Task AdjustStockAsync_WhenSalesMeanwhileLeftTooLittle_RespondsWithConflict()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
-        RestockProductHandler handler = new(new Fake.Repository(null, product));
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5);
+        AdjustProductStockHandler handler = new(new Fake.Repository(null, product, adjustmentApplies: false));
 
-        DomainException error = await Assert.ThrowsAsync<DomainException>(
-            () => ProductsEndpoints.RestockAsync(product.Id, new RestockProductRequest(0), handler, CancellationToken.None));
+        IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(-5), handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
 
-        Assert.Equal(Product.ErrorCodes.RestockNotPositive, error.Code);
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:stock-moved", response.Text("type"));
+    }
+
+    // Sales since the screen opened, not the last millisecond: the same 409,
+    // because to the administrator it is the same thing.
+    [Fact]
+    public async Task AdjustStockAsync_WhenWhatIsLeftIsLessThanItTakesAway_RespondsWithConflict()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 2);
+        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
+
+        IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(-5), handler, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:stock-moved", response.Text("type"));
     }
 
     private static readonly byte[] APng = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52];
@@ -385,8 +401,11 @@ public class ProductsEndpointsTests
             public Guid Id { get; } = Guid.CreateVersion7();
         }
 
-        public sealed class Repository(string? taken, Product? stored = null) : IProductRepository
+        public sealed class Repository(string? taken, Product? stored = null, bool adjustmentApplies = true) : IProductRepository
         {
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
+                Task.FromResult(adjustmentApplies);
+
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>
                 Task.FromResult(string.Equals(name, taken, StringComparison.OrdinalIgnoreCase));
 

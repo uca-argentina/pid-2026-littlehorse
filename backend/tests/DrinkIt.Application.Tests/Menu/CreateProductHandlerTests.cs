@@ -116,6 +116,9 @@ public class CreateProductHandlerTests
 
         public sealed class Products(string? taken = null) : IProductRepository
         {
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
+                Task.FromResult(true);
+
             public Product? Added { get; private set; }
 
             // Ignores case like the real one: the database collation does the

@@ -426,58 +426,99 @@ public class ProductDeactivationTests
     }
 }
 
-// Bringing stock back in: the way out of "sold out" that the nightly switch
-// cannot give.
-public class ProductRestockTests
+// Moving the stock by hand: up when a delivery arrives, down when it was loaded
+// wrong. Always a change and never a new total, so a sale made meanwhile is
+// kept.
+public class ProductStockAdjustmentTests
 {
-    private static Product ASoldOutGinTonic() =>
-        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+    private static Product AGinTonicWith(int stock) =>
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, stock);
 
+    // The way out of "sold out" that the nightly switch cannot give.
     [Fact]
-    public void Restock_WhenSoldOut_AddsTheUnitsAndIsNoLongerSoldOut()
+    public void AdjustStock_WhenSoldOutAndUnitsArrive_IsNoLongerSoldOut()
     {
-        Product product = ASoldOutGinTonic();
+        Product product = AGinTonicWith(0);
 
-        product.Restock(12);
+        product.AdjustStock(12);
 
         Assert.Equal(12, product.Stock);
         Assert.False(product.IsSoldOut);
     }
 
-    // Units are added, not typed over: what was left plus what arrived.
     [Fact]
-    public void Restock_WhenThereWasStock_AddsToIt()
+    public void AdjustStock_WhenTheChangeIsPositive_AddsToWhatWasLeft()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5);
+        Product product = AGinTonicWith(5);
 
-        product.Restock(10);
+        product.AdjustStock(10);
 
         Assert.Equal(15, product.Stock);
     }
 
-    // The nightly switch is a separate thing: restocking does not turn it on.
+    // Loaded 200 when it was 20.
     [Fact]
-    public void Restock_WhenTheSwitchWasOff_LeavesItOff()
+    public void AdjustStock_WhenTheChangeIsNegative_TakesAwayWhatWasLoadedByMistake()
     {
-        Product product = ASoldOutGinTonic();
-        product.MarkUnavailable();
+        Product product = AGinTonicWith(200);
 
-        product.Restock(12);
+        product.AdjustStock(-180);
 
-        Assert.False(product.IsAvailable);
+        Assert.Equal(20, product.Stock);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    [InlineData(-20)]
-    public void Restock_WhenTheUnitsAreNotPositive_ThrowsRestockNotPositiveAndKeepsTheStock(int units)
+    [Fact]
+    public void AdjustStock_WhenItTakesEverythingAway_IsSoldOut()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5);
+        Product product = AGinTonicWith(5);
 
-        DomainException error = Assert.Throws<DomainException>(() => product.Restock(units));
+        product.AdjustStock(-5);
 
-        Assert.Equal(Product.ErrorCodes.RestockNotPositive, error.Code);
+        Assert.True(product.IsSoldOut);
+    }
+
+    [Fact]
+    public void AdjustStock_WhenItWouldGoBelowZero_ThrowsStockNegativeAndKeepsTheStock()
+    {
+        Product product = AGinTonicWith(5);
+
+        DomainException error = Assert.Throws<DomainException>(() => product.AdjustStock(-6));
+
+        Assert.Equal(Product.ErrorCodes.StockNegative, error.Code);
         Assert.Equal(5, product.Stock);
+    }
+
+    // What the handler asks first: sales between the screen opening and the
+    // save can leave less than a correction takes away, and that is expected.
+    [Theory]
+    [InlineData(5, -5, true)]
+    [InlineData(5, -6, false)]
+    [InlineData(0, 12, true)]
+    public void CanAdjustStock_WhenComparedWithWhatIsLeft_SaysWhetherItFits(int stock, int change, bool fits)
+    {
+        Assert.Equal(fits, AGinTonicWith(stock).CanAdjustStock(change));
+    }
+
+    // A change of nothing is a screen that sent a request it did not need to.
+    [Fact]
+    public void AdjustStock_WhenTheChangeIsZero_ThrowsStockChangeZero()
+    {
+        Product product = AGinTonicWith(5);
+
+        DomainException error = Assert.Throws<DomainException>(() => product.AdjustStock(0));
+
+        Assert.Equal(Product.ErrorCodes.StockChangeZero, error.Code);
+    }
+
+    // The nightly switch is a separate thing: adjusting does not turn it on.
+    [Fact]
+    public void AdjustStock_WhenTheSwitchWasOff_LeavesItOff()
+    {
+        Product product = AGinTonicWith(0);
+        product.MarkUnavailable();
+
+        product.AdjustStock(12);
+
+        Assert.False(product.IsAvailable);
     }
 }
