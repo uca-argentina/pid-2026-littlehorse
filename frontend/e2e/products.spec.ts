@@ -248,6 +248,7 @@ test.describe('Products', () => {
       .getByRole('link', { name: /editar/i })
       .click();
     await page.getByRole('button', { name: /dar de baja/i }).click();
+    await page.getByRole('button', { name: /confirmar la baja/i }).click();
 
     // Waits for the API to actually answer before moving on: the danger
     // section only flips to this note once the product came back deactivated.

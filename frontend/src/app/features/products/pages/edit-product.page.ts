@@ -1,5 +1,5 @@
 import { httpResource } from '@angular/common/http';
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { EditProductStore } from '../edit-product.store';
@@ -59,7 +59,19 @@ export class EditProductPage {
     });
   }
 
+  /** Nothing on this screen brings a product back, so the first tap only asks. */
+  protected readonly isConfirmingDeactivation = signal(false);
+
+  protected askToDeactivate(): void {
+    this.isConfirmingDeactivation.set(true);
+  }
+
+  protected cancelDeactivation(): void {
+    this.isConfirmingDeactivation.set(false);
+  }
+
   protected deactivate(): void {
+    this.isConfirmingDeactivation.set(false);
     this.store.deactivate(this.id());
   }
 }

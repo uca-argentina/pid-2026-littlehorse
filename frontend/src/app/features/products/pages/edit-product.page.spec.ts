@@ -431,13 +431,53 @@ describe('EditProductPage', () => {
   });
 
   // US-08, criterion 3: taken off the menu, not deleted.
-  it('takes it off the menu without offering to delete anything', async () => {
-    const { products } = await openScreenFor('id-2');
+  it('takes it off the menu once confirmed, without offering to delete anything', async () => {
+    const { rendered, products } = await openScreenFor('id-2');
 
     press(/dar de baja/i);
+    await rendered.fixture.whenStable();
+    press(/confirmar la baja/i);
 
     expect(products['deactivate']).toHaveBeenCalledWith('id-2');
     expect(screen.queryByRole('button', { name: /borrar|eliminar/i })).toBeNull();
+  });
+
+  // Nothing on this screen brings it back, so one stray tap is not enough.
+  it('does not take it off the menu on the first tap', async () => {
+    const { rendered, products } = await openScreenFor('id-2');
+
+    press(/dar de baja/i);
+    await rendered.fixture.whenStable();
+
+    expect(products['deactivate']).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /confirmar la baja/i })).not.toBeNull();
+  });
+
+  it('backs out without taking it off the menu', async () => {
+    const { rendered, products } = await openScreenFor('id-2');
+
+    press(/dar de baja/i);
+    await rendered.fixture.whenStable();
+    press(/mejor no/i);
+    await rendered.fixture.whenStable();
+
+    expect(products['deactivate']).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /dar de baja/i })).not.toBeNull();
+  });
+
+  // A double tap lands its second touch where the first one was: that spot
+  // has to back out, not confirm.
+  it('puts the way back first, where the first tap landed', async () => {
+    const { rendered } = await openScreenFor('id-2');
+
+    press(/dar de baja/i);
+    await rendered.fixture.whenStable();
+
+    const [first] = screen
+      .getAllByRole('button')
+      .filter((button) => /mejor no|confirmar la baja/i.test(button.textContent ?? ''));
+
+    expect(first.textContent).toMatch(/mejor no/i);
   });
 
   it('says so when nothing here has that id', async () => {

@@ -51,14 +51,32 @@
             El cliente deja de verlo en la carta, pero no se borra nada: los pedidos que ya lo
             tenían lo siguen mostrando tal como se pidió.
           </p>
-          <button
-            class="danger-button"
-            type="button"
-            [disabled]="store.isBusy()"
-            (click)="deactivate()"
-          >
-            Dar de baja
-          </button>
+          @if (isConfirmingDeactivation()) {
+            <p class="danger-confirm" role="status">
+              ¿Seguro? Desde esta pantalla no se puede volver a poner en la carta.
+            </p>
+            <!-- The way back sits where the first tap landed, so a double tap backs out. -->
+            <div class="danger-actions">
+              <button class="ghost" type="button" (click)="cancelDeactivation()">Mejor no</button>
+              <button
+                class="danger-button"
+                type="button"
+                [disabled]="store.isBusy()"
+                (click)="deactivate()"
+              >
+                Confirmar la baja
+              </button>
+            </div>
+          } @else {
+            <button
+              class="danger-button"
+              type="button"
+              [disabled]="store.isBusy()"
+              (click)="askToDeactivate()"
+            >
+              Dar de baja
+            </button>
+          }
         </section>
       } @else {
         <p class="note">Este producto ya está dado de baja y no aparece en la carta del cliente.</p>
