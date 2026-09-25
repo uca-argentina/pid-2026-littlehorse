@@ -3,6 +3,7 @@ using DrinkIt.Api.Tenancy;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Application.Venues;
+using DrinkIt.Domain.Menu;
 using Microsoft.AspNetCore.Http;
 
 namespace DrinkIt.Api.Tests.Features.Menu;
@@ -16,10 +17,11 @@ public class MenuEndpointTests
     private const string Path = "/bar-alfa/menu";
 
     private static readonly MenuItem GinTonic = new(
-        Guid.CreateVersion7(), "Gin Tonic", "Gin, tónica, lima", "https://images.example.com/gin.png", 4500m, true);
+        Guid.CreateVersion7(), "Gin Tonic", "Gin, tónica, lima", "https://images.example.com/gin.png", 4500m,
+        ProductCategory.Drink, true);
 
     private static readonly MenuItem Aperol = new(
-        Guid.CreateVersion7(), "Aperol Spritz", null, null, 6000m, false);
+        Guid.CreateVersion7(), "Aperol Spritz", null, null, 6000m, ProductCategory.Drink, false);
 
     // Pins the shape: the Angular client is generated from it, so renaming a
     // property here breaks the customer's screen silently.
@@ -33,6 +35,7 @@ public class MenuEndpointTests
         Assert.Equal(2, response.Body.GetProperty("items").GetArrayLength());
         Assert.Equal("Gin Tonic", response.Body.GetProperty("items")[0].GetProperty("name").GetString());
         Assert.Equal(4500m, response.Body.GetProperty("items")[0].GetProperty("price").GetDecimal());
+        Assert.Equal("Drink", response.Body.GetProperty("items")[0].GetProperty("category").GetString());
         Assert.False(response.Body.GetProperty("items")[1].GetProperty("isOrderable").GetBoolean());
     }
 

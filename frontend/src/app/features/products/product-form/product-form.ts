@@ -16,6 +16,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { PRODUCT_CATEGORY_DESCRIPTIONS } from '../../../core/menu/product-categories';
+import type { ProductCategory } from '../../../core/menu/product-categories';
 import { trimmedMinLength } from '../../../shared/forms/trimmed-min-length';
 import { IMAGE_MAX_BYTES, IMAGE_TYPES } from '../products.service';
 import type { Product } from '../products.service';
@@ -30,7 +32,7 @@ function positive(control: AbstractControl): ValidationErrors | null {
   return typeof control.value === 'number' && control.value > 0 ? null : { positive: true };
 }
 
-type Field = 'name' | 'description' | 'price' | 'stock';
+type Field = 'name' | 'description' | 'price' | 'stock' | 'category';
 
 /** Units that arrived, or the real total when it was loaded wrong. */
 type StockMode = 'add' | 'set';
@@ -39,6 +41,8 @@ type StockMode = 'add' | 'set';
 export interface ProductFormValue {
   readonly name: string;
   readonly description: string | null;
+  /** US-14: asked at creation, and correctable from the same field afterwards. */
+  readonly category: ProductCategory;
   readonly price: number;
   /** For a new product, how many there are. When correcting one, how much it moves; 0 is none. */
   readonly stock: number;
@@ -110,6 +114,8 @@ export class ProductForm {
     stock: new FormControl<number | null>(null, {
       validators: [(control) => this.stockRule(control)],
     }),
+    // US-14: obligatoria, at creation and while correcting one alike.
+    category: new FormControl<ProductCategory | null>(null, { validators: [Validators.required] }),
   });
 
   /**
@@ -137,6 +143,12 @@ export class ProductForm {
 
   protected readonly priceError = computed(() =>
     this.errorOf('price', 'El precio tiene que ser mayor a cero.'),
+  );
+
+  protected readonly categories = PRODUCT_CATEGORY_DESCRIPTIONS;
+
+  protected readonly categoryError = computed(() =>
+    this.errorOf('category', 'Elegí una categoría.'),
   );
 
   protected readonly stockError = computed(() => {
@@ -248,6 +260,9 @@ export class ProductForm {
         description: product.description ?? '',
         price: product.price,
         stock: null,
+        // The contract types it as a plain string; the API only ever sends
+        // one of the three, same reasoning as staffRoleName's lookup.
+        category: product.category as ProductCategory,
       });
       this.isAvailable.set(product.isAvailable);
     });
@@ -366,15 +381,16 @@ export class ProductForm {
 
     if (this.form.invalid || this.photoIsInvalid() || this.isSending()) return;
 
-    const { name, description, price, stock } = this.form.getRawValue();
+    const { name, description, price, stock, category } = this.form.getRawValue();
 
-    // Validators.required already rejected this above; this is only what the
+    // Validators.required already rejected these above; this is only what the
     // compiler needs to see.
-    if (price === null) return;
+    if (price === null || category === null) return;
 
     this.submitted.emit({
       name: name.trim(),
       description: description.trim() === '' ? null : description.trim(),
+      category,
       price,
       stock: this.isEditing() ? this.stockChange() : (stock ?? 0),
       photo: this.photo(),

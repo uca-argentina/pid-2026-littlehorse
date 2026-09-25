@@ -156,7 +156,7 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
     private async Task<(Venue Venue, Order Order)> AVenueWithAnOrderFor(string customer)
     {
         Venue venue = Venue.Create("Bar de prueba", $"bar-{Guid.NewGuid():N}");
-        Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20);
+        Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
 
         Order order = Order.Place(
             venue.Id,

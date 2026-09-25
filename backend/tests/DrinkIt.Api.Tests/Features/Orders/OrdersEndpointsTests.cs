@@ -21,7 +21,7 @@ public class OrdersEndpointsTests
 
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
-    private Product _gin = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20);
+    private Product _gin = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
 
     [Fact]
     public async Task ConfirmAsync_WhenTheOrderIsGood_RespondsWithItsCode()
@@ -80,7 +80,7 @@ public class OrdersEndpointsTests
     public async Task ConfirmAsync_WhenADrinkRanOut_RespondsWithConflict()
     {
         // One left on the shelf, and two asked for.
-        _gin = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 1);
+        _gin = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 1, ProductCategory.Drink);
 
         HttpResponseSnapshot response = await Confirm(ARequestFor(2));
 

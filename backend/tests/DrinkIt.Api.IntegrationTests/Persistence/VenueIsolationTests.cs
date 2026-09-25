@@ -48,8 +48,8 @@ public sealed class VenueIsolationTests(SqlServerFixture sql)
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Products.AddRange(
-            Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20),
-            Product.Create(theirs.Id, "Fernet", null, null, 4000m, 20));
+            Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink),
+            Product.Create(theirs.Id, "Fernet", null, null, 4000m, 20, ProductCategory.Drink));
         await seed.SaveChangesAsync();
 
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);

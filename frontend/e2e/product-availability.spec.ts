@@ -33,7 +33,7 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
 
   const created = await request.post('/api/staff/products', {
     headers: { Authorization: `Bearer ${token}` },
-    data: { name, description: 'Cargado por la prueba', price: 4500, stock: 20 },
+    data: { name, description: 'Cargado por la prueba', price: 4500, stock: 20, category: 'Drink' },
   });
 
   expect(created.status()).toBe(201);

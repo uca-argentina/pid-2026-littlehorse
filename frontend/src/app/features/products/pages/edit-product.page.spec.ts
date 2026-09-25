@@ -16,6 +16,7 @@ const ginTonic: Product = {
   imageUrl: 'https://images.example.com/gin-tonic.png',
   price: 4500,
   stock: 20,
+  category: 'Drink',
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
@@ -96,6 +97,10 @@ function choosePhoto(file: File): void {
 
 function press(name: RegExp): void {
   screen.getByRole('button', { name }).click();
+}
+
+function category(name: RegExp): HTMLInputElement {
+  return screen.getByRole('radio', { name }) as HTMLInputElement;
 }
 
 interface Rendered {
@@ -237,12 +242,36 @@ describe('EditProductPage', () => {
       name: 'Gin Tonic Doble',
       description: 'Gin, tónica y una rodaja de lima.',
       price: 5200,
+      category: 'Drink',
     });
     expect(products['uploadImage']).not.toHaveBeenCalled();
     expect(products['adjustStock']).not.toHaveBeenCalled();
     expect(products['markAvailable']).not.toHaveBeenCalled();
     expect(products['markUnavailable']).not.toHaveBeenCalled();
     expect(TestBed.inject(Router).url).toBe('/bar-alfa/staff/products');
+  });
+
+  // US-14: unlike the alta, this screen starts from a product that already
+  // has one, so the field opens on it instead of empty.
+  it('opens with the category the product already has selected', async () => {
+    await openScreenFor('id-2');
+
+    expect(category(/tragos/i).checked).toBe(true);
+  });
+
+  it('sends the category that was changed to', async () => {
+    const { rendered, products } = await openScreenFor('id-2');
+
+    type(/^nombre/i, 'Gin Tonic Doble');
+    type(/precio/i, '5200');
+    fireEvent.click(category(/cervezas/i));
+    press(/guardar cambios/i);
+    await rendered.fixture.whenStable();
+
+    expect(products['update']).toHaveBeenCalledWith(
+      'id-2',
+      expect.objectContaining({ category: 'Beer' }),
+    );
   });
 
   it('adds the units that arrived', async () => {

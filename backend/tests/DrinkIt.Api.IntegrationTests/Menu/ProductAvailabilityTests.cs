@@ -166,7 +166,7 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
     public async Task MarkAvailableAsync_WhenTheProductRanOut_IsRefusedAndWritesNothing()
     {
         Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
-        Product empty = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 0);
+        Product empty = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 0, ProductCategory.Drink);
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.Add(mine);
@@ -191,8 +191,8 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         // Slugs are unique platform-wide, so every test needs its own.
         Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
         Venue theirs = Venue.Create("Bar Theirs", $"bar-{Guid.NewGuid():N}");
-        Product gin = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20);
-        Product foreign = Product.Create(theirs.Id, "Gin Tonic", null, null, 4500m, 20);
+        Product gin = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
+        Product foreign = Product.Create(theirs.Id, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.AddRange(mine, theirs);

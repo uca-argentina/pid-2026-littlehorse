@@ -5,6 +5,7 @@ import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
+import { PRODUCT_CATEGORY_DESCRIPTIONS } from '../../../core/menu/product-categories';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 import { formatPrice } from '../../../shared/money/price';
@@ -20,8 +21,23 @@ interface MenuCard {
   readonly image: string;
   readonly amount: number;
   readonly price: string;
+  readonly category: string;
   readonly isOrderable: boolean;
 }
+
+/** US-14: which solapa is open. 'all' is the one the menu opens on. */
+type CategoryFilter = 'all' | (typeof PRODUCT_CATEGORY_DESCRIPTIONS)[number]['category'];
+
+interface CategoryTab {
+  readonly filter: CategoryFilter;
+  readonly name: string;
+}
+
+/** "Todos" first, and always open on it: criterion 2 of US-14. */
+const CATEGORY_TABS: readonly CategoryTab[] = [
+  { filter: 'all', name: 'Todos' },
+  ...PRODUCT_CATEGORY_DESCRIPTIONS.map(({ category, name }) => ({ filter: category, name })),
+];
 
 /**
  * The menu a customer reads after scanning the venue's QR. The first screen of
@@ -55,6 +71,11 @@ export class MenuPage {
 
   protected readonly search = signal('');
 
+  protected readonly categoryTabs = CATEGORY_TABS;
+
+  /** Opens on 'all', same as every visit: nothing about the last visit is remembered. */
+  protected readonly activeCategory = signal<CategoryFilter>('all');
+
   /**
    * A wrong address is not a bad connection. Offering "check your signal" and
    * a retry that can never succeed sends somebody to fight their network over
@@ -82,18 +103,25 @@ export class MenuPage {
 
   protected readonly cards = computed<MenuCard[]>(() => {
     const term = this.search().trim().toLowerCase();
+    const category = this.activeCategory();
 
-    return this.everything()
-      .filter((item) => term === '' || item.name.toLowerCase().includes(term))
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
-        amount: item.price,
-        price: formatPrice(item.price),
-        isOrderable: item.isOrderable,
-      }));
+    return (
+      this.everything()
+        .filter((item) => term === '' || item.name.toLowerCase().includes(term))
+        // Criterion 3: agotados incluidos — this only narrows by category, the
+        // way isOrderable already leaves sold-out and switched-off ones in.
+        .filter((item) => category === 'all' || item.category === category)
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
+          amount: item.price,
+          price: formatPrice(item.price),
+          category: item.category,
+          isOrderable: item.isOrderable,
+        }))
+    );
   });
 
   /** "1 ítem", "2 ítems". One drink is one, and the plural is not free. */
@@ -164,6 +192,10 @@ export class MenuPage {
 
   protected searchFor(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
+  }
+
+  protected openCategory(filter: CategoryFilter): void {
+    this.activeCategory.set(filter);
   }
 
   /**

@@ -228,7 +228,7 @@ export interface paths {
       cookie?: never;
     };
     get?: never;
-    /** Corrects a product's name, description and price. */
+    /** Corrects a product's name, description, price and category. */
     put: operations['UpdateProduct'];
     post?: never;
     delete?: never;
@@ -327,7 +327,8 @@ export interface components {
     };
     /**
      * @description What the administration screen posts. The image address is whatever the
-     *     upload returned, or null while there is none.
+     *     upload returned, or null while there is none. The category travels as its
+     *     name, same as StaffUsersEndpoints' role.
      */
     CreateProductRequest: {
       name: string;
@@ -337,6 +338,7 @@ export interface components {
       price: number;
       /** Format: int32 */
       stock: number;
+      category: string;
     };
     /** @description What the administration screen posts. The role travels as its name. */
     CreateStaffUserRequest: {
@@ -370,6 +372,7 @@ export interface components {
       imageUrl: null | string;
       /** Format: double */
       price: number;
+      category: string;
       isOrderable: boolean;
     };
     /**
@@ -410,6 +413,7 @@ export interface components {
       price: number;
       /** Format: int32 */
       stock: number;
+      category: string;
       isAvailable: boolean;
       isSoldOut: boolean;
       isActive: boolean;
@@ -444,15 +448,16 @@ export interface components {
       items: components['schemas']['TrackedOrderItemResponse'][];
     };
     /**
-     * @description US-08: what the correction form posts. No stock, no picture, no switches —
-     *     each of those has its own action, so a screen that only touches one of them
-     *     cannot accidentally overwrite the rest.
+     * @description US-08: what the correction form posts, plus US-14's category. No stock, no
+     *     picture, no switches — each of those has its own action, so a screen that
+     *     only touches one of them cannot accidentally overwrite the rest.
      */
     UpdateProductRequest: {
       name: string;
       description: null | string;
       /** Format: double */
       price: number;
+      category: string;
     };
   };
   responses: never;

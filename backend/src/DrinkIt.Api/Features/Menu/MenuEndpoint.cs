@@ -12,6 +12,7 @@ public sealed record MenuItemResponse(
     string? Description,
     string? ImageUrl,
     decimal Price,
+    string Category,
     bool IsOrderable);
 
 /// <summary>
@@ -67,6 +68,7 @@ internal static class MenuEndpoint
                 item.Description,
                 item.ImageUrl,
                 item.Price,
+                item.Category.ToString(),
                 item.IsOrderable))]));
     }
 

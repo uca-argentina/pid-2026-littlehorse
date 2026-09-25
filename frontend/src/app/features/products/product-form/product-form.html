@@ -50,6 +50,34 @@
         }
       </div>
 
+      <fieldset
+        class="field categories"
+        [attr.aria-invalid]="categoryError() !== null ? 'true' : null"
+        [attr.aria-describedby]="categoryError() !== null ? 'category-error' : null"
+      >
+        <legend class="label">Categoría</legend>
+        <div class="category-options">
+          @for (option of categories; track option.category) {
+            <label
+              class="category"
+              [class.category-on]="form.controls.category.value === option.category"
+            >
+              <input
+                class="radio"
+                formControlName="category"
+                type="radio"
+                name="category"
+                [value]="option.category"
+              />
+              <span>{{ option.name }}</span>
+            </label>
+          }
+        </div>
+        @if (categoryError() !== null) {
+          <p id="category-error" class="bad">{{ categoryError() }}</p>
+        }
+      </fieldset>
+
       <div class="pair">
         <div class="field">
           <label class="label" for="price">Precio</label>

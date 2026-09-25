@@ -3,7 +3,7 @@ using DrinkIt.Domain.Menu;
 
 namespace DrinkIt.Application.Menu;
 
-public sealed record UpdateProductCommand(Guid ProductId, string Name, string? Description, decimal Price);
+public sealed record UpdateProductCommand(Guid ProductId, string Name, string? Description, decimal Price, ProductCategory Category);
 
 /// <summary>
 /// US-08: corrects a product's name, description and price. The picture is
@@ -30,7 +30,7 @@ public sealed class UpdateProductHandler(IProductRepository products)
         // Whatever is left wrong with the data is a broken domain invariant,
         // and Update throws. The API turns that into a 400; restating the
         // rules here would be a second copy that drifts.
-        product.Update(name, command.Description, command.Price);
+        product.Update(name, command.Description, command.Price, command.Category);
 
         await products.SaveChangesAsync(cancellationToken);
 

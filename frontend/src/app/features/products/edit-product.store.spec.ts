@@ -15,13 +15,14 @@ const ginTonic: Product = {
   imageUrl: null,
   price: 4500,
   stock: 20,
+  category: 'Drink',
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
 };
 
 const onlyTheCorrection: ProductChanges = {
-  correction: { name: 'Gin Tonic Doble', description: null, price: 5200 },
+  correction: { name: 'Gin Tonic Doble', description: null, price: 5200, category: 'Drink' },
   photo: null,
   stockChange: 0,
   isAvailable: null,

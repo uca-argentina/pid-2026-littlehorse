@@ -28,7 +28,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Venue mine = await SeedVenue();
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
-        seed.Products.Add(Product.Create(mine.Id, "Gin Tonic", "Gin, tónica, lima", null, 4500m, 20));
+        seed.Products.Add(Product.Create(mine.Id, "Gin Tonic", "Gin, tónica, lima", null, 4500m, 20, ProductCategory.Drink));
         await seed.SaveChangesAsync();
 
         MenuItem item = (await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None))
@@ -48,8 +48,8 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Venue mine = await SeedVenue();
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
-        Product gone = Product.Create(mine.Id, "Daiquiri", null, null, 4000m, 5);
-        seed.Products.AddRange(gone, Product.Create(mine.Id, "Negroni", null, null, 5000m, 5));
+        Product gone = Product.Create(mine.Id, "Daiquiri", null, null, 4000m, 5, ProductCategory.Drink);
+        seed.Products.AddRange(gone, Product.Create(mine.Id, "Negroni", null, null, 5000m, 5, ProductCategory.Drink));
         TakeOffTheMenu(seed, gone);
         await seed.SaveChangesAsync();
 
@@ -76,7 +76,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Venue mine = await SeedVenue();
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
-        Product product = Product.Create(mine.Id, "Aperol Spritz", null, null, 6000m, stock);
+        Product product = Product.Create(mine.Id, "Aperol Spritz", null, null, 6000m, stock, ProductCategory.Drink);
         seed.Products.Add(product);
 
         if (!available) product.MarkUnavailable();
@@ -99,8 +99,8 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Products.AddRange(
-            Product.Create(mine.Id, "Lo mio", null, null, 1000m, 5),
-            Product.Create(theirs.Id, "Lo de ellos", null, null, 1000m, 5));
+            Product.Create(mine.Id, "Lo mio", null, null, 1000m, 5, ProductCategory.Drink),
+            Product.Create(theirs.Id, "Lo de ellos", null, null, 1000m, 5, ProductCategory.Drink));
         await seed.SaveChangesAsync();
 
         IReadOnlyList<MenuItem> menu = await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None);

@@ -37,6 +37,9 @@ async function fillTheForm(page: Page, name: string, price: string, stock: strin
   await page
     .getByRole('textbox', { name: /descripción/i })
     .fill('Gin, tónica y una rodaja de lima.');
+  // US-14: obligatoria al cargar. Tragos, the same as the migration's default
+  // for what was loaded before the field existed.
+  await page.getByRole('radio', { name: /tragos/i }).check();
   await page.getByRole('spinbutton', { name: /precio/i }).fill(price);
   await page.getByRole('spinbutton', { name: /stock/i }).fill(stock);
   await page.getByRole('button', { name: /crear producto/i }).click();
@@ -189,6 +192,20 @@ test.describe('Products', () => {
     await expect(page).toHaveURL(new RegExp(`${productsPath}/new$`));
   });
 
+  // US-14, criterion 1: obligatoria al cargar un producto.
+  test('does not save without a category chosen, and says why', async ({ page }) => {
+    await logInAsTheAdministrator(page);
+
+    await page.goto(`${productsPath}/new`);
+    await page.getByRole('textbox', { name: /^nombre/i }).fill(aNewProductName());
+    await page.getByRole('spinbutton', { name: /precio/i }).fill('4500');
+    await page.getByRole('spinbutton', { name: /stock/i }).fill('20');
+    await page.getByRole('button', { name: /crear producto/i }).click();
+
+    await expect(page.getByText(/elegí una categoría/i)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${productsPath}/new$`));
+  });
+
   // Criterion 3.
   test('does not save without a name', async ({ page }) => {
     await logInAsTheAdministrator(page);
@@ -226,6 +243,31 @@ test.describe('Products', () => {
     const row = page.getByRole('listitem').filter({ hasText: newName });
     await expect(row).toBeVisible();
     await expect(row).toContainText('3.800');
+  });
+
+  // US-14: the field this story adds to the correction screen, checked all
+  // the way to the tab the customer finds the product under.
+  test('changes the category of a product that already exists', async ({ page }) => {
+    const name = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await fillTheForm(page, name, '4500', '20');
+
+    const row = page.getByRole('listitem').filter({ hasText: name });
+    await row.getByRole('link', { name: /editar/i }).click();
+    await expect(page.getByRole('radio', { name: /tragos/i })).toBeChecked();
+
+    await page.getByRole('radio', { name: /cervezas/i }).check();
+    await page.getByRole('button', { name: /guardar cambios/i }).click();
+    await expect(page).toHaveURL(new RegExp(`${productsPath}$`));
+
+    await page.goto(`/${seededVenueSlug}/menu`);
+    await page.getByRole('tab', { name: 'Cervezas' }).click();
+    await expect(page.getByRole('listitem').filter({ hasText: name })).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Tragos' }).click();
+    await expect(page.getByRole('listitem').filter({ hasText: name })).toHaveCount(0);
   });
 
   // US-08, criterion 3: the customer stops seeing it, and the administration

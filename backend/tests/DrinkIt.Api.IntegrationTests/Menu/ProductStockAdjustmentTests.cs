@@ -124,8 +124,8 @@ public sealed class ProductStockAdjustmentTests(SqlServerFixture sql)
         // Slugs are unique platform-wide, so every test needs its own.
         Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
         Venue theirs = Venue.Create("Bar Theirs", $"bar-{Guid.NewGuid():N}");
-        Product gin = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, stock);
-        Product foreign = Product.Create(theirs.Id, "Gin Tonic", null, null, 4500m, stock);
+        Product gin = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, stock, ProductCategory.Drink);
+        Product foreign = Product.Create(theirs.Id, "Gin Tonic", null, null, 4500m, stock, ProductCategory.Drink);
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.AddRange(mine, theirs);

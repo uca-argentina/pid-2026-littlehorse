@@ -20,6 +20,7 @@ const carta: Menu = {
       description: 'Gin, tónica, lima',
       imageUrl: 'https://images.example.com/gin.png',
       price: 4500,
+      category: 'Drink',
       isOrderable: true,
     },
     {
@@ -28,6 +29,7 @@ const carta: Menu = {
       description: 'Medida doble',
       imageUrl: null,
       price: 4000,
+      category: 'Drink',
       isOrderable: true,
     },
     {
@@ -36,6 +38,7 @@ const carta: Menu = {
       description: null,
       imageUrl: null,
       price: 6000,
+      category: 'Drink',
       isOrderable: false,
     },
   ],
@@ -229,6 +232,89 @@ describe('MenuPage', () => {
 
       expect(screen.getByRole('status').textContent).toContain('No encontramos');
       expect(screen.queryByText(/todavía no cargó/i)).toBeNull();
+    });
+  });
+
+  describe('categories', () => {
+    const mixedMenu: Menu = {
+      venueName: 'Bar Alfa',
+      items: [
+        {
+          id: 'id-1',
+          name: 'Gin Tonic',
+          description: null,
+          imageUrl: null,
+          price: 4500,
+          category: 'Drink',
+          isOrderable: true,
+        },
+        {
+          id: 'id-2',
+          name: 'Imperial',
+          description: null,
+          imageUrl: null,
+          price: 3000,
+          category: 'Beer',
+          isOrderable: true,
+        },
+        {
+          id: 'id-3',
+          name: 'Agua con gas',
+          description: null,
+          imageUrl: null,
+          price: 2000,
+          category: 'NonAlcoholic',
+          isOrderable: false,
+        },
+      ],
+    };
+
+    function tab(name: RegExp): HTMLButtonElement {
+      return screen.getByRole('tab', { name }) as HTMLButtonElement;
+    }
+
+    // US-14, criterion 2.
+    it('offers a solapa for each category plus Todos, and opens on Todos', async () => {
+      await openScreenShowing(mixedMenu);
+
+      expect(tab(/todos/i).getAttribute('aria-selected')).toBe('true');
+      expect(tab(/tragos/i)).not.toBeNull();
+      expect(tab(/cervezas/i)).not.toBeNull();
+      expect(tab(/sin alcohol/i)).not.toBeNull();
+      expect(names()).toEqual(['Gin Tonic', 'Imperial', 'Agua con gas']);
+    });
+
+    // US-14, criterion 3: agotados incluidos.
+    it('narrows to the chosen category, sold-out drinks included', async () => {
+      const rendered = await openScreenShowing(mixedMenu);
+
+      tab(/cervezas/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(names()).toEqual(['Imperial']);
+
+      tab(/sin alcohol/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(names()).toEqual(['Agua con gas']);
+    });
+
+    it('goes back to showing everything from Todos', async () => {
+      const rendered = await openScreenShowing(mixedMenu);
+
+      tab(/cervezas/i).click();
+      await rendered.fixture.whenStable();
+      tab(/todos/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(names()).toEqual(['Gin Tonic', 'Imperial', 'Agua con gas']);
+    });
+
+    // No count anywhere on this strip, unlike administration's pills.
+    it('sends no stock or product count on the tabs', async () => {
+      await openScreenShowing(mixedMenu);
+
+      expect(tab(/tragos/i).textContent?.trim()).toBe('Tragos');
     });
   });
 

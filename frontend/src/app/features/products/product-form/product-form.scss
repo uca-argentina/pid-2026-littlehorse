@@ -130,6 +130,52 @@
   text-transform: uppercase;
 }
 
+// The three fixed categories, as pills with a real radio inside — not a
+// hidden one behind the pill: a control that only a label click can reach
+// cannot be found and driven directly by role, which is how both the E2E
+// spec and any assistive tool locate it. Same reasoning as new-staff-user's
+// role fieldset, whose .radio this copies.
+.categories {
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.category-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  margin-top: 7px;
+}
+
+.category {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-ink);
+  color: var(--dk-text-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.category-on {
+  border-color: var(--dk-pill-on-border);
+  background: var(--dk-pill-on-surface);
+  color: var(--dk-text);
+  font-weight: 700;
+}
+
+.radio {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--dk-accent);
+}
+
 .switch-row {
   display: flex;
   align-items: center;

@@ -414,9 +414,9 @@ public class ConfirmOrderHandlerTests
     /// </summary>
     private sealed class Catalog(int gin, int fernet) : IProductsForOrdering
     {
-        public Product Gin { get; } = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, gin);
+        public Product Gin { get; } = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, gin, ProductCategory.Drink);
 
-        public Product Fernet { get; } = Product.Create(TheVenue, "Fernet con Coca", null, null, 4000m, fernet);
+        public Product Fernet { get; } = Product.Create(TheVenue, "Fernet con Coca", null, null, 4000m, fernet, ProductCategory.Drink);
 
         /// <summary>
         /// The soft delete, written from outside because US-08 has not built

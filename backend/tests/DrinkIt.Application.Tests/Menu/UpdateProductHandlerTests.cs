@@ -10,7 +10,7 @@ public class UpdateProductHandlerTests
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
     private static Product AGinTonic() =>
-        Product.Create(TheVenue, "Gin Tonic", "Gin, tonic and a slice of lime.", null, 4500m, 20);
+        Product.Create(TheVenue, "Gin Tonic", "Gin, tonic and a slice of lime.", null, 4500m, 20, ProductCategory.Drink);
 
     [Fact]
     public async Task HandleAsync_WhenValid_UpdatesAndSaves()
@@ -19,12 +19,13 @@ public class UpdateProductHandlerTests
         Fake.Products products = new(product);
 
         Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(product.Id, "Fernet con Coca", "Medida doble.", 3800m),
+            new UpdateProductCommand(product.Id, "Fernet con Coca", "Medida doble.", 3800m, ProductCategory.Beer),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Fernet con Coca", result.Value.Name);
         Assert.Equal(3800m, result.Value.Price);
+        Assert.Equal(ProductCategory.Beer, result.Value.Category);
         Assert.True(products.Saved);
     }
 
@@ -34,7 +35,7 @@ public class UpdateProductHandlerTests
         Fake.Products products = new(AGinTonic());
 
         Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(Guid.CreateVersion7(), "Fernet con Coca", null, 3800m),
+            new UpdateProductCommand(Guid.CreateVersion7(), "Fernet con Coca", null, 3800m, ProductCategory.Drink),
             CancellationToken.None);
 
         Assert.Equal(ProductErrors.NotFound, result.Error);
@@ -49,7 +50,7 @@ public class UpdateProductHandlerTests
         Fake.Products products = new(product) { NameExistsAnswer = true };
 
         Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(product.Id, "Gin Tonic", null, 5000m),
+            new UpdateProductCommand(product.Id, "Gin Tonic", null, 5000m, ProductCategory.Drink),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -64,7 +65,7 @@ public class UpdateProductHandlerTests
         Fake.Products products = new(product) { NameExistsAnswer = true };
 
         Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(product.Id, "GIN TONIC", null, 5000m),
+            new UpdateProductCommand(product.Id, "GIN TONIC", null, 5000m, ProductCategory.Drink),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -77,7 +78,7 @@ public class UpdateProductHandlerTests
         Fake.Products products = new(product) { NameExistsAnswer = true };
 
         Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(product.Id, "Fernet con Coca", null, 3800m),
+            new UpdateProductCommand(product.Id, "Fernet con Coca", null, 3800m, ProductCategory.Drink),
             CancellationToken.None);
 
         Assert.Equal(CreateProductHandler.NameTaken, result.Error);
@@ -94,7 +95,7 @@ public class UpdateProductHandlerTests
         Fake.Products products = new(product);
 
         DomainException error = await Assert.ThrowsAsync<DomainException>(() => new UpdateProductHandler(products)
-            .HandleAsync(new UpdateProductCommand(product.Id, "Gin Tonic", null, 0m), CancellationToken.None));
+            .HandleAsync(new UpdateProductCommand(product.Id, "Gin Tonic", null, 0m, ProductCategory.Drink), CancellationToken.None));
 
         Assert.Equal(Product.ErrorCodes.PriceNotPositive, error.Code);
         Assert.False(products.Saved);

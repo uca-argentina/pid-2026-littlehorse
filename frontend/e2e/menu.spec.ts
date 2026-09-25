@@ -14,7 +14,12 @@ function aNewProduct(): string {
   return `E2E ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 }
 
-async function loadProduct(request: APIRequestContext, name: string, stock: number): Promise<void> {
+async function loadProduct(
+  request: APIRequestContext,
+  name: string,
+  stock: number,
+  category: 'Drink' | 'Beer' | 'NonAlcoholic' = 'Drink',
+): Promise<void> {
   const login = await request.post(`/api/${seededVenueSlug}/auth/login`, {
     data: { username: seededAdminUsername, password: seededAdminPassword() },
   });
@@ -22,7 +27,7 @@ async function loadProduct(request: APIRequestContext, name: string, stock: numb
 
   const created = await request.post('/api/staff/products', {
     headers: { Authorization: `Bearer ${token}` },
-    data: { name, description: 'Cargado por la prueba', price: 4500, stock },
+    data: { name, description: 'Cargado por la prueba', price: 4500, stock, category },
   });
 
   expect(created.status()).toBe(201);
@@ -201,5 +206,34 @@ test.describe('Menu', () => {
     await page.goto('/bar-que-no-existe/menu');
 
     await expect(page.getByTestId('order-summary')).toHaveCount(0);
+  });
+
+  // US-14, criteria 2 and 3, end to end against the real API.
+  test('groups the menu into tabs by category, sold-out drinks included', async ({
+    page,
+    request,
+  }) => {
+    const drink = aNewProduct();
+    const beer = aNewProduct();
+    const nonAlcoholic = aNewProduct();
+    await loadProduct(request, drink, 10, 'Drink');
+    await loadProduct(request, beer, 0, 'Beer');
+    await loadProduct(request, nonAlcoholic, 5, 'NonAlcoholic');
+
+    await page.goto(menuPath);
+
+    // Opens on Todos, with everything in it.
+    await expect(page.getByRole('tab', { name: 'Todos' })).toHaveAttribute('aria-selected', 'true');
+    await expect(card(page, drink)).toBeVisible();
+    await expect(card(page, beer)).toBeVisible();
+    await expect(card(page, nonAlcoholic)).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Cervezas' }).click();
+
+    // Sold out and still there: the tab narrows by category, not by stock.
+    await expect(card(page, beer)).toBeVisible();
+    await expect(card(page, beer)).toContainText(/sin stock/i);
+    await expect(card(page, drink)).toHaveCount(0);
+    await expect(card(page, nonAlcoholic)).toHaveCount(0);
   });
 });

@@ -15,6 +15,7 @@ const created: Product = {
   imageUrl: null,
   price: 4500,
   stock: 20,
+  category: 'Drink',
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
@@ -67,11 +68,16 @@ function type(label: RegExp, value: string): void {
   fireEvent.input(field(label), { target: { value } });
 }
 
+function category(name: RegExp): HTMLInputElement {
+  return screen.getByRole('radio', { name }) as HTMLInputElement;
+}
+
 function fillAGinTonic(): void {
   type(/^nombre/i, 'Gin Tonic');
   type(/descripción/i, 'Gin, tónica y una rodaja de lima.');
   type(/precio/i, '4500');
   type(/stock/i, '20');
+  fireEvent.click(category(/tragos/i));
 }
 
 function save(): void {
@@ -86,12 +92,14 @@ describe('NewProductPage', () => {
     type(/descripción/i, 'Gin, tónica y una rodaja de lima.');
     type(/precio/i, '4500');
     type(/stock/i, '20');
+    fireEvent.click(category(/tragos/i));
     save();
 
     expect(create).toHaveBeenCalledWith({
       name: 'Gin Tonic',
       description: 'Gin, tónica y una rodaja de lima.',
       imageUrl: null,
+      category: 'Drink',
       price: 4500,
       stock: 20,
     });
@@ -105,6 +113,7 @@ describe('NewProductPage', () => {
     type(/^nombre/i, 'Gin Tonic');
     type(/precio/i, '4500');
     type(/stock/i, '20');
+    fireEvent.click(category(/tragos/i));
     save();
 
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ description: null }));
@@ -179,6 +188,7 @@ describe('NewProductPage', () => {
     type(/^nombre/i, 'Gin Tonic');
     type(/precio/i, '4500');
     type(/stock/i, '0');
+    fireEvent.click(category(/tragos/i));
     save();
 
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ stock: 0 }));
@@ -359,8 +369,43 @@ describe('NewProductPage', () => {
       name: 'Gin Tonic',
       description: 'Gin, tónica y una rodaja de lima.',
       imageUrl: null,
+      category: 'Drink',
       price: 4500,
       stock: 20,
     });
+  });
+
+  // US-14, criterion 1: loading a product asks for its category.
+  it('offers the three categories a venue sells under', async () => {
+    await openScreen();
+
+    expect(category(/tragos/i)).not.toBeNull();
+    expect(category(/cervezas/i)).not.toBeNull();
+    expect(category(/sin alcohol/i)).not.toBeNull();
+  });
+
+  it('refuses to save without a category chosen, and says why', async () => {
+    const { rendered, create } = await openScreen();
+
+    type(/^nombre/i, 'Gin Tonic');
+    type(/precio/i, '4500');
+    type(/stock/i, '20');
+    save();
+    await rendered.fixture.whenStable();
+
+    expect(create).not.toHaveBeenCalled();
+    expect(screen.getByText(/elegí una categoría/i)).not.toBeNull();
+  });
+
+  it('sends the category that was picked', async () => {
+    const { create } = await openScreen();
+
+    type(/^nombre/i, 'Gin Tonic');
+    type(/precio/i, '4500');
+    type(/stock/i, '20');
+    fireEvent.click(category(/cervezas/i));
+    save();
+
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ category: 'Beer' }));
   });
 });

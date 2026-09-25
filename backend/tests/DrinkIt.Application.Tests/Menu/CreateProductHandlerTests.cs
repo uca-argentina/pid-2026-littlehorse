@@ -9,8 +9,10 @@ public class CreateProductHandlerTests
 {
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
-    private static CreateProductCommand AGinTonic(string name = "Gin Tonic") =>
-        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", 4500m, 20);
+    private static CreateProductCommand AGinTonic(
+        string name = "Gin Tonic",
+        ProductCategory category = ProductCategory.Drink) =>
+        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", 4500m, 20, category);
 
     [Fact]
     public async Task HandleAsync_WhenTheDataIsValid_AddsTheProductToTheVenueOfTheSignedInAdministrator()
@@ -26,6 +28,22 @@ public class CreateProductHandlerTests
         Assert.Equal("https://images.example.com/gin-tonic.jpg", products.Added.ImageUrl);
         Assert.Equal(4500m, products.Added.Price);
         Assert.Equal(20, products.Added.Stock);
+    }
+
+    // US-14: the category typed into the alta form ends up on the product.
+    [Theory]
+    [InlineData(ProductCategory.Drink)]
+    [InlineData(ProductCategory.Beer)]
+    [InlineData(ProductCategory.NonAlcoholic)]
+    public async Task HandleAsync_WhenTheDataIsValid_KeepsTheChosenCategory(ProductCategory category)
+    {
+        Fake.Products products = new();
+
+        Result<ProductSummary> result = await HandlerOver(products).HandleAsync(
+            AGinTonic(category: category), CancellationToken.None);
+
+        Assert.Equal(category, products.Added!.Category);
+        Assert.Equal(category, result.Value.Category);
     }
 
     // US-06, criterion 1: it shows up on the menu right after saving, so it

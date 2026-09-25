@@ -8,7 +8,7 @@ public class DeactivateProductHandlerTests
 {
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
-    private static Product AGinTonic() => Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20);
+    private static Product AGinTonic() => Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
 
     [Fact]
     public async Task HandleAsync_WhenTheProductExists_DeactivatesAndSaves()

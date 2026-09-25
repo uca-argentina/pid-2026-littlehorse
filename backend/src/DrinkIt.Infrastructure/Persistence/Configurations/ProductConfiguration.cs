@@ -24,6 +24,9 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         // the last drink from being sold twice is the conditional update in
         // OrderRepository, which only the sale performs.
         builder.Property(product => product.Stock).IsRequired();
+        // US-14, criterion 4: what was loaded before categories existed lands
+        // in Tragos, not in an undefined zero the domain would reject.
+        builder.Property(product => product.Category).IsRequired().HasDefaultValue(ProductCategory.Drink);
         builder.Property(product => product.IsAvailable).IsRequired();
         builder.Property(product => product.IsActive).IsRequired();
 

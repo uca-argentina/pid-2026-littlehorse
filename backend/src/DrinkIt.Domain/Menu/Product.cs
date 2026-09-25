@@ -29,6 +29,7 @@ public sealed class Product : IBelongsToVenue
         public const string StockChangeZero = "product.stock_change_zero";
         public const string ImageUrlInvalid = "product.image_url_invalid";
         public const string SoldOutCannotBeAvailable = "product.sold_out_cannot_be_available";
+        public const string CategoryInvalid = "product.category_invalid";
     }
 
     /// <summary>Read on a phone, at night, in a hurry: a name has to fit on one line of a card.</summary>
@@ -43,7 +44,8 @@ public sealed class Product : IBelongsToVenue
         string? description,
         string? imageUrl,
         decimal price,
-        int stock)
+        int stock,
+        ProductCategory category)
     {
         Id = id;
         VenueId = venueId;
@@ -52,6 +54,7 @@ public sealed class Product : IBelongsToVenue
         ImageUrl = imageUrl;
         Price = price;
         Stock = stock;
+        Category = category;
         IsAvailable = true;
         IsActive = true;
     }
@@ -74,6 +77,9 @@ public sealed class Product : IBelongsToVenue
     public decimal Price { get; private set; }
 
     public int Stock { get; private set; }
+
+    /// <summary>US-14: which of the customer's three tabs this product shows under.</summary>
+    public ProductCategory Category { get; private set; }
 
     /// <summary>True when the venue can serve it tonight. Independent of stock.</summary>
     public bool IsAvailable { get; private set; }
@@ -102,7 +108,8 @@ public sealed class Product : IBelongsToVenue
         string? description,
         string? imageUrl,
         decimal price,
-        int stock)
+        int stock,
+        ProductCategory category)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Products must belong to a venue.");
         string cleanName = ValidateName(name);
@@ -111,12 +118,13 @@ public sealed class Product : IBelongsToVenue
         ValidatePrice(price);
 
         if (stock < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
+        if (!Enum.IsDefined(category)) throw new DomainException(ErrorCodes.CategoryInvalid, $"'{category}' is not a valid product category.");
 
         string? cleanImageUrl = BlankToNull(imageUrl);
 
         if (cleanImageUrl is not null) EnsureAbsoluteHttpUrl(cleanImageUrl);
 
-        return new Product(Guid.CreateVersion7(), venueId, cleanName, cleanDescription, cleanImageUrl, price, stock);
+        return new Product(Guid.CreateVersion7(), venueId, cleanName, cleanDescription, cleanImageUrl, price, stock, category);
     }
 
     /// <summary>
@@ -139,21 +147,23 @@ public sealed class Product : IBelongsToVenue
     }
 
     /// <summary>
-    /// US-08: the name, description and price a customer reads. Stock, the
-    /// picture and the two switches each have their own dedicated method — a
-    /// single "update everything" invites forgetting one of them halfway
-    /// through a screen.
+    /// US-08: the name, description and price a customer reads, plus US-14's
+    /// category. Stock, the picture and the two switches each have their own
+    /// dedicated method — a single "update everything" invites forgetting one
+    /// of them halfway through a screen.
     /// </summary>
-    public void Update(string name, string? description, decimal price)
+    public void Update(string name, string? description, decimal price, ProductCategory category)
     {
         string cleanName = ValidateName(name);
         string? cleanDescription = ValidateDescription(description);
 
         ValidatePrice(price);
+        if (!Enum.IsDefined(category)) throw new DomainException(ErrorCodes.CategoryInvalid, $"'{category}' is not a valid product category.");
 
         Name = cleanName;
         Description = cleanDescription;
         Price = price;
+        Category = category;
     }
 
     /// <summary>

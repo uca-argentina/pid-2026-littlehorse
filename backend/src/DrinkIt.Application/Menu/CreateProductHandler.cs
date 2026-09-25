@@ -8,7 +8,8 @@ public sealed record CreateProductCommand(
     string? Description,
     string? ImageUrl,
     decimal Price,
-    int Stock);
+    int Stock,
+    ProductCategory Category);
 
 /// <summary>
 /// Adds a product to the menu of the venue the signed-in administrator belongs
@@ -41,7 +42,8 @@ public sealed class CreateProductHandler(IProductRepository products, ICurrentVe
             command.Description,
             command.ImageUrl,
             command.Price,
-            command.Stock);
+            command.Stock,
+            command.Category);
 
         await products.AddAsync(product, cancellationToken);
 
