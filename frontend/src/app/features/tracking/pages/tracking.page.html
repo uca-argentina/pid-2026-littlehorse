@@ -1,14 +1,32 @@
 <div class="frame">
   <main class="body">
     @if (store.status() === 'nowhere') {
+      <!--
+        Only a link that never worked reaches this. One that stops working on an
+        order already on screen is the journey ending, and is drawn as one.
+      -->
       <p class="note note-bad" role="alert">
-        Ese enlace no lleva a ningún pedido. Puede que ya te lo hayan entregado, o que el enlace
-        esté incompleto.
+        Ese enlace no lleva a ningún pedido. Puede que esté incompleto: fijate que hayas copiado la
+        dirección entera.
       </p>
 
       <a class="ghost" [routerLink]="menuLink()">Ver la carta</a>
     } @else if (store.order() === null) {
-      <p class="note" role="status">Buscando tu pedido…</p>
+      <!--
+        Nothing on screen yet and the connection is down. Once there is an order
+        to show, the quiet note at the bottom covers this instead: what is on
+        screen is still true, just a few seconds old. Here there is nothing, so
+        staying on "Buscando…" would look like the app is working when it is not.
+      -->
+      @if (store.status() === 'unreachable') {
+        <p class="note note-bad" role="alert">
+          Sin señal. No pudimos traer el estado de tu pedido todavía. Seguimos intentando solos.
+        </p>
+
+        <button class="ghost" type="button" (click)="store.askAgain()">Reintentar ahora</button>
+      } @else {
+        <p class="note" role="status">Buscando tu pedido…</p>
+      }
     } @else {
       <div class="tick" aria-hidden="true">
         <svg
@@ -31,20 +49,14 @@
 
       <p class="what what-now" role="status">{{ whatIsHappening() }}</p>
 
-      <!--
-        A cancelled order is not a journey that stalled at a step: drawing the
-        four with none of them reached would say it is still coming.
-      -->
-      @if (!wasCancelled()) {
-        <ol class="journey">
-          @for (step of steps(); track step.name) {
-            <li class="step" [class.step-done]="step.reached" [attr.data-reached]="step.reached">
-              <span class="dot" aria-hidden="true"></span>
-              <span class="step-name">{{ step.name }}</span>
-            </li>
-          }
-        </ol>
-      }
+      <ol class="journey">
+        @for (step of steps(); track step.name) {
+          <li class="step" [class.step-done]="step.reached" [attr.data-reached]="step.reached">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="step-name">{{ step.name }}</span>
+          </li>
+        }
+      </ol>
 
       <!--
         Said once, quietly, and only while the connection is down: the order is

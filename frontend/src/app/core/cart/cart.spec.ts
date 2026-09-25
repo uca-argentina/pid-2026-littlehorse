@@ -178,6 +178,50 @@ describe('Cart', () => {
     expect(cart.isEmpty()).toBe(true);
   });
 
+  /**
+   * Valid JSON of the wrong shape.
+   *
+   * What is in a browser's storage was written by whatever version of the app
+   * the phone happened to open last, and it outlives the code that wrote it.
+   * Parsing it is not the same as it being an order: a line missing its price
+   * would total NaN on screen, and one missing its id would break the stepper.
+   * Better to start empty, which is what an unreadable cart already does.
+   */
+  it('starts clean when what was stored is not an order', () => {
+    store.entries.set(
+      `${CART_STORAGE_PREFIX}bar-alfa`,
+      JSON.stringify([{ productId: 'p-1', name: 'Gin Tonic' }]),
+    );
+
+    const cart = aCart();
+    cart.open('bar-alfa');
+
+    expect(cart.isEmpty()).toBe(true);
+  });
+
+  it('keeps only the lines that are whole', () => {
+    store.entries.set(
+      `${CART_STORAGE_PREFIX}bar-alfa`,
+      JSON.stringify([
+        {
+          productId: 'p-1',
+          name: 'Gin Tonic',
+          imageUrl: null,
+          unitPrice: 4500,
+          quantity: 2,
+          note: null,
+        },
+        { productId: 'p-2', name: 'Fernet' },
+      ]),
+    );
+
+    const cart = aCart();
+    cart.open('bar-alfa');
+
+    expect(cart.count()).toBe(2);
+    expect(cart.total()).toBe(9000);
+  });
+
   describe('taking things out', () => {
     // US-10, criterion 2, done from the menu card itself.
     it('lowers the quantity by one', () => {

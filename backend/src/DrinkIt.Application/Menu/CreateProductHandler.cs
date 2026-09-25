@@ -10,18 +10,6 @@ public sealed record CreateProductCommand(
     decimal Price,
     int Stock);
 
-/// <summary>The new product as the administration listing shows it.</summary>
-public sealed record CreatedProduct(
-    Guid Id,
-    string Name,
-    string? Description,
-    string? ImageUrl,
-    decimal Price,
-    int Stock,
-    bool IsAvailable,
-    bool IsSoldOut,
-    bool IsActive);
-
 /// <summary>
 /// Adds a product to the menu of the venue the signed-in administrator belongs
 /// to. The venue comes from <see cref="ICurrentVenue"/>, which reads the token
@@ -33,7 +21,7 @@ public sealed class CreateProductHandler(IProductRepository products, ICurrentVe
     public static readonly Error NameTaken =
         new("product.name_taken", "This venue already sells a product with that name.");
 
-    public async Task<Result<CreatedProduct>> HandleAsync(
+    public async Task<Result<ProductSummary>> HandleAsync(
         CreateProductCommand command,
         CancellationToken cancellationToken)
     {
@@ -57,15 +45,6 @@ public sealed class CreateProductHandler(IProductRepository products, ICurrentVe
 
         await products.AddAsync(product, cancellationToken);
 
-        return new CreatedProduct(
-            product.Id,
-            product.Name,
-            product.Description,
-            product.ImageUrl,
-            product.Price,
-            product.Stock,
-            product.IsAvailable,
-            product.IsSoldOut,
-            product.IsActive);
+        return ProductSummary.Of(product);
     }
 }

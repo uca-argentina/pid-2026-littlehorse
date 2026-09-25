@@ -3,6 +3,7 @@ import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core'
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { Router } from '@angular/router';
+import { problemTypeOf } from '../../core/api/problem-type-of';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { ProductsService } from './products.service';
 import type { NewProduct } from './products.service';
@@ -96,5 +97,5 @@ export class NewProductStore {
 function reasonFor(error: unknown): NewProductStatus {
   if (!(error instanceof HttpErrorResponse)) return 'unreachable';
 
-  return error.error?.type === ProblemTypes.productNameTaken ? 'nameTaken' : 'unreachable';
+  return problemTypeOf(error) === ProblemTypes.productNameTaken ? 'nameTaken' : 'unreachable';
 }

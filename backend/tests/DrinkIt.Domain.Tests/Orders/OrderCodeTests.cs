@@ -76,6 +76,42 @@ public class OrderCodeTests
         Assert.Equal(OrderCode.ErrorCodes.Invalid, error.Code);
     }
 
+    /// <summary>
+    /// What a code typed by somebody else goes through.
+    /// </summary>
+    /// <remarks>
+    /// A code that arrives in a URL is not a broken invariant — it is a stranger
+    /// guessing, or a link that got cut in half in a chat app. That is an answer
+    /// of "no such order", not an exception, so there is a way to ask without
+    /// one being thrown.
+    /// </remarks>
+    [Theory]
+    [InlineData("A-0000")]
+    [InlineData("K-4821")]
+    [InlineData("Z-9999")]
+    public void TryParse_WhenTheShapeIsRight_ReadsItBack(string value)
+    {
+        Assert.True(OrderCode.TryParse(value, out OrderCode? code));
+        Assert.Equal(value, code!.Value);
+    }
+
+    [Theory]
+    [InlineData("A0000")]
+    [InlineData("a-0000")]
+    [InlineData("k-4821")]
+    [InlineData("1-0000")]
+    [InlineData("A-000")]
+    [InlineData("A-00000")]
+    [InlineData("A-00A0")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void TryParse_WhenTheShapeIsWrong_SaysSoInsteadOfThrowing(string? value)
+    {
+        Assert.False(OrderCode.TryParse(value, out OrderCode? code));
+        Assert.Null(code);
+    }
+
     // Two codes are the same code when they read the same: what the bar
     // compares is the string on the screen, not which object made it.
     [Fact]

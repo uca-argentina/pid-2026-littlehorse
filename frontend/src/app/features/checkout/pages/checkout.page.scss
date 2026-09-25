@@ -21,8 +21,8 @@
 
 .back {
   display: flex;
-  width: 42px;
-  height: 42px;
+  width: var(--dk-tap-min);
+  height: var(--dk-tap-min);
   flex-shrink: 0;
   align-items: center;
   justify-content: center;

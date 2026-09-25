@@ -17,7 +17,7 @@ public class CreateProductHandlerTests
     {
         Fake.Products products = new();
 
-        Result<CreatedProduct> result = await HandlerOver(products).HandleAsync(AGinTonic(), CancellationToken.None);
+        Result<ProductSummary> result = await HandlerOver(products).HandleAsync(AGinTonic(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(TheVenue, products.Added!.VenueId);
@@ -46,7 +46,7 @@ public class CreateProductHandlerTests
     {
         Fake.Products products = new(taken: "Gin Tonic");
 
-        Result<CreatedProduct> result = await HandlerOver(products).HandleAsync(AGinTonic(), CancellationToken.None);
+        Result<ProductSummary> result = await HandlerOver(products).HandleAsync(AGinTonic(), CancellationToken.None);
 
         Assert.Equal(CreateProductHandler.NameTaken, result.Error);
         Assert.Null(products.Added);
@@ -63,7 +63,7 @@ public class CreateProductHandlerTests
     {
         Fake.Products products = new(taken: "Gin Tonic");
 
-        Result<CreatedProduct> result = await HandlerOver(products).HandleAsync(AGinTonic(name), CancellationToken.None);
+        Result<ProductSummary> result = await HandlerOver(products).HandleAsync(AGinTonic(name), CancellationToken.None);
 
         Assert.Equal(CreateProductHandler.NameTaken, result.Error);
     }
@@ -89,7 +89,7 @@ public class CreateProductHandlerTests
     {
         Fake.Products products = new();
 
-        Result<CreatedProduct> result = await HandlerOver(products).HandleAsync(
+        Result<ProductSummary> result = await HandlerOver(products).HandleAsync(
             AGinTonic("  Gin Tonic  ") with { Stock = 0 },
             CancellationToken.None);
 
@@ -116,6 +116,9 @@ public class CreateProductHandlerTests
 
         public sealed class Products(string? taken = null) : IProductRepository
         {
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
+                Task.FromResult(true);
+
             public Product? Added { get; private set; }
 
             // Ignores case like the real one: the database collation does the

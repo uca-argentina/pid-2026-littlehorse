@@ -65,7 +65,7 @@ public class UploadProductImageHandlerTests
             new UploadProductImageCommand(Guid.CreateVersion7(), new MemoryStream(APng), APng.Length),
             CancellationToken.None);
 
-        Assert.Equal(UploadProductImageHandler.ProductNotFound, result.Error);
+        Assert.Equal(ProductErrors.NotFound, result.Error);
         Assert.Null(images.SavedAs);
     }
 
@@ -108,6 +108,9 @@ public class UploadProductImageHandlerTests
     {
         public sealed class Products(Product stored) : IProductRepository
         {
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
+                Task.FromResult(true);
+
             public bool Saved { get; private set; }
 
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>

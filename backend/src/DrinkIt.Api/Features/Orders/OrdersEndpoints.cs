@@ -26,11 +26,11 @@ public sealed record ConfirmOrderRequest(
     IReadOnlyList<OrderLineRequestBody>? Lines);
 
 /// <summary>The order as the confirmation screen shows it.</summary>
-/// <summary>
-/// The confirmed order. This is the one and only answer that carries the
-/// tracking token: the phone needs it to build the link that watches the order,
-/// and nothing about the order says it again afterwards.
-/// </summary>
+/// <remarks>
+/// This is the one and only answer that carries the tracking token: the phone
+/// needs it to build the link that watches the order, and nothing about the
+/// order says it again afterwards.
+/// </remarks>
 public sealed record ConfirmedOrderResponse(
     Guid Id,
     string Code,

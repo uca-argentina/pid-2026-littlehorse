@@ -183,6 +183,7 @@ test.describe('Staff users', () => {
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(username);
     await page.getByRole('button', { name: /dar de baja/i }).click();
+    await page.getByRole('button', { name: /confirmar la baja/i }).click();
     await expect(page.getByRole('button', { name: /reactivar/i })).toBeVisible();
 
     // Criterion 2: still there, marked, not deleted.
