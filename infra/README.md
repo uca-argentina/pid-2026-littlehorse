@@ -23,6 +23,7 @@ Secrets que tiene que tener el repo en GitHub (Settings → Secrets and variable
 | `AZURE_TENANT_ID`       | `9c25874e-f68b-41d2-8a38-3b7aa9f60cda`                       |
 | `AZURE_SUBSCRIPTION_ID` | `9cce0d2e-78aa-4cd7-b828-12a7f1af28c4`                       |
 | `JWT_SIGNING_KEY`       | generada una vez con `openssl rand -base64 48`, no la de dev |
+| `BOOTSTRAP_ADMIN_PASSWORD` | contraseña del primer administrador; sólo hasta el primer login (ver abajo) |
 
 ## Decisiones de esta primera versión
 
@@ -62,7 +63,21 @@ todo ambiente — ver la próxima sección.
 > ponytail: paso manual de una sola vez, no un `deploymentScript` de Bicep. Automatizarlo si
 > alguna vez hay que recrear el ambiente seguido (hoy es "una vez y listo").
 
-## Qué falta para que el primer deploy funcione de punta a punta
+## Primer administrador
+
+No hay pantalla de registro, así que el primer usuario lo crea la API al arrancar
+(`BootstrapSeeder`): el boliche `bar-alfa` ("Bar Alfa") y el usuario `admin`, con rol
+Administrador. Sólo lo hace si tiene `Bootstrap__AdminPassword`; sin esa variable no toca
+nada. Si el admin ya existe tampoco: cambiar el secret después no cambia la contraseña.
+
+1. Cargar `BOOTSTRAP_ADMIN_PASSWORD` en el environment `production` con una contraseña
+   fuerte. El workflow la pasa al Bicep, que la agrega al Container App como `secretRef`.
+2. Deployar y correr el TSQL de arriba. La API siembra al arrancar, y antes del TSQL no
+   tiene permisos en la base: si el primer arranque falló, reiniciar la revisión del
+   Container App. Después, entrar con `admin` en `/bar-alfa/staff/login`.
+3. Borrar el secret de GitHub. En el próximo deploy el Bicep saca la variable del
+   Container App, y la contraseña deja de vivir en Azure.
+
 
 1. Que termine de registrarse `Microsoft.App` y `Microsoft.Sql` en la suscripción
    (`az provider show -n Microsoft.App --query registrationState`).

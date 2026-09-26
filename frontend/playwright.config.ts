@@ -64,7 +64,7 @@ export default defineConfig({
       env: {
         ASPNETCORE_ENVIRONMENT: 'Development',
         ASPNETCORE_URLS: apiUrls,
-        DevelopmentSeed__AdminPassword: seededAdminPassword(),
+        Bootstrap__AdminPassword: seededAdminPassword(),
       },
       url: apiReadyUrl,
 

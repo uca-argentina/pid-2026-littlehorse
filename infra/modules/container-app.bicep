@@ -13,6 +13,17 @@ param storageContainerName string
 param jwtSigningKey string
 @secure()
 param appInsightsConnectionString string
+@secure()
+param bootstrapAdminPassword string
+
+// Only until the first administrator exists: Container Apps rejects a secret with
+// an empty value, and without the variable the API seeds nothing.
+var bootstrapSecrets = empty(bootstrapAdminPassword)
+  ? []
+  : [{ name: 'bootstrap-admin-password', value: bootstrapAdminPassword }]
+var bootstrapEnv = empty(bootstrapAdminPassword)
+  ? []
+  : [{ name: 'Bootstrap__AdminPassword', secretRef: 'bootstrap-admin-password' }]
 
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
@@ -33,11 +44,11 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         transport: 'auto'
         allowInsecure: false
       }
-      secrets: [
+      secrets: concat([
         { name: 'image-storage-connection-string', value: storageConnectionString }
         { name: 'jwt-signing-key', value: jwtSigningKey }
         { name: 'appinsights-connection-string', value: appInsightsConnectionString }
-      ]
+      ], bootstrapSecrets)
     }
     template: {
       containers: [
@@ -48,7 +59,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json('0.25')
             memory: '0.5Gi'
           }
-          env: [
+          env: concat([
             { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
             { name: 'ASPNETCORE_URLS', value: 'http://+:8080' }
             {
@@ -62,7 +73,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'Jwt__Audience', value: 'drinkit' }
             { name: 'Jwt__LifetimeMinutes', value: '480' }
             { name: 'ApplicationInsights__ConnectionString', secretRef: 'appinsights-connection-string' }
-          ]
+          ], bootstrapEnv)
         }
       ]
       scale: {

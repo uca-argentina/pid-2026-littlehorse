@@ -7,25 +7,22 @@ using Microsoft.Extensions.Options;
 namespace DrinkIt.Infrastructure.Persistence.Seeding;
 
 /// <summary>
-/// Creates one venue and one administrator so there is somebody who can log in
-/// on a machine that just cloned the repo. Development only: see
-/// Program.cs for why this must never run anywhere real.
+/// Creates one venue and one administrator so there is somebody who can log in:
+/// on a machine that just cloned the repo, and on the first production deploy,
+/// where there is no sign-up. Runs on every start in every environment and does
+/// nothing without a password, so production only sets one until the first
+/// administrator exists.
 /// </summary>
-internal sealed class DevelopmentSeeder(
+internal sealed class BootstrapSeeder(
     DrinkItDbContext context,
     IPasswordHasher passwordHasher,
-    IOptions<DevelopmentSeedOptions> options)
+    IOptions<BootstrapOptions> options)
 {
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
-        DevelopmentSeedOptions settings = options.Value;
+        BootstrapOptions settings = options.Value;
 
-        if (string.IsNullOrWhiteSpace(settings.AdminPassword))
-        {
-            throw new InvalidOperationException(
-                "DevelopmentSeed:AdminPassword is not set. Provide it via the "
-                    + "DevelopmentSeed__AdminPassword environment variable.");
-        }
+        if (string.IsNullOrWhiteSpace(settings.AdminPassword)) return;
 
         // AsNoTracking + IgnoreQueryFilters: no venue is resolved yet outside a
         // request, and this must find an existing seed on every restart rather

@@ -17,6 +17,10 @@ param apiContainerImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 @description('JWT signing key. Generate it once and store it as a GitHub secret.')
 param jwtSigningKey string
 
+@secure()
+@description('Password of the first administrator (venue bar-alfa, user admin). Only needed until it exists; empty seeds nothing.')
+param bootstrapAdminPassword string = ''
+
 var resourceSuffix = uniqueString(resourceGroup().id)
 var sqlServerName = 'sql-drinkit-${resourceSuffix}'
 var sqlDatabaseName = 'drinkit'
@@ -93,6 +97,7 @@ module containerApp 'modules/container-app.bicep' = {
     storageConnectionString: storage.outputs.connectionString
     storageContainerName: storageContainerName
     jwtSigningKey: jwtSigningKey
+    bootstrapAdminPassword: bootstrapAdminPassword
     appInsightsConnectionString: appInsights.outputs.connectionString
   }
 }
