@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * The venue and the administrator that DevelopmentSeeder writes when the API
- * starts in Development. The defaults live in DevelopmentSeedOptions.cs.
+ * The venue and the administrator that BootstrapSeeder writes when the API
+ * starts with the password from launchSettings.json. The defaults live in
+ * BootstrapOptions.cs.
  */
 export const seededVenueSlug = 'bar-alfa';
 export const seededAdminUsername = 'admin';
@@ -30,12 +31,11 @@ interface LaunchSettings {
  */
 export function seededAdminPassword(): string {
   const settings = JSON.parse(readFileSync(launchSettingsPath, 'utf8')) as LaunchSettings;
-  const password =
-    settings.profiles['https']?.environmentVariables?.['DevelopmentSeed__AdminPassword'];
+  const password = settings.profiles['https']?.environmentVariables?.['Bootstrap__AdminPassword'];
 
   if (!password)
     throw new Error(
-      `DevelopmentSeed__AdminPassword is missing from the "https" profile in ${launchSettingsPath}.`,
+      `Bootstrap__AdminPassword is missing from the "https" profile in ${launchSettingsPath}.`,
     );
 
   return password;

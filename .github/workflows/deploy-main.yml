@@ -110,7 +110,8 @@ jobs:
                 apiContainerImage=${{ needs.build-and-push-api.outputs.image-tag }} \
                 sqlAadAdminObjectId=${{ env.SQL_AAD_ADMIN_OBJECT_ID }} \
                 sqlAadAdminLoginName="${{ env.SQL_AAD_ADMIN_LOGIN_NAME }}" \
-                jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}"
+                jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
+                bootstrapAdminPassword="${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}"
 
   deploy-pwa:
     name: Deploy the PWA to Static Web Apps
