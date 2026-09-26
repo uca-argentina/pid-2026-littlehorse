@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,15 +6,15 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DrinkIt.Infrastructure.Persistence.Migrations
 {
     /// <summary>
-    /// US-14 grows from three fixed categories into a table each venue fills.
-    /// Written by hand around what EF scaffolded: the scaffold drops the old
-    /// column first, which would have thrown away which category every product
-    /// was in. Here every venue gets the three the platform started with, every
-    /// product is moved into the row that matches what it had, and only then
-    /// does the old column go.
+    /// US-14: each venue splits its menu into categories of its own. Written by
+    /// hand around what EF scaffolded: the scaffold adds CategoryId as a non-null
+    /// column defaulting to an empty guid, which no category row matches, so the
+    /// foreign key fails on any database that already has products. Here every
+    /// venue gets the three the platform starts with, every existing product
+    /// lands in Tragos (US-14, criterion 4), and only then is the column required.
     /// </summary>
     /// <inheritdoc />
-    public partial class ReplaceProductCategoryWithCategories : Migration
+    public partial class AddCategories : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -45,8 +45,8 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                 columns: new[] { "VenueId", "Name" },
                 unique: true);
 
-            // The three that existed as an enum, in the order the customer's
-            // tabs were drawn: a millisecond apart, so CreatedAt keeps it.
+            // In the order the customer's tabs are drawn: a millisecond apart, so
+            // CreatedAt keeps it.
             migrationBuilder.Sql(
                 """
                 INSERT INTO Categories (Id, VenueId, Name, CreatedAt)
@@ -61,8 +61,6 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                 type: "uniqueidentifier",
                 nullable: true);
 
-            // 1 Drink, 2 Beer, 3 NonAlcoholic. Anything else was never valid and
-            // lands in Tragos, which is where AddProductCategory put it too.
             migrationBuilder.Sql(
                 """
                 UPDATE product
@@ -70,11 +68,7 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                 FROM Products AS product
                 JOIN Categories AS category
                     ON category.VenueId = product.VenueId
-                    AND category.Name = CASE product.Category
-                        WHEN 2 THEN N'Cervezas'
-                        WHEN 3 THEN N'Sin alcohol'
-                        ELSE N'Tragos'
-                    END
+                    AND category.Name = N'Tragos'
                 """);
 
             migrationBuilder.AlterColumn<Guid>(
@@ -85,10 +79,6 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                 oldClrType: typeof(Guid),
                 oldType: "uniqueidentifier",
                 oldNullable: true);
-
-            migrationBuilder.DropColumn(
-                name: "Category",
-                table: "Products");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Products_CategoryId",
@@ -114,23 +104,6 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
             migrationBuilder.DropIndex(
                 name: "IX_Products_CategoryId",
                 table: "Products");
-
-            migrationBuilder.AddColumn<int>(
-                name: "Category",
-                table: "Products",
-                type: "int",
-                nullable: false,
-                defaultValue: 1);
-
-            // Back into the three the enum can hold. A category the venue made
-            // itself has no number to go back to, so its products land in Tragos.
-            migrationBuilder.Sql(
-                """
-                UPDATE product
-                SET Category = CASE category.Name WHEN N'Cervezas' THEN 2 WHEN N'Sin alcohol' THEN 3 ELSE 1 END
-                FROM Products AS product
-                JOIN Categories AS category ON category.Id = product.CategoryId
-                """);
 
             migrationBuilder.DropColumn(
                 name: "CategoryId",
