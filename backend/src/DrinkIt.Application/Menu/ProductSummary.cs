@@ -20,7 +20,7 @@ public sealed record ProductSummary(
     string? ImageUrl,
     decimal Price,
     int Stock,
-    ProductCategory Category,
+    Guid CategoryId,
     bool IsAvailable,
     bool IsSoldOut,
     bool IsActive)
@@ -32,7 +32,7 @@ public sealed record ProductSummary(
         product.ImageUrl,
         product.Price,
         product.Stock,
-        product.Category,
+        product.CategoryId,
         product.IsAvailable,
         product.IsSoldOut,
         product.IsActive);

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
+import { categoryIdNamed } from './categories';
 
 /**
  * US-09, end to end: somebody scans the QR on the wall and reads the menu. No
@@ -18,7 +19,7 @@ async function loadProduct(
   request: APIRequestContext,
   name: string,
   stock: number,
-  category: 'Drink' | 'Beer' | 'NonAlcoholic' = 'Drink',
+  categoryName = 'Tragos',
 ): Promise<void> {
   const login = await request.post(`/api/${seededVenueSlug}/auth/login`, {
     data: { username: seededAdminUsername, password: seededAdminPassword() },
@@ -27,7 +28,13 @@ async function loadProduct(
 
   const created = await request.post('/api/staff/products', {
     headers: { Authorization: `Bearer ${token}` },
-    data: { name, description: 'Cargado por la prueba', price: 4500, stock, category },
+    data: {
+      name,
+      description: 'Cargado por la prueba',
+      price: 4500,
+      stock,
+      categoryId: await categoryIdNamed(request, token, categoryName),
+    },
   });
 
   expect(created.status()).toBe(201);
@@ -216,9 +223,9 @@ test.describe('Menu', () => {
     const drink = aNewProduct();
     const beer = aNewProduct();
     const nonAlcoholic = aNewProduct();
-    await loadProduct(request, drink, 10, 'Drink');
-    await loadProduct(request, beer, 0, 'Beer');
-    await loadProduct(request, nonAlcoholic, 5, 'NonAlcoholic');
+    await loadProduct(request, drink, 10, 'Tragos');
+    await loadProduct(request, beer, 0, 'Cervezas');
+    await loadProduct(request, nonAlcoholic, 5, 'Sin alcohol');
 
     await page.goto(menuPath);
 

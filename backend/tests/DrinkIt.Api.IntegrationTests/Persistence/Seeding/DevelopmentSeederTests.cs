@@ -56,6 +56,41 @@ public sealed class DevelopmentSeederTests(SqlServerFixture sql)
         Assert.Equal(1, adminCount);
     }
 
+    // A new venue is born with the three tabs the menu has always had, in the
+    // order they are drawn, so there is something to load products onto.
+    [Fact]
+    public async Task SeedAsync_WhenNothingExists_CreatesTheThreeStartingCategoriesInOrder()
+    {
+        await using DrinkItDbContext context = sql.CreateContext(Guid.Empty);
+
+        await Seeder(context).SeedAsync(CancellationToken.None);
+
+        Venue venue = await context.Venues.SingleAsync(v => v.Slug == SeedOptions.VenueSlug);
+        List<string> names = await context.Categories
+            .IgnoreQueryFilters()
+            .Where(c => c.VenueId == venue.Id)
+            .OrderBy(c => c.CreatedAt)
+            .Select(c => c.Name)
+            .ToListAsync();
+
+        Assert.Equal(["Tragos", "Cervezas", "Sin alcohol"], names);
+    }
+
+    [Fact]
+    public async Task SeedAsync_WhenItRunsAgain_DoesNotDuplicateTheCategories()
+    {
+        await using DrinkItDbContext first = sql.CreateContext(Guid.Empty);
+        await Seeder(first).SeedAsync(CancellationToken.None);
+
+        await using DrinkItDbContext second = sql.CreateContext(Guid.Empty);
+        await Seeder(second).SeedAsync(CancellationToken.None);
+
+        await using DrinkItDbContext verify = sql.CreateContext(Guid.Empty);
+        Venue venue = await verify.Venues.SingleAsync(v => v.Slug == SeedOptions.VenueSlug);
+
+        Assert.Equal(3, await verify.Categories.IgnoreQueryFilters().CountAsync(c => c.VenueId == venue.Id));
+    }
+
     [Fact]
     public async Task SeedAsync_WhenThePasswordIsBlank_ThrowsRatherThanSeedingAGuessableAccount()
     {
@@ -63,11 +98,12 @@ public sealed class DevelopmentSeederTests(SqlServerFixture sql)
         DevelopmentSeeder seeder = new(
             context,
             new IdentityPasswordHasher(),
-            Options.Create(new DevelopmentSeedOptions { AdminPassword = "" }));
+            Options.Create(new DevelopmentSeedOptions { AdminPassword = "" }),
+            TimeProvider.System);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync(CancellationToken.None));
     }
 
     private static DevelopmentSeeder Seeder(DrinkItDbContext context) =>
-        new(context, new IdentityPasswordHasher(), Options.Create(SeedOptions));
+        new(context, new IdentityPasswordHasher(), Options.Create(SeedOptions), TimeProvider.System);
 }

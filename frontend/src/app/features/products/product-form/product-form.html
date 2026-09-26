@@ -56,23 +56,43 @@
         [attr.aria-describedby]="categoryError() !== null ? 'category-error' : null"
       >
         <legend class="label">Categoría</legend>
-        <div class="category-options">
-          @for (option of categories; track option.category) {
-            <label
-              class="category"
-              [class.category-on]="form.controls.category.value === option.category"
-            >
-              <input
-                class="radio"
-                formControlName="category"
-                type="radio"
-                name="category"
-                [value]="option.category"
-              />
-              <span>{{ option.name }}</span>
-            </label>
+
+        @if (categories.isLoading()) {
+          <p class="help" role="status">Cargando las categorías…</p>
+        } @else if (categories.error() !== undefined) {
+          <div class="category-note">
+            <p class="bad" role="alert">No pudimos traer las categorías. Fijate la señal.</p>
+            <button class="link" type="button" (click)="categories.reload()">Reintentar</button>
+          </div>
+        } @else if (categories.hasValue()) {
+          @if (categories.value().length === 0) {
+            <p class="help" role="status">
+              Este boliche todavía no tiene categorías.
+              <a class="link" [routerLink]="['/', venueSlug(), 'staff', 'categories', 'new']"
+                >Creá la primera</a
+              >
+            </p>
+          } @else {
+            <div class="category-options">
+              @for (option of categories.value(); track option.id) {
+                <label
+                  class="category"
+                  [class.category-on]="form.controls.categoryId.value === option.id"
+                >
+                  <input
+                    class="radio"
+                    formControlName="categoryId"
+                    type="radio"
+                    name="categoryId"
+                    [value]="option.id"
+                  />
+                  <span>{{ option.name }}</span>
+                </label>
+              }
+            </div>
           }
-        </div>
+        }
+
         @if (categoryError() !== null) {
           <p id="category-error" class="bad">{{ categoryError() }}</p>
         }

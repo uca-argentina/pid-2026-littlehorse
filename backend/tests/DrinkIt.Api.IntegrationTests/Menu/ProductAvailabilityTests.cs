@@ -166,10 +166,12 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
     public async Task MarkAvailableAsync_WhenTheProductRanOut_IsRefusedAndWritesNothing()
     {
         Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
-        Product empty = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 0, ProductCategory.Drink);
+        Category category = SeedCategory.For(mine.Id);
+        Product empty = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 0, category.Id);
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.Add(mine);
+        seed.Categories.Add(category);
         seed.Products.Add(empty);
         await seed.SaveChangesAsync();
 
@@ -191,11 +193,14 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         // Slugs are unique platform-wide, so every test needs its own.
         Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
         Venue theirs = Venue.Create("Bar Theirs", $"bar-{Guid.NewGuid():N}");
-        Product gin = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
-        Product foreign = Product.Create(theirs.Id, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
+        Category mineCategory = SeedCategory.For(mine.Id);
+        Category theirCategory = SeedCategory.For(theirs.Id);
+        Product gin = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20, mineCategory.Id);
+        Product foreign = Product.Create(theirs.Id, "Gin Tonic", null, null, 4500m, 20, theirCategory.Id);
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.AddRange(mine, theirs);
+        seed.Categories.AddRange(mineCategory, theirCategory);
         seed.Products.AddRange(gin, foreign);
         await seed.SaveChangesAsync();
 

@@ -1,5 +1,3 @@
-using DrinkIt.Domain.Menu;
-
 namespace DrinkIt.Application.Menu;
 
 /// <summary>What the administration listing shows about one product.</summary>
@@ -10,7 +8,7 @@ public sealed record ProductListItem(
     string? ImageUrl,
     decimal Price,
     int Stock,
-    ProductCategory Category,
+    Guid CategoryId,
     bool IsAvailable,
     bool IsSoldOut,
     bool IsActive);
@@ -31,7 +29,7 @@ public sealed record MenuItem(
     string? Description,
     string? ImageUrl,
     decimal Price,
-    ProductCategory Category,
+    Guid CategoryId,
     bool IsOrderable);
 
 /// <summary>

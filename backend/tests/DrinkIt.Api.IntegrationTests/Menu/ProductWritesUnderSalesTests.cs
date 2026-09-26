@@ -53,10 +53,12 @@ public sealed class ProductWritesUnderSalesTests(SqlServerFixture sql)
     private async Task<(Venue Venue, Product Product)> AVenueSelling(int stock)
     {
         Venue venue = Venue.Create("Bar de prueba", $"bar-{Guid.NewGuid():N}");
-        Product product = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, stock, ProductCategory.Drink);
+        Category category = SeedCategory.For(venue.Id);
+        Product product = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, stock, category.Id);
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Venues.Add(venue);
+        seed.Categories.Add(category);
         seed.Products.Add(product);
         await seed.SaveChangesAsync();
 

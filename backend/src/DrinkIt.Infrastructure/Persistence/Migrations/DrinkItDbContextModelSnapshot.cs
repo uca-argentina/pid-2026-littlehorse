@@ -22,15 +22,39 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("DrinkIt.Domain.Menu.Category", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Categories", (string)null);
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Menu.Product", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Category")
-                        .HasDefaultValue(1)
-                        .HasColumnType("int");
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")
                         .HasMaxLength(200)
@@ -62,6 +86,8 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("VenueId", "Name")
                         .IsUnique();
@@ -223,8 +249,23 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.ToTable("OrderCodeCounters", (string)null);
                 });
 
+            modelBuilder.Entity("DrinkIt.Domain.Menu.Category", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Menu.Product", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.Menu.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
                         .HasForeignKey("VenueId")

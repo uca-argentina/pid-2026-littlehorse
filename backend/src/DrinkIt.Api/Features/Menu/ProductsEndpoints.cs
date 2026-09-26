@@ -1,15 +1,14 @@
 using DrinkIt.Api.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
-using DrinkIt.Domain.Menu;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Menu;
 
 /// <summary>
 /// What the administration screen posts. The image address is whatever the
-/// upload returned, or null while there is none. The category travels as its
-/// name, same as StaffUsersEndpoints' role.
+/// upload returned, or null while there is none. The category is one of the
+/// venue's, by id.
 /// </summary>
 public sealed record CreateProductRequest(
     string Name,
@@ -17,7 +16,7 @@ public sealed record CreateProductRequest(
     string? ImageUrl,
     decimal Price,
     int Stock,
-    string Category);
+    Guid CategoryId);
 
 /// <summary>Where the picture ended up. The listing shows it from here on.</summary>
 public sealed record ProductImageResponse(string ImageUrl);
@@ -27,7 +26,7 @@ public sealed record ProductImageResponse(string ImageUrl);
 /// picture, no switches — each of those has its own action, so a screen that
 /// only touches one of them cannot accidentally overwrite the rest.
 /// </summary>
-public sealed record UpdateProductRequest(string Name, string? Description, decimal Price, string Category);
+public sealed record UpdateProductRequest(string Name, string? Description, decimal Price, Guid CategoryId);
 
 /// <summary>
 /// How much the stock moves: positive when units arrived, negative when it was
@@ -43,7 +42,7 @@ public sealed record ProductResponse(
     string? ImageUrl,
     decimal Price,
     int Stock,
-    string Category,
+    Guid CategoryId,
     bool IsAvailable,
     bool IsSoldOut,
     bool IsActive);
@@ -149,7 +148,7 @@ internal static class ProductsEndpoints
                 product.ImageUrl,
                 product.Price,
                 product.Stock,
-                product.Category.ToString(),
+                product.CategoryId,
                 product.IsAvailable,
                 product.IsSoldOut,
                 product.IsActive))
@@ -161,13 +160,11 @@ internal static class ProductsEndpoints
         CreateProductHandler handler,
         CancellationToken cancellationToken)
     {
-        if (!TryReadCategory(request.Category, out ProductCategory category)) return CategoryIsNotOneWeSell(request.Category);
-
         // A broken invariant (price at zero, blank name) is not caught here:
         // the domain throws and the global handler turns it into a 400 with the
         // rule's own problem type.
         Result<ProductSummary> result = await handler.HandleAsync(
-            new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.Stock, category),
+            new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.Stock, request.CategoryId),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -184,12 +181,10 @@ internal static class ProductsEndpoints
         UpdateProductHandler handler,
         CancellationToken cancellationToken)
     {
-        if (!TryReadCategory(request.Category, out ProductCategory category)) return CategoryIsNotOneWeSell(request.Category);
-
         // A broken invariant (price at zero, blank name) is not caught here:
         // the domain throws and the global handler answers, same as CreateAsync.
         Result<ProductSummary> result = await handler.HandleAsync(
-            new UpdateProductCommand(id, request.Name, request.Description, request.Price, category),
+            new UpdateProductCommand(id, request.Name, request.Description, request.Price, request.CategoryId),
             cancellationToken);
 
         return Answer(result);
@@ -235,7 +230,7 @@ internal static class ProductsEndpoints
         product.ImageUrl,
         product.Price,
         product.Stock,
-        product.Category.ToString(),
+        product.CategoryId,
         product.IsAvailable,
         product.IsSoldOut,
         product.IsActive);
@@ -260,28 +255,6 @@ internal static class ProductsEndpoints
 
         return TypedResults.Ok(new ProductImageResponse(result.Value.ImageUrl));
     }
-
-    /// <summary>
-    /// One of our names, and nothing else. Same reasoning as StaffUsersEndpoints'
-    /// TryReadRole: Enum.TryParse on its own also accepts "2" and "99" for an
-    /// enum that does not declare them.
-    /// </summary>
-    private static bool TryReadCategory(string? name, out ProductCategory category)
-    {
-        category = default;
-
-        if (name is null) return false;
-        if (!Enum.GetNames<ProductCategory>().Contains(name, StringComparer.OrdinalIgnoreCase)) return false;
-
-        return Enum.TryParse(name, ignoreCase: true, out category);
-    }
-
-    private static ProblemHttpResult CategoryIsNotOneWeSell(string? name) =>
-        TypedResults.Problem(
-            title: "Invalid request",
-            detail: $"'{name}' is not a category this venue sells under.",
-            statusCode: StatusCodes.Status400BadRequest,
-            type: ProblemTypes.For(Product.ErrorCodes.CategoryInvalid));
 
     private static ProblemHttpResult ImageIsMissing() =>
         TypedResults.Problem(

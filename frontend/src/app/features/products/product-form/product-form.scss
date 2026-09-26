@@ -141,6 +141,14 @@
   margin: 0;
 }
 
+.category-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: baseline;
+  margin-top: 7px;
+}
+
 .category-options {
   display: flex;
   flex-wrap: wrap;

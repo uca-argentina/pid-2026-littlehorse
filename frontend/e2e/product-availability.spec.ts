@@ -1,6 +1,7 @@
 import { devices, expect, test } from '@playwright/test';
 import type { APIRequestContext, Browser, Page } from '@playwright/test';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
+import { categoryIdNamed } from './categories';
 
 /**
  * US-07, the two screens at once: the bar's tablet turns a drink off and the
@@ -33,7 +34,13 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
 
   const created = await request.post('/api/staff/products', {
     headers: { Authorization: `Bearer ${token}` },
-    data: { name, description: 'Cargado por la prueba', price: 4500, stock: 20, category: 'Drink' },
+    data: {
+      name,
+      description: 'Cargado por la prueba',
+      price: 4500,
+      stock: 20,
+      categoryId: await categoryIdNamed(request, token, 'Tragos'),
+    },
   });
 
   expect(created.status()).toBe(201);

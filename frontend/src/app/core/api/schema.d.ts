@@ -168,6 +168,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/categories': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists the venue's categories, the first one created first. */
+    get: operations['ListCategories'];
+    put?: never;
+    /** Adds a category the venue's menu can be split by. */
+    post: operations['CreateCategory'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/products': {
     parameters: {
       query?: never;
@@ -301,6 +319,11 @@ export interface components {
       /** Format: int32 */
       change: number;
     };
+    CategoryResponse: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+    };
     /** @description What the administration screen sends to correct somebody's role. */
     ChangeStaffUserRoleRequest: {
       role: string;
@@ -325,10 +348,14 @@ export interface components {
       idempotencyKey: null | string;
       lines: null | components['schemas']['OrderLineRequestBody'][];
     };
+    /** @description What the administration screen posts to add a category. */
+    CreateCategoryRequest: {
+      name: string;
+    };
     /**
      * @description What the administration screen posts. The image address is whatever the
-     *     upload returned, or null while there is none. The category travels as its
-     *     name, same as StaffUsersEndpoints' role.
+     *     upload returned, or null while there is none. The category is one of the
+     *     venue's, by id.
      */
     CreateProductRequest: {
       name: string;
@@ -338,7 +365,8 @@ export interface components {
       price: number;
       /** Format: int32 */
       stock: number;
-      category: string;
+      /** Format: uuid */
+      categoryId: string;
     };
     /** @description What the administration screen posts. The role travels as its name. */
     CreateStaffUserRequest: {
@@ -363,6 +391,12 @@ export interface components {
       username: string;
       role: string;
     };
+    /** @description One solapa of the menu, in the order the venue made them. */
+    MenuCategoryResponse: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+    };
     /** @description One card of the menu, as the customer's phone receives it. */
     MenuItemResponse: {
       /** Format: uuid */
@@ -372,15 +406,19 @@ export interface components {
       imageUrl: null | string;
       /** Format: double */
       price: number;
-      category: string;
+      /** Format: uuid */
+      categoryId: string;
       isOrderable: boolean;
     };
     /**
      * @description The venue's menu. The name travels with it because the customer scanned a
-     *     QR and never typed where they are: the screen is what tells them.
+     *     QR and never typed where they are: the screen is what tells them. The
+     *     categories travel with it too, because they are the venue's own and the
+     *     screen has nowhere else to learn them from.
      */
     MenuResponse: {
       venueName: string;
+      categories: components['schemas']['MenuCategoryResponse'][];
       items: components['schemas']['MenuItemResponse'][];
     };
     /** @description One drink, as the phone asks for it. What it costs is not in here on purpose. */
@@ -413,7 +451,8 @@ export interface components {
       price: number;
       /** Format: int32 */
       stock: number;
-      category: string;
+      /** Format: uuid */
+      categoryId: string;
       isAvailable: boolean;
       isSoldOut: boolean;
       isActive: boolean;
@@ -457,7 +496,8 @@ export interface components {
       description: null | string;
       /** Format: double */
       price: number;
-      category: string;
+      /** Format: uuid */
+      categoryId: string;
     };
   };
   responses: never;
@@ -839,6 +879,68 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CategoryResponse'][];
+        };
+      };
+    };
+  };
+  CreateCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateCategoryRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CategoryResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

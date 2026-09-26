@@ -20,6 +20,8 @@ export const ProblemTypes = {
   /** The address belongs to no venue. A wrong QR, not a network that dropped. */
   venueNotFound: 'urn:drinkit:problem:venue:not-found',
 
+  categoryNameTaken: 'urn:drinkit:problem:category:name-taken',
+
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
   /** Sales left less stock than an adjustment takes away. */

@@ -8,7 +8,7 @@ public class MarkProductUnavailableHandlerTests
 {
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
-    private static Product AGinTonic() => Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
+    private static Product AGinTonic() => Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20, Guid.CreateVersion7());
 
     [Fact]
     public async Task HandleAsync_WhenTheProductExists_MarksItUnavailableAndSaves()
@@ -68,7 +68,7 @@ public class MarkProductAvailableHandlerTests
 {
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
-    private static Product AGinTonic() => Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20, ProductCategory.Drink);
+    private static Product AGinTonic() => Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20, Guid.CreateVersion7());
 
     [Fact]
     public async Task HandleAsync_WhenTheProductExists_MarksItAvailableAndSaves()

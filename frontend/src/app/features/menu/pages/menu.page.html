@@ -52,13 +52,13 @@
       </div>
     }
 
-    @if (menu.hasValue()) {
+    @if (categoryTabs().length > 0) {
       <!--
         No count on any pill, unlike administration's: the wireframe of the
         customer's menu draws it plain.
       -->
       <div class="tabs" role="tablist" aria-label="Categoría">
-        @for (tab of categoryTabs; track tab.filter) {
+        @for (tab of categoryTabs(); track tab.filter) {
           <button
             class="tab"
             type="button"

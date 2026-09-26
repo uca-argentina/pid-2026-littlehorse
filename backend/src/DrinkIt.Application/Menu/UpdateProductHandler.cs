@@ -3,14 +3,14 @@ using DrinkIt.Domain.Menu;
 
 namespace DrinkIt.Application.Menu;
 
-public sealed record UpdateProductCommand(Guid ProductId, string Name, string? Description, decimal Price, ProductCategory Category);
+public sealed record UpdateProductCommand(Guid ProductId, string Name, string? Description, decimal Price, Guid CategoryId);
 
 /// <summary>
-/// US-08: corrects a product's name, description and price. The picture is
+/// US-08: corrects a product's name, description, price and category. The picture is
 /// not here — UploadProductImageHandler already owns it — and neither is
 /// stock nor the two switches, each with its own single-purpose handler.
 /// </summary>
-public sealed class UpdateProductHandler(IProductRepository products)
+public sealed class UpdateProductHandler(IProductRepository products, ICategoryRepository categories)
 {
     public async Task<Result<ProductSummary>> HandleAsync(UpdateProductCommand command, CancellationToken cancellationToken)
     {
@@ -27,10 +27,12 @@ public sealed class UpdateProductHandler(IProductRepository products)
 
         if (nameChanged && await products.NameExistsAsync(name, cancellationToken)) return CreateProductHandler.NameTaken;
 
+        if (!await categories.ExistsAsync(command.CategoryId, cancellationToken)) return ProductErrors.CategoryNotFound;
+
         // Whatever is left wrong with the data is a broken domain invariant,
         // and Update throws. The API turns that into a 400; restating the
         // rules here would be a second copy that drifts.
-        product.Update(name, command.Description, command.Price, command.Category);
+        product.Update(name, command.Description, command.Price, command.CategoryId);
 
         await products.SaveChangesAsync(cancellationToken);
 

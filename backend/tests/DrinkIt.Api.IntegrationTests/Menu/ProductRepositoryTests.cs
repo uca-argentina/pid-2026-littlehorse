@@ -59,7 +59,7 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
         ProductRepository repository = new(asMine);
 
-        await repository.AddAsync(AProduct(mine.Id, "Gin Tonic"), CancellationToken.None);
+        await repository.AddAsync(AProduct(mine.Id, await CategoryOf(asMine), "Gin Tonic"), CancellationToken.None);
 
         Assert.True(await repository.NameExistsAsync("Gin Tonic", CancellationToken.None));
     }
@@ -76,8 +76,10 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
 
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
 
+        Guid drinks = await CategoryOf(asMine);
+
         await Assert.ThrowsAsync<DbUpdateException>(() => new ProductRepository(asMine).AddAsync(
-            AProduct(mine.Id, "Gin Tonic"),
+            AProduct(mine.Id, drinks, "Gin Tonic"),
             CancellationToken.None));
     }
 
@@ -87,9 +89,10 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
     public async Task AddAsync_WhenSaved_ReadsBackEveryField()
     {
         (Venue mine, _) = await SeedTwoVenues("Fernet", "Fernet");
-        Product product = Product.Create(mine.Id, "Gin Tonic", null, null, 4500.50m, 0, ProductCategory.Drink);
-
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+        Guid drinks = await CategoryOf(asMine);
+        Product product = Product.Create(mine.Id, "Gin Tonic", null, null, 4500.50m, 0, drinks);
+
         await new ProductRepository(asMine).AddAsync(product, CancellationToken.None);
 
         await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
@@ -100,7 +103,7 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
         Assert.Null(stored.ImageUrl);
         Assert.Equal(4500.50m, stored.Price);
         Assert.Equal(0, stored.Stock);
-        Assert.Equal(ProductCategory.Drink, stored.Category);
+        Assert.Equal(drinks, stored.CategoryId);
         Assert.True(stored.IsAvailable);
         Assert.True(stored.IsActive);
     }
@@ -126,7 +129,7 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
         (Venue mine, _) = await SeedTwoVenues("Gin Tonic", "Nothing");
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
-        seed.Products.Add(Product.Create(mine.Id, "Aperol Spritz", "Aperol, prosecco, soda", null, 5200m, 0, ProductCategory.Drink));
+        seed.Products.Add(Product.Create(mine.Id, "Aperol Spritz", "Aperol, prosecco, soda", null, 5200m, 0, await CategoryOf(seed)));
         await seed.SaveChangesAsync();
 
         IReadOnlyList<ProductListItem> listed = await new ProductQueries(seed).ListAsync(CancellationToken.None);
@@ -171,8 +174,12 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
         Assert.Equal("https://images.example.com/products/fernet/new.png", stored.ImageUrl);
     }
 
-    private static Product AProduct(Guid venueId, string name) =>
-        Product.Create(venueId, name, "Something to drink.", "https://images.example.com/drink.jpg", 4500m, 20, ProductCategory.Drink);
+    private static Product AProduct(Guid venueId, Guid categoryId, string name) =>
+        Product.Create(venueId, name, "Something to drink.", "https://images.example.com/drink.jpg", 4500m, 20, categoryId);
+
+    /// <summary>The one category the venue was seeded with: the context only sees its own.</summary>
+    private static async Task<Guid> CategoryOf(DrinkItDbContext context) =>
+        (await context.Categories.SingleAsync()).Id;
 
     private async Task<(Venue Mine, Venue Theirs)> SeedTwoVenues(string mineProduct, string theirsProduct)
     {
@@ -182,7 +189,9 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.AddRange(mine, theirs);
-        seed.Products.AddRange(AProduct(mine.Id, mineProduct), AProduct(theirs.Id, theirsProduct));
+        Category mineCategory = SeedCategory.For(seed, mine.Id);
+        Category theirCategory = SeedCategory.For(seed, theirs.Id);
+        seed.Products.AddRange(AProduct(mine.Id, mineCategory.Id, mineProduct), AProduct(theirs.Id, theirCategory.Id, theirsProduct));
         await seed.SaveChangesAsync();
 
         return (mine, theirs);

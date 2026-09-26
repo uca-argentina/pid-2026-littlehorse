@@ -5,7 +5,6 @@ import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
-import { PRODUCT_CATEGORY_DESCRIPTIONS } from '../../../core/menu/product-categories';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 import { formatPrice } from '../../../shared/money/price';
@@ -21,23 +20,19 @@ interface MenuCard {
   readonly image: string;
   readonly amount: number;
   readonly price: string;
-  readonly category: string;
+  readonly categoryId: string;
   readonly isOrderable: boolean;
 }
 
-/** US-14: which solapa is open. 'all' is the one the menu opens on. */
-type CategoryFilter = 'all' | (typeof PRODUCT_CATEGORY_DESCRIPTIONS)[number]['category'];
+/** US-14: which solapa is open. 'all' is the one the menu opens on: a category's id is a guid and never equals it. */
+type CategoryFilter = string;
+
+const ALL = 'all';
 
 interface CategoryTab {
   readonly filter: CategoryFilter;
   readonly name: string;
 }
-
-/** "Todos" first, and always open on it: criterion 2 of US-14. */
-const CATEGORY_TABS: readonly CategoryTab[] = [
-  { filter: 'all', name: 'Todos' },
-  ...PRODUCT_CATEGORY_DESCRIPTIONS.map(({ category, name }) => ({ filter: category, name })),
-];
 
 /**
  * The menu a customer reads after scanning the venue's QR. The first screen of
@@ -71,10 +66,8 @@ export class MenuPage {
 
   protected readonly search = signal('');
 
-  protected readonly categoryTabs = CATEGORY_TABS;
-
   /** Opens on 'all', same as every visit: nothing about the last visit is remembered. */
-  protected readonly activeCategory = signal<CategoryFilter>('all');
+  protected readonly activeCategory = signal<CategoryFilter>(ALL);
 
   /**
    * A wrong address is not a bad connection. Offering "check your signal" and
@@ -101,6 +94,22 @@ export class MenuPage {
     this.menu.hasValue() && !this.menu.isLoading() ? this.menu.value().items : [],
   );
 
+  /**
+   * "Todos" first, then the venue's own categories in the order it made them:
+   * criterion 2 of US-14. None at all means nothing to split by, so no strip.
+   */
+  protected readonly categoryTabs = computed<CategoryTab[]>(() => {
+    const categories =
+      this.menu.hasValue() && !this.menu.isLoading() ? this.menu.value().categories : [];
+
+    return categories.length === 0
+      ? []
+      : [
+          { filter: ALL, name: 'Todos' },
+          ...categories.map(({ id, name }) => ({ filter: id, name })),
+        ];
+  });
+
   protected readonly cards = computed<MenuCard[]>(() => {
     const term = this.search().trim().toLowerCase();
     const category = this.activeCategory();
@@ -110,7 +119,7 @@ export class MenuPage {
         .filter((item) => term === '' || item.name.toLowerCase().includes(term))
         // Criterion 3: agotados incluidos — this only narrows by category, the
         // way isOrderable already leaves sold-out and switched-off ones in.
-        .filter((item) => category === 'all' || item.category === category)
+        .filter((item) => category === ALL || item.categoryId === category)
         .map((item) => ({
           id: item.id,
           name: item.name,
@@ -118,7 +127,7 @@ export class MenuPage {
           image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
           amount: item.price,
           price: formatPrice(item.price),
-          category: item.category,
+          categoryId: item.categoryId,
           isOrderable: item.isOrderable,
         }))
     );

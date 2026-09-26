@@ -15,7 +15,7 @@ const theMenu: Product[] = [
     imageUrl: 'https://images.example.com/gin-tonic.jpg',
     price: 4500,
     stock: 20,
-    category: 'Drink',
+    categoryId: 'category-drinks',
     isAvailable: true,
     isSoldOut: false,
     isActive: true,
@@ -27,7 +27,7 @@ const theMenu: Product[] = [
     imageUrl: null,
     price: 5200.5,
     stock: 0,
-    category: 'Drink',
+    categoryId: 'category-drinks',
     isAvailable: true,
     isSoldOut: true,
     isActive: true,
@@ -39,7 +39,7 @@ const theMenu: Product[] = [
     imageUrl: null,
     price: 4800,
     stock: 3,
-    category: 'Drink',
+    categoryId: 'category-drinks',
     isAvailable: false,
     isSoldOut: false,
     isActive: false,
@@ -65,6 +65,17 @@ async function openScreenShowing(products: Product[]) {
 }
 
 describe('ProductsPage', () => {
+  // The other button next to "Nuevo producto": a category is created from the
+  // same place a product is, since that is where a missing one is noticed.
+  it('offers to add a category, next to adding a product', async () => {
+    await openScreenShowing(theMenu);
+
+    expect(screen.getByRole('link', { name: /nueva categoría/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/categories/new',
+    );
+    expect(screen.getByRole('link', { name: /nuevo producto/i })).not.toBeNull();
+  });
+
   it('lists every product of the venue', async () => {
     await openScreenShowing(theMenu);
 
@@ -173,7 +184,7 @@ describe('ProductsPage', () => {
       imageUrl: null,
       price: 4500,
       stock: 20,
-      category: 'Drink',
+      categoryId: 'category-drinks',
       isAvailable: true,
       isSoldOut: false,
       isActive: true,

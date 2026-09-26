@@ -1,8 +1,12 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { Subject, of, throwError } from 'rxjs';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { CATEGORIES_URL } from '../../categories/categories.service';
+import type { Category } from '../../categories/categories.service';
 import { NewProductStore } from '../new-product.store';
 import { ProductsService } from '../products.service';
 import type { Product } from '../products.service';
@@ -15,7 +19,7 @@ const created: Product = {
   imageUrl: null,
   price: 4500,
   stock: 20,
-  category: 'Drink',
+  categoryId: 'category-drinks',
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
@@ -24,20 +28,44 @@ const created: Product = {
 const rejectedWith = (status: number, type: string) =>
   vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status, error: { type } })));
 
-function openScreen(
+/** The venue's own categories, as the API lists them. */
+const theCategories: Category[] = [
+  { id: 'category-drinks', name: 'Tragos' },
+  { id: 'category-beer', name: 'Cervezas' },
+  { id: 'category-soft', name: 'Sin alcohol' },
+];
+
+async function openScreen(
   create = vi.fn().mockReturnValue(of(created)),
   uploadImage = vi.fn().mockReturnValue(of({ imageUrl: 'https://images.example.com/a.png' })),
+  categories: Category[] | 'unreachable' | 'pending' = theCategories,
 ) {
-  return render(NewProductPage, {
+  const rendered = await render(NewProductPage, {
     inputs: { venueSlug: 'bar-alfa' },
     providers: [
       // The screen navigates back to the listing for real: without a route to
       // land on, the router rejects and that masks the actual assertion.
       provideRouter([{ path: ':venueSlug/staff/products', children: [] }]),
+      provideHttpClient(),
+      provideHttpClientTesting(),
       NewProductStore,
       { provide: ProductsService, useValue: { create, uploadImage } },
     ],
-  }).then((rendered) => ({ rendered, create, uploadImage }));
+  });
+
+  const http = TestBed.inject(HttpTestingController);
+
+  if (categories === 'unreachable') {
+    http.expectOne(CATEGORIES_URL).flush('', { status: 500, statusText: 'Server Error' });
+  } else if (categories !== 'pending') {
+    http.expectOne(CATEGORIES_URL).flush(categories);
+  }
+
+  // Not stable while the request is in flight: waiting for it would never end.
+  if (categories === 'pending') rendered.fixture.detectChanges();
+  else await rendered.fixture.whenStable();
+
+  return { rendered, create, uploadImage, http };
 }
 
 function aFile(name: string, type: string, bytes = 4): File {
@@ -99,7 +127,7 @@ describe('NewProductPage', () => {
       name: 'Gin Tonic',
       description: 'Gin, tónica y una rodaja de lima.',
       imageUrl: null,
-      category: 'Drink',
+      categoryId: 'category-drinks',
       price: 4500,
       stock: 20,
     });
@@ -369,14 +397,14 @@ describe('NewProductPage', () => {
       name: 'Gin Tonic',
       description: 'Gin, tónica y una rodaja de lima.',
       imageUrl: null,
-      category: 'Drink',
+      categoryId: 'category-drinks',
       price: 4500,
       stock: 20,
     });
   });
 
   // US-14, criterion 1: loading a product asks for its category.
-  it('offers the three categories a venue sells under', async () => {
+  it('offers the categories the venue has, as the API lists them', async () => {
     await openScreen();
 
     expect(category(/tragos/i)).not.toBeNull();
@@ -397,6 +425,46 @@ describe('NewProductPage', () => {
     expect(screen.getByText(/elegí una categoría/i)).not.toBeNull();
   });
 
+  // What the venue made itself shows up here without the screen knowing it.
+  it('offers a category that only this venue has', async () => {
+    await openScreen(undefined, undefined, [
+      ...theCategories,
+      { id: 'category-wine', name: 'Vinos' },
+    ]);
+
+    expect(category(/vinos/i)).not.toBeNull();
+  });
+
+  it('says the categories are loading instead of showing an empty choice', async () => {
+    await openScreen(undefined, undefined, 'pending');
+
+    expect(screen.getByText(/cargando las categorías/i)).not.toBeNull();
+    expect(screen.queryByRole('radio')).toBeNull();
+  });
+
+  it('says so and offers to try again when the categories cannot be fetched', async () => {
+    const { rendered, http } = await openScreen(undefined, undefined, 'unreachable');
+
+    expect(screen.getByText(/no pudimos traer las categorías/i)).not.toBeNull();
+
+    screen.getByRole('button', { name: /reintentar/i }).click();
+    rendered.fixture.detectChanges();
+    http.expectOne(CATEGORIES_URL).flush(theCategories);
+    await rendered.fixture.whenStable();
+
+    expect(category(/tragos/i)).not.toBeNull();
+  });
+
+  // Nothing to choose from is a dead end for the form, so it points at the
+  // way out instead of leaving an empty fieldset.
+  it('leads to creating the first category when the venue has none', async () => {
+    await openScreen(undefined, undefined, []);
+
+    expect(screen.getByRole('link', { name: /creá la primera/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/categories/new',
+    );
+  });
+
   it('sends the category that was picked', async () => {
     const { create } = await openScreen();
 
@@ -406,6 +474,6 @@ describe('NewProductPage', () => {
     fireEvent.click(category(/cervezas/i));
     save();
 
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ category: 'Beer' }));
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'category-beer' }));
   });
 });

@@ -49,7 +49,7 @@ export class EditProductPage {
   protected save({
     name,
     description,
-    category,
+    categoryId,
     price,
     stock,
     photo,
@@ -60,7 +60,7 @@ export class EditProductPage {
     if (product === undefined) return;
 
     this.store.save(this.venueSlug(), this.id(), {
-      correction: { name, description, price, category },
+      correction: { name, description, price, categoryId },
       photo,
       stockChange: stock,
       isAvailable: isAvailable === product.isAvailable ? null : isAvailable,

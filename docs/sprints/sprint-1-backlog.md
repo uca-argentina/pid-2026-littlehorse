@@ -590,11 +590,18 @@ leyendo el almacenamiento después de mirar la carta.
 > **Ampliado el 2026-09-25:** la categoría también se puede corregir desde la pantalla de
 > edición (US-08), no sólo elegir al cargar. Mismo campo, mismo `Update` del dominio que ya
 > corrige nombre, descripción y precio — no hay una acción aparte para esto.
+>
+> **Cambiado el 2026-09-26:** la lista fija en código de arriba ya no vale. Cada boliche crea
+> sus propias categorías desde el botón _Nueva categoría_ del listado de productos: pasan a
+> ser una tabla `Categories` con `VenueId` (única por nombre dentro del boliche) y el
+> producto guarda un `CategoryId`. Las solapas del cliente salen de esa lista, en el orden en
+> que se crearon. La migración le da a cada boliche las tres de siempre (_Tragos_, _Cervezas_,
+> _Sin alcohol_) y mueve cada producto a la que ya tenía, así que el criterio 4 sigue
+> cumplido. Todavía no hay renombrar ni borrar una categoría.
 
 ✅ **Terminada.** Los cuatro criterios están cumplidos, con prueba de punta a punta que carga
-tragos de las tres categorías y verifica el filtro por solapa contra la API real. La migración
-le pone `Category = Drink` por default a nivel de columna, así que lo cargado antes de esta
-story queda en _Tragos_ sin tocar una fila a mano. La corrección de categoría desde la edición
+tragos de las tres categorías y verifica el filtro por solapa contra la API real. Lo cargado
+antes de esta story quedó en _Tragos_ sin tocar una fila a mano: la migración lo hace. La corrección de categoría desde la edición
 tiene su propia prueba de punta a punta, cambiando la categoría de un producto y verificando
 que la carta del cliente lo mueve de solapa.
 
