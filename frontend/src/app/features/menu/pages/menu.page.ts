@@ -20,17 +20,14 @@ interface MenuCard {
   readonly image: string;
   readonly amount: number;
   readonly price: string;
-  readonly categoryId: string;
   readonly isOrderable: boolean;
 }
 
-/** US-14: which solapa is open. 'all' is the one the menu opens on: a category's id is a guid and never equals it. */
-type CategoryFilter = string;
-
+/** US-14: the tab the menu opens on. A category's id is a guid and never equals it. */
 const ALL = 'all';
 
 interface CategoryTab {
-  readonly filter: CategoryFilter;
+  readonly filter: string;
   readonly name: string;
 }
 
@@ -67,7 +64,7 @@ export class MenuPage {
   protected readonly search = signal('');
 
   /** Opens on 'all', same as every visit: nothing about the last visit is remembered. */
-  protected readonly activeCategory = signal<CategoryFilter>(ALL);
+  protected readonly activeCategory = signal<string>(ALL);
 
   /**
    * A wrong address is not a bad connection. Offering "check your signal" and
@@ -117,7 +114,7 @@ export class MenuPage {
     return (
       this.everything()
         .filter((item) => term === '' || item.name.toLowerCase().includes(term))
-        // Criterion 3: agotados incluidos — this only narrows by category, the
+        // Criterion 3: sold-out ones included — this only narrows by category, the
         // way isOrderable already leaves sold-out and switched-off ones in.
         .filter((item) => category === ALL || item.categoryId === category)
         .map((item) => ({
@@ -127,7 +124,6 @@ export class MenuPage {
           image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
           amount: item.price,
           price: formatPrice(item.price),
-          categoryId: item.categoryId,
           isOrderable: item.isOrderable,
         }))
     );
@@ -201,10 +197,6 @@ export class MenuPage {
 
   protected searchFor(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
-  }
-
-  protected openCategory(filter: CategoryFilter): void {
-    this.activeCategory.set(filter);
   }
 
   /**

@@ -16,7 +16,7 @@ public class CreateCategoryHandlerTests
     {
         FakeCategories categories = new();
 
-        Result<CategorySummary> result = await HandlerOver(categories).HandleAsync(
+        Result<CategoryListItem> result = await HandlerOver(categories).HandleAsync(
             new CreateCategoryCommand("Cervezas"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -32,7 +32,7 @@ public class CreateCategoryHandlerTests
     {
         FakeCategories categories = new(taken: "Cervezas");
 
-        Result<CategorySummary> result = await HandlerOver(categories).HandleAsync(
+        Result<CategoryListItem> result = await HandlerOver(categories).HandleAsync(
             new CreateCategoryCommand("Cervezas"), CancellationToken.None);
 
         Assert.Equal(CreateCategoryHandler.NameTaken, result.Error);
@@ -48,7 +48,7 @@ public class CreateCategoryHandlerTests
     {
         FakeCategories categories = new(taken: "Cervezas");
 
-        Result<CategorySummary> result = await HandlerOver(categories).HandleAsync(
+        Result<CategoryListItem> result = await HandlerOver(categories).HandleAsync(
             new CreateCategoryCommand(name), CancellationToken.None);
 
         Assert.Equal(CreateCategoryHandler.NameTaken, result.Error);

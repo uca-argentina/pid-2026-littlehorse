@@ -15,9 +15,6 @@ public sealed record MenuItemResponse(
     Guid CategoryId,
     bool IsOrderable);
 
-/// <summary>One solapa of the menu, in the order the venue made them.</summary>
-public sealed record MenuCategoryResponse(Guid Id, string Name);
-
 /// <summary>
 /// The venue's menu. The name travels with it because the customer scanned a
 /// QR and never typed where they are: the screen is what tells them. The
@@ -26,7 +23,7 @@ public sealed record MenuCategoryResponse(Guid Id, string Name);
 /// </summary>
 public sealed record MenuResponse(
     string VenueName,
-    IReadOnlyList<MenuCategoryResponse> Categories,
+    IReadOnlyList<CategoryResponse> Categories,
     IReadOnlyList<MenuItemResponse> Items);
 
 internal static class MenuEndpoint
@@ -72,7 +69,7 @@ internal static class MenuEndpoint
 
         return TypedResults.Ok(new MenuResponse(
             venue.Identity.Name,
-            [.. tabs.Select(category => new MenuCategoryResponse(category.Id, category.Name))],
+            [.. tabs.Select(category => new CategoryResponse(category.Id, category.Name))],
             [.. menu.Select(item => new MenuItemResponse(
                 item.Id,
                 item.Name,

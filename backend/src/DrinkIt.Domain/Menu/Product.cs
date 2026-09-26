@@ -121,7 +121,7 @@ public sealed class Product : IBelongsToVenue
         ValidatePrice(price);
 
         if (stock < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
-        if (categoryId == Guid.Empty) throw new DomainException(ErrorCodes.CategoryRequired, "The product needs a category.");
+        ValidateCategory(categoryId);
 
         string? cleanImageUrl = BlankToNull(imageUrl);
 
@@ -161,7 +161,7 @@ public sealed class Product : IBelongsToVenue
         string? cleanDescription = ValidateDescription(description);
 
         ValidatePrice(price);
-        if (categoryId == Guid.Empty) throw new DomainException(ErrorCodes.CategoryRequired, "The product needs a category.");
+        ValidateCategory(categoryId);
 
         Name = cleanName;
         Description = cleanDescription;
@@ -217,6 +217,11 @@ public sealed class Product : IBelongsToVenue
     private static void ValidatePrice(decimal price)
     {
         if (price <= 0) throw new DomainException(ErrorCodes.PriceNotPositive, "The price has to be greater than zero.");
+    }
+
+    private static void ValidateCategory(Guid categoryId)
+    {
+        if (categoryId == Guid.Empty) throw new DomainException(ErrorCodes.CategoryRequired, "The product needs a category.");
     }
 
     /// <summary>

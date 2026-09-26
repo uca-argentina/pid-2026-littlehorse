@@ -280,7 +280,7 @@ describe('MenuPage', () => {
     }
 
     // US-14, criterion 2.
-    it('offers a solapa for each category plus Todos, and opens on Todos', async () => {
+    it('offers a tab for each category plus Todos, and opens on Todos', async () => {
       await openScreenShowing(mixedMenu);
 
       expect(tab(/todos/i).getAttribute('aria-selected')).toBe('true');
@@ -290,7 +290,7 @@ describe('MenuPage', () => {
       expect(names()).toEqual(['Gin Tonic', 'Imperial', 'Agua con gas']);
     });
 
-    // US-14, criterion 3: agotados incluidos.
+    // US-14, criterion 3: sold-out ones included.
     it('narrows to the chosen category, sold-out drinks included', async () => {
       const rendered = await openScreenShowing(mixedMenu);
 

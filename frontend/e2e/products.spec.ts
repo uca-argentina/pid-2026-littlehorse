@@ -37,7 +37,7 @@ async function fillTheForm(page: Page, name: string, price: string, stock: strin
   await page
     .getByRole('textbox', { name: /descripción/i })
     .fill('Gin, tónica y una rodaja de lima.');
-  // US-14: obligatoria al cargar. Tragos, the same as the migration's default
+  // US-14: required when loading one. Tragos, the same as the migration's default
   // for what was loaded before the field existed.
   await page.getByRole('radio', { name: /tragos/i }).check();
   await page.getByRole('spinbutton', { name: /precio/i }).fill(price);
@@ -192,7 +192,7 @@ test.describe('Products', () => {
     await expect(page).toHaveURL(new RegExp(`${productsPath}/new$`));
   });
 
-  // US-14, criterion 1: obligatoria al cargar un producto.
+  // US-14, criterion 1: required when loading a product.
   test('does not save without a category chosen, and says why', async ({ page }) => {
     await logInAsTheAdministrator(page);
 

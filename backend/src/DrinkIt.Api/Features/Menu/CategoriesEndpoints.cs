@@ -56,7 +56,7 @@ internal static class CategoriesEndpoints
         // A broken invariant (blank name, too long) is not caught here: the
         // domain throws and the global handler turns it into a 400 with the
         // rule's own problem type.
-        Result<CategorySummary> result = await handler.HandleAsync(new CreateCategoryCommand(request.Name), cancellationToken);
+        Result<CategoryListItem> result = await handler.HandleAsync(new CreateCategoryCommand(request.Name), cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
 

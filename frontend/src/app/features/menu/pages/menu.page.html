@@ -65,7 +65,7 @@
             role="tab"
             [class.tab-on]="activeCategory() === tab.filter"
             [attr.aria-selected]="activeCategory() === tab.filter"
-            (click)="openCategory(tab.filter)"
+            (click)="activeCategory.set(tab.filter)"
           >
             {{ tab.name }}
           </button>

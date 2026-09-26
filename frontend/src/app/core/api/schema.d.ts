@@ -391,12 +391,6 @@ export interface components {
       username: string;
       role: string;
     };
-    /** @description One solapa of the menu, in the order the venue made them. */
-    MenuCategoryResponse: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-    };
     /** @description One card of the menu, as the customer's phone receives it. */
     MenuItemResponse: {
       /** Format: uuid */
@@ -418,7 +412,7 @@ export interface components {
      */
     MenuResponse: {
       venueName: string;
-      categories: components['schemas']['MenuCategoryResponse'][];
+      categories: components['schemas']['CategoryResponse'][];
       items: components['schemas']['MenuItemResponse'][];
     };
     /** @description One drink, as the phone asks for it. What it costs is not in here on purpose. */

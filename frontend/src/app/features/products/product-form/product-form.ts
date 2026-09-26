@@ -115,7 +115,7 @@ export class ProductForm {
     stock: new FormControl<number | null>(null, {
       validators: [(control) => this.stockRule(control)],
     }),
-    // US-14: obligatoria, at creation and while correcting one alike.
+    // US-14: required, at creation and while correcting one alike.
     categoryId: new FormControl<string | null>(null, { validators: [Validators.required] }),
   });
 
