@@ -9,9 +9,9 @@ using Microsoft.Extensions.Options;
 namespace DrinkIt.Api.IntegrationTests.Persistence.Seeding;
 
 [Collection(nameof(SqlServerCollection))]
-public sealed class DevelopmentSeederTests(SqlServerFixture sql)
+public sealed class BootstrapSeederTests(SqlServerFixture sql)
 {
-    private static readonly DevelopmentSeedOptions SeedOptions = new()
+    private static readonly BootstrapOptions SeedOptions = new()
     {
         VenueSlug = $"seed-{Guid.NewGuid():N}",
         AdminUsername = "admin",
@@ -35,7 +35,7 @@ public sealed class DevelopmentSeederTests(SqlServerFixture sql)
         Assert.True(new IdentityPasswordHasher().Verify(SeedOptions.AdminPassword, admin.PasswordHash));
     }
 
-    // The seeder runs on every Development start, so it must be safe to call
+    // The seeder runs on every start, so it must be safe to call
     // twice: once for the first ever run, and once for every restart after.
     [Fact]
     public async Task SeedAsync_WhenTheAdminAlreadyExists_DoesNotCreateASecondOne()
@@ -91,19 +91,25 @@ public sealed class DevelopmentSeederTests(SqlServerFixture sql)
         Assert.Equal(3, await verify.Categories.IgnoreQueryFilters().CountAsync(c => c.VenueId == venue.Id));
     }
 
+    // The seeder runs on every start in every environment, and production only
+    // configures a password for the first deploy. Without one there is nothing
+    // to seed, and seeding an account with a guessable password is worse.
     [Fact]
-    public async Task SeedAsync_WhenThePasswordIsBlank_ThrowsRatherThanSeedingAGuessableAccount()
+    public async Task SeedAsync_WhenThePasswordIsBlank_SeedsNothing()
     {
+        string venueSlug = $"seed-{Guid.NewGuid():N}";
         await using DrinkItDbContext context = sql.CreateContext(Guid.Empty);
-        DevelopmentSeeder seeder = new(
+        BootstrapSeeder seeder = new(
             context,
             new IdentityPasswordHasher(),
-            Options.Create(new DevelopmentSeedOptions { AdminPassword = "" }),
+            Options.Create(new BootstrapOptions { VenueSlug = venueSlug, AdminPassword = "" }),
             TimeProvider.System);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => seeder.SeedAsync(CancellationToken.None));
+        await seeder.SeedAsync(CancellationToken.None);
+
+        Assert.False(await context.Venues.AnyAsync(v => v.Slug == venueSlug));
     }
 
-    private static DevelopmentSeeder Seeder(DrinkItDbContext context) =>
+    private static BootstrapSeeder Seeder(DrinkItDbContext context) =>
         new(context, new IdentityPasswordHasher(), Options.Create(SeedOptions), TimeProvider.System);
 }

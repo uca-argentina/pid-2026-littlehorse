@@ -28,10 +28,10 @@ public static class MigrationExtensions
         /// Safe to call on every restart. The seeder itself is internal to
         /// Infrastructure, so this goes through the same public door DI does.
         /// </summary>
-        public async Task SeedDevelopmentDataAsync()
+        public async Task SeedBootstrapDataAsync()
         {
             using IServiceScope scope = app.Services.CreateScope();
-            await scope.ServiceProvider.SeedDevelopmentDataAsync(CancellationToken.None);
+            await scope.ServiceProvider.SeedBootstrapDataAsync(CancellationToken.None);
         }
     }
 }

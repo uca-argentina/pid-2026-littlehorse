@@ -33,9 +33,9 @@ public static class InfrastructureServices
             options.UseSqlServer(configuration.GetConnectionString("DrinkIt")));
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
-        services.Configure<DevelopmentSeedOptions>(configuration.GetSection(DevelopmentSeedOptions.SectionName));
+        services.Configure<BootstrapOptions>(configuration.GetSection(BootstrapOptions.SectionName));
         services.Configure<ImageStorageOptions>(configuration.GetSection(ImageStorageOptions.SectionName));
-        services.AddScoped<DevelopmentSeeder>();
+        services.AddScoped<BootstrapSeeder>();
 
         // Injected rather than calling DateTimeOffset.UtcNow, so token expiry
         // can be asserted exactly in tests.
@@ -70,9 +70,9 @@ public static class InfrastructureServices
     }
 
     /// <summary>
-    /// The only way to reach DevelopmentSeeder from outside this assembly: it
+    /// The only way to reach BootstrapSeeder from outside this assembly: it
     /// stays internal, and this is the door.
     /// </summary>
-    public static Task SeedDevelopmentDataAsync(this IServiceProvider services, CancellationToken cancellationToken) =>
-        services.GetRequiredService<DevelopmentSeeder>().SeedAsync(cancellationToken);
+    public static Task SeedBootstrapDataAsync(this IServiceProvider services, CancellationToken cancellationToken) =>
+        services.GetRequiredService<BootstrapSeeder>().SeedAsync(cancellationToken);
 }

@@ -65,10 +65,14 @@ WebApplication app = builder.Build();
 // accepted risk with more than one replica applying migrations at the same time.
 await app.ApplyMigrationsAsync();
 
+// Every environment too: it is what creates the first administrator in
+// production, where there is no sign-up. It does nothing unless
+// Bootstrap:AdminPassword is set, see BootstrapSeeder.
+await app.SeedBootstrapDataAsync();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    await app.SeedDevelopmentDataAsync();
     app.MapScalarApiReference();
 }
 
