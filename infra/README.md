@@ -10,12 +10,24 @@ deploy, así que se hizo una sola vez con `az cli`:
 
 - Resource group `rg-drinkit` en `brazilsouth`.
 - App Registration `drinkit-github-actions` (appId `028b0948-3521-49d9-9029-e6c02e8052b2`)
-  con federated credential OIDC para `repo:lamelapablo/drink-it:ref:refs/heads/main`.
+  con federated credential OIDC `github-pid-2026-littlehorse-production` para el subject
+  `repo:uca-argentina@42899167/pid-2026-littlehorse@1370630407:environment:production`.
   Sin secretos de larga vida: GitHub Actions autentica con un token de corta vida en cada
   corrida.
+  - El subject lleva `environment:production` y no `ref:refs/heads/main` porque los jobs de
+    deploy declaran `environment: production`, y en ese caso GitHub emite el token con el
+    environment. Lo que impide deployar desde otra rama es la regla del environment, que
+    sólo admite `main`.
+  - El repo usa el formato de subject **inmutable**, con los IDs numéricos de la org y del
+    repo. El prefijo exacto sale de
+    `gh api repos/uca-argentina/pid-2026-littlehorse/actions/oidc/customization/sub`.
+    Por eso el credential se crea con el escenario "Other issuer" del portal: el de
+    "GitHub Actions" arma el subject sin los IDs y no coincide.
 - Ese service principal tiene rol **Contributor** sobre `rg-drinkit`, nada más amplio.
 
-Secrets que tiene que tener el repo en GitHub (Settings → Secrets and variables → Actions):
+Environment `production` en GitHub (Settings → Environments), con **Deployment branches**
+restringido a `main`. Los secrets van en el environment, no a nivel repo: así sólo los
+leen los jobs de deploy que corren desde `main`.
 
 | Secret                  | Valor                                                        |
 | ----------------------- | ------------------------------------------------------------ |
@@ -35,7 +47,7 @@ Secrets que tiene que tener el repo en GitHub (Settings → Secrets and variable
   de autenticarse contra GHCR con Managed Identity, y pedirle un PAT de GitHub como secret
   sólo para bajar una imagen es más superficie de ataque que exponerla. El código fuente
   privado no se toca — sólo el binario compilado. Se hace a mano una vez: en GitHub,
-  paquete `drink-it-api` → **Package settings → Change visibility → Public**.
+  paquete `pid-2026-littlehorse-api` → **Package settings → Change visibility → Public**.
 - **`storage` y `Jwt:SigningKey` sí son secrets del Container App**, no hay forma AAD-only
   para esos dos con el código actual (ver ADR-0007, adenda de las fotos). Van como
   `secretRef`, nunca como variable de entorno plana.
@@ -66,7 +78,7 @@ todo ambiente — ver la próxima sección.
 
 1. Que termine de registrarse `Microsoft.App` y `Microsoft.Sql` en la suscripción
    (`az provider show -n Microsoft.App --query registrationState`).
-2. Cargar los 4 secrets de GitHub de la tabla de arriba.
+2. Crear el environment `production` y cargarle los 4 secrets de la tabla de arriba.
 3. Mergear a `main` → dispara `.github/workflows/deploy-main.yml`.
 4. Correr el TSQL de arriba una vez.
 5. Poner pública la imagen en GHCR (o el primer arranque del contenedor falla al no poder
