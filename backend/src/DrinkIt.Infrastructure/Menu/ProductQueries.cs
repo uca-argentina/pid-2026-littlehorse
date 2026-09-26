@@ -1,3 +1,4 @@
+using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +30,8 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
                 // Product.IsSoldOut is not mapped, so the rule is restated for
                 // SQL here. The domain test is the one that owns it.
                 product.Stock == 0,
-                product.IsActive))
+                product.IsActive,
+                new AuditInfo(product.CreatedAt, product.CreatedBy, product.LastModifiedAt, product.LastModifiedBy)))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>

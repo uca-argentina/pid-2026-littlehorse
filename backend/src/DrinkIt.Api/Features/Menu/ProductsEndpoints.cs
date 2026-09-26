@@ -45,7 +45,8 @@ public sealed record ProductResponse(
     Guid CategoryId,
     bool IsAvailable,
     bool IsSoldOut,
-    bool IsActive);
+    bool IsActive,
+    AuditResponse Audit);
 
 internal static class ProductsEndpoints
 {
@@ -151,7 +152,8 @@ internal static class ProductsEndpoints
                 product.CategoryId,
                 product.IsAvailable,
                 product.IsSoldOut,
-                product.IsActive))
+                product.IsActive,
+                AuditResponse.Of(product.Audit)))
             .ToArray());
     }
 
@@ -233,7 +235,8 @@ internal static class ProductsEndpoints
         product.CategoryId,
         product.IsAvailable,
         product.IsSoldOut,
-        product.IsActive);
+        product.IsActive,
+        AuditResponse.Of(product.Audit));
 
     internal static async Task<IResult> UploadImageAsync(
         Guid id,

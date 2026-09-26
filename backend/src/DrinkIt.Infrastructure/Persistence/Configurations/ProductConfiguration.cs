@@ -10,6 +10,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
     public void Configure(EntityTypeBuilder<Product> builder)
     {
         builder.ToTable("Products");
+        builder.HasAuditColumns();
         builder.HasKey(product => product.Id);
 
         builder.Property(product => product.Name).HasMaxLength(Product.NameMaxLength).IsRequired();

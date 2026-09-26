@@ -15,7 +15,7 @@ public sealed record ChangeStaffUserRoleRequest(string Role);
 /// <summary>What it sends to hand somebody a new password.</summary>
 public sealed record ResetStaffUserPasswordRequest(string Password);
 
-public sealed record StaffUserResponse(Guid Id, string Username, string Role, bool IsActive);
+public sealed record StaffUserResponse(Guid Id, string Username, string Role, bool IsActive, AuditResponse Audit);
 
 internal static class StaffUsersEndpoints
 {
@@ -86,7 +86,7 @@ internal static class StaffUsersEndpoints
         IReadOnlyList<StaffUserListItem> everyone = await staffUsers.ListAsync(cancellationToken);
 
         return TypedResults.Ok(everyone
-            .Select(user => new StaffUserResponse(user.Id, user.Username, user.Role.ToString(), user.IsActive))
+            .Select(user => new StaffUserResponse(user.Id, user.Username, user.Role.ToString(), user.IsActive, AuditResponse.Of(user.Audit)))
             .ToArray());
     }
 
@@ -110,7 +110,7 @@ internal static class StaffUsersEndpoints
         // identifies.
         return TypedResults.Created(
             (string?)null,
-            new StaffUserResponse(created.Id, created.Username, created.Role.ToString(), created.IsActive));
+            new StaffUserResponse(created.Id, created.Username, created.Role.ToString(), created.IsActive, AuditResponse.Of(created.Audit)));
     }
 
     internal static async Task<IResult> ChangeRoleAsync(
@@ -152,7 +152,7 @@ internal static class StaffUsersEndpoints
         StaffUserSummary user = result.Value;
 
         return TypedResults.Ok(
-            new StaffUserResponse(user.Id, user.Username, user.Role.ToString(), user.IsActive));
+            new StaffUserResponse(user.Id, user.Username, user.Role.ToString(), user.IsActive, AuditResponse.Of(user.Audit)));
     }
 
     /// <summary>

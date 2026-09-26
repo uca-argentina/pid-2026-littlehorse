@@ -38,6 +38,8 @@ builder.Services.AddScoped<ConfirmOrderHandler>();
 // it and the DbContext reads from it while handling the same request.
 builder.Services.AddScoped<CurrentVenue>();
 builder.Services.AddScoped<ICurrentVenue>(services => services.GetRequiredService<CurrentVenue>());
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentStaffUser, CurrentStaffUser>();
 
 JwtOptions jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 

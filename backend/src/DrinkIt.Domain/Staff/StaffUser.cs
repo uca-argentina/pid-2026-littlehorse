@@ -7,7 +7,7 @@ namespace DrinkIt.Domain.Staff;
 /// Customers are a separate aggregate — they belong to no venue and their
 /// account is optional.
 /// </summary>
-public sealed class StaffUser : IBelongsToVenue
+public sealed class StaffUser : AuditStamps, IBelongsToVenue
 {
     public static class ErrorCodes
     {

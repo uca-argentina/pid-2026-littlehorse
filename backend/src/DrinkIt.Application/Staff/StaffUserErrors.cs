@@ -3,7 +3,16 @@ using DrinkIt.Application.Common;
 namespace DrinkIt.Application.Staff;
 
 /// <summary>What the staff user in a request is, once it is found. No password travels back.</summary>
-public sealed record StaffUserSummary(Guid Id, string Username, DrinkIt.Domain.Staff.StaffRole Role, bool IsActive);
+public sealed record StaffUserSummary(
+    Guid Id,
+    string Username,
+    DrinkIt.Domain.Staff.StaffRole Role,
+    bool IsActive,
+    AuditInfo Audit)
+{
+    internal static StaffUserSummary Of(DrinkIt.Domain.Staff.StaffUser user) =>
+        new(user.Id, user.Username, user.Role, user.IsActive, AuditInfo.Of(user));
+}
 
 public static class StaffUserErrors
 {

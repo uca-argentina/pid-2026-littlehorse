@@ -7,6 +7,8 @@ import { NewStaffUserStore } from './new-staff-user.store';
 import { StaffUsersService } from './staff-users.service';
 import type { StaffUser } from './staff-users.service';
 
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
 function rejectedWith(status: number, type: string): HttpErrorResponse {
   return new HttpErrorResponse({ status, error: { type } });
 }
@@ -16,6 +18,7 @@ const created: StaffUser = {
   username: 'martin.p',
   role: 'Waiter',
   isActive: true,
+  audit: noAudit,
 };
 
 const aNewUser = { username: 'martin.p', password: 'a long enough one', role: 'Waiter' };

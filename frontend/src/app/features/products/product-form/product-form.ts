@@ -19,6 +19,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 import { CATEGORIES_URL } from '../../categories/categories.service';
 import type { Category } from '../../categories/categories.service';
+import { AuditNote } from '../../../shared/audit-note/audit-note';
 import { trimmedMinLength } from '../../../shared/forms/trimmed-min-length';
 import { IMAGE_MAX_BYTES, IMAGE_TYPES } from '../products.service';
 import type { Product } from '../products.service';
@@ -58,7 +59,7 @@ export interface ProductFormValue {
  */
 @Component({
   selector: 'drinkit-product-form',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [AuditNote, ReactiveFormsModule, RouterLink],
   styleUrl: './product-form.scss',
   templateUrl: './product-form.html',
 })

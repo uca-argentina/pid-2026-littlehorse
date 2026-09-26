@@ -7,6 +7,8 @@ import { PRODUCTS_URL, PRODUCT_PLACEHOLDER } from '../products.service';
 import type { Product } from '../products.service';
 import { ProductsPage } from './products.page';
 
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
 const theMenu: Product[] = [
   {
     id: 'id-1',
@@ -19,6 +21,8 @@ const theMenu: Product[] = [
     isAvailable: true,
     isSoldOut: false,
     isActive: true,
+
+    audit: noAudit,
   },
   {
     id: 'id-2',
@@ -31,6 +35,8 @@ const theMenu: Product[] = [
     isAvailable: true,
     isSoldOut: true,
     isActive: true,
+
+    audit: noAudit,
   },
   {
     id: 'id-3',
@@ -43,6 +49,8 @@ const theMenu: Product[] = [
     isAvailable: false,
     isSoldOut: false,
     isActive: false,
+
+    audit: noAudit,
   },
 ];
 
@@ -188,6 +196,8 @@ describe('ProductsPage', () => {
       isAvailable: true,
       isSoldOut: false,
       isActive: true,
+
+      audit: noAudit,
     };
 
     function theSwitch(): HTMLElement {

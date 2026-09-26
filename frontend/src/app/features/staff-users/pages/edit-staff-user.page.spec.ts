@@ -10,12 +10,31 @@ import { STAFF_USERS_URL, StaffUsersService } from '../staff-users.service';
 import type { StaffUser } from '../staff-users.service';
 import { EditStaffUserPage } from './edit-staff-user.page';
 
-const martin: StaffUser = { id: 'id-2', username: 'martin.p', role: 'Waiter', isActive: true };
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
+const martin: StaffUser = {
+  id: 'id-2',
+  username: 'martin.p',
+  role: 'Waiter',
+  isActive: true,
+  audit: noAudit,
+};
 
 const theTeam: StaffUser[] = [
-  { id: 'id-1', username: 'euge.q', role: 'Administrator', isActive: true },
+  { id: 'id-1', username: 'euge.q', role: 'Administrator', isActive: true, audit: noAudit },
   martin,
-  { id: 'id-3', username: 'pablo.l', role: 'Kds', isActive: false },
+  {
+    id: 'id-3',
+    username: 'pablo.l',
+    role: 'Kds',
+    isActive: false,
+    audit: {
+      createdAt: '2026-09-27T21:00:00Z',
+      createdBy: 'euge.q',
+      lastModifiedAt: '2026-09-28T01:30:00Z',
+      lastModifiedBy: 'nico.r',
+    },
+  },
 ];
 
 const rejectedWith = (status: number, type: string) =>
@@ -68,6 +87,21 @@ async function takeAccessAway(rendered: { fixture: { whenStable: () => Promise<u
 }
 
 describe('EditStaffUserPage', () => {
+  // US-30, criteria 1 and 2, on the ficha of a person.
+  it('says who added this person and who last changed them', async () => {
+    await openScreenFor('id-3');
+
+    expect(screen.getByText(/creado por euge\.q/i)).not.toBeNull();
+    expect(screen.getByText(/última modificación por nico\.r/i)).not.toBeNull();
+  });
+
+  // Criterion 4: nobody is given a date they never had.
+  it('says there is no record for somebody who was there before the audit existed', async () => {
+    await openScreenFor('id-2');
+
+    expect(screen.getByText(/sin registro de quién lo creó ni de cuándo/i)).not.toBeNull();
+  });
+
   it('names whoever is being corrected', async () => {
     await openScreenFor('id-2');
 

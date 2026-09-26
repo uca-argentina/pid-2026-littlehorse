@@ -126,6 +126,23 @@ se marca agotado, se da de baja y nada se borra.
 - **A favor:** el reloj ya está inyectado (`TimeProvider`, el que usa la estrategia de pago),
   así que las fechas se pueden fijar en un test en vez de depender de la hora de la máquina.
 
+**Decidido el 2026-09-27 y construido:**
+
+- **Columnas** `CreatedAt`, `CreatedBy`, `LastModifiedAt` y `LastModifiedBy` en `Products`,
+  `StaffUsers` y `Categories`; sólo `CreatedAt` en `Venues` y `Orders`; nada en `OrderItems` ni
+  en `OrderCodeCounters`. El porqué de cada una está en
+  [modelo-de-datos.md](../modelo-de-datos.md).
+- **Un solo lugar:** un interceptor de `SaveChanges` lee el reloj y el username del token. La
+  venta que descuenta stock va por su propia sentencia y no cuenta como una edición.
+- **Dónde se ve:** al pie de la ficha de personal y de la ficha de producto (criterios 1, 2 y
+  4). Las filas anteriores dicen _Sin registro_, y en la base local quedaron todas nulas.
+- **Falta el criterio 3** (las marcas del recorrido del pedido): hoy no existe ninguna pantalla
+  de administración de pedidos donde mostrarlas. `Orders` ya guarda `CreatedAt`; confirmado,
+  listo, entregado y "preparado por" los agrega cada story de la barra junto con su
+  transición, con el mismo mecanismo.
+- **Sin renombrar ni borrar:** las categorías no se editan todavía, así que sus columnas
+  `LastModified*` quedan nulas hasta que exista esa pantalla.
+
 ---
 
 ## La barra
