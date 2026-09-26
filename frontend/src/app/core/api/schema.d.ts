@@ -319,6 +319,20 @@ export interface components {
       /** Format: int32 */
       change: number;
     };
+    /**
+     * @description Who made something and who last touched it, as the administration screens
+     *     read it (US-30). Every part travels as null when there is none: a row from
+     *     before the columns existed has no date, and the screen says "sin registro"
+     *     instead of showing one that was never recorded.
+     */
+    AuditResponse: {
+      /** Format: date-time */
+      createdAt: null | string;
+      createdBy: null | string;
+      /** Format: date-time */
+      lastModifiedAt: null | string;
+      lastModifiedBy: null | string;
+    };
     CategoryResponse: {
       /** Format: uuid */
       id: string;
@@ -456,6 +470,7 @@ export interface components {
       isAvailable: boolean;
       isSoldOut: boolean;
       isActive: boolean;
+      audit: components['schemas']['AuditResponse'];
     };
     /** @description What it sends to hand somebody a new password. */
     ResetStaffUserPasswordRequest: {
@@ -467,6 +482,7 @@ export interface components {
       username: string;
       role: string;
       isActive: boolean;
+      audit: components['schemas']['AuditResponse'];
     };
     /** @description One drink of the order, as the tracking screen draws it. */
     TrackedOrderItemResponse: {

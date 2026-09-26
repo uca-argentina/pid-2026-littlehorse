@@ -8,6 +8,8 @@ import type { ProductChanges } from './edit-product.store';
 import { ProductsService } from './products.service';
 import type { Product } from './products.service';
 
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
 const ginTonic: Product = {
   id: 'id-1',
   name: 'Gin Tonic',
@@ -19,6 +21,8 @@ const ginTonic: Product = {
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
+
+  audit: noAudit,
 };
 
 const onlyTheCorrection: ProductChanges = {

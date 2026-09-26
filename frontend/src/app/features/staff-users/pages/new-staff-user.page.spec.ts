@@ -8,7 +8,15 @@ import { StaffUsersService } from '../staff-users.service';
 import type { StaffUser } from '../staff-users.service';
 import { NewStaffUserPage } from './new-staff-user.page';
 
-const created: StaffUser = { id: 'id-1', username: 'martin.p', role: 'Waiter', isActive: true };
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
+const created: StaffUser = {
+  id: 'id-1',
+  username: 'martin.p',
+  role: 'Waiter',
+  isActive: true,
+  audit: noAudit,
+};
 
 const rejectedWith = (status: number, type: string) =>
   vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status, error: { type } })));

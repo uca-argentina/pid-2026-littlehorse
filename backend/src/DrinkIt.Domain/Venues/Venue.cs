@@ -7,7 +7,7 @@ namespace DrinkIt.Domain.Venues;
 /// A place that sells drinks: a club, a bar, the bars of a concert venue.
 /// Root of the multi-tenancy model — see CLAUDE.md.
 /// </summary>
-public sealed partial class Venue
+public sealed partial class Venue : CreationStamp
 {
     public static class ErrorCodes
     {

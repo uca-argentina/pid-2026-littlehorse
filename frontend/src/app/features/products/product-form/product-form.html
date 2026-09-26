@@ -260,6 +260,11 @@
           <p class="help">Sin stock: reponé para poder prenderlo.</p>
         }
       </div>
+
+      <!-- Only a product that exists has a history: the alta has nothing to say yet. -->
+      @if (product(); as current) {
+        <drinkit-audit-note [audit]="current.audit" />
+      }
     </div>
 
     <div class="side">

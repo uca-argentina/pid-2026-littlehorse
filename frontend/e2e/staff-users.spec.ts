@@ -173,6 +173,29 @@ test.describe('Staff users', () => {
    * attempt in the middle — a screen that says "dado de baja" proves nothing
    * about whether that person can still get in.
    */
+  // US-30, criteria 1 and 2, against the real API: the administrator who is
+  // signed in is the one who gets written down, taken from the token.
+  test('records who added somebody and who last changed them', async ({ page }) => {
+    const username = aNewUsername();
+
+    await logInAsTheAdministrator(page);
+    await createStaffUser(page, username, /mozo/i);
+    await page.getByRole('searchbox', { name: /buscar usuario/i }).fill(username);
+    await page.getByRole('link', { name: /editar/i }).click();
+
+    await expect(
+      page.getByText(new RegExp(`creado por ${seededAdminUsername} el `, 'i')),
+    ).toBeVisible();
+    await expect(page.getByText(/sin modificaciones desde que se creó/i)).toBeVisible();
+
+    await page.getByRole('button', { name: /dar de baja/i }).click();
+    await page.getByRole('button', { name: /confirmar la baja/i }).click();
+
+    await expect(
+      page.getByText(new RegExp(`última modificación por ${seededAdminUsername} el `, 'i')),
+    ).toBeVisible();
+  });
+
   test('takes access away, keeps the row, and gives the account back', async ({ page }) => {
     const username = aNewUsername();
 

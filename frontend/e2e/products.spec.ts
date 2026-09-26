@@ -245,6 +245,33 @@ test.describe('Products', () => {
     await expect(row).toContainText('3.800');
   });
 
+  // US-30, criteria 1 and 2, against the real API: the administrator who is
+  // signed in is the one who gets written down, taken from the token.
+  test('records who loaded a product and who last changed it', async ({ page }) => {
+    const name = aNewProductName();
+
+    await logInAsTheAdministrator(page);
+    await page.goto(`${productsPath}/new`);
+    await fillTheForm(page, name, '4500', '20');
+
+    const row = page.getByRole('listitem').filter({ hasText: name });
+    await row.getByRole('link', { name: /editar/i }).click();
+
+    await expect(
+      page.getByText(new RegExp(`creado por ${seededAdminUsername} el `, 'i')),
+    ).toBeVisible();
+    await expect(page.getByText(/sin modificaciones desde que se creó/i)).toBeVisible();
+
+    await page.getByRole('spinbutton', { name: /precio/i }).fill('5200');
+    await page.getByRole('button', { name: /guardar cambios/i }).click();
+    await expect(page).toHaveURL(new RegExp(`${productsPath}$`));
+
+    await row.getByRole('link', { name: /editar/i }).click();
+    await expect(
+      page.getByText(new RegExp(`última modificación por ${seededAdminUsername} el `, 'i')),
+    ).toBeVisible();
+  });
+
   // US-14: the field this story adds to the correction screen, checked all
   // the way to the tab the customer finds the product under.
   test('changes the category of a product that already exists', async ({ page }) => {

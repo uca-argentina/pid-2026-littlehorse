@@ -7,6 +7,8 @@ import { NewProductStore } from './new-product.store';
 import { ProductsService } from './products.service';
 import type { NewProduct, Product } from './products.service';
 
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
 function rejectedWith(status: number, type: string): HttpErrorResponse {
   return new HttpErrorResponse({ status, error: { type } });
 }
@@ -22,6 +24,8 @@ const created: Product = {
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
+
+  audit: noAudit,
 };
 
 const aNewProduct: NewProduct = {

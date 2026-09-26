@@ -34,6 +34,6 @@ public sealed class ResetStaffUserPasswordHandler(
 
         await staffUsers.SaveChangesAsync(cancellationToken);
 
-        return new StaffUserSummary(user.Id, user.Username, user.Role, user.IsActive);
+        return StaffUserSummary.Of(user);
     }
 }

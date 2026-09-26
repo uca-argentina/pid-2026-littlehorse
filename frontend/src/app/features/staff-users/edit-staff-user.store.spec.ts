@@ -6,7 +6,15 @@ import { EditStaffUserStore } from './edit-staff-user.store';
 import { StaffUsersService } from './staff-users.service';
 import type { StaffUser } from './staff-users.service';
 
-const martin: StaffUser = { id: 'id-1', username: 'martin.p', role: 'Waiter', isActive: true };
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
+const martin: StaffUser = {
+  id: 'id-1',
+  username: 'martin.p',
+  role: 'Waiter',
+  isActive: true,
+  audit: noAudit,
+};
 
 const rejectedWith = (status: number, type: string) =>
   vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status, error: { type } })));

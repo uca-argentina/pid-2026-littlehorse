@@ -20,6 +20,6 @@ public sealed class ReactivateStaffUserHandler(IStaffUserRepository staffUsers)
 
         await staffUsers.SaveChangesAsync(cancellationToken);
 
-        return new StaffUserSummary(user.Id, user.Username, user.Role, user.IsActive);
+        return StaffUserSummary.Of(user);
     }
 }

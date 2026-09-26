@@ -9,6 +9,7 @@ internal sealed class VenueConfiguration : IEntityTypeConfiguration<Venue>
     public void Configure(EntityTypeBuilder<Venue> builder)
     {
         builder.ToTable("Venues");
+        builder.HasCreationTime();
         builder.HasKey(venue => venue.Id);
 
         builder.Property(venue => venue.Name).HasMaxLength(100).IsRequired();

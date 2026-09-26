@@ -16,7 +16,7 @@ namespace DrinkIt.Domain.Menu;
 /// <item><see cref="IsActive"/> — the soft delete. Off means gone from the menu for good; the row stays because old orders point at it.</item>
 /// </list>
 /// </remarks>
-public sealed class Product : IBelongsToVenue
+public sealed class Product : AuditStamps, IBelongsToVenue
 {
     public static class ErrorCodes
     {

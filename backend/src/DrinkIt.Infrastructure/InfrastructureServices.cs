@@ -29,8 +29,11 @@ public static class InfrastructureServices
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddDbContext<DrinkItDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("DrinkIt")));
+        services.AddScoped<AuditInterceptor>();
+        services.AddDbContext<DrinkItDbContext>((services, options) => options
+            .UseSqlServer(configuration.GetConnectionString("DrinkIt"))
+            // US-30: the one place that stamps who and when on every save.
+            .AddInterceptors(services.GetRequiredService<AuditInterceptor>()));
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<DevelopmentSeedOptions>(configuration.GetSection(DevelopmentSeedOptions.SectionName));

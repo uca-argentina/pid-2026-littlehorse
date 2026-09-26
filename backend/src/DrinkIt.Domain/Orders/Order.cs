@@ -17,7 +17,7 @@ namespace DrinkIt.Domain.Orders;
 /// answer would carry a half-moved order forward, and that is the bug this
 /// design exists to make impossible.
 /// </remarks>
-public sealed class Order : IBelongsToVenue
+public sealed class Order : CreationStamp, IBelongsToVenue
 {
     public static class ErrorCodes
     {

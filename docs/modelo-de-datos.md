@@ -9,6 +9,8 @@ funcional que quedan fuera están listadas al final, con el motivo de cada una.
 erDiagram
     VENUE ||--o{ STAFF_USER : emplea
     VENUE ||--o{ PRODUCT : ofrece
+    VENUE ||--o{ CATEGORY : define
+    CATEGORY ||--o{ PRODUCT : agrupa
     VENUE ||--o{ CUSTOMER_ORDER : recibe
     CUSTOMER |o--o{ CUSTOMER_ORDER : "hizo (opcional)"
     STAFF_USER |o--o{ CUSTOMER_ORDER : prepara
@@ -19,7 +21,7 @@ erDiagram
         guid id PK
         nvarchar name
         nvarchar slug UK "va en la URL del QR"
-        datetime2 created_at
+        datetimeoffset created_at "NULL en filas anteriores a US-30"
     }
 
     STAFF_USER {
@@ -29,7 +31,10 @@ erDiagram
         nvarchar password_hash
         int role "Administrator | Kds | Waiter"
         bit is_active "baja logica del ABM"
-        datetime2 created_at
+        datetimeoffset created_at "NULL en filas anteriores a US-30"
+        nvarchar created_by "username del token; NULL si no habia nadie o es anterior"
+        datetimeoffset last_modified_at
+        nvarchar last_modified_by
     }
 
     CUSTOMER {
@@ -47,9 +52,23 @@ erDiagram
         nvarchar description
         nvarchar image_url
         decimal price
+        guid category_id FK "US-14: la solapa de la carta"
         bit is_available "sin stock esta noche"
         bit is_active "baja logica del ABM"
-        datetime2 created_at
+        datetimeoffset created_at "NULL en filas anteriores a US-30"
+        nvarchar created_by "username del token; NULL si no habia nadie o es anterior"
+        datetimeoffset last_modified_at
+        nvarchar last_modified_by
+    }
+
+    CATEGORY {
+        guid id PK
+        guid venue_id FK
+        nvarchar name UK "unico por venue"
+        datetimeoffset created_at "el orden de las solapas"
+        nvarchar created_by "username del token; NULL si no habia nadie o es anterior"
+        datetimeoffset last_modified_at
+        nvarchar last_modified_by
     }
 
     CUSTOMER_ORDER {
@@ -62,7 +81,7 @@ erDiagram
         tinyint delivery_type "BarPickup"
         decimal total_amount
         guid prepared_by_staff_user_id FK "bartender que lo tomo"
-        datetime2 created_at
+        datetimeoffset created_at "solo cuando; el cliente no tiene cuenta, asi que no hay quien"
         datetime2 confirmed_at
         datetime2 ready_at
         datetime2 delivered_at
@@ -119,6 +138,23 @@ Queda **sin modelar** el caso inverso: que el local no pueda entregar un pedido 
 cobró, y necesita su propia decisión de producto.
 
 ## Decisiones de modelado
+
+**Campos de auditoría (US-30).** Cada tabla que un administrador crea y edita lleva
+`created_at`, `created_by`, `last_modified_at` y `last_modified_by`: `STAFF_USER`, `PRODUCT` y
+`CATEGORY`. `VENUE` y `CUSTOMER_ORDER` llevan sólo `created_at`: al local no lo crea ningún
+usuario, y el cliente no tiene cuenta, así que en un pedido el autor no existe y no se
+inventa uno. `ORDER_ITEM` y el contador de códigos no llevan nada: el ítem se escribe una vez
+con su pedido y no cambia, y el contador es técnico. Una prueba de arquitectura obliga a que
+toda tabla nueva tenga `created_at` o esté en esa lista con su motivo.
+
+- **Todo es nulo en las filas anteriores.** No se rellena con la fecha de la migración: diría
+  cuándo corrió, no cuándo pasó, que es lo que esta story viene a evitar.
+- **"Quién" es el username del token**, no un id: no hace falta un join para mostrarlo, y no
+  hay cómo renombrar a alguien.
+- **Se estampa en un solo lugar**, un interceptor de `SaveChanges`, y sólo cuenta lo que edita
+  un administrador. La venta que baja el stock usa su propia sentencia y no mueve la marca.
+- **Tipo `datetimeoffset` en UTC**, no `datetime2`: es el que ya usaba `PaidAt` y `CreatedAt`
+  de `CATEGORY`, y lleva el desfase de origen.
 
 **Dos tablas de identidad, no una.** `STAFF_USER` es empleado de un local y lleva `venue_id`
 obligatorio; `CUSTOMER` es una persona que puede pedir en cualquier local y no

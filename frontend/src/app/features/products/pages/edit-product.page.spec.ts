@@ -10,6 +10,8 @@ import { PRODUCTS_URL, ProductsService } from '../products.service';
 import type { Product } from '../products.service';
 import { EditProductPage } from './edit-product.page';
 
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
 const ginTonic: Product = {
   id: 'id-2',
   name: 'Gin Tonic',
@@ -21,10 +23,18 @@ const ginTonic: Product = {
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
+
+  audit: noAudit,
 };
 
 const fernet: Product = {
   ...ginTonic,
+  audit: {
+    createdAt: '2026-09-27T21:00:00Z',
+    createdBy: 'euge.q',
+    lastModifiedAt: '2026-09-28T01:30:00Z',
+    lastModifiedBy: 'nico.r',
+  },
   id: 'id-3',
   name: 'Fernet con Coca',
   imageUrl: null,
@@ -145,6 +155,20 @@ function nightlySwitch(): HTMLButtonElement {
 }
 
 describe('EditProductPage', () => {
+  // US-30, criterion 2: who changed the price, and when.
+  it('says who made the product and who last changed it', async () => {
+    await openScreenFor('id-3');
+
+    expect(screen.getByText(/creado por euge\.q/i)).not.toBeNull();
+    expect(screen.getByText(/última modificación por nico\.r/i)).not.toBeNull();
+  });
+
+  it('says there is no record for a product from before the audit existed', async () => {
+    await openScreenFor('id-2');
+
+    expect(screen.getByText(/sin registro de quién lo creó ni de cuándo/i)).not.toBeNull();
+  });
+
   // The same form as a new product, so what tells the two apart is the title
   // and the button.
   it('says it is correcting a product, not creating one', async () => {

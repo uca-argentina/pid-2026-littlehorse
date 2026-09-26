@@ -8,7 +8,7 @@ namespace DrinkIt.Domain.Menu;
 /// 2026-09-26, because each venue names its own; the three the platform started
 /// with are just the first rows every venue got.
 /// </summary>
-public sealed class Category : IBelongsToVenue
+public sealed class Category : AuditStamps, IBelongsToVenue
 {
     public static class ErrorCodes
     {
@@ -20,12 +20,11 @@ public sealed class Category : IBelongsToVenue
     /// <summary>A tab on a phone: what does not fit on one line of it is not a name.</summary>
     public const int NameMaxLength = 40;
 
-    private Category(Guid id, Guid venueId, string name, DateTimeOffset createdAt)
+    private Category(Guid id, Guid venueId, string name)
     {
         Id = id;
         VenueId = venueId;
         Name = name;
-        CreatedAt = createdAt;
     }
 
     public Guid Id { get; }
@@ -33,9 +32,6 @@ public sealed class Category : IBelongsToVenue
     public Guid VenueId { get; }
 
     public string Name { get; }
-
-    /// <summary>What orders the tabs: the first one created is the first one shown.</summary>
-    public DateTimeOffset CreatedAt { get; }
 
     public static Category Create(Guid venueId, string name, DateTimeOffset createdAt)
     {
@@ -46,6 +42,12 @@ public sealed class Category : IBelongsToVenue
 
         if (cleanName.Length > NameMaxLength) throw new DomainException(ErrorCodes.NameLength, $"The name cannot be longer than {NameMaxLength} characters.");
 
-        return new Category(Guid.CreateVersion7(), venueId, cleanName, createdAt);
+        return new Category(Guid.CreateVersion7(), venueId, cleanName)
+        {
+            // Decided by the caller and not by the save: what orders the tabs is
+            // the first one created first, and the three a venue starts with are
+            // a millisecond apart on purpose.
+            CreatedAt = createdAt,
+        };
     }
 }

@@ -12,6 +12,8 @@ import { ProductsService } from '../products.service';
 import type { Product } from '../products.service';
 import { NewProductPage } from './new-product.page';
 
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
 const created: Product = {
   id: 'id-1',
   name: 'Gin Tonic',
@@ -23,6 +25,8 @@ const created: Product = {
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
+
+  audit: noAudit,
 };
 
 const rejectedWith = (status: number, type: string) =>
@@ -113,6 +117,13 @@ function save(): void {
 }
 
 describe('NewProductPage', () => {
+  // A product that does not exist yet has no history to show.
+  it('shows no audit note on the alta', async () => {
+    await openScreen();
+
+    expect(screen.queryByText(/sin registro/i)).toBeNull();
+  });
+
   it('sends what was typed, with the name trimmed and the numbers as numbers', async () => {
     const { create } = await openScreen();
 
