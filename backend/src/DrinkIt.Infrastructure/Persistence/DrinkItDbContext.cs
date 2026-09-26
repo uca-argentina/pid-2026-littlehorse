@@ -16,6 +16,8 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
 
     public DbSet<Product> Products => Set<Product>();
 
+    public DbSet<Category> Categories => Set<Category>();
+
     public DbSet<Order> Orders => Set<Order>();
 
     /// <summary>Where each venue's order codes are up to. Not a domain aggregate.</summary>
@@ -36,6 +38,7 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
         // is known. Filtering it would make that lookup impossible.
         modelBuilder.Entity<StaffUser>().HasQueryFilter(user => user.VenueId == CurrentVenueId);
         modelBuilder.Entity<Product>().HasQueryFilter(product => product.VenueId == CurrentVenueId);
+        modelBuilder.Entity<Category>().HasQueryFilter(category => category.VenueId == CurrentVenueId);
         modelBuilder.Entity<Order>().HasQueryFilter(order => order.VenueId == CurrentVenueId);
 
         base.OnModelCreating(modelBuilder);

@@ -12,8 +12,9 @@ public class ProductTests
         string? description = "Gin, tonic and a slice of lime.",
         string? imageUrl = "https://images.example.com/gin-tonic.jpg",
         decimal price = 4500m,
-        int stock = 20) =>
-        Product.Create(AVenue, name, description, imageUrl, price, stock);
+        int stock = 20,
+        Guid? categoryId = null) =>
+        Product.Create(AVenue, name, description, imageUrl, price, stock, categoryId ?? ACategory.Id);
 
     [Fact]
     public void Create_WhenValid_StartsActiveAndAvailable()
@@ -37,9 +38,28 @@ public class ProductTests
     public void Create_WhenVenueIdIsEmpty_ThrowsVenueRequired()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Product.Create(Guid.Empty, "Gin Tonic", null, null, 4500m, 20));
+            () => Product.Create(Guid.Empty, "Gin Tonic", null, null, 4500m, 20, ACategory.Id));
 
         Assert.Equal(Product.ErrorCodes.VenueRequired, error.Code);
+    }
+
+    // US-14: the tab the customer's menu shows it under.
+    [Fact]
+    public void Create_WhenValid_KeepsTheCategory()
+    {
+        Product product = AGinTonic(categoryId: ACategory.Other);
+
+        Assert.Equal(ACategory.Other, product.CategoryId);
+    }
+
+    // Whether that category exists in the venue is the handler's question: the
+    // domain only refuses to have none at all.
+    [Fact]
+    public void Create_WhenCategoryIsEmpty_ThrowsCategoryRequired()
+    {
+        DomainException error = Assert.Throws<DomainException>(() => AGinTonic(categoryId: Guid.Empty));
+
+        Assert.Equal(Product.ErrorCodes.CategoryRequired, error.Code);
     }
 
     [Theory]
@@ -174,7 +194,7 @@ public class ProductTests
 public class ProductAvailabilityTests
 {
     private static Product AGinTonic() =>
-        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, ACategory.Id);
 
     [Fact]
     public void MarkUnavailable_WhenAvailable_SetsIsAvailableFalse()
@@ -219,7 +239,7 @@ public class ProductAvailabilityTests
     [Fact]
     public void MarkAvailable_WhenSoldOut_ThrowsSoldOutCannotBeAvailable()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, ACategory.Id);
 
         DomainException error = Assert.Throws<DomainException>(product.MarkAvailable);
 
@@ -231,7 +251,7 @@ public class ProductAvailabilityTests
     [Fact]
     public void MarkUnavailable_WhenSoldOut_TurnsTheSwitchOff()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, ACategory.Id);
 
         product.MarkUnavailable();
 
@@ -259,7 +279,7 @@ public class ProductAvailabilityTests
     [Fact]
     public void IsOrderable_WhenSoldOut_IsFalse()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, ACategory.Id);
 
         Assert.True(product.IsAvailable);
         Assert.False(product.IsOrderable);
@@ -269,7 +289,7 @@ public class ProductAvailabilityTests
 public class ProductImageTests
 {
     private static Product AGinTonicWithoutPicture() =>
-        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, ACategory.Id);
 
     // The picture arrives after the product exists: the upload needs an id to
     // file it under, so creation and the picture are two steps.
@@ -317,18 +337,19 @@ public class ProductImageTests
 public class ProductUpdateTests
 {
     private static Product AGinTonic() =>
-        Product.Create(Guid.CreateVersion7(), "Gin Tonic", "Gin, tonic and a slice of lime.", null, 4500m, 20);
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", "Gin, tonic and a slice of lime.", null, 4500m, 20, ACategory.Id);
 
     [Fact]
-    public void Update_WhenValid_ReplacesNameDescriptionAndPrice()
+    public void Update_WhenValid_ReplacesNameDescriptionPriceAndCategory()
     {
         Product product = AGinTonic();
 
-        product.Update("Fernet con Coca", "Medida doble.", 3800m);
+        product.Update("Fernet con Coca", "Medida doble.", 3800m, ACategory.Other);
 
         Assert.Equal("Fernet con Coca", product.Name);
         Assert.Equal("Medida doble.", product.Description);
         Assert.Equal(3800m, product.Price);
+        Assert.Equal(ACategory.Other, product.CategoryId);
     }
 
     // Same rule as at creation: padding is not part of the name.
@@ -337,7 +358,7 @@ public class ProductUpdateTests
     {
         Product product = AGinTonic();
 
-        product.Update("  Fernet con Coca  ", null, 3800m);
+        product.Update("  Fernet con Coca  ", null, 3800m, ACategory.Id);
 
         Assert.Equal("Fernet con Coca", product.Name);
     }
@@ -349,7 +370,7 @@ public class ProductUpdateTests
     {
         Product product = AGinTonic();
 
-        DomainException error = Assert.Throws<DomainException>(() => product.Update(name, null, 3800m));
+        DomainException error = Assert.Throws<DomainException>(() => product.Update(name, null, 3800m, ACategory.Id));
 
         Assert.Equal(Product.ErrorCodes.NameRequired, error.Code);
         Assert.Equal("Gin Tonic", product.Name);
@@ -361,7 +382,7 @@ public class ProductUpdateTests
         string tooLong = new('a', Product.NameMaxLength + 1);
         Product product = AGinTonic();
 
-        DomainException error = Assert.Throws<DomainException>(() => product.Update(tooLong, null, 3800m));
+        DomainException error = Assert.Throws<DomainException>(() => product.Update(tooLong, null, 3800m, ACategory.Id));
 
         Assert.Equal(Product.ErrorCodes.NameLength, error.Code);
     }
@@ -372,7 +393,7 @@ public class ProductUpdateTests
         string tooLong = new('a', Product.DescriptionMaxLength + 1);
         Product product = AGinTonic();
 
-        DomainException error = Assert.Throws<DomainException>(() => product.Update("Fernet con Coca", tooLong, 3800m));
+        DomainException error = Assert.Throws<DomainException>(() => product.Update("Fernet con Coca", tooLong, 3800m, ACategory.Id));
 
         Assert.Equal(Product.ErrorCodes.DescriptionLength, error.Code);
         Assert.Equal("Gin, tonic and a slice of lime.", product.Description);
@@ -386,7 +407,7 @@ public class ProductUpdateTests
     {
         Product product = AGinTonic();
 
-        product.Update("Fernet con Coca", description, 3800m);
+        product.Update("Fernet con Coca", description, 3800m, ACategory.Id);
 
         Assert.Null(product.Description);
     }
@@ -400,10 +421,33 @@ public class ProductUpdateTests
     {
         Product product = AGinTonic();
 
-        DomainException error = Assert.Throws<DomainException>(() => product.Update("Fernet con Coca", null, price));
+        DomainException error = Assert.Throws<DomainException>(() => product.Update("Fernet con Coca", null, price, ACategory.Id));
 
         Assert.Equal(Product.ErrorCodes.PriceNotPositive, error.Code);
         Assert.Equal(4500m, product.Price);
+    }
+
+    // US-14: the correction screen offers the field too.
+    [Fact]
+    public void Update_WhenCategoryChanges_MovesTheProductToIt()
+    {
+        Product product = AGinTonic();
+
+        product.Update("Fernet con Coca", null, 3800m, ACategory.Other);
+
+        Assert.Equal(ACategory.Other, product.CategoryId);
+    }
+
+    [Fact]
+    public void Update_WhenCategoryIsEmpty_ThrowsCategoryRequiredAndKeepsTheOldOne()
+    {
+        Product product = AGinTonic();
+
+        DomainException error = Assert.Throws<DomainException>(
+            () => product.Update("Fernet con Coca", null, 3800m, Guid.Empty));
+
+        Assert.Equal(Product.ErrorCodes.CategoryRequired, error.Code);
+        Assert.Equal(ACategory.Id, product.CategoryId);
     }
 }
 
@@ -412,7 +456,7 @@ public class ProductUpdateTests
 public class ProductDeactivationTests
 {
     private static Product AGinTonic() =>
-        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, ACategory.Id);
 
     [Fact]
     public void Deactivate_WhenActive_SetsIsActiveFalse()
@@ -442,7 +486,7 @@ public class ProductDeactivationTests
 public class ProductStockAdjustmentTests
 {
     private static Product AGinTonicWith(int stock) =>
-        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, stock);
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, stock, ACategory.Id);
 
     // The way out of "sold out" that the nightly switch cannot give.
     [Fact]

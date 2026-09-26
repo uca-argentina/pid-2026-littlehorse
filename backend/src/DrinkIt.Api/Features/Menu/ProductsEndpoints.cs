@@ -7,24 +7,26 @@ namespace DrinkIt.Api.Features.Menu;
 
 /// <summary>
 /// What the administration screen posts. The image address is whatever the
-/// upload returned, or null while there is none.
+/// upload returned, or null while there is none. The category is one of the
+/// venue's, by id.
 /// </summary>
 public sealed record CreateProductRequest(
     string Name,
     string? Description,
     string? ImageUrl,
     decimal Price,
-    int Stock);
+    int Stock,
+    Guid CategoryId);
 
 /// <summary>Where the picture ended up. The listing shows it from here on.</summary>
 public sealed record ProductImageResponse(string ImageUrl);
 
 /// <summary>
-/// US-08: what the correction form posts. No stock, no picture, no switches —
-/// each of those has its own action, so a screen that only touches one of them
-/// cannot accidentally overwrite the rest.
+/// US-08: what the correction form posts, plus US-14's category. No stock, no
+/// picture, no switches — each of those has its own action, so a screen that
+/// only touches one of them cannot accidentally overwrite the rest.
 /// </summary>
-public sealed record UpdateProductRequest(string Name, string? Description, decimal Price);
+public sealed record UpdateProductRequest(string Name, string? Description, decimal Price, Guid CategoryId);
 
 /// <summary>
 /// How much the stock moves: positive when units arrived, negative when it was
@@ -40,6 +42,7 @@ public sealed record ProductResponse(
     string? ImageUrl,
     decimal Price,
     int Stock,
+    Guid CategoryId,
     bool IsAvailable,
     bool IsSoldOut,
     bool IsActive);
@@ -90,7 +93,7 @@ internal static class ProductsEndpoints
         group
             .MapPut("/{id:guid}", UpdateAsync)
             .WithName("UpdateProduct")
-            .WithSummary("Corrects a product's name, description and price.")
+            .WithSummary("Corrects a product's name, description, price and category.")
             .Produces<ProductResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -145,6 +148,7 @@ internal static class ProductsEndpoints
                 product.ImageUrl,
                 product.Price,
                 product.Stock,
+                product.CategoryId,
                 product.IsAvailable,
                 product.IsSoldOut,
                 product.IsActive))
@@ -160,7 +164,7 @@ internal static class ProductsEndpoints
         // the domain throws and the global handler turns it into a 400 with the
         // rule's own problem type.
         Result<ProductSummary> result = await handler.HandleAsync(
-            new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.Stock),
+            new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.Stock, request.CategoryId),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -180,7 +184,7 @@ internal static class ProductsEndpoints
         // A broken invariant (price at zero, blank name) is not caught here:
         // the domain throws and the global handler answers, same as CreateAsync.
         Result<ProductSummary> result = await handler.HandleAsync(
-            new UpdateProductCommand(id, request.Name, request.Description, request.Price),
+            new UpdateProductCommand(id, request.Name, request.Description, request.Price, request.CategoryId),
             cancellationToken);
 
         return Answer(result);
@@ -226,6 +230,7 @@ internal static class ProductsEndpoints
         product.ImageUrl,
         product.Price,
         product.Stock,
+        product.CategoryId,
         product.IsAvailable,
         product.IsSoldOut,
         product.IsActive);

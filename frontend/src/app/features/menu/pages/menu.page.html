@@ -52,6 +52,27 @@
       </div>
     }
 
+    @if (categoryTabs().length > 0) {
+      <!--
+        No count on any pill, unlike administration's: the wireframe of the
+        customer's menu draws it plain.
+      -->
+      <div class="tabs" role="tablist" aria-label="Categoría">
+        @for (tab of categoryTabs(); track tab.filter) {
+          <button
+            class="tab"
+            type="button"
+            role="tab"
+            [class.tab-on]="activeCategory() === tab.filter"
+            [attr.aria-selected]="activeCategory() === tab.filter"
+            (click)="activeCategory.set(tab.filter)"
+          >
+            {{ tab.name }}
+          </button>
+        }
+      </div>
+    }
+
     @if (isEmpty()) {
       <p class="note" role="status">
         Este boliche todavía no cargó su carta. Preguntá en la barra.

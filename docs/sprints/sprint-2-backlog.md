@@ -48,7 +48,7 @@ se marca agotado, se da de baja y nada se borra.
 
 | ID    | Story                          | Depende de   | Estado      |
 | ----- | ------------------------------ | ------------ | ----------- |
-| US-14 | Agrupar la carta por categoría | US-06, US-09 | Sin empezar |
+| US-14 | Agrupar la carta por categoría | US-06, US-09 | ✅ Terminada |
 
 **Transversal** — toca todas las tablas, así que va antes que las que crean tablas nuevas.
 

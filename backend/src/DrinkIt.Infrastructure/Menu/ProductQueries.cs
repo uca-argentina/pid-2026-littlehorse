@@ -24,6 +24,7 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
                 product.ImageUrl,
                 product.Price,
                 product.Stock,
+                product.CategoryId,
                 product.IsAvailable,
                 // Product.IsSoldOut is not mapped, so the rule is restated for
                 // SQL here. The domain test is the one that owns it.
@@ -54,6 +55,7 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
                 product.Description,
                 product.ImageUrl,
                 product.Price,
+                product.CategoryId,
                 product.IsAvailable && product.Stock > 0))
             .ToListAsync(cancellationToken);
 }

@@ -29,6 +29,7 @@ public sealed class Product : IBelongsToVenue
         public const string StockChangeZero = "product.stock_change_zero";
         public const string ImageUrlInvalid = "product.image_url_invalid";
         public const string SoldOutCannotBeAvailable = "product.sold_out_cannot_be_available";
+        public const string CategoryRequired = "product.category_required";
     }
 
     /// <summary>Read on a phone, at night, in a hurry: a name has to fit on one line of a card.</summary>
@@ -43,7 +44,8 @@ public sealed class Product : IBelongsToVenue
         string? description,
         string? imageUrl,
         decimal price,
-        int stock)
+        int stock,
+        Guid categoryId)
     {
         Id = id;
         VenueId = venueId;
@@ -52,6 +54,7 @@ public sealed class Product : IBelongsToVenue
         ImageUrl = imageUrl;
         Price = price;
         Stock = stock;
+        CategoryId = categoryId;
         IsAvailable = true;
         IsActive = true;
     }
@@ -74,6 +77,12 @@ public sealed class Product : IBelongsToVenue
     public decimal Price { get; private set; }
 
     public int Stock { get; private set; }
+
+    /// <summary>
+    /// US-14: the tab this product shows under. Only the id: that the venue has
+    /// such a category is checked where both can be looked up, not here.
+    /// </summary>
+    public Guid CategoryId { get; private set; }
 
     /// <summary>True when the venue can serve it tonight. Independent of stock.</summary>
     public bool IsAvailable { get; private set; }
@@ -102,7 +111,8 @@ public sealed class Product : IBelongsToVenue
         string? description,
         string? imageUrl,
         decimal price,
-        int stock)
+        int stock,
+        Guid categoryId)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Products must belong to a venue.");
         string cleanName = ValidateName(name);
@@ -111,12 +121,13 @@ public sealed class Product : IBelongsToVenue
         ValidatePrice(price);
 
         if (stock < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
+        ValidateCategory(categoryId);
 
         string? cleanImageUrl = BlankToNull(imageUrl);
 
         if (cleanImageUrl is not null) EnsureAbsoluteHttpUrl(cleanImageUrl);
 
-        return new Product(Guid.CreateVersion7(), venueId, cleanName, cleanDescription, cleanImageUrl, price, stock);
+        return new Product(Guid.CreateVersion7(), venueId, cleanName, cleanDescription, cleanImageUrl, price, stock, categoryId);
     }
 
     /// <summary>
@@ -139,21 +150,23 @@ public sealed class Product : IBelongsToVenue
     }
 
     /// <summary>
-    /// US-08: the name, description and price a customer reads. Stock, the
-    /// picture and the two switches each have their own dedicated method — a
-    /// single "update everything" invites forgetting one of them halfway
-    /// through a screen.
+    /// US-08: the name, description and price a customer reads, plus US-14's
+    /// category. Stock, the picture and the two switches each have their own
+    /// dedicated method — a single "update everything" invites forgetting one
+    /// of them halfway through a screen.
     /// </summary>
-    public void Update(string name, string? description, decimal price)
+    public void Update(string name, string? description, decimal price, Guid categoryId)
     {
         string cleanName = ValidateName(name);
         string? cleanDescription = ValidateDescription(description);
 
         ValidatePrice(price);
+        ValidateCategory(categoryId);
 
         Name = cleanName;
         Description = cleanDescription;
         Price = price;
+        CategoryId = categoryId;
     }
 
     /// <summary>
@@ -204,6 +217,11 @@ public sealed class Product : IBelongsToVenue
     private static void ValidatePrice(decimal price)
     {
         if (price <= 0) throw new DomainException(ErrorCodes.PriceNotPositive, "The price has to be greater than zero.");
+    }
+
+    private static void ValidateCategory(Guid categoryId)
+    {
+        if (categoryId == Guid.Empty) throw new DomainException(ErrorCodes.CategoryRequired, "The product needs a category.");
     }
 
     /// <summary>

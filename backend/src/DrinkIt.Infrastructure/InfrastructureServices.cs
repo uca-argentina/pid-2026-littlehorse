@@ -53,6 +53,8 @@ public static class InfrastructureServices
         services.AddScoped<IStaffUserQueries, StaffUserQueries>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IProductQueries, ProductQueries>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ICategoryQueries, CategoryQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductsForOrdering, ProductsForOrdering>();

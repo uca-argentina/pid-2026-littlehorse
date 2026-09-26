@@ -4,6 +4,7 @@ using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace DrinkIt.Api.IntegrationTests.Menu;
 
@@ -28,7 +29,8 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Venue mine = await SeedVenue();
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
-        seed.Products.Add(Product.Create(mine.Id, "Gin Tonic", "Gin, tónica, lima", null, 4500m, 20));
+        Guid drinks = await CategoryOf(seed);
+        seed.Products.Add(Product.Create(mine.Id, "Gin Tonic", "Gin, tónica, lima", null, 4500m, 20, drinks));
         await seed.SaveChangesAsync();
 
         MenuItem item = (await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None))
@@ -48,8 +50,9 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Venue mine = await SeedVenue();
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
-        Product gone = Product.Create(mine.Id, "Daiquiri", null, null, 4000m, 5);
-        seed.Products.AddRange(gone, Product.Create(mine.Id, "Negroni", null, null, 5000m, 5));
+        Guid drinks = await CategoryOf(seed);
+        Product gone = Product.Create(mine.Id, "Daiquiri", null, null, 4000m, 5, drinks);
+        seed.Products.AddRange(gone, Product.Create(mine.Id, "Negroni", null, null, 5000m, 5, drinks));
         TakeOffTheMenu(seed, gone);
         await seed.SaveChangesAsync();
 
@@ -76,7 +79,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Venue mine = await SeedVenue();
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
-        Product product = Product.Create(mine.Id, "Aperol Spritz", null, null, 6000m, stock);
+        Product product = Product.Create(mine.Id, "Aperol Spritz", null, null, 6000m, stock, await CategoryOf(seed));
         seed.Products.Add(product);
 
         if (!available) product.MarkUnavailable();
@@ -98,9 +101,10 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Venue theirs = await SeedVenue();
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
+        await using DrinkItDbContext asTheirs = sql.CreateContext(theirs.Id);
         seed.Products.AddRange(
-            Product.Create(mine.Id, "Lo mio", null, null, 1000m, 5),
-            Product.Create(theirs.Id, "Lo de ellos", null, null, 1000m, 5));
+            Product.Create(mine.Id, "Lo mio", null, null, 1000m, 5, await CategoryOf(seed)),
+            Product.Create(theirs.Id, "Lo de ellos", null, null, 1000m, 5, await CategoryOf(asTheirs)));
         await seed.SaveChangesAsync();
 
         IReadOnlyList<MenuItem> menu = await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None);
@@ -125,6 +129,10 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
     private static void TakeOffTheMenu(DrinkItDbContext context, Product product) =>
         context.Entry(product).Property(item => item.IsActive).CurrentValue = false;
 
+    /// <summary>The one category the venue was seeded with: the context only sees its own.</summary>
+    private static async Task<Guid> CategoryOf(DrinkItDbContext context) =>
+        (await context.Categories.SingleAsync()).Id;
+
     private async Task<Venue> SeedVenue()
     {
         // Slugs are unique platform-wide, so every test needs its own.
@@ -132,6 +140,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Venues.Add(venue);
+        SeedCategory.For(seed, venue.Id);
         await seed.SaveChangesAsync();
 
         return venue;

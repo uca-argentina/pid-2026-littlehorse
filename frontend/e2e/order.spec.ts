@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
+import { categoryIdNamed } from './categories';
 
 /**
  * US-10, end to end: somebody builds an order on the menu, opens it, fixes it
@@ -24,7 +25,13 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
 
   const created = await request.post('/api/staff/products', {
     headers: { Authorization: `Bearer ${token}` },
-    data: { name, description: 'Cargado por la prueba', price: 4500, stock: 20 },
+    data: {
+      name,
+      description: 'Cargado por la prueba',
+      price: 4500,
+      stock: 20,
+      categoryId: await categoryIdNamed(request, token, 'Tragos'),
+    },
   });
 
   expect(created.status()).toBe(201);

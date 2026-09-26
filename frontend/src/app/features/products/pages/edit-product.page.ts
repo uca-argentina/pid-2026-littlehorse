@@ -46,13 +46,21 @@ export class EditProductPage {
     () => this.products.hasValue() && this.product() === undefined,
   );
 
-  protected save({ name, description, price, stock, photo, isAvailable }: ProductFormValue): void {
+  protected save({
+    name,
+    description,
+    categoryId,
+    price,
+    stock,
+    photo,
+    isAvailable,
+  }: ProductFormValue): void {
     const product = this.product();
 
     if (product === undefined) return;
 
     this.store.save(this.venueSlug(), this.id(), {
-      correction: { name, description, price },
+      correction: { name, description, price, categoryId },
       photo,
       stockChange: stock,
       isAvailable: isAvailable === product.isAvailable ? null : isAvailable,

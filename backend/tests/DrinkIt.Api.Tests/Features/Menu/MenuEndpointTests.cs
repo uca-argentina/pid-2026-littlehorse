@@ -15,11 +15,14 @@ public class MenuEndpointTests
 {
     private const string Path = "/bar-alfa/menu";
 
+    private static readonly Guid TheCategory = Guid.CreateVersion7();
+
     private static readonly MenuItem GinTonic = new(
-        Guid.CreateVersion7(), "Gin Tonic", "Gin, tónica, lima", "https://images.example.com/gin.png", 4500m, true);
+        Guid.CreateVersion7(), "Gin Tonic", "Gin, tónica, lima", "https://images.example.com/gin.png", 4500m,
+        TheCategory, true);
 
     private static readonly MenuItem Aperol = new(
-        Guid.CreateVersion7(), "Aperol Spritz", null, null, 6000m, false);
+        Guid.CreateVersion7(), "Aperol Spritz", null, null, 6000m, TheCategory, false);
 
     // Pins the shape: the Angular client is generated from it, so renaming a
     // property here breaks the customer's screen silently.
@@ -33,6 +36,7 @@ public class MenuEndpointTests
         Assert.Equal(2, response.Body.GetProperty("items").GetArrayLength());
         Assert.Equal("Gin Tonic", response.Body.GetProperty("items")[0].GetProperty("name").GetString());
         Assert.Equal(4500m, response.Body.GetProperty("items")[0].GetProperty("price").GetDecimal());
+        Assert.Equal(TheCategory, response.Body.GetProperty("items")[0].GetProperty("categoryId").GetGuid());
         Assert.False(response.Body.GetProperty("items")[1].GetProperty("isOrderable").GetBoolean());
     }
 
@@ -67,13 +71,30 @@ public class MenuEndpointTests
     public async Task GetAsync_WhenNoVenueHasThatSlug_RespondsWithNotFound()
     {
         IResult result = await MenuEndpoint.GetAsync(
-            "bar-que-no-existe", new CurrentVenue(), new Fake.Menu(), CancellationToken.None);
+            "bar-que-no-existe", new CurrentVenue(), new Fake.Menu(), new FakeCategoryQueries(), CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Get);
 
         Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
         Assert.StartsWith("application/problem+json", response.ContentType, StringComparison.Ordinal);
         Assert.Equal("urn:drinkit:problem:venue:not-found", response.Text("type"));
+    }
+
+    // US-14: the tabs are the venue's own, so they travel with the menu, in the
+    // order the venue made them.
+    [Fact]
+    public async Task GetAsync_WhenTheVenueHasCategories_SendsThemInOrder()
+    {
+        FakeCategoryQueries categories = new(
+            new CategoryListItem(TheCategory, "Tragos"),
+            new CategoryListItem(Guid.CreateVersion7(), "Cervezas"));
+
+        HttpResponseSnapshot response = await MenuWith(categories, GinTonic);
+
+        Assert.Equal(2, response.Body.GetProperty("categories").GetArrayLength());
+        Assert.Equal("Tragos", response.Body.GetProperty("categories")[0].GetProperty("name").GetString());
+        Assert.Equal(TheCategory, response.Body.GetProperty("categories")[0].GetProperty("id").GetGuid());
+        Assert.Equal("Cervezas", response.Body.GetProperty("categories")[1].GetProperty("name").GetString());
     }
 
     // Nothing about how many are left leaves the building.
@@ -85,13 +106,16 @@ public class MenuEndpointTests
         Assert.DoesNotContain("stock", response.Raw, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task<HttpResponseSnapshot> Menu(params MenuItem[] items)
+    private static async Task<HttpResponseSnapshot> Menu(params MenuItem[] items) =>
+        await MenuWith(new FakeCategoryQueries(), items);
+
+    private static async Task<HttpResponseSnapshot> MenuWith(FakeCategoryQueries categories, params MenuItem[] items)
     {
         CurrentVenue venue = new();
         venue.Resolve(new VenueIdentity(Guid.CreateVersion7(), "Bar Alfa", "bar-alfa"));
 
         IResult result = await MenuEndpoint.GetAsync(
-            "bar-alfa", venue, new Fake.Menu(items), CancellationToken.None);
+            "bar-alfa", venue, new Fake.Menu(items), categories, CancellationToken.None);
 
         return await EndpointResponse.Execute(result, Path, HttpMethods.Get);
     }

@@ -15,6 +15,14 @@ public static class ProductErrors
         new("product.not_found", "This venue has no product with that id.");
 
     /// <summary>
+    /// The venue of the current request has no category with that id. Another
+    /// venue's category lands here too, for the same reason as
+    /// <see cref="NotFound"/>.
+    /// </summary>
+    public static readonly Error CategoryNotFound =
+        new("product.category_not_found", "This venue has no category with that id.");
+
+    /// <summary>
     /// Sales since the screen was opened left less stock than the change takes
     /// away. Worth its own answer: looking again at the stock is the fix.
     /// </summary>

@@ -9,8 +9,12 @@ public class UpdateProductHandlerTests
 {
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
+    private static readonly Guid TheCategory = Guid.CreateVersion7();
+
+    private static readonly Guid AnotherCategory = Guid.CreateVersion7();
+
     private static Product AGinTonic() =>
-        Product.Create(TheVenue, "Gin Tonic", "Gin, tonic and a slice of lime.", null, 4500m, 20);
+        Product.Create(TheVenue, "Gin Tonic", "Gin, tonic and a slice of lime.", null, 4500m, 20, TheCategory);
 
     [Fact]
     public async Task HandleAsync_WhenValid_UpdatesAndSaves()
@@ -18,13 +22,14 @@ public class UpdateProductHandlerTests
         Product product = AGinTonic();
         Fake.Products products = new(product);
 
-        Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(product.Id, "Fernet con Coca", "Medida doble.", 3800m),
+        Result<ProductSummary> result = await new UpdateProductHandler(products, new FakeCategories()).HandleAsync(
+            new UpdateProductCommand(product.Id, "Fernet con Coca", "Medida doble.", 3800m, AnotherCategory),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Fernet con Coca", result.Value.Name);
         Assert.Equal(3800m, result.Value.Price);
+        Assert.Equal(AnotherCategory, result.Value.CategoryId);
         Assert.True(products.Saved);
     }
 
@@ -33,8 +38,8 @@ public class UpdateProductHandlerTests
     {
         Fake.Products products = new(AGinTonic());
 
-        Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(Guid.CreateVersion7(), "Fernet con Coca", null, 3800m),
+        Result<ProductSummary> result = await new UpdateProductHandler(products, new FakeCategories()).HandleAsync(
+            new UpdateProductCommand(Guid.CreateVersion7(), "Fernet con Coca", null, 3800m, TheCategory),
             CancellationToken.None);
 
         Assert.Equal(ProductErrors.NotFound, result.Error);
@@ -48,8 +53,8 @@ public class UpdateProductHandlerTests
         Product product = AGinTonic();
         Fake.Products products = new(product) { NameExistsAnswer = true };
 
-        Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(product.Id, "Gin Tonic", null, 5000m),
+        Result<ProductSummary> result = await new UpdateProductHandler(products, new FakeCategories()).HandleAsync(
+            new UpdateProductCommand(product.Id, "Gin Tonic", null, 5000m, TheCategory),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -63,8 +68,8 @@ public class UpdateProductHandlerTests
         Product product = AGinTonic();
         Fake.Products products = new(product) { NameExistsAnswer = true };
 
-        Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(product.Id, "GIN TONIC", null, 5000m),
+        Result<ProductSummary> result = await new UpdateProductHandler(products, new FakeCategories()).HandleAsync(
+            new UpdateProductCommand(product.Id, "GIN TONIC", null, 5000m, TheCategory),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -76,8 +81,8 @@ public class UpdateProductHandlerTests
         Product product = AGinTonic();
         Fake.Products products = new(product) { NameExistsAnswer = true };
 
-        Result<ProductSummary> result = await new UpdateProductHandler(products).HandleAsync(
-            new UpdateProductCommand(product.Id, "Fernet con Coca", null, 3800m),
+        Result<ProductSummary> result = await new UpdateProductHandler(products, new FakeCategories()).HandleAsync(
+            new UpdateProductCommand(product.Id, "Fernet con Coca", null, 3800m, TheCategory),
             CancellationToken.None);
 
         Assert.Equal(CreateProductHandler.NameTaken, result.Error);
@@ -93,11 +98,27 @@ public class UpdateProductHandlerTests
         Product product = AGinTonic();
         Fake.Products products = new(product);
 
-        DomainException error = await Assert.ThrowsAsync<DomainException>(() => new UpdateProductHandler(products)
-            .HandleAsync(new UpdateProductCommand(product.Id, "Gin Tonic", null, 0m), CancellationToken.None));
+        DomainException error = await Assert.ThrowsAsync<DomainException>(() => new UpdateProductHandler(products, new FakeCategories())
+            .HandleAsync(new UpdateProductCommand(product.Id, "Gin Tonic", null, 0m, TheCategory), CancellationToken.None));
 
         Assert.Equal(Product.ErrorCodes.PriceNotPositive, error.Code);
         Assert.False(products.Saved);
+    }
+
+    // Same answer as at creation: a category of another venue is not found.
+    [Fact]
+    public async Task HandleAsync_WhenTheCategoryIsNotOneOfThisVenue_FailsWithoutSaving()
+    {
+        Product product = AGinTonic();
+        Fake.Products products = new(product);
+
+        Result<ProductSummary> result = await new UpdateProductHandler(products, new FakeCategories(knowsEveryId: false)).HandleAsync(
+            new UpdateProductCommand(product.Id, "Fernet con Coca", null, 3800m, AnotherCategory),
+            CancellationToken.None);
+
+        Assert.Equal(ProductErrors.CategoryNotFound, result.Error);
+        Assert.False(products.Saved);
+        Assert.Equal(TheCategory, product.CategoryId);
     }
 
     private static class Fake

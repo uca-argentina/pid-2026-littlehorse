@@ -13,8 +13,16 @@ public class ProductsEndpointsTests
 {
     private const string Path = "/staff/products";
 
-    private static CreateProductRequest AGinTonic(string name = "Gin Tonic", decimal price = 4500m, int stock = 20) =>
-        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", price, stock);
+    private static readonly Guid TheCategory = Guid.CreateVersion7();
+
+    private static readonly Guid AnotherCategory = Guid.CreateVersion7();
+
+    private static CreateProductRequest AGinTonic(
+        string name = "Gin Tonic",
+        decimal price = 4500m,
+        int stock = 20,
+        Guid? categoryId = null) =>
+        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", price, stock, categoryId ?? TheCategory);
 
     // Pins the success shape: the Angular client is generated from it, so
     // renaming a property here breaks the screen silently.
@@ -31,6 +39,7 @@ public class ProductsEndpointsTests
         Assert.Equal("https://images.example.com/gin-tonic.jpg", response.Text("imageUrl"));
         Assert.Equal(4500m, response.Body.GetProperty("price").GetDecimal());
         Assert.Equal(0, response.Body.GetProperty("stock").GetInt32());
+        Assert.Equal(TheCategory, response.Body.GetProperty("categoryId").GetGuid());
         Assert.True(response.Body.GetProperty("isAvailable").GetBoolean());
         Assert.True(response.Body.GetProperty("isSoldOut").GetBoolean());
         Assert.True(response.Body.GetProperty("isActive").GetBoolean());
@@ -42,11 +51,22 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task CreateAsync_WhenTheOptionalFieldsAreMissing_RespondsWithThemAsNull()
     {
-        HttpResponseSnapshot response = await Create(new CreateProductRequest("Gin Tonic", null, null, 4500m, 20));
+        HttpResponseSnapshot response = await Create(new CreateProductRequest("Gin Tonic", null, null, 4500m, 20, TheCategory));
 
         Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
         Assert.Equal(JsonValueKind.Null, response.Body.GetProperty("description").ValueKind);
         Assert.Equal(JsonValueKind.Null, response.Body.GetProperty("imageUrl").ValueKind);
+    }
+
+    // US-14: a category of another venue is not found, and the screen is told
+    // which of its fields to fix.
+    [Fact]
+    public async Task CreateAsync_WhenTheCategoryIsNotOneOfThisVenue_RespondsWithBadRequest()
+    {
+        HttpResponseSnapshot response = await Create(AGinTonic(), categories: new FakeCategories(knowsEveryId: false));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:category-not-found", response.Text("type"));
     }
 
     [Fact]
@@ -75,8 +95,8 @@ public class ProductsEndpointsTests
     {
         ProductListItem[] stored =
         [
-            new(Guid.CreateVersion7(), "Aperol Spritz", "Aperol, prosecco, soda", null, 5200m, 0, IsAvailable: true, IsSoldOut: true, IsActive: true),
-            new(Guid.CreateVersion7(), "Gin Tonic", null, "https://images.example.com/gin-tonic.jpg", 4500m, 20, IsAvailable: false, IsSoldOut: false, IsActive: false),
+            new(Guid.CreateVersion7(), "Aperol Spritz", "Aperol, prosecco, soda", null, 5200m, 0, TheCategory, IsAvailable: true, IsSoldOut: true, IsActive: true),
+            new(Guid.CreateVersion7(), "Gin Tonic", null, "https://images.example.com/gin-tonic.jpg", 4500m, 20, AnotherCategory, IsAvailable: false, IsSoldOut: false, IsActive: false),
         ];
 
         IResult result = await ProductsEndpoints.ListAsync(new Fake.Queries(stored), CancellationToken.None);
@@ -88,6 +108,7 @@ public class ProductsEndpointsTests
         Assert.True(response.Body[0].GetProperty("isSoldOut").GetBoolean());
         Assert.Equal(JsonValueKind.Null, response.Body[0].GetProperty("imageUrl").ValueKind);
         Assert.Equal(20, response.Body[1].GetProperty("stock").GetInt32());
+        Assert.Equal(AnotherCategory, response.Body[1].GetProperty("categoryId").GetGuid());
         Assert.False(response.Body[1].GetProperty("isAvailable").GetBoolean());
         Assert.False(response.Body[1].GetProperty("isActive").GetBoolean());
     }
@@ -97,7 +118,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task MarkUnavailableAsync_WhenTheProductExists_RespondsWithItMarkedUnavailable()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
         MarkProductUnavailableHandler handler = new(new Fake.Repository(null, product));
 
         IResult result = await ProductsEndpoints.MarkUnavailableAsync(product.Id, handler, CancellationToken.None);
@@ -110,7 +131,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task MarkUnavailableAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
         MarkProductUnavailableHandler handler = new(new Fake.Repository(null, product));
 
         IResult result = await ProductsEndpoints.MarkUnavailableAsync(Guid.CreateVersion7(), handler, CancellationToken.None);
@@ -123,7 +144,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task MarkAvailableAsync_WhenTheProductExists_RespondsWithItMarkedAvailable()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
         product.MarkUnavailable();
         MarkProductAvailableHandler handler = new(new Fake.Repository(null, product));
 
@@ -137,7 +158,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task MarkAvailableAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
         MarkProductAvailableHandler handler = new(new Fake.Repository(null, product));
 
         IResult result = await ProductsEndpoints.MarkAvailableAsync(Guid.CreateVersion7(), handler, CancellationToken.None);
@@ -152,7 +173,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task MarkAvailableAsync_WhenTheProductRanOut_LetsTheDomainExceptionThrough()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, TheCategory);
         MarkProductAvailableHandler handler = new(new Fake.Repository(null, product));
 
         DomainException error = await Assert.ThrowsAsync<DomainException>(
@@ -161,15 +182,18 @@ public class ProductsEndpointsTests
         Assert.Equal(Product.ErrorCodes.SoldOutCannotBeAvailable, error.Code);
     }
 
-    private static UpdateProductRequest AnUpdate(string name = "Fernet con Coca", decimal price = 3800m) =>
-        new(name, "Medida doble.", price);
+    private static UpdateProductRequest AnUpdate(
+        string name = "Fernet con Coca",
+        decimal price = 3800m,
+        Guid? categoryId = null) =>
+        new(name, "Medida doble.", price, categoryId ?? AnotherCategory);
 
     // US-08, criterion 1. Pins the success shape for the same reason as
     // CreateAsync above.
     [Fact]
     public async Task UpdateAsync_WhenTheDataIsValid_RespondsWithTheUpdatedProduct()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
 
         HttpResponseSnapshot response = await Update(product, product.Id, AnUpdate());
 
@@ -177,12 +201,25 @@ public class ProductsEndpointsTests
         Assert.Equal("Fernet con Coca", response.Text("name"));
         Assert.Equal("Medida doble.", response.Text("description"));
         Assert.Equal(3800m, response.Body.GetProperty("price").GetDecimal());
+        Assert.Equal(AnotherCategory, response.Body.GetProperty("categoryId").GetGuid());
+    }
+
+    // US-14: the correction screen offers the field too, and the same rule applies.
+    [Fact]
+    public async Task UpdateAsync_WhenTheCategoryIsNotOneOfThisVenue_RespondsWithBadRequest()
+    {
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
+
+        HttpResponseSnapshot response = await Update(product, product.Id, AnUpdate(), categories: new FakeCategories(knowsEveryId: false));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:category-not-found", response.Text("type"));
     }
 
     [Fact]
     public async Task UpdateAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
 
         HttpResponseSnapshot response = await Update(product, Guid.CreateVersion7(), AnUpdate());
 
@@ -193,7 +230,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task UpdateAsync_WhenTheNewNameIsAlreadyUsedInThisVenue_RespondsWithConflict()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
 
         HttpResponseSnapshot response = await Update(product, product.Id, AnUpdate(name: "Fernet con Coca"), taken: "Fernet con Coca");
 
@@ -206,7 +243,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task UpdateAsync_WhenThePriceIsNotPositive_LetsTheDomainExceptionThrough()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
 
         DomainException error = await Assert.ThrowsAsync<DomainException>(
             () => Update(product, product.Id, AnUpdate(price: 0)));
@@ -218,7 +255,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task DeactivateAsync_WhenTheProductExists_RespondsWithItDeactivated()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
         DeactivateProductHandler handler = new(new Fake.Repository(null, product));
 
         IResult result = await ProductsEndpoints.DeactivateAsync(product.Id, handler, CancellationToken.None);
@@ -231,7 +268,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task DeactivateAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
         DeactivateProductHandler handler = new(new Fake.Repository(null, product));
 
         IResult result = await ProductsEndpoints.DeactivateAsync(Guid.CreateVersion7(), handler, CancellationToken.None);
@@ -241,9 +278,9 @@ public class ProductsEndpointsTests
         Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
     }
 
-    private static async Task<HttpResponseSnapshot> Update(Product stored, Guid productId, UpdateProductRequest request, string? taken = null)
+    private static async Task<HttpResponseSnapshot> Update(Product stored, Guid productId, UpdateProductRequest request, string? taken = null, FakeCategories? categories = null)
     {
-        UpdateProductHandler handler = new(new Fake.Repository(taken, stored));
+        UpdateProductHandler handler = new(new Fake.Repository(taken, stored), categories ?? new FakeCategories());
 
         IResult result = await ProductsEndpoints.UpdateAsync(productId, request, handler, CancellationToken.None);
 
@@ -255,7 +292,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task AdjustStockAsync_WhenTheChangeIsValid_RespondsWithTheProductAndItsNewStock()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, TheCategory);
         AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
 
         IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(12), handler, CancellationToken.None);
@@ -269,7 +306,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task AdjustStockAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, TheCategory);
         AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
 
         IResult result = await ProductsEndpoints.AdjustStockAsync(Guid.CreateVersion7(), new AdjustProductStockRequest(12), handler, CancellationToken.None);
@@ -284,7 +321,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task AdjustStockAsync_WhenSalesMeanwhileLeftTooLittle_RespondsWithConflict()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5, TheCategory);
         AdjustProductStockHandler handler = new(new Fake.Repository(null, product, adjustmentApplies: false));
 
         IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(-5), handler, CancellationToken.None);
@@ -299,7 +336,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task AdjustStockAsync_WhenWhatIsLeftIsLessThanItTakesAway_RespondsWithConflict()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 2);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 2, TheCategory);
         AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
 
         IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(-5), handler, CancellationToken.None);
@@ -316,7 +353,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task UploadImageAsync_WhenTheImageIsValid_RespondsWithTheNewAddress()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
 
         HttpResponseSnapshot response = await Upload(product, product.Id, APng);
 
@@ -330,7 +367,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task UploadImageAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
 
         HttpResponseSnapshot response = await Upload(product, Guid.CreateVersion7(), APng);
 
@@ -341,7 +378,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task UploadImageAsync_WhenTheImageIsTooLarge_RespondsWithPayloadTooLarge()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
 
         HttpResponseSnapshot response = await Upload(product, product.Id, APng, declaredLength: UploadProductImageHandler.MaxImageBytes + 1);
 
@@ -352,7 +389,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task UploadImageAsync_WhenTheBytesAreNotAnImageWeShow_RespondsWithUnsupportedMediaType()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
 
         HttpResponseSnapshot response = await Upload(product, product.Id, APdf);
 
@@ -365,7 +402,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task UploadImageAsync_WhenNoFileWasSent_RespondsWithBadRequest()
     {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20);
+        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
         UploadProductImageHandler handler = new(new Fake.Repository(null, product), new Fake.Images());
 
         IResult result = await ProductsEndpoints.UploadImageAsync(product.Id, null, handler, CancellationToken.None);
@@ -385,9 +422,9 @@ public class ProductsEndpointsTests
         return await EndpointResponse.Execute(result, $"{Path}/{productId}/image", HttpMethods.Put);
     }
 
-    private static async Task<HttpResponseSnapshot> Create(CreateProductRequest request, string? taken = null)
+    private static async Task<HttpResponseSnapshot> Create(CreateProductRequest request, string? taken = null, FakeCategories? categories = null)
     {
-        CreateProductHandler handler = new(new Fake.Repository(taken), new Fake.CurrentVenue());
+        CreateProductHandler handler = new(new Fake.Repository(taken), categories ?? new FakeCategories(), new Fake.CurrentVenue());
 
         IResult result = await ProductsEndpoints.CreateAsync(request, handler, CancellationToken.None);
 

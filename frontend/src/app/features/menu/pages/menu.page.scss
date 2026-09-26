@@ -97,6 +97,41 @@ drinkit-theme-toggle {
   color: var(--dk-text-muted);
 }
 
+// US-14: one solapa per category plus "Todos". A horizontal strip, same shape
+// as the wireframe's pills, that scrolls sideways instead of wrapping — a
+// third solapa still has to fit next to the thumb that opened it.
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+
+  // Not part of the design, only of touching a screen with a finger: no
+  // visible bar for a strip this short, but no invisible edge either.
+  scrollbar-width: none;
+}
+
+.tab {
+  flex-shrink: 0;
+  min-height: var(--dk-tap-min);
+  padding: 0 16px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-surface);
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tab-on {
+  border-color: var(--dk-pill-on-border);
+  background: var(--dk-pill-on-surface);
+  color: var(--dk-text);
+  font-weight: 700;
+}
+
 .list {
   display: flex;
   flex-direction: column;

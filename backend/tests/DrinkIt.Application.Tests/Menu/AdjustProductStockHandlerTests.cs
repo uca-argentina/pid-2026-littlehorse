@@ -8,7 +8,7 @@ namespace DrinkIt.Application.Tests.Menu;
 public class AdjustProductStockHandlerTests
 {
     private static Product AGinTonicWith(int stock) =>
-        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, stock);
+        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, stock, Guid.CreateVersion7());
 
     // Loaded 200 when it was 20.
     [Fact]
