@@ -24,6 +24,7 @@ builder.Services.AddScoped<ChangeStaffUserRoleHandler>();
 builder.Services.AddScoped<ResetStaffUserPasswordHandler>();
 builder.Services.AddScoped<DeactivateStaffUserHandler>();
 builder.Services.AddScoped<ReactivateStaffUserHandler>();
+builder.Services.AddScoped<CreateCategoryHandler>();
 builder.Services.AddScoped<CreateProductHandler>();
 builder.Services.AddScoped<UpdateProductHandler>();
 builder.Services.AddScoped<DeactivateProductHandler>();
@@ -101,6 +102,7 @@ app.MapMenu();
 app.MapOrders();
 app.MapOrderTracking();
 app.MapStaffUsers();
+app.MapCategories();
 app.MapProducts();
 
 await app.RunAsync();

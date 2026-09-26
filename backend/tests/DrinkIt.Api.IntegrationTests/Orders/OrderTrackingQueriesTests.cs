@@ -156,7 +156,8 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
     private async Task<(Venue Venue, Order Order)> AVenueWithAnOrderFor(string customer)
     {
         Venue venue = Venue.Create("Bar de prueba", $"bar-{Guid.NewGuid():N}");
-        Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20);
+        Category category = SeedCategory.For(venue.Id);
+        Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20, category.Id);
 
         Order order = Order.Place(
             venue.Id,
@@ -169,6 +170,7 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Venues.Add(venue);
+        seed.Categories.Add(category);
         seed.Products.Add(gin);
         seed.Orders.Add(order);
         seed.Entry(order).Property("IdempotencyKey").CurrentValue = Guid.NewGuid().ToString();

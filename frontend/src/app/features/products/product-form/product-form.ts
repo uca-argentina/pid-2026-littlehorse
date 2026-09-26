@@ -1,3 +1,4 @@
+import { httpResource } from '@angular/common/http';
 import type { ElementRef } from '@angular/core';
 import {
   Component,
@@ -16,6 +17,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { CATEGORIES_URL } from '../../categories/categories.service';
+import type { Category } from '../../categories/categories.service';
 import { trimmedMinLength } from '../../../shared/forms/trimmed-min-length';
 import { IMAGE_MAX_BYTES, IMAGE_TYPES } from '../products.service';
 import type { Product } from '../products.service';
@@ -30,7 +33,7 @@ function positive(control: AbstractControl): ValidationErrors | null {
   return typeof control.value === 'number' && control.value > 0 ? null : { positive: true };
 }
 
-type Field = 'name' | 'description' | 'price' | 'stock';
+type Field = 'name' | 'description' | 'price' | 'stock' | 'categoryId';
 
 /** Units that arrived, or the real total when it was loaded wrong. */
 type StockMode = 'add' | 'set';
@@ -39,6 +42,8 @@ type StockMode = 'add' | 'set';
 export interface ProductFormValue {
   readonly name: string;
   readonly description: string | null;
+  /** US-14: asked at creation, and correctable from the same field afterwards. */
+  readonly categoryId: string;
   readonly price: number;
   /** For a new product, how many there are. When correcting one, how much it moves; 0 is none. */
   readonly stock: number;
@@ -110,6 +115,8 @@ export class ProductForm {
     stock: new FormControl<number | null>(null, {
       validators: [(control) => this.stockRule(control)],
     }),
+    // US-14: required, at creation and while correcting one alike.
+    categoryId: new FormControl<string | null>(null, { validators: [Validators.required] }),
   });
 
   /**
@@ -137,6 +144,18 @@ export class ProductForm {
 
   protected readonly priceError = computed(() =>
     this.errorOf('price', 'El precio tiene que ser mayor a cero.'),
+  );
+
+  /**
+   * The venue's own categories, which is what the administrator picks from: a
+   * list that changes with the button that adds one, so it is asked for and
+   * not written into the screen. Loading, failing and being empty each get
+   * their own line in the template.
+   */
+  protected readonly categories = httpResource<Category[]>(() => CATEGORIES_URL);
+
+  protected readonly categoryError = computed(() =>
+    this.errorOf('categoryId', 'Elegí una categoría.'),
   );
 
   protected readonly stockError = computed(() => {
@@ -248,6 +267,7 @@ export class ProductForm {
         description: product.description ?? '',
         price: product.price,
         stock: null,
+        categoryId: product.categoryId,
       });
       this.isAvailable.set(product.isAvailable);
     });
@@ -366,15 +386,16 @@ export class ProductForm {
 
     if (this.form.invalid || this.photoIsInvalid() || this.isSending()) return;
 
-    const { name, description, price, stock } = this.form.getRawValue();
+    const { name, description, price, stock, categoryId } = this.form.getRawValue();
 
-    // Validators.required already rejected this above; this is only what the
+    // Validators.required already rejected these above; this is only what the
     // compiler needs to see.
-    if (price === null) return;
+    if (price === null || categoryId === null) return;
 
     this.submitted.emit({
       name: name.trim(),
       description: description.trim() === '' ? null : description.trim(),
+      categoryId,
       price,
       stock: this.isEditing() ? this.stockChange() : (stock ?? 0),
       photo: this.photo(),

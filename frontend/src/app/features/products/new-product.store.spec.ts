@@ -18,6 +18,7 @@ const created: Product = {
   imageUrl: null,
   price: 4500,
   stock: 20,
+  categoryId: 'category-drinks',
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
@@ -29,6 +30,7 @@ const aNewProduct: NewProduct = {
   imageUrl: null,
   price: 4500,
   stock: 20,
+  categoryId: 'category-drinks',
 };
 
 const aPhoto = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'gin-tonic.png', {

@@ -12,13 +12,19 @@ public sealed record MenuItemResponse(
     string? Description,
     string? ImageUrl,
     decimal Price,
+    Guid CategoryId,
     bool IsOrderable);
 
 /// <summary>
 /// The venue's menu. The name travels with it because the customer scanned a
-/// QR and never typed where they are: the screen is what tells them.
+/// QR and never typed where they are: the screen is what tells them. The
+/// categories travel with it too, because they are the venue's own and the
+/// screen has nowhere else to learn them from.
 /// </summary>
-public sealed record MenuResponse(string VenueName, IReadOnlyList<MenuItemResponse> Items);
+public sealed record MenuResponse(
+    string VenueName,
+    IReadOnlyList<CategoryResponse> Categories,
+    IReadOnlyList<MenuItemResponse> Items);
 
 internal static class MenuEndpoint
 {
@@ -50,6 +56,7 @@ internal static class MenuEndpoint
         string venueSlug,
         CurrentVenue venue,
         IProductQueries products,
+        ICategoryQueries categories,
         CancellationToken cancellationToken)
     {
         // Told apart from a venue that exists and has nothing loaded on
@@ -58,15 +65,18 @@ internal static class MenuEndpoint
         if (venue.Identity is null) return NoSuchVenue(venueSlug);
 
         IReadOnlyList<MenuItem> menu = await products.ListForMenuAsync(cancellationToken);
+        IReadOnlyList<CategoryListItem> tabs = await categories.ListAsync(cancellationToken);
 
         return TypedResults.Ok(new MenuResponse(
             venue.Identity.Name,
+            [.. tabs.Select(category => new CategoryResponse(category.Id, category.Name))],
             [.. menu.Select(item => new MenuItemResponse(
                 item.Id,
                 item.Name,
                 item.Description,
                 item.ImageUrl,
                 item.Price,
+                item.CategoryId,
                 item.IsOrderable))]));
     }
 

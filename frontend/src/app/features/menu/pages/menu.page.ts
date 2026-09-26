@@ -23,6 +23,14 @@ interface MenuCard {
   readonly isOrderable: boolean;
 }
 
+/** US-14: the tab the menu opens on. A category's id is a guid and never equals it. */
+const ALL = 'all';
+
+interface CategoryTab {
+  readonly filter: string;
+  readonly name: string;
+}
+
 /**
  * The menu a customer reads after scanning the venue's QR. The first screen of
  * the app that belongs to nobody in particular: no session, no account, no
@@ -55,6 +63,9 @@ export class MenuPage {
 
   protected readonly search = signal('');
 
+  /** Opens on 'all', same as every visit: nothing about the last visit is remembered. */
+  protected readonly activeCategory = signal<string>(ALL);
+
   /**
    * A wrong address is not a bad connection. Offering "check your signal" and
    * a retry that can never succeed sends somebody to fight their network over
@@ -80,20 +91,42 @@ export class MenuPage {
     this.menu.hasValue() && !this.menu.isLoading() ? this.menu.value().items : [],
   );
 
+  /**
+   * "Todos" first, then the venue's own categories in the order it made them:
+   * criterion 2 of US-14. None at all means nothing to split by, so no strip.
+   */
+  protected readonly categoryTabs = computed<CategoryTab[]>(() => {
+    const categories =
+      this.menu.hasValue() && !this.menu.isLoading() ? this.menu.value().categories : [];
+
+    return categories.length === 0
+      ? []
+      : [
+          { filter: ALL, name: 'Todos' },
+          ...categories.map(({ id, name }) => ({ filter: id, name })),
+        ];
+  });
+
   protected readonly cards = computed<MenuCard[]>(() => {
     const term = this.search().trim().toLowerCase();
+    const category = this.activeCategory();
 
-    return this.everything()
-      .filter((item) => term === '' || item.name.toLowerCase().includes(term))
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
-        amount: item.price,
-        price: formatPrice(item.price),
-        isOrderable: item.isOrderable,
-      }));
+    return (
+      this.everything()
+        .filter((item) => term === '' || item.name.toLowerCase().includes(term))
+        // Criterion 3: sold-out ones included — this only narrows by category, the
+        // way isOrderable already leaves sold-out and switched-off ones in.
+        .filter((item) => category === ALL || item.categoryId === category)
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
+          amount: item.price,
+          price: formatPrice(item.price),
+          isOrderable: item.isOrderable,
+        }))
+    );
   });
 
   /** "1 ítem", "2 ítems". One drink is one, and the plural is not free. */

@@ -24,6 +24,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         // the last drink from being sold twice is the conditional update in
         // OrderRepository, which only the sale performs.
         builder.Property(product => product.Stock).IsRequired();
+        builder.Property(product => product.CategoryId).IsRequired();
         builder.Property(product => product.IsAvailable).IsRequired();
         builder.Property(product => product.IsActive).IsRequired();
 
@@ -34,6 +35,14 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.HasOne<Venue>()
             .WithMany()
             .HasForeignKey(product => product.VenueId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // A category with products in it cannot go: nothing deletes them today,
+        // and the day something does, it has to decide what happens to the
+        // products first.
+        builder.HasOne<Category>()
+            .WithMany()
+            .HasForeignKey(product => product.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -9,8 +9,10 @@ public class CreateProductHandlerTests
 {
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
-    private static CreateProductCommand AGinTonic(string name = "Gin Tonic") =>
-        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", 4500m, 20);
+    private static readonly Guid TheCategory = Guid.CreateVersion7();
+
+    private static CreateProductCommand AGinTonic(string name = "Gin Tonic", Guid? categoryId = null) =>
+        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", 4500m, 20, categoryId ?? TheCategory);
 
     [Fact]
     public async Task HandleAsync_WhenTheDataIsValid_AddsTheProductToTheVenueOfTheSignedInAdministrator()
@@ -26,6 +28,32 @@ public class CreateProductHandlerTests
         Assert.Equal("https://images.example.com/gin-tonic.jpg", products.Added.ImageUrl);
         Assert.Equal(4500m, products.Added.Price);
         Assert.Equal(20, products.Added.Stock);
+    }
+
+    // US-14: the category chosen in the alta form ends up on the product.
+    [Fact]
+    public async Task HandleAsync_WhenTheDataIsValid_KeepsTheChosenCategory()
+    {
+        Fake.Products products = new();
+
+        Result<ProductSummary> result = await HandlerOver(products).HandleAsync(AGinTonic(), CancellationToken.None);
+
+        Assert.Equal(TheCategory, products.Added!.CategoryId);
+        Assert.Equal(TheCategory, result.Value.CategoryId);
+    }
+
+    // Another venue's category is not found, not forbidden: from outside, not
+    // ours and not existing are the same answer.
+    [Fact]
+    public async Task HandleAsync_WhenTheCategoryIsNotOneOfThisVenue_FailsWithoutCreatingAnything()
+    {
+        Fake.Products products = new();
+
+        Result<ProductSummary> result = await HandlerOver(products, new FakeCategories(knowsEveryId: false))
+            .HandleAsync(AGinTonic(), CancellationToken.None);
+
+        Assert.Equal(ProductErrors.CategoryNotFound, result.Error);
+        Assert.Null(products.Added);
     }
 
     // US-06, criterion 1: it shows up on the menu right after saving, so it
@@ -104,8 +132,8 @@ public class CreateProductHandlerTests
         Assert.True(result.Value.IsActive);
     }
 
-    private static CreateProductHandler HandlerOver(Fake.Products products) =>
-        new(products, new Fake.CurrentVenue());
+    private static CreateProductHandler HandlerOver(Fake.Products products, FakeCategories? categories = null) =>
+        new(products, categories ?? new FakeCategories(), new Fake.CurrentVenue());
 
     private static class Fake
     {

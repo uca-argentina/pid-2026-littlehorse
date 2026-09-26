@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
 import type { WritableSignal } from '@angular/core';
@@ -90,7 +91,7 @@ function pesos(amount: number): string {
 
 @Component({
   selector: 'drinkit-products-page',
-  imports: [AdminHeader, RouterLink],
+  imports: [AdminHeader, NgTemplateOutlet, RouterLink],
   styleUrl: './products.page.scss',
   templateUrl: './products.page.html',
 })

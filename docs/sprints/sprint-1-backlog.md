@@ -89,7 +89,7 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-11 | Confirmar el pedido               | US-10        | **Terminada** — a falta de prueba a mano                              |
 | US-12 | Seguir mi pedido                  | US-11        | **Terminada** — a falta de prueba a mano                              |
 | US-13 | Encontrar a alguien en el listado | US-03        | ✅ **Terminada**                                                      |
-| US-14 | Agrupar la carta por categoría    | US-06, US-09 | Pendiente — planificada el 2026-09-15                                 |
+| US-14 | Agrupar la carta por categoría    | US-06, US-09 | ✅ **Terminada**                                                      |
 
 Las doce primeras son imprescindibles: cubren los seis puntos de la consigna y nada más.
 US-13 es la excepción, y entró por pedido del equipo el 2026-09-14 después de estar
@@ -586,6 +586,24 @@ leyendo el almacenamiento después de mirar la carta.
 > porque así lo dibuja el wireframe del cliente.
 >
 > **Se construye después de US-09**, no antes: la carta tiene que estar caminando primero.
+>
+> **Ampliado el 2026-09-25:** la categoría también se puede corregir desde la pantalla de
+> edición (US-08), no sólo elegir al cargar. Mismo campo, mismo `Update` del dominio que ya
+> corrige nombre, descripción y precio — no hay una acción aparte para esto.
+>
+> **Cambiado el 2026-09-26:** la lista fija en código de arriba ya no vale. Cada boliche crea
+> sus propias categorías desde el botón _Nueva categoría_ del listado de productos: pasan a
+> ser una tabla `Categories` con `VenueId` (única por nombre dentro del boliche) y el
+> producto guarda un `CategoryId`. Las solapas del cliente salen de esa lista, en el orden en
+> que se crearon. La migración le da a cada boliche las tres de siempre (_Tragos_, _Cervezas_,
+> _Sin alcohol_) y mueve cada producto a la que ya tenía, así que el criterio 4 sigue
+> cumplido. Todavía no hay renombrar ni borrar una categoría.
+
+✅ **Terminada.** Los cuatro criterios están cumplidos, con prueba de punta a punta que carga
+tragos de las tres categorías y verifica el filtro por solapa contra la API real. Lo cargado
+antes de esta story quedó en _Tragos_ sin tocar una fila a mano: la migración lo hace. La corrección de categoría desde la edición
+tiene su propia prueba de punta a punta, cambiando la categoría de un producto y verificando
+que la carta del cliente lo mueve de solapa.
 
 ### US-10 · Armar el pedido
 

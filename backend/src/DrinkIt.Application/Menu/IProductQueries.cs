@@ -8,6 +8,7 @@ public sealed record ProductListItem(
     string? ImageUrl,
     decimal Price,
     int Stock,
+    Guid CategoryId,
     bool IsAvailable,
     bool IsSoldOut,
     bool IsActive);
@@ -28,6 +29,7 @@ public sealed record MenuItem(
     string? Description,
     string? ImageUrl,
     decimal Price,
+    Guid CategoryId,
     bool IsOrderable);
 
 /// <summary>

@@ -13,6 +13,7 @@ import { MenuPage } from './menu.page';
 
 const carta: Menu = {
   venueName: 'Bar Alfa',
+  categories: [{ id: 'category-drinks', name: 'Tragos' }],
   items: [
     {
       id: 'id-1',
@@ -20,6 +21,7 @@ const carta: Menu = {
       description: 'Gin, tónica, lima',
       imageUrl: 'https://images.example.com/gin.png',
       price: 4500,
+      categoryId: 'category-drinks',
       isOrderable: true,
     },
     {
@@ -28,6 +30,7 @@ const carta: Menu = {
       description: 'Medida doble',
       imageUrl: null,
       price: 4000,
+      categoryId: 'category-drinks',
       isOrderable: true,
     },
     {
@@ -36,6 +39,7 @@ const carta: Menu = {
       description: null,
       imageUrl: null,
       price: 6000,
+      categoryId: 'category-drinks',
       isOrderable: false,
     },
   ],
@@ -167,7 +171,7 @@ describe('MenuPage', () => {
 
   // Criterion 5: an empty list with no explanation reads as a broken app.
   it('says the venue has not loaded anything yet', async () => {
-    await openScreenShowing({ venueName: 'Bar Alfa', items: [] });
+    await openScreenShowing({ venueName: 'Bar Alfa', categories: [], items: [] });
 
     expect(screen.getByRole('status').textContent).toContain('todavía no cargó');
   });
@@ -229,6 +233,125 @@ describe('MenuPage', () => {
 
       expect(screen.getByRole('status').textContent).toContain('No encontramos');
       expect(screen.queryByText(/todavía no cargó/i)).toBeNull();
+    });
+  });
+
+  describe('categories', () => {
+    const mixedMenu: Menu = {
+      venueName: 'Bar Alfa',
+      categories: [
+        { id: 'category-drinks', name: 'Tragos' },
+        { id: 'category-beer', name: 'Cervezas' },
+        { id: 'category-soft', name: 'Sin alcohol' },
+      ],
+      items: [
+        {
+          id: 'id-1',
+          name: 'Gin Tonic',
+          description: null,
+          imageUrl: null,
+          price: 4500,
+          categoryId: 'category-drinks',
+          isOrderable: true,
+        },
+        {
+          id: 'id-2',
+          name: 'Imperial',
+          description: null,
+          imageUrl: null,
+          price: 3000,
+          categoryId: 'category-beer',
+          isOrderable: true,
+        },
+        {
+          id: 'id-3',
+          name: 'Agua con gas',
+          description: null,
+          imageUrl: null,
+          price: 2000,
+          categoryId: 'category-soft',
+          isOrderable: false,
+        },
+      ],
+    };
+
+    function tab(name: RegExp): HTMLButtonElement {
+      return screen.getByRole('tab', { name }) as HTMLButtonElement;
+    }
+
+    // US-14, criterion 2.
+    it('offers a tab for each category plus Todos, and opens on Todos', async () => {
+      await openScreenShowing(mixedMenu);
+
+      expect(tab(/todos/i).getAttribute('aria-selected')).toBe('true');
+      expect(tab(/tragos/i)).not.toBeNull();
+      expect(tab(/cervezas/i)).not.toBeNull();
+      expect(tab(/sin alcohol/i)).not.toBeNull();
+      expect(names()).toEqual(['Gin Tonic', 'Imperial', 'Agua con gas']);
+    });
+
+    // US-14, criterion 3: sold-out ones included.
+    it('narrows to the chosen category, sold-out drinks included', async () => {
+      const rendered = await openScreenShowing(mixedMenu);
+
+      tab(/cervezas/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(names()).toEqual(['Imperial']);
+
+      tab(/sin alcohol/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(names()).toEqual(['Agua con gas']);
+    });
+
+    it('goes back to showing everything from Todos', async () => {
+      const rendered = await openScreenShowing(mixedMenu);
+
+      tab(/cervezas/i).click();
+      await rendered.fixture.whenStable();
+      tab(/todos/i).click();
+      await rendered.fixture.whenStable();
+
+      expect(names()).toEqual(['Gin Tonic', 'Imperial', 'Agua con gas']);
+    });
+
+    // No count anywhere on this strip, unlike administration's pills.
+    it('sends no stock or product count on the tabs', async () => {
+      await openScreenShowing(mixedMenu);
+
+      expect(tab(/tragos/i).textContent?.trim()).toBe('Tragos');
+    });
+
+    // Since 2026-09-26 the categories are the venue's own: whatever it named
+    // and in the order it made them, not three written into the screen.
+    it('draws the categories the venue made, in the order it made them', async () => {
+      await openScreenShowing({
+        ...mixedMenu,
+        categories: [
+          { id: 'category-wine', name: 'Vinos' },
+          { id: 'category-beer', name: 'Cervezas' },
+        ],
+        items: [{ ...mixedMenu.items[1], categoryId: 'category-wine', name: 'Malbec' }],
+      });
+
+      expect(screen.getAllByRole('tab').map((tab) => tab.textContent?.trim())).toEqual([
+        'Todos',
+        'Vinos',
+        'Cervezas',
+      ]);
+
+      tab(/vinos/i).click();
+
+      expect(names()).toEqual(['Malbec']);
+    });
+
+    // Nothing to split by: a strip with only "Todos" would be a control that
+    // does nothing.
+    it('draws no tabs when the venue has no categories', async () => {
+      await openScreenShowing({ ...mixedMenu, categories: [] });
+
+      expect(screen.queryByRole('tab')).toBeNull();
     });
   });
 
