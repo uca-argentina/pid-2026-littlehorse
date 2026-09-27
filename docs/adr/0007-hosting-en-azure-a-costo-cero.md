@@ -18,11 +18,11 @@ in-process, y una base relacional.
 
 ### Para la API
 
-| Opción | Cómputo gratis mensual | Problema |
-|---|---|---|
-| **App Service F1** | 60 minutos de CPU **por día** (~30 h/mes) | Al superar la cuota diaria devuelve `403` hasta la medianoche UTC. No escala a cero: se duerme, con arranque en frío de 10-20 s. |
-| **Container Apps** (Consumption) | 180.000 vCPU-seg + 360.000 GiB-seg + 2M requests **por suscripción, por mes** | Exige imagen de contenedor y un registry. |
-| **Azure Functions** | 1M ejecuciones | SignalR y una API con estado no encajan en el modelo. |
+| Opción                           | Cómputo gratis mensual                                                        | Problema                                                                                                                         |
+| -------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **App Service F1**               | 60 minutos de CPU **por día** (~30 h/mes)                                     | Al superar la cuota diaria devuelve `403` hasta la medianoche UTC. No escala a cero: se duerme, con arranque en frío de 10-20 s. |
+| **Container Apps** (Consumption) | 180.000 vCPU-seg + 360.000 GiB-seg + 2M requests **por suscripción, por mes** | Exige imagen de contenedor y un registry.                                                                                        |
+| **Azure Functions**              | 1M ejecuciones                                                                | SignalR y una API con estado no encajan en el modelo.                                                                            |
 
 A 0,25 vCPU y 0,5 GiB —la configuración mínima— el grant de Container Apps equivale a unas
 **200 horas de ejecución por mes**, casi 7× lo de App Service F1, y sin el precipicio diario.
@@ -43,14 +43,14 @@ Apps puede tirar imágenes de cualquier registry.
 
 ## Decisión
 
-| Componente | Recurso |
-|---|---|
-| PWA | Static Web Apps, tier Free |
-| API | Container Apps, perfil **Consumption**, `minReplicas: 0` |
-| Imagen | GitHub Container Registry (`ghcr.io`) |
-| Base de datos | Azure SQL, free offer, serverless con auto-pausa |
-| Tiempo real | SignalR in-process, **sin** Azure SignalR Service |
-| Observabilidad | Application Insights (5 GB/mes gratis) |
+| Componente     | Recurso                                                  |
+| -------------- | -------------------------------------------------------- |
+| PWA            | Static Web Apps, tier Free                               |
+| API            | Container Apps, perfil **Consumption**, `minReplicas: 0` |
+| Imagen         | GitHub Container Registry (`ghcr.io`)                    |
+| Base de datos  | Azure SQL, free offer, serverless con auto-pausa         |
+| Tiempo real    | SignalR in-process, **sin** Azure SignalR Service        |
+| Observabilidad | Application Insights (5 GB/mes gratis)                   |
 
 **Azure SignalR Service queda explícitamente afuera.** Existe para repartir conexiones entre
 varias instancias; con una sola es un recurso de más que hay que crear, configurar y pagar
@@ -105,6 +105,28 @@ Cómo tiene que crearse, cuando exista `infra/`:
 Se descartó guardar las fotos en la base o en el disco del contenedor: la base gratuita tiene
 32 GB pero cada foto pasaría por la API en cada carta que se abre, y el disco de Container
 Apps se pierde en cada reinicio.
+
+## Adenda del 2026-09-27: el PWA le habla a la API directo, con CORS
+
+El primer deploy mostró que la tabla de arriba tenía un hueco: en desarrollo el proxy de
+Angular reenvía `/api` a la API, pero en Azure nada cumple ese rol. La Static Web App en el
+plan **Free** no puede reenviar a un backend propio (los "linked backends" son del plan
+Standard, ~USD 9/mes), y `staticwebapp.config.json` no hace proxy a URLs externas. El
+`POST /api/…` llegaba a la Static Web App y respondía `405`.
+
+Decisión: el PWA llama a la API en su propio host y la API habilita **CORS** para el host
+del PWA. Nada de eso queda escrito en el código:
+
+- La URL de la API es un output del Bicep (`apiFqdn`). El workflow compila el PWA después
+  de desplegar la infraestructura y se la pasa con `ng build --define`. Un interceptor la
+  antepone a cada `/api/…`; en desarrollo queda vacía y el proxy sigue como estaba.
+- Los orígenes permitidos los arma el Bicep: el hostname de la Static Web App, más el dominio
+  propio cuando exista (variable `FRONTEND_CUSTOM_DOMAIN` del environment). Llegan a la API
+  como `Cors__AllowedOrigins__N`.
+
+Costo: el build del PWA espera al de la infraestructura, unos minutos más por deploy. El
+token viaja en `Authorization` y no en una cookie, así que no hace falta el modo con
+credenciales de CORS.
 
 ## Qué no pudimos verificar
 
