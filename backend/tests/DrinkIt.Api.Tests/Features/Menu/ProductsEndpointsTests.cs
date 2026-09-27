@@ -95,8 +95,8 @@ public class ProductsEndpointsTests
     {
         ProductListItem[] stored =
         [
-            new(Guid.CreateVersion7(), "Aperol Spritz", "Aperol, prosecco, soda", null, 5200m, 0, TheCategory, IsAvailable: true, IsSoldOut: true, IsActive: true),
-            new(Guid.CreateVersion7(), "Gin Tonic", null, "https://images.example.com/gin-tonic.jpg", 4500m, 20, AnotherCategory, IsAvailable: false, IsSoldOut: false, IsActive: false),
+            new(Guid.CreateVersion7(), "Aperol Spritz", "Aperol, prosecco, soda", null, 5200m, 0, TheCategory, IsAvailable: true, IsSoldOut: true, IsActive: true, new AuditInfo(null, null, null, null)),
+            new(Guid.CreateVersion7(), "Gin Tonic", null, "https://images.example.com/gin-tonic.jpg", 4500m, 20, AnotherCategory, IsAvailable: false, IsSoldOut: false, IsActive: false, new AuditInfo(new DateTimeOffset(2026, 9, 27, 21, 0, 0, TimeSpan.Zero), "euge.q", null, null)),
         ];
 
         IResult result = await ProductsEndpoints.ListAsync(new Fake.Queries(stored), CancellationToken.None);
@@ -109,6 +109,8 @@ public class ProductsEndpointsTests
         Assert.Equal(JsonValueKind.Null, response.Body[0].GetProperty("imageUrl").ValueKind);
         Assert.Equal(20, response.Body[1].GetProperty("stock").GetInt32());
         Assert.Equal(AnotherCategory, response.Body[1].GetProperty("categoryId").GetGuid());
+        Assert.Equal("euge.q", response.Body[1].GetProperty("audit").GetProperty("createdBy").GetString());
+        Assert.Equal(JsonValueKind.Null, response.Body[0].GetProperty("audit").GetProperty("createdAt").ValueKind);
         Assert.False(response.Body[1].GetProperty("isAvailable").GetBoolean());
         Assert.False(response.Body[1].GetProperty("isActive").GetBoolean());
     }

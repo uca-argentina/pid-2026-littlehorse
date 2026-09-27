@@ -41,7 +41,7 @@ public sealed class CategoryQueriesTests(SqlServerFixture sql)
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.AddRange(mine, theirs);
         SeedCategory.For(seed, mine.Id, "Tragos");
-        SeedCategory.For(seed, theirs.Id, "Vinos");
+        SeedCategory.For(seed, theirs.Id, "Wine");
         await seed.SaveChangesAsync();
 
         IReadOnlyList<CategoryListItem> listed = await new CategoryQueries(seed).ListAsync(CancellationToken.None);

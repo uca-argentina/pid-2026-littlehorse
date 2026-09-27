@@ -1,3 +1,4 @@
+using DrinkIt.Application.Common;
 using DrinkIt.Domain.Menu;
 
 namespace DrinkIt.Application.Menu;
@@ -23,7 +24,8 @@ public sealed record ProductSummary(
     Guid CategoryId,
     bool IsAvailable,
     bool IsSoldOut,
-    bool IsActive)
+    bool IsActive,
+    AuditInfo Audit)
 {
     internal static ProductSummary Of(Product product) => new(
         product.Id,
@@ -35,5 +37,6 @@ public sealed record ProductSummary(
         product.CategoryId,
         product.IsAvailable,
         product.IsSoldOut,
-        product.IsActive);
+        product.IsActive,
+        AuditInfo.Of(product));
 }

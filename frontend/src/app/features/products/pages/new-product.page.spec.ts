@@ -12,6 +12,8 @@ import { ProductsService } from '../products.service';
 import type { Product } from '../products.service';
 import { NewProductPage } from './new-product.page';
 
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
 const created: Product = {
   id: 'id-1',
   name: 'Gin Tonic',
@@ -23,6 +25,8 @@ const created: Product = {
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
+
+  audit: noAudit,
 };
 
 const rejectedWith = (status: number, type: string) =>
@@ -113,6 +117,13 @@ function save(): void {
 }
 
 describe('NewProductPage', () => {
+  // A product that does not exist yet has no history to show.
+  it('shows no audit note on a new product', async () => {
+    await openScreen();
+
+    expect(screen.queryByText(/sin registro/i)).toBeNull();
+  });
+
   it('sends what was typed, with the name trimmed and the numbers as numbers', async () => {
     const { create } = await openScreen();
 
@@ -429,10 +440,10 @@ describe('NewProductPage', () => {
   it('offers a category that only this venue has', async () => {
     await openScreen(undefined, undefined, [
       ...theCategories,
-      { id: 'category-wine', name: 'Vinos' },
+      { id: 'category-wine', name: 'Wine' },
     ]);
 
-    expect(category(/vinos/i)).not.toBeNull();
+    expect(category(/wine/i)).not.toBeNull();
   });
 
   it('says the categories are loading instead of showing an empty choice', async () => {

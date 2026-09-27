@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using DrinkIt.Application.Common;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Testcontainers.MsSql;
 
 namespace DrinkIt.Api.IntegrationTests.Persistence;
@@ -28,10 +29,17 @@ public sealed class SqlServerFixture : IAsyncLifetime
     public Task DisposeAsync() => _sqlServer.DisposeAsync().AsTask();
 
     /// <summary>A context scoped to one venue, as a real request would have.</summary>
-    public DrinkItDbContext CreateContext(Guid venueId) =>
+    public DrinkItDbContext CreateContext(Guid venueId) => CreateContext(venueId, []);
+
+    /// <summary>
+    /// The same, with the interceptors a real request registers. Most tests do
+    /// not want them: a stamp they did not ask for is one more thing to assert around.
+    /// </summary>
+    public DrinkItDbContext CreateContext(Guid venueId, params IInterceptor[] interceptors) =>
         new(
             new DbContextOptionsBuilder<DrinkItDbContext>()
                 .UseSqlServer(_sqlServer.GetConnectionString())
+                .AddInterceptors(interceptors)
                 .Options,
             new FixedVenue(venueId));
 
