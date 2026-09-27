@@ -15,6 +15,9 @@ param jwtSigningKey string
 param appInsightsConnectionString string
 @secure()
 param bootstrapAdminPassword string
+param registryUsername string
+@secure()
+param registryPassword string
 
 // Only until the first administrator exists: Container Apps rejects a secret with
 // an empty value, and without the variable the API seeds nothing.
@@ -24,6 +27,16 @@ var bootstrapSecrets = empty(bootstrapAdminPassword)
 var bootstrapEnv = empty(bootstrapAdminPassword)
   ? []
   : [{ name: 'Bootstrap__AdminPassword', secretRef: 'bootstrap-admin-password' }]
+
+// Only while the image on ghcr.io is private: Container Apps cannot pull from it
+// with a managed identity, so it signs in with a GitHub token. Empty means a
+// public image, which needs no credentials at all.
+var registrySecrets = empty(registryPassword)
+  ? []
+  : [{ name: 'ghcr-pull-token', value: registryPassword }]
+var registries = empty(registryPassword)
+  ? []
+  : [{ server: 'ghcr.io', username: registryUsername, passwordSecretRef: 'ghcr-pull-token' }]
 
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
@@ -48,7 +61,8 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
         { name: 'image-storage-connection-string', value: storageConnectionString }
         { name: 'jwt-signing-key', value: jwtSigningKey }
         { name: 'appinsights-connection-string', value: appInsightsConnectionString }
-      ], bootstrapSecrets)
+      ], bootstrapSecrets, registrySecrets)
+      registries: registries
     }
     template: {
       containers: [
