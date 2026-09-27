@@ -1,6 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# It marks the EF migrations as generated code. Without it the analyzers check
+# them and TreatWarningsAsErrors fails the publish. Needs --build-context repo=.
+COPY --from=repo .editorconfig ./
 COPY DrinkIt.slnx Directory.Packages.props Directory.Build.props ./
 COPY src/DrinkIt.Domain/DrinkIt.Domain.csproj src/DrinkIt.Domain/
 COPY src/DrinkIt.Application/DrinkIt.Application.csproj src/DrinkIt.Application/
