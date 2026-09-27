@@ -21,6 +21,13 @@ param jwtSigningKey string
 @description('Password of the first administrator (venue bar-alfa, user admin). Only needed until it exists; empty seeds nothing.')
 param bootstrapAdminPassword string = ''
 
+@description('GitHub user that owns the token below. Only needed while the image on ghcr.io is private.')
+param registryUsername string = ''
+
+@secure()
+@description('Classic GitHub token with read:packages, to pull the private image. Empty means a public image.')
+param registryPassword string = ''
+
 var resourceSuffix = uniqueString(resourceGroup().id)
 var sqlServerName = 'sql-drinkit-${resourceSuffix}'
 var sqlDatabaseName = 'drinkit'
@@ -98,6 +105,8 @@ module containerApp 'modules/container-app.bicep' = {
     storageContainerName: storageContainerName
     jwtSigningKey: jwtSigningKey
     bootstrapAdminPassword: bootstrapAdminPassword
+    registryUsername: registryUsername
+    registryPassword: registryPassword
     appInsightsConnectionString: appInsights.outputs.connectionString
   }
 }

@@ -117,7 +117,9 @@ jobs:
                 sqlAadAdminObjectId=${{ env.SQL_AAD_ADMIN_OBJECT_ID }} \
                 sqlAadAdminLoginName="${{ env.SQL_AAD_ADMIN_LOGIN_NAME }}" \
                 jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
-                bootstrapAdminPassword="${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}"
+                bootstrapAdminPassword="${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
+                registryUsername="${{ secrets.GHCR_PULL_USERNAME }}" \
+                registryPassword="${{ secrets.GHCR_PULL_TOKEN }}"
 
   deploy-pwa:
     name: Deploy the PWA to Static Web Apps
