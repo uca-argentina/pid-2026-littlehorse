@@ -21,6 +21,9 @@ param jwtSigningKey string
 @description('Password of the first administrator (venue bar-alfa, user admin). Only needed until it exists; empty seeds nothing.')
 param bootstrapAdminPassword string = ''
 
+@description('Custom domain of the PWA, without https:// (e.g. drinkit.example.com). Empty until one is registered.')
+param frontendCustomDomain string = ''
+
 @description('GitHub user that owns the token below. Only needed while the image on ghcr.io is private.')
 param registryUsername string = ''
 
@@ -90,6 +93,13 @@ module containerAppsEnvironment 'modules/container-apps-environment.bicep' = {
   }
 }
 
+// The Static Web App's own address always, plus the custom domain once there is one:
+// both keep working while people still have the old one bookmarked.
+var corsAllowedOrigins = concat(
+  ['https://${staticWebApp.outputs.defaultHostname}'],
+  empty(frontendCustomDomain) ? [] : ['https://${frontendCustomDomain}']
+)
+
 module containerApp 'modules/container-app.bicep' = {
   name: 'container-app'
   params: {
@@ -107,6 +117,7 @@ module containerApp 'modules/container-app.bicep' = {
     bootstrapAdminPassword: bootstrapAdminPassword
     registryUsername: registryUsername
     registryPassword: registryPassword
+    corsAllowedOrigins: corsAllowedOrigins
     appInsightsConnectionString: appInsights.outputs.connectionString
   }
 }

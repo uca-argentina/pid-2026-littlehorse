@@ -16,6 +16,8 @@ param appInsightsConnectionString string
 @secure()
 param bootstrapAdminPassword string
 param registryUsername string
+@description('Full origins (https://host) the PWA is served from. The API answers cross-origin calls from these only.')
+param corsAllowedOrigins array
 @secure()
 param registryPassword string
 
@@ -37,6 +39,10 @@ var registrySecrets = empty(registryPassword)
 var registries = empty(registryPassword)
   ? []
   : [{ server: 'ghcr.io', username: registryUsername, passwordSecretRef: 'ghcr-pull-token' }]
+
+// One variable per origin: Cors__AllowedOrigins__0, __1… is how ASP.NET reads an array
+// out of environment variables.
+var corsEnv = [for (origin, index) in corsAllowedOrigins: { name: 'Cors__AllowedOrigins__${index}', value: origin }]
 
 resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: name
@@ -87,7 +93,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'Jwt__Audience', value: 'drinkit' }
             { name: 'Jwt__LifetimeMinutes', value: '480' }
             { name: 'ApplicationInsights__ConnectionString', secretRef: 'appinsights-connection-string' }
-          ], bootstrapEnv)
+          ], bootstrapEnv, corsEnv)
         }
       ]
       scale: {

@@ -55,6 +55,9 @@ jobs:
 
   build-pwa:
     name: Build the PWA
+    # After the infrastructure: the PWA is built with the API's address, and
+    # that address is a Bicep output.
+    needs: deploy-infra
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -80,7 +83,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm run build
+      # The services call /api/...; this is where that lands once deployed.
+      - run: pnpm run build --define "DRINKIT_API_BASE_URL='${{ needs.deploy-infra.outputs.api-url }}'"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -95,6 +99,8 @@ jobs:
     needs: build-and-push-api
     runs-on: ubuntu-latest
     environment: production
+    outputs:
+      api-url: ${{ steps.deploy.outputs.api-url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -106,10 +112,12 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: az deployment group create
+        id: deploy
         uses: azure/cli@v2
         with:
           inlineScript: |
-            az deployment group create \
+            fqdn=$(az deployment group create \
+              --query properties.outputs.apiFqdn.value -o tsv \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --template-file infra/main.bicep \
               --parameters \
@@ -119,7 +127,9 @@ jobs:
                 jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
                 bootstrapAdminPassword="${{ secrets.BOOTSTRAP_ADMIN_PASSWORD }}" \
                 registryUsername="${{ secrets.GHCR_PULL_USERNAME }}" \
-                registryPassword="${{ secrets.GHCR_PULL_TOKEN }}"
+                registryPassword="${{ secrets.GHCR_PULL_TOKEN }}" \
+                frontendCustomDomain="${{ vars.FRONTEND_CUSTOM_DOMAIN }}")
+            echo "api-url=https://$fqdn" >> "$GITHUB_OUTPUT"
 
   deploy-pwa:
     name: Deploy the PWA to Static Web Apps

@@ -50,6 +50,7 @@ if (!builder.Environment.IsDevelopment() && jwt.SigningKey.StartsWith("dev-", St
 }
 
 builder.Services.AddStaffAuthentication(jwt);
+builder.Services.AddFrontendCors(builder.Configuration);
 
 builder.Services.AddProblemDetailsForEveryError();
 // Numbers are numbers on the wire. ASP.NET's default also reads them from
@@ -99,6 +100,9 @@ app.UseHttpsRedirection();
 // the claims exist, and only then the venue resolution that reads both. Nothing
 // touching the database may run before it.
 app.UseRouting();
+// Before authentication: the browser's preflight carries no token, and refusing
+// it with a 401 would block the real request behind it.
+app.UseCors();
 app.UseAuthentication();
 app.UseMiddleware<VenueResolutionMiddleware>();
 app.UseAuthorization();
