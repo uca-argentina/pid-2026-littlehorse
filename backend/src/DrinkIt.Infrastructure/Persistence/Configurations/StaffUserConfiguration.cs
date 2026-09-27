@@ -10,6 +10,7 @@ internal sealed class StaffUserConfiguration : IEntityTypeConfiguration<StaffUse
     public void Configure(EntityTypeBuilder<StaffUser> builder)
     {
         builder.ToTable("StaffUsers");
+        builder.HasAuditColumns();
         builder.HasKey(user => user.Id);
 
         builder.Property(user => user.Username).HasMaxLength(50).IsRequired();

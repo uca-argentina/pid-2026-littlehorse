@@ -1,0 +1,145 @@
+// Same header and the same column width as the listing it came from, so the
+// form reads as a step inside that screen and not as a different place.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 560px;
+  padding: var(--dk-space-5);
+  margin: 0 auto;
+}
+
+.back {
+  align-self: flex-start;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.label {
+  padding: 0;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.input {
+  min-height: 54px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // Above the 16px that keeps iOS Safari from zooming into the field on
+  // focus: going bigger is still safe, only smaller is not.
+  font-size: 17px;
+}
+
+.input::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.input-bad {
+  border-color: var(--dk-danger);
+}
+
+.help {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.bad {
+  margin: 0;
+  color: var(--dk-danger);
+  font-size: 14px;
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border: 0;
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
+.cta:disabled {
+  opacity: 0.6;
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--dk-accent-hover);
+}
+
+// The way back, kept quiet: leaving without saving is not what this screen is
+// for, but a form with no way out is a dead end on a shared laptop.
+.ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  color: var(--dk-text-muted);
+  font-size: 15.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ghost:hover {
+  color: var(--dk-text);
+}

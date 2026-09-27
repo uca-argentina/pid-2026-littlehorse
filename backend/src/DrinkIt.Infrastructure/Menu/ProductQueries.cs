@@ -1,3 +1,4 @@
+using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -24,11 +25,13 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
                 product.ImageUrl,
                 product.Price,
                 product.Stock,
+                product.CategoryId,
                 product.IsAvailable,
                 // Product.IsSoldOut is not mapped, so the rule is restated for
                 // SQL here. The domain test is the one that owns it.
                 product.Stock == 0,
-                product.IsActive))
+                product.IsActive,
+                new AuditInfo(product.CreatedAt, product.CreatedBy, product.LastModifiedAt, product.LastModifiedBy)))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
@@ -38,11 +41,14 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
             // What can be ordered first, so the reachable part of the menu is
             // what a thumb lands on. Sold out stays visible, further down.
             //
-            // Ordering after projecting to MenuItem would read better (sort on
-            // the already-computed IsOrderable instead of repeating the
-            // expression), but EF Core cannot translate an OrderBy over a
-            // property read back off a constructed record — it has to be a SQL
-            // ORDER BY over the raw columns, so the condition is written twice.
+            // Product.IsOrderable is the same rule and owns the test for it,
+            // but it is not a mapped column, so it cannot cross into SQL and is
+            // restated here. Ordering after projecting to MenuItem would read
+            // better (sort on the already-computed IsOrderable instead of
+            // repeating the expression), but EF Core cannot translate an
+            // OrderBy over a property read back off a constructed record — it
+            // has to be a SQL ORDER BY over the raw columns, so the condition
+            // is written twice.
             .OrderByDescending(product => product.IsAvailable && product.Stock > 0)
             .ThenBy(product => product.Name)
             .Select(product => new MenuItem(
@@ -51,6 +57,7 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
                 product.Description,
                 product.ImageUrl,
                 product.Price,
+                product.CategoryId,
                 product.IsAvailable && product.Stock > 0))
             .ToListAsync(cancellationToken);
 }

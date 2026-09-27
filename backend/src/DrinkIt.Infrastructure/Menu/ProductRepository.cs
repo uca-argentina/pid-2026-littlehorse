@@ -32,4 +32,23 @@ internal sealed class ProductRepository(DrinkItDbContext context) : IProductRepo
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         context.SaveChangesAsync(cancellationToken);
+
+    /// <summary>
+    /// One conditional statement, the same shape as a sale in OrderRepository:
+    /// the database adds the change to whatever it holds right now, so a sale
+    /// between reading the product and this keeps its units. The venue filter
+    /// applies here too.
+    /// </summary>
+    public async Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken)
+    {
+        int applied = await context.Products
+            .Where(row => row.Id == product.Id && row.Stock + change >= 0)
+            .ExecuteUpdateAsync(row => row.SetProperty(p => p.Stock, p => p.Stock + change), cancellationToken);
+
+        // What the domain worked out in memory is not what is stored once sales
+        // are counted in: the screen gets the stock the database has.
+        await context.Entry(product).ReloadAsync(cancellationToken);
+
+        return applied == 1;
+    }
 }

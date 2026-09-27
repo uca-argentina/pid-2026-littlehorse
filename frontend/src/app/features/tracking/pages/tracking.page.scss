@@ -1,0 +1,149 @@
+// Traced from design/wireframes/EstadoPedido.dc.html, minus the pickup QR,
+// which belongs with the bar's screens and is out of Sprint 1.
+
+.frame {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.body {
+  display: flex;
+  width: 100%;
+  max-width: 420px;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 20px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.tick {
+  display: flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.what {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+// What is happening right now, which is the sentence somebody opens the screen
+// to read. Louder than the rest of the prose and in the page's own voice.
+.what-now {
+  color: var(--dk-text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+// The one thing on the screen somebody has to read out loud across a loud
+// room, so it is the biggest thing on it by a long way.
+.code {
+  padding: 14px 26px;
+  border: 1px solid var(--dk-border);
+  border-radius: 18px;
+  margin: 2px 0;
+  background: var(--dk-surface);
+  font-size: 46px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+}
+
+.journey {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 18px;
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: 15px;
+  margin: 4px 0 0;
+  background: var(--dk-surface);
+  list-style: none;
+  text-align: left;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  color: var(--dk-text-muted);
+  font-size: 15px;
+}
+
+// Reached, rather than "current": somebody who looks away and comes back reads
+// how far it got, not one blinking dot with no history.
+.step-done {
+  color: var(--dk-text);
+  font-weight: 600;
+}
+
+.dot {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  border: 1px solid var(--dk-border);
+  border-radius: 99px;
+  background: var(--dk-surface-raised);
+}
+
+.step-done .dot {
+  border-color: var(--dk-accent);
+  background: var(--dk-accent);
+}
+
+.stale {
+  margin: 0;
+  color: var(--dk-text-faint);
+  font-size: 13px;
+}
+
+.ghost {
+  display: flex;
+  width: 100%;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--dk-drop-border);
+  border-radius: 14px;
+  margin-top: 6px;
+  color: var(--dk-text);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ghost:hover {
+  border-color: var(--dk-accent);
+}
+
+.note {
+  margin: 0;
+  padding: 14px 15px;
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: 14px;
+  background: var(--dk-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-danger-alert-text);
+}

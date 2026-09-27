@@ -10,12 +10,31 @@ import { STAFF_USERS_URL, StaffUsersService } from '../staff-users.service';
 import type { StaffUser } from '../staff-users.service';
 import { EditStaffUserPage } from './edit-staff-user.page';
 
-const martin: StaffUser = { id: 'id-2', username: 'martin.p', role: 'Waiter', isActive: true };
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
+const martin: StaffUser = {
+  id: 'id-2',
+  username: 'martin.p',
+  role: 'Waiter',
+  isActive: true,
+  audit: noAudit,
+};
 
 const theTeam: StaffUser[] = [
-  { id: 'id-1', username: 'euge.q', role: 'Administrator', isActive: true },
+  { id: 'id-1', username: 'euge.q', role: 'Administrator', isActive: true, audit: noAudit },
   martin,
-  { id: 'id-3', username: 'pablo.l', role: 'Kds', isActive: false },
+  {
+    id: 'id-3',
+    username: 'pablo.l',
+    role: 'Kds',
+    isActive: false,
+    audit: {
+      createdAt: '2026-09-27T21:00:00Z',
+      createdBy: 'euge.q',
+      lastModifiedAt: '2026-09-28T01:30:00Z',
+      lastModifiedBy: 'nico.r',
+    },
+  },
 ];
 
 const rejectedWith = (status: number, type: string) =>
@@ -55,7 +74,34 @@ function press(name: RegExp): void {
   screen.getByRole('button', { name }).click();
 }
 
+/**
+ * The whole two-step journey, for the tests that are about what follows it.
+ * The screen has to be let redraw in between: the button to confirm with does
+ * not exist until the first touch has been rendered.
+ */
+async function takeAccessAway(rendered: { fixture: { whenStable: () => Promise<unknown> } }) {
+  press(/dar de baja/i);
+  await rendered.fixture.whenStable();
+
+  press(/confirmar la baja/i);
+}
+
 describe('EditStaffUserPage', () => {
+  // US-30, criteria 1 and 2, on a person's record.
+  it('says who added this person and who last changed them', async () => {
+    await openScreenFor('id-3');
+
+    expect(screen.getByText(/creado por euge\.q/i)).not.toBeNull();
+    expect(screen.getByText(/última modificación por nico\.r/i)).not.toBeNull();
+  });
+
+  // Criterion 4: nobody is given a date they never had.
+  it('says there is no record for somebody who was there before the audit existed', async () => {
+    await openScreenFor('id-2');
+
+    expect(screen.getByText(/sin registro de quién lo creó ni de cuándo/i)).not.toBeNull();
+  });
+
   it('names whoever is being corrected', async () => {
     await openScreenFor('id-2');
 
@@ -121,11 +167,57 @@ describe('EditStaffUserPage', () => {
     expect(screen.getByText(/al menos ocho caracteres/i)).not.toBeNull();
   });
 
-  // US-05, criterion 1.
-  it('takes access away without offering to delete anything', async () => {
-    const { staffUsers } = await openScreenFor('id-2');
+  /**
+   * Taking somebody's access away asks first.
+   *
+   * This screen is used standing up, fast, on a tablet that is passed around,
+   * and "Dar de baja" sits in the same vertical run as "Guardar el rol" and
+   * "Cambiar la contraseña". One stray touch logs a colleague out in the middle
+   * of their shift, and nothing on this screen undoes it in one step.
+   */
+  it('does not take access away on the first touch', async () => {
+    const { rendered, staffUsers } = await openScreenFor('id-2');
 
     press(/dar de baja/i);
+    await rendered.fixture.whenStable();
+
+    expect(staffUsers['deactivate']).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /confirmar la baja/i })).not.toBeNull();
+  });
+
+  it('lets whoever asked to deactivate back out of it', async () => {
+    const { rendered, staffUsers } = await openScreenFor('id-2');
+
+    press(/dar de baja/i);
+    await rendered.fixture.whenStable();
+
+    press(/mejor no/i);
+    await rendered.fixture.whenStable();
+
+    expect(staffUsers['deactivate']).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /dar de baja/i })).not.toBeNull();
+  });
+
+  // A double tap lands its second touch where the first one was: that spot
+  // has to back out, not confirm.
+  it('puts the way back first, where the first tap landed', async () => {
+    const { rendered } = await openScreenFor('id-2');
+
+    press(/dar de baja/i);
+    await rendered.fixture.whenStable();
+
+    const [first] = screen
+      .getAllByRole('button')
+      .filter((button) => /dar de baja|mejor no|confirmar la baja/i.test(button.textContent ?? ''));
+
+    expect(first.textContent).toMatch(/mejor no/i);
+  });
+
+  // US-05, criterion 1.
+  it('takes access away without offering to delete anything', async () => {
+    const { rendered, staffUsers } = await openScreenFor('id-2');
+
+    await takeAccessAway(rendered);
 
     expect(staffUsers['deactivate']).toHaveBeenCalledWith('id-2');
     expect(screen.queryByRole('button', { name: /borrar|eliminar/i })).toBeNull();
@@ -146,7 +238,7 @@ describe('EditStaffUserPage', () => {
   it('shows the new state after taking access away', async () => {
     const { rendered } = await openScreenFor('id-2');
 
-    press(/dar de baja/i);
+    await takeAccessAway(rendered);
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('button', { name: /reactivar/i })).not.toBeNull();
@@ -158,7 +250,7 @@ describe('EditStaffUserPage', () => {
       deactivate: rejectedWith(409, ProblemTypes.lastAdministrator),
     });
 
-    press(/dar de baja/i);
+    await takeAccessAway(rendered);
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('alert').textContent).toContain('último administrador');

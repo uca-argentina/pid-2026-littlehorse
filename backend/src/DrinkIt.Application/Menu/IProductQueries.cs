@@ -1,3 +1,5 @@
+using DrinkIt.Application.Common;
+
 namespace DrinkIt.Application.Menu;
 
 /// <summary>What the administration listing shows about one product.</summary>
@@ -8,9 +10,11 @@ public sealed record ProductListItem(
     string? ImageUrl,
     decimal Price,
     int Stock,
+    Guid CategoryId,
     bool IsAvailable,
     bool IsSoldOut,
-    bool IsActive);
+    bool IsActive,
+    AuditInfo Audit);
 
 /// <summary>
 /// One card of the menu a customer reads on their phone.
@@ -28,6 +32,7 @@ public sealed record MenuItem(
     string? Description,
     string? ImageUrl,
     decimal Price,
+    Guid CategoryId,
     bool IsOrderable);
 
 /// <summary>

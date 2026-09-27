@@ -8,6 +8,8 @@ export type Product = components['schemas']['ProductResponse'];
 
 export type NewProduct = components['schemas']['CreateProductRequest'];
 
+export type ProductCorrection = components['schemas']['UpdateProductRequest'];
+
 export type ProductImage = components['schemas']['ProductImageResponse'];
 
 /**
@@ -42,5 +44,30 @@ export class ProductsService {
     form.append('image', image, image.name);
 
     return this.http.put<ProductImage>(`${PRODUCTS_URL}/${productId}/image`, form);
+  }
+
+  /** US-08: corrects name, description and price. Stock, the picture and the two switches each have their own action. */
+  update(productId: string, correction: ProductCorrection): Observable<Product> {
+    return this.http.put<Product>(`${PRODUCTS_URL}/${productId}`, correction);
+  }
+
+  /** US-08: off the menu for good. The row stays for the orders that point at it. */
+  deactivate(productId: string): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/deactivate`, {});
+  }
+
+  /** Moves the stock by a number of units, up or down. Never a new total: the API adds it to what is there. */
+  adjustStock(productId: string, change: number): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/adjust-stock`, { change });
+  }
+
+  /** US-07: the nightly switch off. The customer keeps seeing the product, dimmed. */
+  markUnavailable(productId: string): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-unavailable`, {});
+  }
+
+  /** US-07: the switch back on, e.g. after the stock comes back. Does not touch stock. */
+  markAvailable(productId: string): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-available`, {});
   }
 }

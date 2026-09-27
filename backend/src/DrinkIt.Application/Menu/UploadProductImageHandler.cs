@@ -23,9 +23,6 @@ public sealed class UploadProductImageHandler(IProductRepository products, IImag
     /// <summary>Decided on 2026-09-15: a phone photo fits, a mistake does not.</summary>
     public const long MaxImageBytes = 5 * 1024 * 1024;
 
-    public static readonly Error ProductNotFound =
-        new("product.not_found", "This venue has no product with that id.");
-
     public static readonly Error ImageTooLarge =
         new("product.image_too_large", "The picture cannot be larger than 5 MB.");
 
@@ -38,7 +35,7 @@ public sealed class UploadProductImageHandler(IProductRepository products, IImag
     {
         Product? product = await products.GetForUpdateAsync(command.ProductId, cancellationToken);
 
-        if (product is null) return ProductNotFound;
+        if (product is null) return ProductErrors.NotFound;
         if (command.Length > MaxImageBytes) return ImageTooLarge;
 
         ImageFormat? format = ImageFormat.Detect(await HeaderOf(command.Content, cancellationToken));

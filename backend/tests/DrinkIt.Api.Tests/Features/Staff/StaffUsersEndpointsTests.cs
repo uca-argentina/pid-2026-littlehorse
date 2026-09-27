@@ -12,6 +12,8 @@ public class StaffUsersEndpointsTests
 {
     private const string Path = "/staff/users";
 
+    private static readonly DateTimeOffset Created = new(2026, 9, 27, 21, 0, 0, TimeSpan.Zero);
+
     private const string LongEnoughPassword = "a long enough password";
 
     // Pins the success shape: the Angular client is generated from it, so
@@ -88,8 +90,8 @@ public class StaffUsersEndpointsTests
     {
         StaffUserListItem[] stored =
         [
-            new(Guid.CreateVersion7(), "euge.q", StaffRole.Administrator, IsActive: true),
-            new(Guid.CreateVersion7(), "pablo.l", StaffRole.Waiter, IsActive: false),
+            new(Guid.CreateVersion7(), "euge.q", StaffRole.Administrator, IsActive: true, new AuditInfo(Created, "euge.q", null, null)),
+            new(Guid.CreateVersion7(), "pablo.l", StaffRole.Waiter, IsActive: false, new AuditInfo(null, null, null, null)),
         ];
 
         IResult result = await StaffUsersEndpoints.ListAsync(new Fake.Queries(stored), CancellationToken.None);
@@ -100,6 +102,31 @@ public class StaffUsersEndpointsTests
         Assert.Equal("euge.q", response.Body[0].GetProperty("username").GetString());
         Assert.Equal("Administrator", response.Body[0].GetProperty("role").GetString());
         Assert.False(response.Body[1].GetProperty("isActive").GetBoolean());
+    }
+
+    // US-30. The shape the screen reads, and the row from before the columns
+    // existed, which has to arrive as nulls and not as a date.
+    [Fact]
+    public async Task ListAsync_WhenTheRowsCarryAnAudit_RespondsWithItAndWithNullsWhereThereIsNone()
+    {
+        StaffUserListItem[] stored =
+        [
+            new(Guid.CreateVersion7(), "euge.q", StaffRole.Administrator, IsActive: true, new AuditInfo(Created, "root", Created.AddHours(1), "pablo.l")),
+            new(Guid.CreateVersion7(), "viejo.v", StaffRole.Waiter, IsActive: true, new AuditInfo(null, null, null, null)),
+        ];
+
+        IResult result = await StaffUsersEndpoints.ListAsync(new Fake.Queries(stored), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Get);
+
+        System.Text.Json.JsonElement audit = response.Body[0].GetProperty("audit");
+        Assert.Equal(Created, audit.GetProperty("createdAt").GetDateTimeOffset());
+        Assert.Equal("root", audit.GetProperty("createdBy").GetString());
+        Assert.Equal(Created.AddHours(1), audit.GetProperty("lastModifiedAt").GetDateTimeOffset());
+        Assert.Equal("pablo.l", audit.GetProperty("lastModifiedBy").GetString());
+
+        System.Text.Json.JsonElement legacy = response.Body[1].GetProperty("audit");
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, legacy.GetProperty("createdAt").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, legacy.GetProperty("createdBy").ValueKind);
     }
 
     private static async Task<HttpResponseSnapshot> Create(

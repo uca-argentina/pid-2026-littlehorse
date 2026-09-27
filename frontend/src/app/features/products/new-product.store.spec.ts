@@ -7,6 +7,8 @@ import { NewProductStore } from './new-product.store';
 import { ProductsService } from './products.service';
 import type { NewProduct, Product } from './products.service';
 
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
 function rejectedWith(status: number, type: string): HttpErrorResponse {
   return new HttpErrorResponse({ status, error: { type } });
 }
@@ -18,9 +20,12 @@ const created: Product = {
   imageUrl: null,
   price: 4500,
   stock: 20,
+  categoryId: 'category-drinks',
   isAvailable: true,
   isSoldOut: false,
   isActive: true,
+
+  audit: noAudit,
 };
 
 const aNewProduct: NewProduct = {
@@ -29,6 +34,7 @@ const aNewProduct: NewProduct = {
   imageUrl: null,
   price: 4500,
   stock: 20,
+  categoryId: 'category-drinks',
 };
 
 const aPhoto = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'gin-tonic.png', {

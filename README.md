@@ -1,7 +1,7 @@
 # drink.it
 
-[![CI backend](https://github.com/lamelapablo/drink-it/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/lamelapablo/drink-it/actions/workflows/ci-backend.yml)
-[![CI frontend](https://github.com/lamelapablo/drink-it/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/lamelapablo/drink-it/actions/workflows/ci-frontend.yml)
+[![CI backend](https://github.com/uca-argentina/pid-2026-littlehorse/actions/workflows/ci-backend.yml/badge.svg)](https://github.com/uca-argentina/pid-2026-littlehorse/actions/workflows/ci-backend.yml)
+[![CI frontend](https://github.com/uca-argentina/pid-2026-littlehorse/actions/workflows/ci-frontend.yml/badge.svg)](https://github.com/uca-argentina/pid-2026-littlehorse/actions/workflows/ci-frontend.yml)
 
 **Pedí tu trago desde el celular y retiralo cuando esté listo.** PWA de gestión de pedidos
 para boliches: el cliente pide y paga desde donde esté, el bartender prepara con un KDS en
@@ -78,7 +78,7 @@ infra/            # Bicep (todavía vacío).
 ### Setup
 
 ```bash
-git clone https://github.com/lamelapablo/drink-it.git
+git clone https://github.com/uca-argentina/pid-2026-littlehorse.git drink-it
 cd drink-it
 pnpm --prefix frontend install
 dotnet restore backend/DrinkIt.slnx

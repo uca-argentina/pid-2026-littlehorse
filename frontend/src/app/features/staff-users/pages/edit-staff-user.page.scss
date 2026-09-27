@@ -251,3 +251,25 @@
 .danger-button:hover:not(:disabled) {
   background: var(--dk-danger-surface);
 }
+
+.danger-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+}
+
+.ghost {
+  min-height: 50px;
+  padding: 0 var(--dk-space-5);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ghost:hover {
+  background: var(--dk-surface-raised);
+}

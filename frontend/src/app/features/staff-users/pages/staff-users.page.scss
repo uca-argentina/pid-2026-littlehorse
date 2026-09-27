@@ -174,7 +174,7 @@
 .edit {
   display: inline-flex;
   align-items: center;
-  min-height: 42px;
+  min-height: var(--dk-tap-min);
   padding: 0 var(--dk-space-4);
   border: 1px solid var(--dk-border);
   border-radius: var(--dk-radius-sm);

@@ -82,14 +82,14 @@ depende de nada sin terminar. Si le falta algo, no entra.
 | US-04 | Ver y corregir al equipo          | US-03        | ✅ **Terminada**                                                      |
 | US-05 | Dar de baja a quien se fue        | US-03        | **3 de 4** — falta el criterio de los pedidos, que no existen todavía |
 | US-06 | Cargar un trago en la carta       | US-01        | ✅ **Terminada**                                                      |
-| US-07 | Marcar que un trago se acabó      | US-06        | Pendiente                                                             |
+| US-07 | Marcar que un trago se acabó      | US-06        | ✅ **Terminada**                                                      |
 | US-08 | Corregir y sacar tragos           | US-06        | Pendiente                                                             |
 | US-09 | Ver la carta desde el celular     | US-06        | ✅ **Terminada**                                                      |
 | US-10 | Armar el pedido                   | US-09        | **Terminada** — a falta de prueba a mano                              |
-| US-11 | Confirmar el pedido               | US-10        | Pendiente                                                             |
-| US-12 | Seguir mi pedido                  | US-11        | Pendiente                                                             |
+| US-11 | Confirmar el pedido               | US-10        | **Terminada** — a falta de prueba a mano                              |
+| US-12 | Seguir mi pedido                  | US-11        | **Terminada** — a falta de prueba a mano                              |
 | US-13 | Encontrar a alguien en el listado | US-03        | ✅ **Terminada**                                                      |
-| US-14 | Agrupar la carta por categoría    | US-06, US-09 | Pendiente — planificada el 2026-09-15                                 |
+| US-14 | Agrupar la carta por categoría    | US-06, US-09 | ✅ **Terminada**                                                      |
 
 Las doce primeras son imprescindibles: cubren los seis puntos de la consigna y nada más.
 US-13 es la excepción, y entró por pedido del equipo el 2026-09-14 después de estar
@@ -136,6 +136,22 @@ está en _Deuda anotada_ por qué conviene que los dos servicios viejos también
 
 Quedan seis: US-07 y US-08 cierran la carta del administrador, US-11 y US-12 cierran el
 pedido, y US-14 son las categorías. El camino crítico es el pedido.
+
+**Estado al sábado 19 de septiembre.** US-07 cerró, y cerró chica: de sus tres criterios ya
+había dos construidos sin que fueran de ninguna story. El backend del criterio 1 entró con
+US-09 —la carta del cliente ya calculaba `IsOrderable` como "hay stock y está prendido"— y el
+criterio 3 entró con US-11, porque confirmar un pedido ya rechazaba el pedido entero nombrando
+el trago que no se puede preparar. Lo que faltaba de verdad era el interruptor del
+administrador, que es lo que se construyó.
+
+De paso se saldaron dos deudas que estaban esperando justamente esta story. Dos tests apagaban
+`IsAvailable` por reflexión, con un comentario que decía "hasta que exista US-07": ahora llaman
+a `Product.MarkUnavailable()`. Y `product.not_found` estaba declarado dos veces, en dos
+handlers distintos; como `Error` es un record, las dos constantes comparaban iguales y el
+segundo brazo del switch de la API era código muerto.
+
+Queda US-08, que es la última de la carta, y US-14. El interruptor y la baja lógica se parecen
+en la pantalla y no se parecen en nada más: uno es de esta noche y el otro es para siempre.
 
 ---
 
@@ -421,6 +437,49 @@ foto, o cuya foto no carga, muestra el ícono de `public/images` en su lugar.
 > exactamente la caminata que el producto quiere evitar. El diseño ya lo resuelve: la tarjeta
 > aparece atenuada y sin el botón de agregar.
 
+✅ **Terminada.** Los tres criterios están cumplidos y con test, incluido un spec de Playwright
+de dos actores —la tablet de la barra y el celular del cliente en el mismo test— que es lo
+único que prueba que apagar en una pantalla cambia lo que se puede hacer en la otra.
+
+El interruptor es el del wireframe `AdminProductos`: la columna "Disponible esta noche", un
+switch y al lado por qué está donde está. No pide confirmación porque se deshace con otro
+toque. No toca el stock ni la baja lógica, que son las otras dos preguntas —las tres decididas
+el 2026-09-14—, y eso está probado contra la base de verdad.
+
+**Con el stock en cero el interruptor se apaga solo y queda trabado.** Se decidió el
+2026-09-19: volver a prender algo que no hay sería prometerle al cliente un trago que la barra
+no puede servir. No alcanza con deshabilitar el botón —una pantalla vieja o un pedido hecho a
+mano llegan igual—, así que la regla vive en `Product.MarkAvailable()`, que tira excepción de
+dominio, y la pantalla sólo refleja lo que el dominio ya no deja hacer. Se destraba cargando
+stock, que es US-08.
+
+De ahí salió `Product.IsOrderable`, que es "el interruptor dice que sí y queda algo". Era la
+regla que la carta del cliente venía calculando sola en SQL desde US-09; ahora el dominio la
+posee y tiene su test, y la query la restata porque ni `IsSoldOut` ni `IsOrderable` son
+columnas mapeadas.
+
+**Un solo aviso por fila.** El wireframe dibuja "Sin stock" dos veces —al lado del interruptor
+y como chip— y la columna de stock lo decía una tercera. Quedó sólo el rótulo del interruptor,
+que es además el que explica por qué no se puede mover; la columna de stock volvió a ser un
+número ("0 en stock") y los chips quedaron para la baja lógica.
+
+**La pestaña "Dados de baja" pasó a llamarse "No disponibles"** y junta lo que el cliente no
+puede pedir por algo que no sea el stock: lo apagado esta noche y lo dado de baja. Antes
+contaba sólo la baja lógica, que hasta US-08 no existe, así que era una pestaña que decía cero
+siempre. El rótulo de la fila y la pestaña salen ahora del mismo `ProductState` —`available`,
+`soldOut`, `unavailable`—, así que una pestaña no puede juntar filas que digan otra cosa. Los
+dos casos se siguen distinguiendo por el chip "Dado de baja", que es lo que le importa a quien
+está atrás de la barra; para el cliente son lo mismo.
+
+Y se fue el párrafo de ayuda del pie. Explicaba que "disponible esta noche" no es lo mismo que
+dar de baja, que era cierto cuando la pestaña separaba las dos cosas y dejó de serlo cuando
+las juntó.
+
+Dos cosas que conviene tener escritas. La primera: **un administrador no puede apagar un trago
+de otro boliche**, aunque conozca el id y lo ponga en la URL; el filtro global lo deja en un 404,
+y hay test de integración de los dos sentidos. La segunda está abajo, en _Deuda anotada_: el
+criterio 3 avisa, nombra el trago y no cobra, pero la frase le llega al cliente en inglés.
+
 ### US-08 · Corregir y sacar tragos
 
 > **Como** administrador
@@ -527,6 +586,24 @@ leyendo el almacenamiento después de mirar la carta.
 > porque así lo dibuja el wireframe del cliente.
 >
 > **Se construye después de US-09**, no antes: la carta tiene que estar caminando primero.
+>
+> **Ampliado el 2026-09-25:** la categoría también se puede corregir desde la pantalla de
+> edición (US-08), no sólo elegir al cargar. Mismo campo, mismo `Update` del dominio que ya
+> corrige nombre, descripción y precio — no hay una acción aparte para esto.
+>
+> **Cambiado el 2026-09-26:** la lista fija en código de arriba ya no vale. Cada boliche crea
+> sus propias categorías desde el botón _Nueva categoría_ del listado de productos: pasan a
+> ser una tabla `Categories` con `VenueId` (única por nombre dentro del boliche) y el
+> producto guarda un `CategoryId`. Las solapas del cliente salen de esa lista, en el orden en
+> que se crearon. La migración le da a cada boliche las tres de siempre (_Tragos_, _Cervezas_,
+> _Sin alcohol_) y mueve cada producto a la que ya tenía, así que el criterio 4 sigue
+> cumplido. Todavía no hay renombrar ni borrar una categoría.
+
+✅ **Terminada.** Los cuatro criterios están cumplidos, con prueba de punta a punta que carga
+tragos de las tres categorías y verifica el filtro por solapa contra la API real. Lo cargado
+antes de esta story quedó en _Tragos_ sin tocar una fila a mano: la migración lo hace. La corrección de categoría desde la edición
+tiene su propia prueba de punta a punta, cambiando la categoría de un producto y verificando
+que la carta del cliente lo mueve de solapa.
 
 ### US-10 · Armar el pedido
 
@@ -596,6 +673,68 @@ líneas, la aclaración por trago, el subtotal y el total. Falta la prueba a man
 > **Nota:** el pago está simulado en este sprint, como habilita la consigna. Por eso confirmar
 > equivale a pagar.
 
+**Terminada.** Es la primera story que crea un pedido de verdad: hasta acá el pedido vivía en
+el navegador. `POST /{venueSlug}/orders` es anónimo como la carta —el boliche sale del slug
+del QR— y el cliente camina carta → pedido → `/{venueSlug}/checkout` → `/{venueSlug}/orders/A-1234`.
+
+| Decisión | Cómo queda |
+|---|---|
+| El pago | Simulado, como habilita la consigna ("los pagos pueden simularse mediante cambios de estado"). No hay pasarela y no se integra ninguna. "Pagar" muestra dos segundos de "procesando" y el pedido queda pago. |
+| Los dos segundos | Un piso, no una siesta: se espera lo que tarde la API o dos segundos, lo que sea más largo. Sin eso la pantalla salta de un toque al código y se lee como que no pasó nada. |
+| Métodos de pago | Los tres del wireframe. **Pago digital** elegido; **Efectivo en caja** y **Saldo de la mesa** dibujados y apagados. Están fuera del sprint, y una pantalla que gana dos filas después es una que hay que aprender dos veces. Pedirlos por API se responde, no se ignora. |
+| El código del pedido | **`A-1234`**: una letra, guion y cuatro dígitos. Corre en orden por boliche —`A-0000` … `A-9999`, después `B-0000`— y a los 260.000 vuelve a empezar. El guion separa la letra de los números, así la O de `O-0000` sólo puede ser la letra y sirve el abecedario entero. |
+| Quién reparte el código | La base, con un `UPDATE` condicional sobre el contador del boliche: "movete de K-4821 a K-4822, pero sólo si seguís en K-4821". Es la única forma de cumplir el criterio 4, y no se puede en memoria. |
+| Estado al confirmar | `Paid` y enseguida `Queued`. La pantalla dice "ya está pago y esperando en la barra", que es el criterio 5 literal. Nadie lo mueve de ahí hasta que exista el KDS. |
+| Doble toque (criterio 6) | Clave de idempotencia que genera la pantalla al abrirse y viaja en cada intento. La misma clave devuelve el mismo pedido. Viaja como columna sombra: es **cómo llegó** el pedido, no algo cierto sobre los tragos, y el dominio no la ve. |
+| Los precios | Los calcula el backend desde su propia carta. El celular manda ids y cantidades, nunca importes: si no, cualquiera paga lo que quiere editando el navegador. |
+| El stock | Confirmar descuenta, en la misma escritura que crea el pedido. Si un trago no alcanza o salió de la carta, se rechaza el pedido **entero** con 409 y se dice cuál: nadie paga por algo que no va a recibir. |
+| Dos clientes por el último trago | El descuento es una sentencia condicional por trago —"bajá 2 si hay al menos 2"— dentro de la transacción del pedido, así que de dos carreras una sola toca fila. La perdedora no se entera: el pedido se rearma contra la carta como quedó, hasta cinco veces, y sólo se avisa si el trago de verdad se agotó. |
+| Por qué no un token de concurrencia sobre `Stock` | Se probó y se sacó el 2026-09-17: ponía `Stock` en el `WHERE` de **toda** escritura de un producto. Subir una foto tarda segundos de red, y si alguien compraba ese trago en el medio la subida fallaba con 500, perdía la foto y dejaba el blob huérfano. US-07 y US-08 habrían heredado la misma trampa. |
+| El nombre | Nombre y apellido, sólo letras y espacios. Es más de lo que pide el criterio 3, y se tomó sabiendo que rechaza apellidos reales como D'Angelo. Se valida en las dos puntas: en la pantalla para no hacer esperar dos segundos por un "Euge", y en el servidor porque es quien manda. |
+| El método de pago en el contrato | Viaja como nombre —"Digital"— y no como el número del enum, igual que el rol del personal. El OpenAPI de un enum de .NET es un entero pelado, y un cliente generado que dice `method: number` no le dice nada a la pantalla. |
+| Al confirmar | El carrito del celular se vacía: el pedido es del servidor y tiene código propio. |
+| La confirmación | En `/{venueSlug}/orders/A-1234`, con el código sacado de la dirección: sobrevive a que bloqueen el teléfono y recarguen. Es la ruta que US-12 va a expandir con el estado en vivo. |
+| "Ver el estado" | Dibujado y **deshabilitado** hasta que exista US-12, igual que estuvo "Ir a pagar". |
+| "Pago protegido · [boliche]" del wireframe | **No entra.** No hay pasarela: prometer protección sobre un pago simulado sería la única mentira que esta pantalla no puede decir. Dice que el pago está simulado. |
+
+**Lo que encontró la revisión** (2026-09-17, agente `revisor-arquitectura` sobre los dos
+primeros commits). Los tres primeros eran defectos reales en código ya escrito:
+
+1. **Se vendía dos veces el último trago.** El stock se leía, se bajaba en memoria y se
+   escribía con un `UPDATE` que sólo nombraba la fila. Peor: un comentario del dominio
+   afirmaba lo contrario de lo que el código hacía.
+2. **La idempotencia sólo cubría el reintento secuencial.** El simultáneo —que es el que
+   produce una señal mala— moría con 500 contra el índice único.
+3. **Dos líneas del mismo trago** gastaban un código antes de ser rechazadas.
+4. Un puerto prometía guardar y no guardaba, y faltaban cuatro tests.
+
+Y uno que la revisión **no** vio y destapó el test nuevo al cambiar el timing: el `INSERT`
+que arranca el contador de un boliche tampoco era atómico bajo `READ COMMITTED`.
+
+**La segunda revisión** (2026-09-17, `/code-review` sobre la rama entera) encontró seis cosas
+más, todas reales:
+
+1. **El token de concurrencia sobre `Stock` rompía cualquier edición de un producto** mientras
+   el bar vendía. Es lo que llevó a cambiar el mecanismo por la sentencia condicional; hay un
+   test de integración que sube una foto mientras alguien compra.
+2. **`.cta-off` no existía en ninguna hoja de estilo**: el "Ir a pagar" de un pedido vacío se
+   veía dorado y activo, pero no hacía nada.
+3. **La clave de idempotencia vivía sólo en la pantalla.** Recargar —lo que cualquiera hace
+   con mala señal— generaba otra, y pagar de nuevo habría creado un segundo pedido pago,
+   justo lo que la pantalla promete que no pasa. Ahora vive en el navegador y se suelta al
+   confirmar.
+4. **Una cantidad de cero o negativa** no se validaba: pasaba el chequeo de stock y explotaba
+   en el dominio con un tipo de problema escrito para nosotros, no para el cliente.
+5. **El carrito se vaciaba antes de navegar**, así que la pantalla de pago decía "no hay nada
+   para pagar" —en voz alta, por `role="status"`— en el segundo posterior a un pago exitoso.
+6. **El servidor partía el nombre sólo por `' '` y la pantalla por cualquier espacio.** Un
+   nombre pegado con un espacio duro habilitaba el botón y fallaba después de pagar.
+
+**Deuda anotada.** Los comentarios XML de implementación de los endpoints se publican en el
+OpenAPI y terminan en el `schema.d.ts` del front. No es información sensible, pero son notas
+para el equipo en un contrato público: conviene separar `<summary>` de `<remarks>` o dejar de
+emitirlos.
+
 ### US-12 · Seguir mi pedido
 
 > **Como** cliente
@@ -627,6 +766,29 @@ líneas, la aclaración por trago, el subtotal y el total. Falta la prueba a man
 > criterio 3 se verifica cambiando el estado a mano en la base y viendo que la pantalla se
 > pone al día sola. Es una limitación de la demo, no del diseño: la pantalla ya muestra los
 > cuatro pasos y el mecanismo de actualización queda construido y probado.
+
+**Terminada.** El pedido vive en `/{venueSlug}/orders/{código}/{token}`, que es donde cae
+quien paga y el enlace que se guarda.
+
+| Decisión | Cómo queda |
+|---|---|
+| Una pantalla, no dos | La confirmación y el seguimiento eran el mismo lugar peleando por la misma dirección. Quedó una: arriba el tilde y el código grande —lo primero que hace falta al pagar— y abajo el recorrido. Volver más tarde al mismo enlace muestra lo mismo con el estado al día, que es el criterio 4. |
+| Cómo se protege el enlace | Un **token de seguimiento** de 128 bits, aparte del código. El código es el nombre del pedido: se grita en la barra, se puede loggear. El token es la llave, y es lo único que tiene quien no tiene cuenta. Se compara en **tiempo constante**: una comparación que corta en el primer carácter distinto le dice al que adivina cuánto acertó. |
+| Por qué el token y no el id del pedido | Con el id en la dirección, el identificador **es** la credencial: cualquier log o métrica que lo registre lo filtra. Y el día que existan las cuentas de cliente habría que mudar la ruta otra vez para que el registrado tenga direcciones limpias. Con el token, la regla pasa a ser "sos el dueño **o** traés el token" sin tocar nada. |
+| Dónde viaja el token | En el **path**, nunca en query string: las query strings son lo que proxies, logs y analíticas guardan por defecto. |
+| Un solo 404 | Token equivocado, código inexistente, pedido de otro boliche y pedido ya entregado responden lo mismo. Un 403 le confirmaría a alguien que va probando códigos que ése existe. |
+| El token se entrega una vez | En el 201 de la confirmación, y nunca más: la respuesta del seguimiento no lo lleva. Hay tests que verifican que la palabra no aparece en el cuerpo. |
+| Cuándo muere el enlace | Cuando el pedido se entrega o se cancela. El que quedó en el historial de un teléfono compartido deja de ser una puerta en el momento en que le dan los tragos. |
+| Cómo se ve morir el enlace | **Corregido el 2026-09-18.** El enlace muere, pero no en la cara de quien estaba mirando. La pantalla distingue dos 404: el de un enlace que **nunca** funcionó, que sigue mostrando la alerta roja, y el que llega sobre un pedido que estaba en pantalla hace un segundo, que es el final del recorrido y se dibuja como tal — "Entregado. ¡Que lo disfrutes!" con los cuatro pasos alcanzados. Antes, entregar el trago le tiraba al cliente "Ese enlace no lleva a ningún pedido" justo cuando nada había salido mal. La API no cambió: la regla de un solo 404 sigue entera. |
+| Cada cuánto consulta | Cada **tres segundos**, no SignalR. Para cuando el pedido termina, y descansa mientras la pestaña está en segundo plano: veinte consultas por minuto por algo que nadie está leyendo es batería que hace falta para el resto de la noche. |
+| Sin señal ≠ enlace roto | Son dos mensajes distintos. Si se cae la conexión, la pantalla **conserva lo último que supo** y avisa que está desactualizada; el pedido no dejó de existir. Eso es el criterio 6. |
+| Los pasos | Cuatro: esperando, en preparación, listo, entregado. Pagado y En cola son el mismo paso, porque para quien espera un trago son la misma cosa. El cuarto no llega nunca como respuesta —la API deja de mostrar el pedido apenas termina—, así que lo pone la pantalla sola cuando el enlace se apaga sobre un pedido que ya estaba mostrando. **Un pedido cancelado no se distingue de uno entregado** por esta vía, y la pantalla no lo intenta: el día que la cancelación tenga que avisarse, avisa el push, no el 404. |
+| El criterio 3 de punta a punta | **No se prueba con Playwright.** Sin las pantallas de la barra nada mueve un pedido, y probarlo habría pedido un endpoint que existe sólo para ser probado o un test que entra a la base. Lo que hace el polling está cubierto en `tracking.store.spec.ts`, y el criterio se muestra a mano en la demo. |
+
+**Ojo con la US-05.** Su criterio 3 —que los pedidos sigan mostrando quién los preparó—
+estaba trabado porque los pedidos no existían. Ahora existen, pero sigue trabado por otra
+razón: **un pedido no registra quién lo preparó**, porque eso lo asigna el KDS, que está
+fuera del sprint.
 
 ---
 
@@ -683,6 +845,21 @@ story que lo necesita.
     Cuelga de ahí toda la autenticación, así que se revisa con más cuidado.
 
     **Después del hito**, y en ese orden. Si aparece un cuarto lugar, deja de ser prolijidad.
+
+- **El cliente recibe en inglés el aviso de que un trago no se puede preparar.** Es el
+  criterio 3 de US-07 y sale de US-11: cuando confirmar el pedido se rechaza, la pantalla de
+  pago muestra tal cual el `detail` del problem document, y ese `detail` es el mensaje del
+  `Error`, que va en inglés como todo el backend. O sea que quien está en el boliche lee
+  "Gin Tonic is not on the menu any more.".
+
+    El criterio se cumple igual —se entera, sabe cuál es el trago y no se le cobra—, y por eso
+    US-07 quedó cerrada. Pero es el único texto en inglés que ve un cliente, y contradice la
+    regla de `CLAUDE.md` de que la PWA le habla en español.
+
+    **No se arregla poniendo español en el `.cs`**, que es la otra mitad de la misma regla. El
+    camino es que el problem document lleve el nombre del trago aparte del mensaje, y que la
+    frase la escriba la plantilla de Angular. Eso toca un endpoint de US-11, así que va en su
+    propia rama y no en la de US-07.
 
 **Ya está hecho y no se rehace.** Del backend: el modelo de local y de personal, el
 aislamiento entre locales con su prueba, la base con su migración, la API armada

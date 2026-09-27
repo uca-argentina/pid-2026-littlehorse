@@ -1,0 +1,52 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <form class="body" [formGroup]="form" (ngSubmit)="submit()">
+    <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'products']">Volver al listado</a>
+    <h1 class="title">Nueva categoría</h1>
+
+    @if (store.status() === 'nameTaken') {
+      <p class="note note-bad" role="alert">
+        Ya hay una categoría con ese nombre en este boliche. Elegí otro.
+      </p>
+    }
+
+    @if (store.status() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos guardarla. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    <div class="field">
+      <label class="label" for="name">Nombre</label>
+      <input
+        id="name"
+        class="input"
+        [class.input-bad]="nameError() !== null"
+        [attr.aria-invalid]="nameError() !== null ? 'true' : null"
+        [attr.aria-describedby]="nameError() !== null ? 'name-error' : 'name-help'"
+        formControlName="name"
+        type="text"
+        autocomplete="off"
+        placeholder="Vinos"
+      />
+      @if (nameError() !== null) {
+        <p id="name-error" class="bad">{{ nameError() }}</p>
+      } @else {
+        <p id="name-help" class="help">
+          Es la solapa que el cliente ve en la carta. Única en este boliche.
+        </p>
+      }
+    </div>
+
+    <button class="cta" type="submit" [disabled]="store.isSending()">
+      @if (store.isSending()) {
+        Creando
+      } @else {
+        Crear categoría
+      }
+    </button>
+
+    <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'products']">Cancelar</a>
+  </form>
+</div>

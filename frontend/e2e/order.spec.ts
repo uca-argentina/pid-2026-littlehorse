@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
+import { categoryIdNamed } from './categories';
 
 /**
  * US-10, end to end: somebody builds an order on the menu, opens it, fixes it
@@ -24,7 +25,13 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
 
   const created = await request.post('/api/staff/products', {
     headers: { Authorization: `Bearer ${token}` },
-    data: { name, description: 'Cargado por la prueba', price: 4500, stock: 20 },
+    data: {
+      name,
+      description: 'Cargado por la prueba',
+      price: 4500,
+      stock: 20,
+      categoryId: await categoryIdNamed(request, token, 'Tragos'),
+    },
   });
 
   expect(created.status()).toBe(201);
@@ -119,12 +126,14 @@ test.describe('Order', () => {
     );
   });
 
-  // US-11 is the screen this leads to and it does not exist yet.
-  test('does not offer to pay yet', async ({ page, request }) => {
+  // US-11 exists now, so the gold bar is the way on to paying.
+  test('leads to the payment screen', async ({ page, request }) => {
     await anOrderWith(page, request, 1);
 
     await page.goto(orderPath);
+    await page.getByRole('link', { name: /ir a pagar/i }).click();
 
-    await expect(page.getByRole('button', { name: /ir a pagar/i })).toBeDisabled();
+    await expect(page).toHaveURL(new RegExp(`/${seededVenueSlug}/checkout$`));
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pagar');
   });
 });

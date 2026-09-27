@@ -3,11 +3,13 @@ using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
 using DrinkIt.Api.Features.Menu;
+using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Orders;
 using DrinkIt.Application.Staff;
 using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
@@ -22,13 +24,22 @@ builder.Services.AddScoped<ChangeStaffUserRoleHandler>();
 builder.Services.AddScoped<ResetStaffUserPasswordHandler>();
 builder.Services.AddScoped<DeactivateStaffUserHandler>();
 builder.Services.AddScoped<ReactivateStaffUserHandler>();
+builder.Services.AddScoped<CreateCategoryHandler>();
 builder.Services.AddScoped<CreateProductHandler>();
+builder.Services.AddScoped<UpdateProductHandler>();
+builder.Services.AddScoped<DeactivateProductHandler>();
+builder.Services.AddScoped<AdjustProductStockHandler>();
 builder.Services.AddScoped<UploadProductImageHandler>();
+builder.Services.AddScoped<MarkProductUnavailableHandler>();
+builder.Services.AddScoped<MarkProductAvailableHandler>();
+builder.Services.AddScoped<ConfirmOrderHandler>();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
 builder.Services.AddScoped<CurrentVenue>();
 builder.Services.AddScoped<ICurrentVenue>(services => services.GetRequiredService<CurrentVenue>());
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentStaffUser, CurrentStaffUser>();
 
 JwtOptions jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
 
@@ -50,11 +61,20 @@ builder.Services.AddOpenApi();
 
 WebApplication app = builder.Build();
 
+// Every environment: a single venue, low traffic, and the Container App's managed
+// identity already holds db_ddladmin (see infra/README.md), so there's no separate
+// deploy step to run this from. See MigrationExtensions.ApplyMigrationsAsync for the
+// accepted risk with more than one replica applying migrations at the same time.
+await app.ApplyMigrationsAsync();
+
+// Every environment too: it is what creates the first administrator in
+// production, where there is no sign-up. It does nothing unless
+// Bootstrap:AdminPassword is set, see BootstrapSeeder.
+await app.SeedBootstrapDataAsync();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    await app.ApplyMigrationsAsync();
-    await app.SeedDevelopmentDataAsync();
     app.MapScalarApiReference();
 }
 
@@ -85,7 +105,10 @@ app.UseAuthorization();
 
 app.MapLogin();
 app.MapMenu();
+app.MapOrders();
+app.MapOrderTracking();
 app.MapStaffUsers();
+app.MapCategories();
 app.MapProducts();
 
 await app.RunAsync();

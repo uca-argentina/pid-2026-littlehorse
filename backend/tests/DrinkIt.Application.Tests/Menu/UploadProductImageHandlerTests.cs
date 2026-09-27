@@ -12,7 +12,7 @@ public class UploadProductImageHandlerTests
 
     private static readonly byte[] APdf = [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A, 0x0A];
 
-    private static Product AGinTonic() => Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20);
+    private static Product AGinTonic() => Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 20, Guid.CreateVersion7());
 
     private static UploadProductImageCommand AnUploadFor(Product product, byte[] bytes) =>
         new(product.Id, new MemoryStream(bytes), bytes.Length);
@@ -65,7 +65,7 @@ public class UploadProductImageHandlerTests
             new UploadProductImageCommand(Guid.CreateVersion7(), new MemoryStream(APng), APng.Length),
             CancellationToken.None);
 
-        Assert.Equal(UploadProductImageHandler.ProductNotFound, result.Error);
+        Assert.Equal(ProductErrors.NotFound, result.Error);
         Assert.Null(images.SavedAs);
     }
 
@@ -108,6 +108,9 @@ public class UploadProductImageHandlerTests
     {
         public sealed class Products(Product stored) : IProductRepository
         {
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
+                Task.FromResult(true);
+
             public bool Saved { get; private set; }
 
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>

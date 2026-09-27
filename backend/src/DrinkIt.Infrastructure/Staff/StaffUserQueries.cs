@@ -1,3 +1,4 @@
+using DrinkIt.Application.Common;
 using DrinkIt.Application.Staff;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,11 @@ internal sealed class StaffUserQueries(DrinkItDbContext context) : IStaffUserQue
             // kept for the order history, not to be read every shift.
             .OrderByDescending(user => user.IsActive)
             .ThenBy(user => user.Username)
-            .Select(user => new StaffUserListItem(user.Id, user.Username, user.Role, user.IsActive))
+            .Select(user => new StaffUserListItem(
+                user.Id,
+                user.Username,
+                user.Role,
+                user.IsActive,
+                new AuditInfo(user.CreatedAt, user.CreatedBy, user.LastModifiedAt, user.LastModifiedBy)))
             .ToListAsync(cancellationToken);
 }

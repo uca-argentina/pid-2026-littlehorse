@@ -173,14 +173,24 @@ describe('OrderPage', () => {
     );
   });
 
-  // US-11 is the screen this leads to and it does not exist yet. A gold button
-  // that does nothing is what reads as a broken app.
-  it('cannot be paid yet', async () => {
+  // US-11 exists now, so the gold button is the way on to it.
+  it('leads to the payment screen', async () => {
     await openScreenWith((cart) => cart.add(ginTonic));
 
-    const pay = screen.getByRole<HTMLButtonElement>('button', { name: /Ir a pagar/ });
+    expect(
+      screen
+        .getByText(/Ir a pagar/)
+        .closest('a')
+        ?.getAttribute('href'),
+    ).toBe('/bar-alfa/checkout');
+  });
 
-    expect(pay.disabled).toBe(true);
+  // With nothing in it there is nothing to pay for, and the way on is drawn
+  // switched off rather than leading to a screen that would send them back.
+  it('does not lead to paying when the order is empty', async () => {
+    await openScreenWith();
+
+    expect(screen.queryByText(/Ir a pagar/)?.closest('a')).toBeFalsy();
   });
 
   describe('with nothing in it', () => {

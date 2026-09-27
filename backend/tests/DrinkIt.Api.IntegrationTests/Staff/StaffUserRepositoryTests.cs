@@ -106,7 +106,7 @@ public sealed class StaffUserRepositoryTests(SqlServerFixture sql)
     }
 
     /// <summary>
-    /// US-05: the row survives the baja. This is what the whole soft delete
+    /// US-05: the row survives the deactivation. This is what the whole soft delete
     /// exists for — the orders that person prepared keep pointing somewhere.
     /// </summary>
     [Fact]

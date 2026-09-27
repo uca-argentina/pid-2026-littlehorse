@@ -178,6 +178,50 @@ describe('Cart', () => {
     expect(cart.isEmpty()).toBe(true);
   });
 
+  /**
+   * Valid JSON of the wrong shape.
+   *
+   * What is in a browser's storage was written by whatever version of the app
+   * the phone happened to open last, and it outlives the code that wrote it.
+   * Parsing it is not the same as it being an order: a line missing its price
+   * would total NaN on screen, and one missing its id would break the stepper.
+   * Better to start empty, which is what an unreadable cart already does.
+   */
+  it('starts clean when what was stored is not an order', () => {
+    store.entries.set(
+      `${CART_STORAGE_PREFIX}bar-alfa`,
+      JSON.stringify([{ productId: 'p-1', name: 'Gin Tonic' }]),
+    );
+
+    const cart = aCart();
+    cart.open('bar-alfa');
+
+    expect(cart.isEmpty()).toBe(true);
+  });
+
+  it('keeps only the lines that are whole', () => {
+    store.entries.set(
+      `${CART_STORAGE_PREFIX}bar-alfa`,
+      JSON.stringify([
+        {
+          productId: 'p-1',
+          name: 'Gin Tonic',
+          imageUrl: null,
+          unitPrice: 4500,
+          quantity: 2,
+          note: null,
+        },
+        { productId: 'p-2', name: 'Fernet' },
+      ]),
+    );
+
+    const cart = aCart();
+    cart.open('bar-alfa');
+
+    expect(cart.count()).toBe(2);
+    expect(cart.total()).toBe(9000);
+  });
+
   describe('taking things out', () => {
     // US-10, criterion 2, done from the menu card itself.
     it('lowers the quantity by one', () => {
@@ -363,6 +407,35 @@ describe('Cart', () => {
 
       expect(cart.isEmpty()).toBe(true);
       expect(cart.noteOf(ginTonic.id)).toBeNull();
+    });
+  });
+
+  describe('once the order is confirmed', () => {
+    // US-11: the order belongs to the server now and has its own code. Going
+    // back to the menu starts a new one, which is what somebody going for the
+    // second round wants.
+    it('is emptied', () => {
+      const cart = aCart();
+      cart.open('bar-alfa');
+      cart.add(ginTonic);
+      cart.add(fernet);
+
+      cart.clear();
+
+      expect(cart.isEmpty()).toBe(true);
+      expect(cart.lines()).toEqual([]);
+    });
+
+    it('is still empty when the app is opened again', () => {
+      const before = aCart();
+      before.open('bar-alfa');
+      before.add(ginTonic);
+      before.clear();
+
+      const after = aCart();
+      after.open('bar-alfa');
+
+      expect(after.isEmpty()).toBe(true);
     });
   });
 

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
+import { problemTypeOf } from '../../core/api/problem-type-of';
 import { ProblemTypes } from '../../core/api/problem-types';
 import type { StaffRole } from '../../core/staff/staff-roles';
 import { StaffUsersService } from './staff-users.service';
@@ -100,8 +101,10 @@ export class EditStaffUserStore {
 function reasonFor(error: unknown): ActionStatus {
   if (!(error instanceof HttpErrorResponse)) return 'unreachable';
 
-  if (error.error?.type === ProblemTypes.passwordTooShort) return 'passwordTooShort';
-  if (error.error?.type === ProblemTypes.lastAdministrator) return 'lastAdministrator';
+  const type = problemTypeOf(error);
+
+  if (type === ProblemTypes.passwordTooShort) return 'passwordTooShort';
+  if (type === ProblemTypes.lastAdministrator) return 'lastAdministrator';
 
   return 'unreachable';
 }

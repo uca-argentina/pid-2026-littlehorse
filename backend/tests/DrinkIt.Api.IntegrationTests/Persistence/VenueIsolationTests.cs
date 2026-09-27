@@ -47,9 +47,11 @@ public sealed class VenueIsolationTests(SqlServerFixture sql)
         (Venue mine, Venue theirs) = await SeedTwoVenuesWithOneUserEach("euge", "nico");
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
+        Category mineCategory = SeedCategory.For(seed, mine.Id);
+        Category theirCategory = SeedCategory.For(seed, theirs.Id);
         seed.Products.AddRange(
-            Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20),
-            Product.Create(theirs.Id, "Fernet", null, null, 4000m, 20));
+            Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 20, mineCategory.Id),
+            Product.Create(theirs.Id, "Fernet", null, null, 4000m, 20, theirCategory.Id));
         await seed.SaveChangesAsync();
 
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
