@@ -5,9 +5,23 @@
     <title>drink.it</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#12100e" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <meta name="theme-color" content="#12100E" />
+
+    <!-- The .ico stays at the root: browsers request /favicon.ico on their own,
+         before reading any <link>, and a stale copy there would win. The SVG
+         is what every current browser actually uses. -->
+    <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png" />
     <link rel="manifest" href="manifest.webmanifest" />
+
+    <!-- iOS ignores most of the manifest; these are how it learns the app can
+         be installed and what to call it. black-translucent lets the page paint
+         under the status bar, which viewport-fit=cover above already allows. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="drink.it" />
 
     <!-- The typefaces are served from this same origin (see src/_fonts.scss for
          why). Preloading the body face only: it is what the first paint needs,
