@@ -45,6 +45,9 @@ jobs:
         with:
           context: backend
           file: backend/Dockerfile
+          # The Dockerfile copies the repo's .editorconfig from here: it lives
+          # outside the backend context.
+          build-contexts: repo=.
           push: true
           tags: |
             ${{ steps.tag.outputs.value }}
@@ -64,6 +67,9 @@ jobs:
       # Must run before setup-node, which needs pnpm on PATH to resolve its store.
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
+        with:
+          # Same as ci-frontend.yml: the pnpm version lives in frontend/package.json.
+          package_json_file: frontend/package.json
 
       - name: Set up Node
         uses: actions/setup-node@v4
