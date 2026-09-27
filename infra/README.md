@@ -39,6 +39,17 @@ leen los jobs de deploy que corren desde `main`.
 | `GHCR_PULL_USERNAME`       | usuario de GitHub dueño del token de abajo                                         |
 | `GHCR_PULL_TOKEN`          | token clásico con `read:packages`; sólo mientras la imagen sea privada (ver abajo) |
 
+Y una **variable** (no secret) del mismo environment, opcional:
+
+| Variable                 | Valor                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| `FRONTEND_CUSTOM_DOMAIN` | dominio propio del PWA, sin `https://` (p. ej. `drinkit.example.com`); vacía hasta tenerlo |
+
+La API sólo acepta llamadas del navegador desde el hostname de la Static Web App y, si está
+cargada, desde ese dominio (ver la adenda del 2026-09-27 en ADR-0007). Al registrar el
+dominio: agregarlo como custom domain en la Static Web App, cargar la variable y volver a
+deployar. Sin la variable, el PWA servido desde el dominio nuevo recibe errores de CORS.
+
 ## Decisiones de esta primera versión
 
 - **Azure SQL con AAD-only auth, sin contraseña en ningún lado.** El admin del server es
