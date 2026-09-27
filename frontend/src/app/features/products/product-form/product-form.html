@@ -261,7 +261,7 @@
         }
       </div>
 
-      <!-- Only a product that exists has a history: the alta has nothing to say yet. -->
+      <!-- Only a product that exists has a history: a new product has nothing to show yet. -->
       @if (product(); as current) {
         <drinkit-audit-note [audit]="current.audit" />
       }

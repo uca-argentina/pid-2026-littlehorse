@@ -10,7 +10,7 @@ type Audit = components['schemas']['AuditResponse'];
 const WHEN = new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' });
 
 /**
- * US-30: who made something and who last touched it, at the foot of the ficha.
+ * US-30: who made something and who last touched it, at the foot of its record.
  * A null is not the same thing everywhere, and the screen tells them apart: no
  * date at all is a row from before the audit existed ("sin registro"), and a
  * date with no author is something nobody signed in wrote.

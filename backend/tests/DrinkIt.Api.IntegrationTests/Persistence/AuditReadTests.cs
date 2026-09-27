@@ -41,7 +41,7 @@ public sealed class AuditReadTests(SqlServerFixture sql)
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         Category category = SeedCategory.For(seed, venue.Id);
-        seed.Products.Add(Product.Create(venue.Id, "Vieja", null, null, 1000m, 5, category.Id));
+        seed.Products.Add(Product.Create(venue.Id, "Gin", null, null, 1000m, 5, category.Id));
         await seed.SaveChangesAsync();
 
         ProductListItem listed = (await new ProductQueries(seed).ListAsync(CancellationToken.None)).Single();

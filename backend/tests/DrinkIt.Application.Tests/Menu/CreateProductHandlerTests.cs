@@ -30,7 +30,7 @@ public class CreateProductHandlerTests
         Assert.Equal(20, products.Added.Stock);
     }
 
-    // US-14: the category chosen in the alta form ends up on the product.
+    // US-14: the category chosen in the creation form ends up on the product.
     [Fact]
     public async Task HandleAsync_WhenTheDataIsValid_KeepsTheChosenCategory()
     {

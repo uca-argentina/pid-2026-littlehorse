@@ -87,7 +87,7 @@ async function takeAccessAway(rendered: { fixture: { whenStable: () => Promise<u
 }
 
 describe('EditStaffUserPage', () => {
-  // US-30, criteria 1 and 2, on the ficha of a person.
+  // US-30, criteria 1 and 2, on a person's record.
   it('says who added this person and who last changed them', async () => {
     await openScreenFor('id-3');
 

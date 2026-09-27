@@ -118,7 +118,7 @@ function save(): void {
 
 describe('NewProductPage', () => {
   // A product that does not exist yet has no history to show.
-  it('shows no audit note on the alta', async () => {
+  it('shows no audit note on a new product', async () => {
     await openScreen();
 
     expect(screen.queryByText(/sin registro/i)).toBeNull();
@@ -440,10 +440,10 @@ describe('NewProductPage', () => {
   it('offers a category that only this venue has', async () => {
     await openScreen(undefined, undefined, [
       ...theCategories,
-      { id: 'category-wine', name: 'Vinos' },
+      { id: 'category-wine', name: 'Wine' },
     ]);
 
-    expect(category(/vinos/i)).not.toBeNull();
+    expect(category(/wine/i)).not.toBeNull();
   });
 
   it('says the categories are loading instead of showing an empty choice', async () => {

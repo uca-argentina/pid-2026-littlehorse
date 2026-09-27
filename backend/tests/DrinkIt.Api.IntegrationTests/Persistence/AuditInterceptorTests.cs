@@ -146,7 +146,7 @@ public sealed class AuditInterceptorTests(SqlServerFixture sql)
     public async Task SaveChanges_WhenTheCreationTimeWasAlreadySet_KeepsIt()
     {
         Venue venue = await SeedVenue();
-        Category early = Category.Create(venue.Id, "Vinos", Evening.AddDays(-30));
+        Category early = Category.Create(venue.Id, "Wine", Evening.AddDays(-30));
 
         await using DrinkItDbContext context = ContextFor(venue, "euge", Evening);
         context.Categories.Add(early);

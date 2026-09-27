@@ -290,7 +290,7 @@ describe('EditProductPage', () => {
     expect(TestBed.inject(Router).url).toBe('/bar-alfa/staff/products');
   });
 
-  // US-14: unlike the alta, this screen starts from a product that already
+  // US-14: unlike the creation form, this screen starts from a product that already
   // has one, so the field opens on it instead of empty.
   it('opens with the category the product already has selected', async () => {
     await openScreenFor('id-2');

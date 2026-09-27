@@ -329,19 +329,19 @@ describe('MenuPage', () => {
       await openScreenShowing({
         ...mixedMenu,
         categories: [
-          { id: 'category-wine', name: 'Vinos' },
-          { id: 'category-beer', name: 'Cervezas' },
+          { id: 'category-wine', name: 'Wine' },
+          { id: 'category-beer', name: 'Beer' },
         ],
         items: [{ ...mixedMenu.items[1], categoryId: 'category-wine', name: 'Malbec' }],
       });
 
       expect(screen.getAllByRole('tab').map((tab) => tab.textContent?.trim())).toEqual([
         'Todos',
-        'Vinos',
-        'Cervezas',
+        'Wine',
+        'Beer',
       ]);
 
-      tab(/vinos/i).click();
+      tab(/wine/i).click();
 
       expect(names()).toEqual(['Malbec']);
     });
