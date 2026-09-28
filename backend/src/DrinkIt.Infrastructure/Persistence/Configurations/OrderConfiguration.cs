@@ -23,6 +23,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(order => order.CustomerName).HasMaxLength(Order.CustomerNameMaxLength).IsRequired();
         builder.Property(order => order.Status).IsRequired();
         builder.Property(order => order.PaidAt);
+        builder.Property(order => order.Method);
 
         // Stored as the six characters the customer reads, not as two columns:
         // it is one thing, and every query looks it up whole.

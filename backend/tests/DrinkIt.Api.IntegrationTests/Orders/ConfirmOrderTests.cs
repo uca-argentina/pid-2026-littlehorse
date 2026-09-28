@@ -1,6 +1,7 @@
 using DrinkIt.Api.IntegrationTests.Persistence;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Venues;
@@ -209,6 +210,36 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         Assert.Equal(18, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
     }
 
+    // US-15: confirming an order is what raises OrderQueued, and the KDS board
+    // learns about it through the same dispatcher every other use case will.
+    [Fact]
+    public async Task ConfirmOrder_WhenItReachesTheQueue_NotifiesTheKdsBoard()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20);
+        SpyDispatcher spy = new();
+
+        await Confirm(venue, [new OrderLineRequest(gin.Id, 1, null)], dispatcher: spy);
+
+        OrderQueued raised = Assert.IsType<OrderQueued>(Assert.Single(spy.Received));
+        Assert.Equal(venue.Id, raised.VenueId);
+    }
+
+    // A dropped notification is not a failed order: the money is taken and the
+    // drink is queued either way, and losing the order over it would be worse
+    // than a tablet that catches up on its next reload.
+    [Fact]
+    public async Task ConfirmOrder_WhenNotifyingTheBoardFails_StillSucceeds()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20);
+
+        Result<ConfirmedOrder> result = await Confirm(
+            venue,
+            [new OrderLineRequest(gin.Id, 1, null)],
+            dispatcher: new ThrowingDispatcher());
+
+        Assert.True(result.IsSuccess);
+    }
+
     /// <summary>
     /// One handler over one context, the way a request gets it: every port in
     /// the use case shares the unit of work, which is what makes the order and
@@ -218,13 +249,14 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         Venue venue,
         OrderLineRequest[] lines,
         string key = "a-key",
-        string name = "María Quadro")
+        string name = "María Quadro",
+        IDomainEventDispatcher? dispatcher = null)
     {
         await using DrinkItDbContext context = sql.CreateContext(venue.Id);
         FixedVenue current = new(venue.Id);
 
         ConfirmOrderHandler handler = new(
-            new OrderRepository(context),
+            new OrderRepository(context, dispatcher ?? new SpyDispatcher()),
             new ProductsForOrdering(context),
             new OrderCodeSequence(context, current),
             [new DigitalPaymentStrategy(new FixedClock(Tonight))],
@@ -258,5 +290,22 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
     private sealed class FixedVenue(Guid id) : ICurrentVenue
     {
         public Guid Id { get; } = id;
+    }
+
+    private sealed class SpyDispatcher : IDomainEventDispatcher
+    {
+        public List<IDomainEvent> Received { get; } = [];
+
+        public Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken cancellationToken)
+        {
+            Received.AddRange(events);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowingDispatcher : IDomainEventDispatcher
+    {
+        public Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("The board is unreachable.");
     }
 }

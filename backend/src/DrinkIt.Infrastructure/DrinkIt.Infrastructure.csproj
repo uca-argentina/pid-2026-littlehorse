@@ -14,11 +14,23 @@
     <InternalsVisibleTo Include="DrinkIt.Api.IntegrationTests" />
   </ItemGroup>
 
+  <!--
+    A plain class library does not pull in ASP.NET Core on its own. KdsHub
+    (US-15) needs Microsoft.AspNetCore.SignalR, which lives in this shared
+    framework — part of the .NET SDK itself, not a third-party dependency, so
+    the "only free libraries" rule in CLAUDE.md does not apply to it.
+
+    It also carries Microsoft.Extensions.Configuration.Json,
+    Microsoft.Extensions.Configuration.EnvironmentVariables and
+    Microsoft.Extensions.Identity.Core, which is why those three stopped being
+    their own PackageReference below: NuGet refuses to list a package twice.
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="Azure.Storage.Blobs" />
   </ItemGroup>

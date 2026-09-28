@@ -82,6 +82,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/kds/queue': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The bar's queue: every paid order still on its way, oldest paid first. */
+    get: operations['GetKdsQueue'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/users': {
     parameters: {
       query?: never;
@@ -390,6 +407,23 @@ export interface components {
     };
     /** Format: binary */
     IFormFile: string;
+    /** @description One drink on a card of the board, as the bar's tablet reads it. */
+    KdsQueueLineResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+    };
+    /** @description One card of the bar's board (US-15). */
+    KdsQueueOrderResponse: {
+      code: string;
+      customerName: string;
+      status: string;
+      /** Format: date-time */
+      paidAt: string;
+      isForTable: boolean;
+      lines: components['schemas']['KdsQueueLineResponse'][];
+    };
     /**
      * @description What the client posts. Kept apart from LoginCommand so the wire
      *         contract can change without dragging the use case with it.
@@ -664,6 +698,26 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetKdsQueue: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['KdsQueueOrderResponse'][];
         };
       };
     };

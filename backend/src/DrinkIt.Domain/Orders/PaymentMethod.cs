@@ -21,3 +21,16 @@ public enum PaymentMethod
     /// <summary>Charged against the table's VIP account.</summary>
     VipBalance = 2,
 }
+
+/// <summary>Questions about a payment method that more than one place asks.</summary>
+public static class PaymentMethods
+{
+    /// <summary>
+    /// Whether this method means the order goes to a VIP table instead of
+    /// being picked up at the bar (US-15). The only one that does is the VIP
+    /// balance — cash and digital both leave the drinks waiting at the bar,
+    /// whichever moment the money actually changes hands.
+    /// </summary>
+    public static bool IsForTable(this PaymentMethod method) =>
+        method == PaymentMethod.VipBalance;
+}

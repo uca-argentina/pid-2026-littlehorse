@@ -15,4 +15,7 @@ internal static class Policies
     /// role added afterwards is locked out until somebody decides otherwise.
     /// </summary>
     public const string Administrator = nameof(StaffRole.Administrator);
+
+    /// <summary>The bar's own tablet (US-15): only the station's own account reads its queue.</summary>
+    public const string Kds = nameof(StaffRole.Kds);
 }

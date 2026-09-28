@@ -112,8 +112,9 @@ test.describe('Staff users', () => {
     await signOut(page);
     await logIn(page, username, aNewPassword);
 
-    await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
-    await expect(page.getByText(/KDS · estación de barra/)).toBeVisible();
+    // US-15: a Kds account now has its own board, so it lands there instead
+    // of the generic "nothing for your role" screen.
+    await expect(page).toHaveURL(new RegExp(`${staffAreaPath}/kds$`));
   });
 
   // Criterion 3. The administrator has to be able to fix it on the spot, so the
@@ -233,7 +234,8 @@ test.describe('Staff users', () => {
     await signOut(page);
     await logIn(page, username, aNewPassword);
 
-    await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
+    // US-15: this account is Kds, so it lands on its own board.
+    await expect(page).toHaveURL(new RegExp(`${staffAreaPath}/kds$`));
   });
 
   // US-04, criteria 2 and 3.
@@ -264,8 +266,7 @@ test.describe('Staff users', () => {
 
     // The new one works, and the role it lands on is the corrected one.
     await logIn(page, username, anotherPassword);
-    await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
-    await expect(page.getByText(/KDS · estación de barra/)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${staffAreaPath}/kds$`));
   });
 
   test.describe('with an account that is not an administrator', () => {
@@ -283,14 +284,14 @@ test.describe('Staff users', () => {
       // Waited for on purpose: the session is only stored once the login lands,
       // and navigating before that turns this into a test of the wrong guard.
       await logIn(page, username, aNewPassword);
-      await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
+      await expect(page).toHaveURL(new RegExp(`${staffAreaPath}/kds$`));
 
       await page.goto(staffUsersPath);
 
       // Back to their own screen, not to the login: their session is fine, and
-      // signing in again would change nothing about their role.
-      await expect(page).toHaveURL(new RegExp(`${staffAreaPath}$`));
-      await expect(page.getByRole('heading', { name: /hola/i })).toBeVisible();
+      // signing in again would change nothing about their role. US-15: that
+      // screen is now the board, not the generic placeholder.
+      await expect(page).toHaveURL(new RegExp(`${staffAreaPath}/kds$`));
     });
 
     // Criterion 6, the half that matters: a guard only hides a screen, and
