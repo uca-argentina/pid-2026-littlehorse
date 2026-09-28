@@ -47,4 +47,18 @@ public interface IOrderRepository
     /// </list>
     /// </remarks>
     Task<Result<Order>> AddAsync(Order order, string idempotencyKey, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The whole order, lines included and tracked, so a use case can move it
+    /// along. Null when this venue has no order with that code — including
+    /// when another venue does, since the global query filter hides it.
+    /// </summary>
+    Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Commits what the use case changed, and only then reacts to the events
+    /// the order raised — so the board never hears about a change that did not
+    /// make it to the database.
+    /// </summary>
+    Task SaveAsync(Order order, CancellationToken cancellationToken);
 }

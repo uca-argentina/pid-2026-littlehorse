@@ -277,4 +277,136 @@ public class OrderTests
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
     }
+
+    public class Preparing
+    {
+        private static readonly DateTimeOffset PaidAt = new(2026, 9, 17, 2, 30, 0, TimeSpan.Zero);
+
+        private static Order APaidOrder()
+        {
+            Order order = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.Pay(PaidAt, PaymentMethod.Digital);
+
+            return order;
+        }
+
+        private static Order AQueuedOrder()
+        {
+            Order order = APaidOrder();
+            order.Enqueue();
+            order.ClearDomainEvents();
+
+            return order;
+        }
+
+        private static Order AnOrderInPreparation()
+        {
+            Order order = AQueuedOrder();
+            order.StartPreparing();
+            order.ClearDomainEvents();
+
+            return order;
+        }
+
+        // US-16, criterion 1: the bar took it, so it leaves Nuevos.
+        [Fact]
+        public void StartPreparing_WhenQueued_MovesItToInPreparation()
+        {
+            Order order = AQueuedOrder();
+
+            order.StartPreparing();
+
+            Assert.Equal(OrderStatus.InPreparation, order.Status);
+        }
+
+        [Fact]
+        public void StartPreparing_WhenQueued_RaisesOrderPreparationStarted()
+        {
+            Order order = AQueuedOrder();
+
+            order.StartPreparing();
+
+            OrderPreparationStarted raised = Assert.IsType<OrderPreparationStarted>(Assert.Single(order.DomainEvents));
+            Assert.Equal(AVenue, raised.VenueId);
+        }
+
+        // US-16, criterion 3: a double tap, or a retry over a bad signal, asks
+        // for what already happened. It is already true, so nothing changes
+        // and the board is not told about a change that did not happen.
+        [Fact]
+        public void StartPreparing_WhenAlreadyInPreparation_ChangesNothing()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.StartPreparing();
+
+            Assert.Equal(OrderStatus.InPreparation, order.Status);
+            Assert.Empty(order.DomainEvents);
+        }
+
+        [Fact]
+        public void StartPreparing_WhenNotYetQueued_ThrowsInvalidTransition()
+        {
+            Order order = APaidOrder();
+
+            DomainException error = Assert.Throws<DomainException>(order.StartPreparing);
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+
+        // US-16, criterion 4: taken by mistake, back among the new ones.
+        [Fact]
+        public void ReturnToQueue_WhenInPreparation_PutsItBackInTheQueue()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.ReturnToQueue();
+
+            Assert.Equal(OrderStatus.Queued, order.Status);
+        }
+
+        // The age on the board is counted from here, so keeping it is what
+        // "conservando su antigüedad original" means.
+        [Fact]
+        public void ReturnToQueue_WhenInPreparation_KeepsWhenItWasPaid()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.ReturnToQueue();
+
+            Assert.Equal(PaidAt, order.PaidAt);
+        }
+
+        [Fact]
+        public void ReturnToQueue_WhenInPreparation_RaisesOrderRequeued()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.ReturnToQueue();
+
+            OrderRequeued raised = Assert.IsType<OrderRequeued>(Assert.Single(order.DomainEvents));
+            Assert.Equal(AVenue, raised.VenueId);
+        }
+
+        [Fact]
+        public void ReturnToQueue_WhenAlreadyQueued_ChangesNothing()
+        {
+            Order order = AQueuedOrder();
+
+            order.ReturnToQueue();
+
+            Assert.Equal(OrderStatus.Queued, order.Status);
+            Assert.Empty(order.DomainEvents);
+        }
+
+        [Fact]
+        public void ReturnToQueue_WhenNeverQueued_ThrowsInvalidTransition()
+        {
+            Order order = APaidOrder();
+
+            DomainException error = Assert.Throws<DomainException>(order.ReturnToQueue);
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+    }
 }

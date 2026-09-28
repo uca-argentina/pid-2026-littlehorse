@@ -23,6 +23,32 @@ public class DomainEventDispatcherTests
         Assert.Equal(venueId, Assert.Single(notifier.NotifiedVenues));
     }
 
+    // US-16: taking an order and handing it back both change which column it
+    // is in, and every tablet of the venue has to redraw.
+    [Fact]
+    public async Task DispatchAsync_WhenTheBarTakesAnOrder_NotifiesTheKdsBoard()
+    {
+        Guid venueId = Guid.CreateVersion7();
+        SpyNotifier notifier = new();
+        DomainEventDispatcher dispatcher = new(notifier);
+
+        await dispatcher.DispatchAsync([new OrderPreparationStarted(venueId)], CancellationToken.None);
+
+        Assert.Equal(venueId, Assert.Single(notifier.NotifiedVenues));
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenAnOrderGoesBackToTheQueue_NotifiesTheKdsBoard()
+    {
+        Guid venueId = Guid.CreateVersion7();
+        SpyNotifier notifier = new();
+        DomainEventDispatcher dispatcher = new(notifier);
+
+        await dispatcher.DispatchAsync([new OrderRequeued(venueId)], CancellationToken.None);
+
+        Assert.Equal(venueId, Assert.Single(notifier.NotifiedVenues));
+    }
+
     // A future event this dispatcher does not yet know how to react to must
     // not throw: it is simply not its reaction to make, same as an unhandled
     // status in a switch that only some callers care about.

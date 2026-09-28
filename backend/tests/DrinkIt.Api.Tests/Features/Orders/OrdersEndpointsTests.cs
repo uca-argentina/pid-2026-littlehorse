@@ -206,6 +206,12 @@ public class OrdersEndpointsTests
                 string idempotencyKey,
                 CancellationToken cancellationToken) =>
                 Task.FromResult<Result<Order>>(order);
+
+            public Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming never loads an existing order.");
+
+            public Task SaveAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming saves through AddAsync.");
         }
 
         public sealed class Menu(params Product[] products) : IProductsForOrdering
