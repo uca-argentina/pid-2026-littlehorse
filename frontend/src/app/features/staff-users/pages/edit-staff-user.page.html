@@ -1,11 +1,45 @@
 <div class="frame">
   <drinkit-admin-header [venueSlug]="venueSlug()" />
 
-  <section class="body">
+  <section class="body" [attr.aria-busy]="staff.isLoading()">
     <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'users']">Volver al equipo</a>
 
     @if (staff.isLoading()) {
-      <p class="note" role="status">Buscando a esta persona…</p>
+      <!-- Read aloud from the start, drawn only once it has something to add
+           to the outline below. -->
+      <p class="note" role="status" [class.dk-sr-only]="!isSlow()">
+        Buscando a esta persona…
+        @if (isSlow()) {
+          Está tardando más de lo normal, seguimos buscando.
+        }
+      </p>
+
+      <div class="skeleton" data-testid="staff-user-skeleton" aria-hidden="true">
+        <div class="dk-skeleton skeleton-title"></div>
+        <div class="dk-skeleton skeleton-now"></div>
+        <div class="card">
+          <div class="dk-skeleton skeleton-card-title"></div>
+          @for (role of skeletonRoles; track role) {
+            <div class="dk-skeleton skeleton-role"></div>
+          }
+        </div>
+        <div class="card">
+          <div class="dk-skeleton skeleton-card-title"></div>
+          <div class="dk-skeleton skeleton-input"></div>
+        </div>
+      </div>
+    }
+
+    @if (failure() === 'forbidden') {
+      <p class="note note-bad" role="alert">
+        Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que te
+        la vuelva a dar.
+      </p>
+    } @else if (failure() === 'unreachable') {
+      <div class="note note-bad" role="alert">
+        <p class="note-what">No pudimos traer a esta persona. Fijate la señal y probá de nuevo.</p>
+        <button class="retry" type="button" (click)="retry()">Reintentar</button>
+      </div>
     }
 
     @if (isMissing()) {

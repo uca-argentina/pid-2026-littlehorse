@@ -87,6 +87,89 @@ async function takeAccessAway(rendered: { fixture: { whenStable: () => Promise<u
 }
 
 describe('EditStaffUserPage', () => {
+  describe('while the person loads', () => {
+    // Nothing answered yet: the listing request stays pending.
+    async function openScreenLoading() {
+      return render(EditStaffUserPage, {
+        inputs: { venueSlug: 'bar-alfa', id: 'id-2' },
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          EditStaffUserStore,
+          { provide: StaffUsersService, useValue: {} },
+        ],
+      });
+    }
+
+    it('draws the outline of the screen', async () => {
+      await openScreenLoading();
+
+      const skeleton = screen.getByTestId('staff-user-skeleton');
+      expect(skeleton.closest('[aria-busy="true"]')).not.toBeNull();
+      expect(screen.getByRole('status').textContent).toContain('Buscando');
+    });
+
+    it('drops the outline once the person arrives', async () => {
+      await openScreenFor('id-2');
+
+      expect(screen.queryByTestId('staff-user-skeleton')).toBeNull();
+    });
+
+    // A blank page with only "Volver al equipo" says nothing about what
+    // happened, or whether trying again could help.
+    it('says so and offers to try again when the person cannot be fetched', async () => {
+      const rendered = await openScreenLoading();
+      const http = TestBed.inject(HttpTestingController);
+
+      http.expectOne(STAFF_USERS_URL).flush('', { status: 500, statusText: 'Server Error' });
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos traer a esta persona');
+      screen.getByRole('button', { name: /reintentar/i }).click();
+      rendered.fixture.detectChanges();
+
+      // The last failure goes away while the new attempt is under way.
+      expect(screen.queryByRole('alert')).toBeNull();
+      http.expectOne(STAFF_USERS_URL);
+    });
+
+    it('does not offer to retry when the account is no longer an administrator', async () => {
+      const rendered = await openScreenLoading();
+
+      TestBed.inject(HttpTestingController)
+        .expectOne(STAFF_USERS_URL)
+        .flush(
+          { type: ProblemTypes.forbidden },
+          {
+            status: 403,
+            statusText: 'Forbidden',
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        );
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('ya no lo es');
+      expect(screen.queryByRole('button', { name: /reintentar/i })).toBeNull();
+    });
+
+    describe('when it takes long', () => {
+      beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+      afterEach(() => vi.useRealTimers());
+
+      it('says it is still on it after a few seconds', async () => {
+        const rendered = await openScreenLoading();
+
+        expect(screen.getByRole('status').textContent).not.toContain('tardando');
+
+        vi.advanceTimersByTime(5000);
+        rendered.fixture.detectChanges();
+
+        expect(screen.getByRole('status').textContent).toContain('tardando');
+      });
+    });
+  });
+
   // US-30, criteria 1 and 2, on a person's record.
   it('says who added this person and who last changed them', async () => {
     await openScreenFor('id-3');
