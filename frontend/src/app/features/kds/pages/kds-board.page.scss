@@ -8,6 +8,16 @@
   padding: var(--dk-space-3) var(--dk-space-4);
 }
 
+// Which venue, and which station's tablet: the wireframe's top bar, without
+// the scanner and the clock, which arrive with the stories that need them.
+.head {
+  display: flex;
+  align-items: center;
+  padding-bottom: var(--dk-space-3);
+  margin-bottom: var(--dk-space-3);
+  border-bottom: 1px solid var(--dk-border);
+}
+
 .status {
   margin: var(--dk-space-6) auto;
   color: var(--dk-text-muted);

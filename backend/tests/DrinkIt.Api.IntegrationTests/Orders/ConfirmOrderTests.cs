@@ -8,6 +8,8 @@ using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DrinkIt.Api.IntegrationTests.Orders;
 
@@ -240,6 +242,44 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         Assert.True(result.IsSuccess);
     }
 
+    // Still succeeds, but not in silence: an order the board never heard of is
+    // a customer waiting on a drink nobody is making, and the log is the only
+    // place left that can tell anybody why.
+    [Fact]
+    public async Task ConfirmOrder_WhenNotifyingTheBoardFails_LogsIt()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20);
+        SpyLogger logger = new();
+
+        await Confirm(
+            venue,
+            [new OrderLineRequest(gin.Id, 1, null)],
+            dispatcher: new ThrowingDispatcher(),
+            logger: logger);
+
+        (LogLevel level, Exception? exception) = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Error, level);
+        Assert.IsType<InvalidOperationException>(exception);
+    }
+
+    // The order is committed by then, so the customer closing the app right
+    // after paying must not take the board's notification down with it.
+    [Fact]
+    public async Task ConfirmOrder_WhenItReachesTheQueue_NotifiesWithoutTheRequestsCancellation()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20);
+        SpyDispatcher spy = new();
+        using CancellationTokenSource request = new();
+
+        await Confirm(
+            venue,
+            [new OrderLineRequest(gin.Id, 1, null)],
+            dispatcher: spy,
+            cancellationToken: request.Token);
+
+        Assert.False(spy.ReceivedToken.CanBeCanceled);
+    }
+
     /// <summary>
     /// One handler over one context, the way a request gets it: every port in
     /// the use case shares the unit of work, which is what makes the order and
@@ -250,13 +290,18 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         OrderLineRequest[] lines,
         string key = "a-key",
         string name = "María Quadro",
-        IDomainEventDispatcher? dispatcher = null)
+        IDomainEventDispatcher? dispatcher = null,
+        ILogger<OrderRepository>? logger = null,
+        CancellationToken cancellationToken = default)
     {
         await using DrinkItDbContext context = sql.CreateContext(venue.Id);
         FixedVenue current = new(venue.Id);
 
         ConfirmOrderHandler handler = new(
-            new OrderRepository(context, dispatcher ?? new SpyDispatcher()),
+            new OrderRepository(
+                context,
+                dispatcher ?? new SpyDispatcher(),
+                logger ?? NullLogger<OrderRepository>.Instance),
             new ProductsForOrdering(context),
             new OrderCodeSequence(context, current),
             [new DigitalPaymentStrategy(new FixedClock(Tonight))],
@@ -264,7 +309,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
 
         return await handler.HandleAsync(
             new ConfirmOrderCommand(name, PaymentMethod.Digital, key, lines),
-            CancellationToken.None);
+            cancellationToken);
     }
 
     private async Task<(Venue Venue, Product Product)> AVenueSelling(string drink, int stock)
@@ -296,11 +341,36 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
     {
         public List<IDomainEvent> Received { get; } = [];
 
+        public CancellationToken ReceivedToken { get; private set; }
+
         public Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken cancellationToken)
         {
             Received.AddRange(events);
+            ReceivedToken = cancellationToken;
             return Task.CompletedTask;
         }
+    }
+
+    /// <summary>
+    /// Hand-written rather than Microsoft's FakeLogger: that one is its own
+    /// NuGet package, and a list of what was logged is all this needs.
+    /// </summary>
+    private sealed class SpyLogger : ILogger<OrderRepository>
+    {
+        public List<(LogLevel Level, Exception? Exception)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, exception));
     }
 
     private sealed class ThrowingDispatcher : IDomainEventDispatcher

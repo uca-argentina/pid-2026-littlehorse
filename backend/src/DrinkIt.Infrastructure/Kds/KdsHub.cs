@@ -26,11 +26,15 @@ public sealed class KdsHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        if (VenueIdOf(Context.User) is Guid venueId)
+        // Left open without a group, the tablet would sit there "connected"
+        // and never hear a thing. Closing it is what makes the screen say so.
+        if (VenueIdOf(Context.User) is not Guid venueId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, GroupFor(venueId));
+            Context.Abort();
+            return;
         }
 
+        await Groups.AddToGroupAsync(Context.ConnectionId, GroupFor(venueId));
         await base.OnConnectedAsync();
     }
 

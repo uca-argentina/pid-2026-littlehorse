@@ -1,7 +1,10 @@
+using System.Security.Claims;
+using System.Text;
 using DrinkIt.Api.IntegrationTests.Persistence;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Kds;
 using DrinkIt.Domain.Staff;
+using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Kds;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Connections;
@@ -10,6 +13,9 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 
 namespace DrinkIt.Api.IntegrationTests.Kds;
 
@@ -68,11 +74,63 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         await notified.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
+    [Fact]
+    public async Task OnConnectedAsync_WhenTheTokenCarriesNoVenue_ClosesTheConnection()
+    {
+        await using HubConnection connection = await ConnectedWith(SignedKdsTokenWithoutVenue());
+
+        TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        connection.Closed += _ =>
+        {
+            closed.TrySetResult();
+            return Task.CompletedTask;
+        };
+
+        // Already closed by the time the handler was attached counts too.
+        if (connection.State == HubConnectionState.Disconnected) closed.TrySetResult();
+
+        await closed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
     private async Task<HubConnection> ConnectedAsKds(Guid venueId)
     {
         ITokenIssuer tokenIssuer = _factory.Services.GetRequiredService<ITokenIssuer>();
         AccessToken token = tokenIssuer.Issue(Guid.CreateVersion7(), venueId, "kds", StaffRole.Kds);
 
+        return await ConnectedWith(token.Value);
+    }
+
+    /// <summary>
+    /// Signed with the real key, so it gets past authentication and the role
+    /// check — only the venue claim is missing. The issuer never writes one
+    /// like this; a hub has to hold its ground anyway.
+    /// </summary>
+    private string SignedKdsTokenWithoutVenue()
+    {
+        JwtOptions settings = _factory.Services.GetRequiredService<IOptions<JwtOptions>>().Value;
+        DateTime now = DateTime.UtcNow;
+
+        return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = settings.Issuer,
+            Audience = settings.Audience,
+            IssuedAt = now,
+            NotBefore = now,
+            Expires = now.AddMinutes(5),
+            Subject = new ClaimsIdentity(
+            [
+                new Claim(JwtRegisteredClaimNames.Sub, Guid.CreateVersion7().ToString()),
+                new Claim(JwtClaims.Name, "kds"),
+                new Claim(JwtClaims.Role, nameof(StaffRole.Kds)),
+            ]),
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.SigningKey)),
+                SecurityAlgorithms.HmacSha256),
+        });
+    }
+
+    private async Task<HubConnection> ConnectedWith(string token)
+    {
         HubConnection connection = new HubConnectionBuilder()
             .WithUrl(new Uri(_factory.Server.BaseAddress, KdsHubRoute.Path), options =>
             {
@@ -80,7 +138,7 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
                 // The in-memory TestServer has no real socket to upgrade, so the
                 // transport SignalR would normally pick first does not apply here.
                 options.Transports = HttpTransportType.LongPolling;
-                options.AccessTokenProvider = () => Task.FromResult<string?>(token.Value);
+                options.AccessTokenProvider = () => Task.FromResult<string?>(token);
             })
             .Build();
 
