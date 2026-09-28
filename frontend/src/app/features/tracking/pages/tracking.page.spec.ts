@@ -5,14 +5,14 @@ import { provideRouter } from '@angular/router';
 import { render, screen } from '@testing-library/angular';
 import { TRACKING_INTERVAL_MS, TrackingStore } from '../tracking.store';
 import { trackingUrl } from '../tracking.service';
-import type { TrackedOrder } from '../tracking.service';
+import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
 import { TrackingPage } from './tracking.page';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
 
 const url = trackingUrl('bar-alfa', 'K-4821', token);
 
-function anOrder(status: string): TrackedOrder {
+function anOrder(status: CustomerOrderStatus): TrackedOrder {
   return {
     code: 'K-4821',
     customerName: 'María Quadro',
@@ -23,7 +23,7 @@ function anOrder(status: string): TrackedOrder {
   };
 }
 
-async function openScreenShowing(status: string) {
+async function openScreenShowing(status: CustomerOrderStatus) {
   const rendered = await render(TrackingPage, {
     inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
     providers: [

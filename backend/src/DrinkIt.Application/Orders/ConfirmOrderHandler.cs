@@ -205,10 +205,10 @@ public sealed class ConfirmOrderHandler(
     // nothing, which is also the honest answer.
     private static Error NotOnTheMenuFor(Product? product) => product is null
         ? NotOnTheMenu
-        : new Error(NotOnTheMenu.Code, $"{product.Name} is not on the menu any more.");
+        : new Error(NotOnTheMenu.Code, $"{product.Name} is not on the menu any more.", product.Name);
 
     private static Error OutOfStock(Product product) =>
-        new(SoldOut.Code, $"{product.Name} ran out while you were ordering.");
+        new(SoldOut.Code, $"{product.Name} ran out while you were ordering.", product.Name);
 
     private static string TheKeyOf(ConfirmOrderCommand command) =>
         (command.IdempotencyKey ?? string.Empty).Trim();

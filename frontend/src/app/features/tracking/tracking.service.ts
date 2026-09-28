@@ -6,6 +6,9 @@ import type { components } from '../../core/api/schema';
 /** Taken from the generated contract, so nothing here can drift from the API. */
 export type TrackedOrder = components['schemas']['TrackedOrderResponse'];
 
+/** Where an order is, from the contract: a status spelled wrong here fails to compile. */
+export type CustomerOrderStatus = components['schemas']['CustomerOrderStatus'];
+
 /**
  * The address of one order, token included.
  *

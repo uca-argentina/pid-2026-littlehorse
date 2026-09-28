@@ -5,7 +5,9 @@ namespace DrinkIt.Application.Common;
 /// <summary>
 /// An expected failure. <see cref="Code"/> is the stable half that the API maps
 /// to the ProblemDetails type and the PWA branches on; the message is for logs
-/// and developers, and rewording it breaks nothing.
+/// and developers, and rewording it breaks nothing. <see cref="Subject"/> names
+/// what the failure is about — the drink that ran out — for a screen that has
+/// to say it in its own language rather than repeat the message.
 /// </summary>
 [SuppressMessage(
     "Naming",
@@ -13,4 +15,4 @@ namespace DrinkIt.Application.Common;
     Justification = "CA1716 protects consumers writing VB or F#, which only matters for a "
         + "published library. This is an application assembly, and Error is the idiomatic "
         + "name for this half of the Result pattern.")]
-public sealed record Error(string Code, string Message);
+public sealed record Error(string Code, string Message, string? Subject = null);

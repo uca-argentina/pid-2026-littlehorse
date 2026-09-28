@@ -32,4 +32,9 @@ export const ProblemTypes = {
   orderSoldOut: 'urn:drinkit:problem:order:sold-out',
   orderNotOnTheMenu: 'urn:drinkit:problem:order:not-on-the-menu',
   orderStockMoved: 'urn:drinkit:problem:order:stock-moved',
+
+  orderNameRequired: 'urn:drinkit:problem:order:name-required',
+  orderNameNeedsSurname: 'urn:drinkit:problem:order:name-needs-surname',
+  orderNameOnlyLetters: 'urn:drinkit:problem:order:name-only-letters',
+  orderNameTooLong: 'urn:drinkit:problem:order:name-too-long',
 } as const;

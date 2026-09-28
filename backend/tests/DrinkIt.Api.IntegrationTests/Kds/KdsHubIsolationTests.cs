@@ -1,18 +1,15 @@
 using System.Security.Claims;
 using System.Text;
+using DrinkIt.Api.IntegrationTests.Common;
 using DrinkIt.Api.IntegrationTests.Persistence;
 using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Kds;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Kds;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Connections;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -27,7 +24,7 @@ namespace DrinkIt.Api.IntegrationTests.Kds;
 [Collection(nameof(SqlServerCollection))]
 public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposable
 {
-    private readonly KdsHubTestFactory _factory = new(sql.ConnectionString);
+    private readonly DrinkItApiFactory _factory = new(sql.ConnectionString);
 
     public async ValueTask DisposeAsync() => await _factory.DisposeAsync();
 
@@ -145,23 +142,5 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         await connection.StartAsync();
 
         return connection;
-    }
-
-    /// <summary>
-    /// Points the whole app — migrations, seeding, everything Program.cs does
-    /// before it starts listening — at the same Testcontainers instance the
-    /// query tests already run against, instead of the connection string in
-    /// appsettings.json.
-    /// </summary>
-    private sealed class KdsHubTestFactory(string connectionString) : WebApplicationFactory<Program>
-    {
-        protected override void ConfigureWebHost(IWebHostBuilder builder)
-        {
-            builder.UseEnvironment(Environments.Development);
-            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
-            [
-                new KeyValuePair<string, string?>("ConnectionStrings:DrinkIt", connectionString),
-            ]));
-        }
     }
 }

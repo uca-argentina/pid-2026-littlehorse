@@ -6,11 +6,14 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Authentication;
 
-/// <summary>What the client posts. Kept apart from LoginCommand so the wire
-/// contract can change without dragging the use case with it.</summary>
+/// <summary>The credentials a staff member signs in with.</summary>
+/// <remarks>
+/// Kept apart from LoginCommand so the wire contract can change without
+/// dragging the use case with it.
+/// </remarks>
 public sealed record LoginRequest(string Username, string Password);
 
-public sealed record LoginResponse(string Token, DateTimeOffset ExpiresAt, string Username, string Role);
+public sealed record LoginResponse(string Token, DateTimeOffset ExpiresAt, string Username, StaffRoleName Role);
 
 internal static class LoginEndpoint
 {
@@ -48,7 +51,7 @@ internal static class LoginEndpoint
             session.Token,
             session.ExpiresAt,
             session.Username,
-            session.Role.ToString()));
+            session.Role.ToContract()));
     }
 
     /// <summary>

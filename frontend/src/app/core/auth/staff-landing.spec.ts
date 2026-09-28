@@ -4,8 +4,9 @@ import type { ActivatedRouteSnapshot, UrlTree } from '@angular/router';
 import { SessionStorage } from './session-storage';
 import { staffLandingFor, staffLandsOnItsOwnScreenGuard } from './staff-landing';
 import type { StaffSession } from './staff-session';
+import type { StaffRole } from '../staff/staff-roles';
 
-function sessionFor(role: string): StaffSession {
+function sessionFor(role: StaffRole): StaffSession {
   return {
     token: 'un-token',
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
@@ -76,7 +77,7 @@ describe('staffLandsOnItsOwnScreenGuard', () => {
     expect(router.serializeUrl(run() as UrlTree)).toBe('/bar-alfa/staff/kds');
   });
 
-  it.each(['Waiter'])('lets a %s stay', (role) => {
+  it.each<StaffRole>(['Waiter'])('lets a %s stay', (role) => {
     sessions.remember(sessionFor(role));
 
     expect(run()).toBe(true);

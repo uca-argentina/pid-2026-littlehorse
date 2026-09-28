@@ -730,7 +730,9 @@ más, todas reales:
 6. **El servidor partía el nombre sólo por `' '` y la pantalla por cualquier espacio.** Un
    nombre pegado con un espacio duro habilitaba el botón y fallaba después de pagar.
 
-**Deuda anotada.** Los comentarios XML de implementación de los endpoints se publican en el
+**Deuda anotada — resuelta el 2026-09-28.** Las notas del equipo pasaron a `<remarks>`, que el
+OpenAPI no publica, y un test de integración falla si una descripción del contrato vuelve a citar
+una story, un ADR o una fecha. Lo que decía la nota: los comentarios XML de implementación de los endpoints se publican en el
 OpenAPI y terminan en el `schema.d.ts` del front. No es información sensible, pero son notas
 para el equipo en un contrato público: conviene separar `<summary>` de `<remarks>` o dejar de
 emitirlos.
@@ -845,6 +847,10 @@ story que lo necesita.
     Cuelga de ahí toda la autenticación, así que se revisa con más cuidado.
 
     **Después del hito**, y en ese orden. Si aparece un cuarto lugar, deja de ser prolijidad.
+
+- **Resuelta el 2026-09-28: el cliente ya no lee inglés al pagar.** El problem document lleva
+  el trago aparte (`productName`) y la plantilla arma la frase en español según el tipo; el
+  `detail` no se muestra nunca. Lo que decía la nota:
 
 - **El cliente recibe en inglés el aviso de que un trago no se puede preparar.** Es el
   criterio 3 de US-07 y sale de US-11: cuando confirmar el pedido se rechaza, la pantalla de

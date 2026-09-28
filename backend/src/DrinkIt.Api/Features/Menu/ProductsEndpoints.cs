@@ -22,17 +22,23 @@ public sealed record CreateProductRequest(
 public sealed record ProductImageResponse(string ImageUrl);
 
 /// <summary>
-/// US-08: what the correction form posts, plus US-14's category. No stock, no
-/// picture, no switches — each of those has its own action, so a screen that
-/// only touches one of them cannot accidentally overwrite the rest.
+/// A product's name, description, price and category. Stock, picture and
+/// availability each have their own action.
 /// </summary>
+/// <remarks>
+/// US-08, plus US-14's category. Kept to these four so a screen that only
+/// touches one of the others cannot accidentally overwrite the rest.
+/// </remarks>
 public sealed record UpdateProductRequest(string Name, string? Description, decimal Price, Guid CategoryId);
 
 /// <summary>
 /// How much the stock moves: positive when units arrived, negative when it was
-/// loaded wrong. Never the new total: a change is what keeps a sale made while
-/// the screen was open from being overwritten.
+/// loaded wrong. A change, never the new total.
 /// </summary>
+/// <remarks>
+/// A change is what keeps a sale made while the screen was open from being
+/// overwritten.
+/// </remarks>
 public sealed record AdjustProductStockRequest(int Change);
 
 public sealed record ProductResponse(

@@ -4,8 +4,9 @@ import type { ActivatedRouteSnapshot, UrlTree } from '@angular/router';
 import { administratorGuard } from './administrator-guard';
 import { SessionStorage } from './session-storage';
 import type { StaffSession } from './staff-session';
+import type { StaffRole } from '../staff/staff-roles';
 
-function sessionFor(role: string): StaffSession {
+function sessionFor(role: StaffRole): StaffSession {
   return {
     token: 'un-token',
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
@@ -46,11 +47,16 @@ describe('administratorGuard', () => {
 
   // US-03, criterion 6. Written by exclusion so a role added later is locked
   // out until somebody decides otherwise, instead of being let in by omission.
-  it.each(['Kds', 'Waiter', 'Cashier'])('turns a %s away from them', (role) => {
-    sessions.remember(sessionFor(role));
+  // 'Cashier' is not a role the contract has yet: it stands for one a newer
+  // API could send before this screen knows about it.
+  it.each<StaffRole>(['Kds', 'Waiter', 'Cashier' as StaffRole])(
+    'turns a %s away from them',
+    (role) => {
+      sessions.remember(sessionFor(role));
 
-    expect(run()).not.toBe(true);
-  });
+      expect(run()).not.toBe(true);
+    },
+  );
 
   /**
    * Back to their own home screen, not to the login screen: their token is

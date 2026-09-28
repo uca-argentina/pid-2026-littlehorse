@@ -8,11 +8,11 @@ namespace DrinkIt.Api.Features.Kds;
 /// <summary>One drink on a card of the board, as the bar's tablet reads it.</summary>
 public sealed record KdsQueueOrderItemResponse(string ProductName, int Quantity, string? Note);
 
-/// <summary>One card of the bar's board (US-15).</summary>
+/// <summary>One order on the bar's board: who asked, what for, since when, and where it is.</summary>
 public sealed record KdsQueueOrderResponse(
     string Code,
     string CustomerName,
-    string Status,
+    KdsOrderStatus Status,
     DateTimeOffset PaidAt,
     bool IsForTable,
     IReadOnlyList<KdsQueueOrderItemResponse> OrderItems);
@@ -50,7 +50,7 @@ internal static class KdsEndpoints
         orders
             .MapPost("/return-to-queue", ReturnToQueueAsync)
             .WithName("ReturnOrderToQueue")
-            .WithSummary("Hands an order taken by mistake back to Nuevos, as old as it was.")
+            .WithSummary("Hands an order in preparation back to the queue, keeping when it was paid.")
             .Produces(StatusCodes.Status204NoContent)
             // An order no longer where the board thought it was: a broken
             // transition, answered by the global exception handler.
@@ -96,7 +96,7 @@ internal static class KdsEndpoints
             [.. orders.Select(order => new KdsQueueOrderResponse(
                 order.Code,
                 order.CustomerName,
-                order.Status.ToString(),
+                order.Status.ToKdsStatus(),
                 order.PaidAt,
                 order.IsForTable,
                 [.. order.OrderItems.Select(item => new KdsQueueOrderItemResponse(item.ProductName, item.Quantity, item.Note))]))]);

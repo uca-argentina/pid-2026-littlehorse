@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import type { CustomerOrderStatus } from '../tracking.service';
 import { TrackingStore } from '../tracking.store';
 
 /** One step of the journey, as the screen draws it. */
@@ -17,7 +18,7 @@ interface Step {
  * the API stops showing an order once it is handed over — so the screen supplies
  * it itself when the link stops working on an order it was already showing.
  */
-const JOURNEY = [
+const JOURNEY: readonly { name: string; after: readonly CustomerOrderStatus[] }[] = [
   {
     name: 'Esperando en la barra',
     after: ['Paid', 'Queued', 'InPreparation', 'Ready', 'Delivered'],
@@ -28,7 +29,7 @@ const JOURNEY = [
 ];
 
 /** What to say about each status, in the words somebody in a bar would use. */
-const WHAT_IS_HAPPENING: Record<string, string> = {
+const WHAT_IS_HAPPENING: Partial<Record<CustomerOrderStatus, string>> = {
   Paid: 'Ya está pago. Te avisamos cuando lo estén preparando.',
   Queued: 'Ya está pago y esperando en la barra.',
   InPreparation: 'Lo están preparando.',
@@ -75,14 +76,22 @@ export class TrackingPage {
    * been watching their order deserves to see it arrive, not an alert saying
    * their link is broken at the moment their drinks reached them.
    */
-  private readonly status = computed(() =>
-    this.store.status() === 'over' ? 'Delivered' : (this.store.order()?.status ?? ''),
+  private readonly status = computed<CustomerOrderStatus | null>(() =>
+    this.store.status() === 'over' ? 'Delivered' : (this.store.order()?.status ?? null),
   );
 
-  protected readonly whatIsHappening = computed(() => WHAT_IS_HAPPENING[this.status()] ?? '');
+  protected readonly whatIsHappening = computed(() => {
+    const status = this.status();
+
+    return status === null ? '' : (WHAT_IS_HAPPENING[status] ?? '');
+  });
 
   protected readonly steps = computed<Step[]>(() =>
-    JOURNEY.map((step) => ({ name: step.name, reached: step.after.includes(this.status()) })),
+    JOURNEY.map((step) => {
+      const status = this.status();
+
+      return { name: step.name, reached: status !== null && step.after.includes(status) };
+    }),
   );
 
   constructor() {

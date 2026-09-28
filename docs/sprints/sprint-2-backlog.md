@@ -372,6 +372,8 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 > **quiero** que, si mi sesión se venció, el tablero me lleve a la pantalla de ingreso
 > **para** no quedarme mirando una cola vieja que dice "reintentando" para siempre.
 
+**Estado:** ✅ terminada el 2026-09-28, en la rama de deuda antes de US-18.
+
 **Criterios de aceptación**
 
 1. **Dado** que la sesión de la tablet se venció, **cuando** el tablero pide la cola,
@@ -637,6 +639,7 @@ Cuando llegue la impresora, además del papel, el ticket tiene que llevar el QR 
 
 **Nueva, de auditar US-15: el tablero.** Dos huecos que ya tienen story propia, US-31 (se
 pone al día solo si se pierde un aviso) y US-32 (manda al login si la sesión se venció).
+**US-32 quedó hecha el 2026-09-28; US-31 sigue pendiente.**
 
 **Nueva, de auditar US-15: los enums del contrato viajan como `string`.** Los siete —`role`
 en el login, en el personal y en sus altas y cambios, y `status` en el pedido confirmado, en
@@ -644,6 +647,18 @@ el seguimiento y en la cola del KDS— salen con `.ToString()`, así que el `sch
 generado dice `string` y el front compara contra literales que nada controla. Se arregla
 publicándolos como enum de OpenAPI **en los siete a la vez**: hacerlo en uno solo deja el
 contrato con dos convenciones.
+
+**Resuelta el 2026-09-28.** La API tiene sus propios enums (`StaffRoleName`,
+`CustomerOrderStatus`, `KdsOrderStatus`), mapeados a mano desde el dominio para que el
+contrato no publique estados internos como `Cart`. Viajan sólo por su nombre: un número o una
+lista con coma (`"Administrator,Kds"`, que el lector de .NET convertía en otro rol válido) se
+rechazan con 400. En el camino apareció que **un body que no se podía leer respondía 500**, en
+cualquier endpoint: ahora es 400.
+
+**Nueva, de resolver los enums: la forma de pago también viaja como `string`.** El `method`
+del pedido confirmado es un octavo enum que la cuenta de arriba no tenía. Sigue validado a
+mano con `TryReadPaymentMethod`; pasarlo a `PaymentMethodName` es el mismo trabajo, cuando
+llegue el carril del pago (US-24).
 
 ## Dependencias nuevas
 

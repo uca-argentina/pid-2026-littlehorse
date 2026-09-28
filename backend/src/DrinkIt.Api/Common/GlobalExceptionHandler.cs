@@ -19,6 +19,7 @@ internal sealed partial class GlobalExceptionHandler(
         CancellationToken cancellationToken)
     {
         if (exception is DomainException broken) return await RejectAsync(httpContext, broken);
+        if (exception is BadHttpRequestException unreadable) return await UnreadableAsync(httpContext, unreadable);
 
         LogUnhandledException(logger, httpContext.Request.Method, httpContext.Request.Path, exception);
 
@@ -32,6 +33,29 @@ internal sealed partial class GlobalExceptionHandler(
             // connection string. The traceId is what ties this response to the
             // log line that does have the real cause.
             detail: "The request could not be completed. Quote the traceId when reporting it.");
+    }
+
+    /// <summary>
+    /// A request the framework could not read: a body that is not JSON, or a
+    /// value that is not one of the contract's — a number where a role name
+    /// goes. ASP.NET already decided the status; answering 500 would call the
+    /// caller's mistake ours.
+    /// </summary>
+    /// <remarks>
+    /// Fixed text, never the exception's message: it quotes our own type names,
+    /// and the parser's wording is not part of the contract.
+    /// </remarks>
+    private async ValueTask<bool> UnreadableAsync(HttpContext httpContext, BadHttpRequestException unreadable)
+    {
+        LogUnreadableRequest(logger, httpContext.Request.Method, httpContext.Request.Path, unreadable.StatusCode);
+
+        httpContext.Response.StatusCode = unreadable.StatusCode;
+
+        return await WriteAsync(
+            httpContext,
+            unreadable,
+            detail: "The request could not be read. Check that every value is one the API accepts.",
+            title: "Invalid request");
     }
 
     /// <summary>
@@ -96,4 +120,11 @@ internal sealed partial class GlobalExceptionHandler(
         Level = LogLevel.Warning,
         Message = "Rejected {Method} {Path}: the domain rule {Rule} was broken.")]
     private static partial void LogBrokenInvariant(ILogger logger, string rule, string method, string path);
+
+    // Warning, like a broken invariant: the request was wrong, the server was not.
+    [LoggerMessage(
+        EventId = 3,
+        Level = LogLevel.Warning,
+        Message = "Rejected {Method} {Path}: the request could not be read ({Status}).")]
+    private static partial void LogUnreadableRequest(ILogger logger, string method, string path, int status);
 }

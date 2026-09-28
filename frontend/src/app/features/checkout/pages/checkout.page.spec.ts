@@ -138,18 +138,84 @@ describe('CheckoutPage', () => {
       {
         type: 'urn:drinkit:problem:order:sold-out',
         detail: 'Gin Tonic ran out while you were ordering.',
+        productName: 'Gin Tonic',
       },
       { status: 409, statusText: 'Conflict' },
     );
     await rendered.fixture.whenStable();
 
-    expect(screen.getByRole('alert').textContent).toContain('Gin Tonic');
+    expect(screen.getByRole('alert').textContent).toContain('Se acabó el Gin Tonic');
     expect(
       screen
         .getByText(/revisar el pedido/i)
         .closest('a')
         ?.getAttribute('href'),
     ).toBe('/bar-alfa/order');
+  });
+
+  // The API's detail is English, for developers: a customer in a boliche reads
+  // Spanish, whatever went wrong, and never the sentence meant for the logs.
+  describe('when the order is refused', () => {
+    async function refusedWith(problem: Record<string, string>, status = 400) {
+      const { rendered, http } = await openScreenWith(anOrderOfTwoGins);
+
+      fireEvent.input(name(), { target: { value: 'María Quadro' } });
+      await rendered.fixture.whenStable();
+      payButton().click();
+      await rendered.fixture.whenStable();
+
+      http
+        .expectOne(ordersUrl('bar-alfa'))
+        .flush(
+          { detail: 'An English sentence for the logs.', ...problem },
+          { status, statusText: '' },
+        );
+      await rendered.fixture.whenStable();
+
+      return screen.getByRole('alert').textContent ?? '';
+    }
+
+    it.each([
+      ['urn:drinkit:problem:order:sold-out', 'Se acabó el Gin Tonic mientras pedías.'],
+      ['urn:drinkit:problem:order:not-on-the-menu', 'El Gin Tonic ya no está en la carta.'],
+    ])('names the drink in Spanish (%s)', async (type, sentence) => {
+      const said = await refusedWith({ type, productName: 'Gin Tonic' }, 409);
+
+      expect(said).toContain(sentence);
+      expect(said).not.toContain('English');
+    });
+
+    // An old API, or a drink it could not name: still Spanish, just vaguer.
+    it('still says it in Spanish when the drink is not named', async () => {
+      const said = await refusedWith({ type: 'urn:drinkit:problem:order:sold-out' }, 409);
+
+      expect(said).toContain('Se acabó uno de los tragos mientras pedías.');
+    });
+
+    it('says in Spanish that somebody took the last one', async () => {
+      const said = await refusedWith({ type: 'urn:drinkit:problem:order:stock-moved' }, 409);
+
+      expect(said).toContain('Alguien pidió al mismo tiempo');
+    });
+
+    it.each([
+      ['urn:drinkit:problem:order:name-required', 'Necesitamos un nombre'],
+      ['urn:drinkit:problem:order:name-needs-surname', 'Poné tu nombre y tu apellido.'],
+      ['urn:drinkit:problem:order:name-only-letters', 'El nombre sólo puede tener letras.'],
+      ['urn:drinkit:problem:order:name-too-long', 'El nombre es demasiado largo.'],
+    ])('says what is wrong with the name in Spanish (%s)', async (type, sentence) => {
+      const said = await refusedWith({ type });
+
+      expect(said).toContain(sentence);
+      expect(said).not.toContain('English');
+    });
+
+    it('says something in Spanish for a refusal it has no sentence for', async () => {
+      const said = await refusedWith({ type: 'urn:drinkit:problem:order:something-new' });
+
+      expect(said).toContain('No pudimos confirmar tu pedido.');
+      expect(said).not.toContain('English');
+    });
   });
 
   // Nothing to pay for. Reached by typing the address, or by coming back to a

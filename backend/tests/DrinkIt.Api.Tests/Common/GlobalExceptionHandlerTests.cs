@@ -41,6 +41,22 @@ public class GlobalExceptionHandlerTests
         Assert.False(string.IsNullOrWhiteSpace(traceId.GetString()));
     }
 
+    // A body the API could not read — a number where a role name goes, JSON
+    // that does not parse — is the caller's mistake. ASP.NET already knows
+    // that and says 400; answering 500 would report it as our fault.
+    [Fact]
+    public async Task TryHandleAsync_WhenTheRequestCouldNotBeRead_RespondsWithBadRequest()
+    {
+        HttpResponseSnapshot response = await Handle(new BadHttpRequestException(
+            "Failed to read parameter \"CreateStaffUserRequest request\" from the request body as JSON.",
+            StatusCodes.Status400BadRequest,
+            new JsonException("The JSON value could not be converted to StaffRoleName.")));
+
+        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
+        Assert.StartsWith("application/problem+json", response.ContentType, StringComparison.Ordinal);
+        Assert.DoesNotContain("StaffRoleName", response.Text("detail"), StringComparison.Ordinal);
+    }
+
     private static async Task<HttpResponseSnapshot> Handle(Exception exception)
     {
         ServiceCollection services = new();

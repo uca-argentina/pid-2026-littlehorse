@@ -47,12 +47,15 @@ export class CheckoutStore {
 
   private readonly state = signal<CheckoutStatus>('idle');
 
-  private readonly problem = signal('');
+  private readonly refusal = signal<Refusal | null>(null);
 
   readonly status = this.state.asReadonly();
 
-  /** What the API said went wrong, in the words it used. Empty while nothing has. */
-  readonly whatWentWrong = this.problem.asReadonly();
+  /**
+   * What went wrong, as data: the screen says it in Spanish. The API's own
+   * detail is English and written for developers, so it is never shown.
+   */
+  readonly whatWentWrong = this.refusal.asReadonly();
 
   readonly isPaying = computed(() => this.state() === 'paying');
 
@@ -83,7 +86,7 @@ export class CheckoutStore {
     if (this.isPaying()) return;
 
     this.state.set('paying');
-    this.problem.set('');
+    this.refusal.set(null);
 
     forkJoin({
       // Both, so the wait is the longer of the two rather than one after the
@@ -146,7 +149,7 @@ export class CheckoutStore {
     // The venue's menu moved under the order: a drink ran out, left the menu,
     // or somebody else took the last one. The screen sends them back to fix it.
     if (theMenuMoved(problem)) {
-      this.problem.set(detailOf(error));
+      this.refusal.set(refusalOf(error, problem));
       this.state.set('soldOut');
 
       return;
@@ -160,7 +163,7 @@ export class CheckoutStore {
       return;
     }
 
-    this.problem.set(detailOf(error));
+    this.refusal.set(refusalOf(error, problem));
     this.state.set('rejected');
   }
 }
@@ -174,17 +177,22 @@ function theMenuMoved(problem: string | undefined): boolean {
   );
 }
 
+/** Why the order was refused: which rule, and which drink when it was one. */
+export interface Refusal {
+  readonly type: string | undefined;
+  readonly productName: string | null;
+}
+
 /**
- * The sentence the API wrote for this exact failure — which drink ran out, what
- * is wrong with the name. Repeating those rules here would be a second copy
- * that drifts from the one the server enforces.
+ * The problem's type, and the drink it names when the menu moved underneath.
+ * Never its detail: that sentence is the API's, in English, for developers.
  */
-function detailOf(error: unknown): string {
-  if (!(error instanceof HttpErrorResponse)) return '';
-
+function refusalOf(error: HttpErrorResponse, type: string | undefined): Refusal {
   const body: unknown = error.error;
+  const productName =
+    typeof body === 'object' && body !== null && 'productName' in body
+      ? String((body as { productName: unknown }).productName)
+      : null;
 
-  return typeof body === 'object' && body !== null && 'detail' in body
-    ? String((body as { detail: unknown }).detail)
-    : '';
+  return { type, productName };
 }

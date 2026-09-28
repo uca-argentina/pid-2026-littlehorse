@@ -3,13 +3,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { TRACKING_INTERVAL_MS, TrackingStore } from './tracking.store';
 import { trackingUrl } from './tracking.service';
-import type { TrackedOrder } from './tracking.service';
+import type { CustomerOrderStatus, TrackedOrder } from './tracking.service';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
 
 const url = trackingUrl('bar-alfa', 'K-4821', token);
 
-function anOrder(status: string): TrackedOrder {
+function anOrder(status: CustomerOrderStatus): TrackedOrder {
   return {
     code: 'K-4821',
     customerName: 'María Quadro',

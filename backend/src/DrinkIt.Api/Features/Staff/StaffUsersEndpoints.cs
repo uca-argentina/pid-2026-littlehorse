@@ -1,21 +1,21 @@
+using System.Text.Json.Serialization;
 using DrinkIt.Api.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Staff;
-using DrinkIt.Domain.Staff;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Staff;
 
 /// <summary>What the administration screen posts. The role travels as its name.</summary>
-public sealed record CreateStaffUserRequest(string Username, string Password, string Role);
+public sealed record CreateStaffUserRequest(string Username, string Password, [property: JsonRequired] StaffRoleName Role);
 
 /// <summary>What the administration screen sends to correct somebody's role.</summary>
-public sealed record ChangeStaffUserRoleRequest(string Role);
+public sealed record ChangeStaffUserRoleRequest([property: JsonRequired] StaffRoleName Role);
 
 /// <summary>What it sends to hand somebody a new password.</summary>
 public sealed record ResetStaffUserPasswordRequest(string Password);
 
-public sealed record StaffUserResponse(Guid Id, string Username, string Role, bool IsActive, AuditResponse Audit);
+public sealed record StaffUserResponse(Guid Id, string Username, StaffRoleName Role, bool IsActive, AuditResponse Audit);
 
 internal static class StaffUsersEndpoints
 {
@@ -86,7 +86,7 @@ internal static class StaffUsersEndpoints
         IReadOnlyList<StaffUserListItem> everyone = await staffUsers.ListAsync(cancellationToken);
 
         return TypedResults.Ok(everyone
-            .Select(user => new StaffUserResponse(user.Id, user.Username, user.Role.ToString(), user.IsActive, AuditResponse.Of(user.Audit)))
+            .Select(user => new StaffUserResponse(user.Id, user.Username, user.Role.ToContract(), user.IsActive, AuditResponse.Of(user.Audit)))
             .ToArray());
     }
 
@@ -95,10 +95,8 @@ internal static class StaffUsersEndpoints
         CreateStaffUserHandler handler,
         CancellationToken cancellationToken)
     {
-        if (!TryReadRole(request.Role, out StaffRole role)) return RoleIsNotOneWeHandOut(request.Role);
-
         Result<CreatedStaffUser> result = await handler.HandleAsync(
-            new CreateStaffUserCommand(request.Username, request.Password, role),
+            new CreateStaffUserCommand(request.Username, request.Password, request.Role.ToDomain()),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -110,7 +108,7 @@ internal static class StaffUsersEndpoints
         // identifies.
         return TypedResults.Created(
             (string?)null,
-            new StaffUserResponse(created.Id, created.Username, created.Role.ToString(), created.IsActive, AuditResponse.Of(created.Audit)));
+            new StaffUserResponse(created.Id, created.Username, created.Role.ToContract(), created.IsActive, AuditResponse.Of(created.Audit)));
     }
 
     internal static async Task<IResult> ChangeRoleAsync(
@@ -119,9 +117,7 @@ internal static class StaffUsersEndpoints
         ChangeStaffUserRoleHandler handler,
         CancellationToken cancellationToken)
     {
-        if (!TryReadRole(request.Role, out StaffRole role)) return RoleIsNotOneWeHandOut(request.Role);
-
-        return Answer(await handler.HandleAsync(new ChangeStaffUserRoleCommand(id, role), cancellationToken));
+        return Answer(await handler.HandleAsync(new ChangeStaffUserRoleCommand(id, request.Role.ToDomain()), cancellationToken));
     }
 
     internal static async Task<IResult> ResetPasswordAsync(
@@ -152,32 +148,8 @@ internal static class StaffUsersEndpoints
         StaffUserSummary user = result.Value;
 
         return TypedResults.Ok(
-            new StaffUserResponse(user.Id, user.Username, user.Role.ToString(), user.IsActive, AuditResponse.Of(user.Audit)));
+            new StaffUserResponse(user.Id, user.Username, user.Role.ToContract(), user.IsActive, AuditResponse.Of(user.Audit)));
     }
-
-    /// <summary>
-    /// One of our names, and nothing else. Enum.TryParse on its own also accepts
-    /// "2", "99", and a comma-separated list that it ORs together even for an
-    /// enum that is not [Flags] — "Administrator,Kds" would quietly become a
-    /// Waiter. Checking the name against the declared ones first rules out all
-    /// three shapes at once.
-    /// </summary>
-    private static bool TryReadRole(string? name, out StaffRole role)
-    {
-        role = default;
-
-        if (name is null) return false;
-        if (!Enum.GetNames<StaffRole>().Contains(name, StringComparer.OrdinalIgnoreCase)) return false;
-
-        return Enum.TryParse(name, ignoreCase: true, out role);
-    }
-
-    private static ProblemHttpResult RoleIsNotOneWeHandOut(string? name) =>
-        TypedResults.Problem(
-            title: "Invalid request",
-            detail: $"'{name}' is not a role this venue can hand out.",
-            statusCode: StatusCodes.Status400BadRequest,
-            type: ProblemTypes.For(StaffUser.ErrorCodes.RoleInvalid));
 
     /// <summary>
     /// What each expected failure means over HTTP. A conflict is a request that
