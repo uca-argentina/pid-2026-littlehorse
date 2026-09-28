@@ -183,6 +183,41 @@ describe('EditProductPage', () => {
       expect(screen.queryByTestId('product-skeleton')).toBeNull();
     });
 
+    // A blank page with only "Volver al listado" says nothing about what
+    // happened, or whether trying again could help.
+    it('says so and offers to try again when the product cannot be fetched', async () => {
+      const rendered = await openScreenLoading();
+      const http = TestBed.inject(HttpTestingController);
+
+      http.expectOne(PRODUCTS_URL).flush('', { status: 500, statusText: 'Server Error' });
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos traer este producto');
+      screen.getByRole('button', { name: /reintentar/i }).click();
+      rendered.fixture.detectChanges();
+
+      http.expectOne(PRODUCTS_URL);
+    });
+
+    it('does not offer to retry when the account is no longer an administrator', async () => {
+      const rendered = await openScreenLoading();
+
+      TestBed.inject(HttpTestingController)
+        .expectOne(PRODUCTS_URL)
+        .flush(
+          { type: ProblemTypes.forbidden },
+          {
+            status: 403,
+            statusText: 'Forbidden',
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        );
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('ya no lo es');
+      expect(screen.queryByRole('button', { name: /reintentar/i })).toBeNull();
+    });
+
     describe('when it takes long', () => {
       beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
       afterEach(() => vi.useRealTimers());

@@ -1,6 +1,8 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ProblemTypes } from '../../../core/api/problem-types';
+import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { slowLoading } from '../../../shared/loading/slow-loading';
 import { EditProductStore } from '../edit-product.store';
@@ -46,6 +48,22 @@ export class EditProductPage {
       this.store.updated() ??
       (this.products.hasValue() ? this.products.value() : []).find((row) => row.id === this.id()),
   );
+
+  /**
+   * Same split as the listing: a dropped connection goes away on a retry, a
+   * role taken away never will, so only the first one offers it.
+   */
+  protected readonly failure = computed<'none' | 'forbidden' | 'unreachable'>(() => {
+    const error = this.products.error();
+
+    if (error === undefined) return 'none';
+
+    return problemTypeOf(error) === ProblemTypes.forbidden ? 'forbidden' : 'unreachable';
+  });
+
+  protected retry(): void {
+    this.products.reload();
+  }
 
   /** Loaded, and nothing here has that id. Not the same as still loading. */
   protected readonly isMissing = computed(

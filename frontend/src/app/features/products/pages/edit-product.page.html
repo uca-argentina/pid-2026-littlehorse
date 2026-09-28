@@ -113,6 +113,18 @@
         </div>
       }
 
+      @if (failure() === 'forbidden') {
+        <p class="note note-bad" role="alert">
+          Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que
+          te la vuelva a dar.
+        </p>
+      } @else if (failure() === 'unreachable') {
+        <div class="note note-bad" role="alert">
+          <p class="note-what">No pudimos traer este producto. Fijate la señal y probá de nuevo.</p>
+          <button class="retry" type="button" (click)="retry()">Reintentar</button>
+        </div>
+      }
+
       @if (isMissing()) {
         <p class="note" role="status">No encontramos ningún producto con ese id en este boliche.</p>
       }

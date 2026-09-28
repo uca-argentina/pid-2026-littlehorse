@@ -38,6 +38,34 @@
   color: var(--dk-text);
 }
 
+// The failure with a way out: the message, and under it the retry.
+div.note-bad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+}
+
+.note-what {
+  margin: 0;
+}
+
+.retry {
+  align-self: flex-start;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-5);
+  border: 0;
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.retry:hover {
+  background: var(--dk-accent-hover);
+}
+
 // Dashed and apart from the form: this is the only thing on the screen that
 // takes something away, even though it takes nothing away for good.
 .danger {
