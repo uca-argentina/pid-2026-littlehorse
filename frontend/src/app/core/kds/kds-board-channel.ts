@@ -1,12 +1,21 @@
 import { Injectable, inject } from '@angular/core';
 import type { HubConnection } from '@microsoft/signalr';
 import { HubConnectionBuilder } from '@microsoft/signalr';
+import { API_BASE_URL } from '../api/api-base-url-interceptor';
 import { SessionStorage } from '../auth/session-storage';
-
-export const KDS_HUB_URL = '/api/hubs/kds';
 
 /** Must match KdsHub.BoardChanged on the backend — the one message this hub ever sends. */
 export const BOARD_CHANGED_MESSAGE = 'BoardChanged';
+
+/**
+ * Where the hub lives. The same rule apiBaseUrlInterceptor applies to
+ * HttpClient, done by hand: the SignalR client makes its own requests, so the
+ * interceptor never sees them, and deployed a relative /api would land on the
+ * Static Web App instead of the API.
+ */
+export function kdsHubUrl(apiBaseUrl: string): string {
+  return apiBaseUrl === '' ? '/api/hubs/kds' : `${apiBaseUrl}/hubs/kds`;
+}
 
 /**
  * US-15: the live half of the board. A thin wrapper so the page never touches
@@ -21,6 +30,8 @@ export const BOARD_CHANGED_MESSAGE = 'BoardChanged';
 export class KdsBoardChannel {
   private readonly sessions = inject(SessionStorage);
 
+  private readonly hubUrl = kdsHubUrl(inject(API_BASE_URL));
+
   private connection: HubConnection | null = null;
 
   /**
@@ -31,7 +42,13 @@ export class KdsBoardChannel {
     if (this.connection) return;
 
     const connection = new HubConnectionBuilder()
-      .withUrl(KDS_HUB_URL, { accessTokenFactory: () => this.sessions.session()?.token ?? '' })
+      .withUrl(this.hubUrl, {
+        accessTokenFactory: () => this.sessions.session()?.token ?? '',
+        // The client's default is true, and FrontendCors deliberately allows
+        // no credentials: the token travels in accessTokenFactory, not in a
+        // cookie. Left on, the cross-origin negotiate is refused in Azure.
+        withCredentials: false,
+      })
       .withAutomaticReconnect()
       .build();
 
