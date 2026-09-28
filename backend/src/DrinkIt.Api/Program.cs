@@ -6,11 +6,7 @@ using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tenancy;
-using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Common;
-using DrinkIt.Application.Menu;
-using DrinkIt.Application.Orders;
-using DrinkIt.Application.Staff;
 using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
 using Scalar.AspNetCore;
@@ -18,21 +14,11 @@ using Scalar.AspNetCore;
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddScoped<LoginHandler>();
-builder.Services.AddScoped<CreateStaffUserHandler>();
-builder.Services.AddScoped<ChangeStaffUserRoleHandler>();
-builder.Services.AddScoped<ResetStaffUserPasswordHandler>();
-builder.Services.AddScoped<DeactivateStaffUserHandler>();
-builder.Services.AddScoped<ReactivateStaffUserHandler>();
-builder.Services.AddScoped<CreateCategoryHandler>();
-builder.Services.AddScoped<CreateProductHandler>();
-builder.Services.AddScoped<UpdateProductHandler>();
-builder.Services.AddScoped<DeactivateProductHandler>();
-builder.Services.AddScoped<AdjustProductStockHandler>();
-builder.Services.AddScoped<UploadProductImageHandler>();
-builder.Services.AddScoped<MarkProductUnavailableHandler>();
-builder.Services.AddScoped<MarkProductAvailableHandler>();
-builder.Services.AddScoped<ConfirmOrderHandler>();
+// One line per feature: each one lists its own handlers, next to its endpoints.
+builder.Services.AddLoginHandlers();
+builder.Services.AddStaffHandlers();
+builder.Services.AddMenuHandlers();
+builder.Services.AddOrderHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
