@@ -152,6 +152,41 @@ body {
   white-space: nowrap;
 }
 
+// A block standing in for content that has not arrived. Each screen sizes it
+// with its own class to the shape of what will replace it. Invisible for the
+// first 200ms: a fast answer never flashes an outline on its way in.
+.dk-skeleton {
+  border-radius: var(--dk-radius-sm);
+  background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--dk-text) 6%, transparent),
+      transparent
+    )
+    var(--dk-surface-raised);
+  background-size: 200% 100%;
+  opacity: 0;
+  animation:
+    dk-skeleton-in 0.2s 0.2s forwards,
+    dk-skeleton-shimmer 1.6s linear infinite;
+}
+
+@keyframes dk-skeleton-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dk-skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
 // One focus ring for the whole app. The venue is dark and the accent is the
 // only colour that survives it.
 :focus-visible {
@@ -167,5 +202,11 @@ body {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+
+  // Shortened to 0.01ms an infinite shimmer would flicker instead of stop.
+  .dk-skeleton {
+    opacity: 1;
+    animation: none !important;
   }
 }

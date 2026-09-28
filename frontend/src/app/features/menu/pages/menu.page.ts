@@ -26,6 +26,8 @@ interface MenuCard {
 /** US-14: the tab the menu opens on. A category's id is a guid and never equals it. */
 const ALL = 'all';
 
+const SLOW_AFTER_MS = 5000;
+
 interface CategoryTab {
   readonly filter: string;
   readonly name: string;
@@ -158,7 +160,25 @@ export class MenuPage {
     this.cart.setNote(productId, (event.target as HTMLInputElement).value);
   }
 
+  /** Enough outlines to fill a phone's first screen, not the length of any real menu. */
+  protected readonly skeletonCards = [1, 2, 3, 4];
+
+  /**
+   * Past a few seconds still loading. A cold start of the API and the database
+   * together takes most of a minute, and an outline that sits still that long
+   * looks frozen.
+   */
+  protected readonly isSlow = signal(false);
+
   constructor() {
+    effect((onCleanup) => {
+      this.isSlow.set(false);
+      if (!this.menu.isLoading()) return;
+
+      const timer = setTimeout(() => this.isSlow.set(true), SLOW_AFTER_MS);
+      onCleanup(() => clearTimeout(timer));
+    });
+
     // The order belongs to the venue whose address is open, and switching
     // venues has to switch orders rather than carry one into the other.
     effect(() => this.cart.open(this.venueSlug()));
