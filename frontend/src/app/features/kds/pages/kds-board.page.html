@@ -1,5 +1,12 @@
 <div class="board">
-  @if (queue.isLoading()) {
+  @if (channel.state() === 'reconnecting') {
+    <p class="offline" role="status">
+      Sin conexión con la barra — reintentando. Lo que ves puede estar desactualizado.
+    </p>
+  }
+
+  <!-- Only the first load: a reload keeps the orders already on screen. -->
+  @if (queue.isLoading() && !queue.hasValue()) {
     <p class="status">Cargando la cola…</p>
   } @else if (failure() !== 'none') {
     <p class="status" role="alert">No pudimos cargar la cola de la barra.</p>

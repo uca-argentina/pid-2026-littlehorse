@@ -1,14 +1,18 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { render, screen } from '@testing-library/angular';
 import { KdsBoardChannel } from '../../../core/kds/kds-board-channel';
+import type { KdsLinkState } from '../../../core/kds/kds-board-channel';
 import { KDS_QUEUE_URL } from '../kds-queue';
 import type { KdsQueueOrder } from '../kds-queue';
 import { KdsBoardPage } from './kds-board.page';
 
 /** Captures the callback the page hands the channel, instead of opening a real connection. */
 class FakeKdsBoardChannel {
+  readonly state = signal<KdsLinkState>('connected');
+
   onChanged: (() => void) | null = null;
 
   connect(onChanged: () => void): void {
@@ -145,6 +149,36 @@ describe('KdsBoardPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByText('K-4821')).not.toBeNull();
+  });
+
+  // A new order must not blank the board: with orders arriving all night the
+  // tablet would flash "Cargando" every time somebody pays.
+  it('keeps the orders on screen while it reloads', async () => {
+    const { rendered, channel } = await openScreenShowing([anOrder()]);
+
+    channel.onChanged?.();
+    rendered.fixture.detectChanges();
+
+    expect(screen.getByText('K-4821')).not.toBeNull();
+    expect(screen.queryByText(/cargando/i)).toBeNull();
+  });
+
+  // What is on screen may be stale while the link is down, and the bartender
+  // has to know it rather than trust a board that stopped listening.
+  it('warns that it lost the connection while the channel is reconnecting', async () => {
+    const { rendered, channel } = await openScreenShowing([anOrder()]);
+
+    channel.state.set('reconnecting');
+    rendered.fixture.detectChanges();
+
+    expect(screen.getByRole('status').textContent).toContain('Sin conexión');
+    expect(screen.getByText('K-4821')).not.toBeNull();
+  });
+
+  it('shows no warning while connected', async () => {
+    await openScreenShowing([anOrder()]);
+
+    expect(screen.queryByText(/sin conexión/i)).toBeNull();
   });
 
   it('disconnects the channel when the screen closes', async () => {

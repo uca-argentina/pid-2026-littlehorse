@@ -34,7 +34,7 @@ const COLUMN_TITLES: Record<ColumnKey, string> = {
   templateUrl: './kds-board.page.html',
 })
 export class KdsBoardPage {
-  private readonly channel = inject(KdsBoardChannel);
+  protected readonly channel = inject(KdsBoardChannel);
 
   /**
    * The Resource API rather than a subscription: loading, error and value

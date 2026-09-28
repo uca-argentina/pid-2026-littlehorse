@@ -18,6 +18,17 @@
   color: var(--dk-text);
 }
 
+.offline {
+  margin: 0 0 var(--dk-space-3);
+  padding: var(--dk-space-2) var(--dk-space-3);
+  border-radius: var(--dk-radius-sm);
+  border: 1.5px solid var(--dk-age-warn);
+  background: var(--dk-surface);
+  color: var(--dk-age-warn);
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .cols {
   flex-grow: 1;
   display: grid;
