@@ -6,7 +6,7 @@ using DrinkIt.Domain.Orders;
 namespace DrinkIt.Api.Features.Kds;
 
 /// <summary>One drink on a card of the board, as the bar's tablet reads it.</summary>
-public sealed record KdsQueueLineResponse(string ProductName, int Quantity, string? Note);
+public sealed record KdsQueueOrderItemResponse(string ProductName, int Quantity, string? Note);
 
 /// <summary>One card of the bar's board (US-15).</summary>
 public sealed record KdsQueueOrderResponse(
@@ -15,7 +15,7 @@ public sealed record KdsQueueOrderResponse(
     string Status,
     DateTimeOffset PaidAt,
     bool IsForTable,
-    IReadOnlyList<KdsQueueLineResponse> Lines);
+    IReadOnlyList<KdsQueueOrderItemResponse> OrderItems);
 
 internal static class KdsEndpoints
 {
@@ -40,7 +40,7 @@ internal static class KdsEndpoints
         orders
             .MapPost("/start-preparing", StartPreparingAsync)
             .WithName("StartPreparingOrder")
-            .WithSummary("Takes an order off Nuevos: the board's Imprimir. Taking it twice changes nothing.")
+            .WithSummary("Takes a queued order into preparation. Taking it again changes nothing.")
             .Produces(StatusCodes.Status204NoContent)
             // An order no longer where the board thought it was: a broken
             // transition, answered by the global exception handler.
@@ -99,6 +99,6 @@ internal static class KdsEndpoints
                 order.Status.ToString(),
                 order.PaidAt,
                 order.IsForTable,
-                [.. order.Lines.Select(line => new KdsQueueLineResponse(line.ProductName, line.Quantity, line.Note))]))]);
+                [.. order.OrderItems.Select(item => new KdsQueueOrderItemResponse(item.ProductName, item.Quantity, item.Note))]))]);
     }
 }

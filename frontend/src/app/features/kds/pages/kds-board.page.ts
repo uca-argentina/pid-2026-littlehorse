@@ -41,6 +41,15 @@ const COLUMN_TITLES: Record<ColumnKey, string> = {
   Ready: 'Listos en la barra',
 };
 
+/**
+ * Which action on which order did not go through. Data and not a sentence: the
+ * template says it, in Spanish, like every other text the bar reads.
+ */
+interface ActionFailure {
+  readonly action: 'take' | 'return';
+  readonly code: string;
+}
+
 @Component({
   selector: 'drinkit-kds-board-page',
   imports: [NgTemplateOutlet, VenueBrand],
@@ -117,7 +126,7 @@ export class KdsBoardPage {
   private readonly busy = signal<ReadonlySet<string>>(new Set());
 
   /** What the last action on an order could not do, said to the bar. */
-  protected readonly actionFailure = signal<string | null>(null);
+  protected readonly actionFailure = signal<ActionFailure | null>(null);
 
   /**
    * The next ten, oldest paid first — the order the queue already arrives in.
@@ -153,8 +162,8 @@ export class KdsBoardPage {
   protected readonly chosenDrinks = computed(() => {
     const totals = new Map<string, number>();
 
-    for (const line of this.chosen().flatMap((order) => order.lines)) {
-      totals.set(line.productName, (totals.get(line.productName) ?? 0) + line.quantity);
+    for (const item of this.chosen().flatMap((order) => order.orderItems)) {
+      totals.set(item.productName, (totals.get(item.productName) ?? 0) + item.quantity);
     }
 
     return [...totals].map(([name, quantity]) => `${quantity}× ${name}`);
@@ -223,9 +232,9 @@ export class KdsBoardPage {
     this.picked.set(new Set());
   }
 
-  /** The card's own "Imprimir": that order alone. */
+  /** The card's own "Preparar": that order alone. */
   protected take(order: KdsQueueOrder): void {
-    this.act(order.code, this.kdsOrders.startPreparing(order.code), 'tomar el pedido');
+    this.act(order.code, this.kdsOrders.startPreparing(order.code), 'take');
   }
 
   /**
@@ -237,10 +246,10 @@ export class KdsBoardPage {
   }
 
   protected returnToQueue(order: KdsQueueOrder): void {
-    this.act(order.code, this.kdsOrders.returnToQueue(order.code), 'devolver a la cola el pedido');
+    this.act(order.code, this.kdsOrders.returnToQueue(order.code), 'return');
   }
 
-  private act(code: string, request: Observable<void>, what: string): void {
+  private act(code: string, request: Observable<void>, action: ActionFailure['action']): void {
     this.actionFailure.set(null);
     this.busy.update((busy) => new Set(busy).add(code));
 
@@ -268,7 +277,7 @@ export class KdsBoardPage {
       // on elsewhere — so the queue is read again to show what it is now.
       error: () => {
         settle();
-        this.actionFailure.set(`No pudimos ${what} ${code}. Probá de nuevo.`);
+        this.actionFailure.set({ action, code });
         this.queue.reload();
       },
     });

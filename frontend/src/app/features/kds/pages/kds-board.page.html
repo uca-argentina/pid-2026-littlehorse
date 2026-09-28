@@ -41,7 +41,11 @@
                   [class.urg]="ageBand(order) === 'urg'"
                   [class.chosen]="isChosen(order)"
                 >
-                  <!-- One of the next ten: tapping the top of the card chooses it (US-16). -->
+                  <!--
+                    One of the next ten: tapping anywhere on the card chooses it
+                    (US-16). The button's area is stretched over the whole card
+                    by the stylesheet, so there is still a single control.
+                  -->
                   @if (canChoose(order)) {
                     <button
                       type="button"
@@ -64,12 +68,12 @@
                     </div>
                   }
                   <div class="items">
-                    @for (line of order.lines; track line.productName) {
+                    @for (item of order.orderItems; track item.productName) {
                       <div class="it">
-                        <span class="q">{{ line.quantity }}×</span>
-                        <span>{{ line.productName }}</span>
-                        @if (line.note) {
-                          <span class="note">{{ line.note }}</span>
+                        <span class="q">{{ item.quantity }}×</span>
+                        <span>{{ item.productName }}</span>
+                        @if (item.note) {
+                          <span class="note">{{ item.note }}</span>
                         }
                       </div>
                     }
@@ -83,11 +87,11 @@
                         <button
                           type="button"
                           class="act primary"
-                          [attr.aria-label]="'Imprimir ' + order.code"
+                          [attr.aria-label]="'Preparar ' + order.code"
                           [disabled]="isBusy(order)"
                           (click)="take(order)"
                         >
-                          Imprimir
+                          Preparar
                         </button>
                       }
                     </div>
@@ -113,27 +117,41 @@
     }
   }
 
-  @if (actionFailure(); as failure) {
-    <p class="offline" role="alert">{{ failure }}</p>
-  }
-
-  @if (chosen().length > 0) {
-    <section class="picked" aria-label="Pedidos elegidos">
-      <div class="picked-text">
-        <strong>
-          {{ chosen().length }}
-          {{ chosen().length === 1 ? 'pedido elegido' : 'pedidos elegidos' }}
-        </strong>
-        @for (drink of chosenDrinks(); track drink) {
-          <span> · {{ drink }}</span>
+  <!--
+    Pinned to the bottom of the screen, not the end of the page: with a long
+    queue the page is taller than the tablet, and a warning drawn after the last
+    card is one the bartender never sees.
+  -->
+  <div class="dock">
+    @if (actionFailure(); as failure) {
+      <p class="offline" role="alert">
+        @if (failure.action === 'take') {
+          No pudimos tomar el pedido {{ failure.code }}.
+        } @else {
+          No pudimos devolver a la cola el pedido {{ failure.code }}.
         }
-      </div>
-      <button type="button" class="act" (click)="clearChoice()">Cancelar</button>
-      <button type="button" class="act primary" (click)="takeChosen()">
-        Imprimir {{ chosen().length }} {{ chosen().length === 1 ? 'ticket' : 'tickets' }}
-      </button>
-    </section>
-  }
+        Probá de nuevo.
+      </p>
+    }
+
+    @if (chosen().length > 0) {
+      <section class="picked" aria-label="Pedidos elegidos">
+        <div class="picked-text">
+          <strong>
+            {{ chosen().length }}
+            {{ chosen().length === 1 ? 'pedido elegido' : 'pedidos elegidos' }}
+          </strong>
+          @for (drink of chosenDrinks(); track drink) {
+            <span> · {{ drink }}</span>
+          }
+        </div>
+        <button type="button" class="act" (click)="clearChoice()">Cancelar</button>
+        <button type="button" class="act primary" (click)="takeChosen()">
+          Preparar {{ chosen().length }} {{ chosen().length === 1 ? 'pedido' : 'pedidos' }}
+        </button>
+      </section>
+    }
+  </div>
 </div>
 
 <ng-template #summary let-order>

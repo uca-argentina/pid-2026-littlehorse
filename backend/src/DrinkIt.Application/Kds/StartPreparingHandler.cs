@@ -5,7 +5,7 @@ using DrinkIt.Domain.Orders;
 namespace DrinkIt.Application.Kds;
 
 /// <summary>
-/// US-16: the bar takes an order off Nuevos — "Imprimir" on the board. Several
+/// US-16: the bar takes an order off Nuevos — "Preparar" on the board. Several
 /// taken together are several calls to this, one per order, so each one is
 /// taken on its own and one that fails leaves the rest taken.
 /// </summary>

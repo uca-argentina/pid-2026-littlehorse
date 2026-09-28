@@ -198,7 +198,7 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 
 **Criterios de aceptación**
 
-1. **Dado** un pedido en la cola, **cuando** lo tomo con "Imprimir", **entonces** pasa a la
+1. **Dado** un pedido en la cola, **cuando** lo tomo con "Preparar", **entonces** pasa a la
    columna de preparación y deja de aparecer entre los nuevos.
 2. **Dado** que elegí varios pedidos para prepararlos juntos, **cuando** los tomo,
    **entonces** cada uno queda tomado por separado, con su propio número, y no sale uno
@@ -211,7 +211,8 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 **Notas**
 
 - **Depende de** US-15.
-- **"Imprimir" no imprime en este sprint: sólo toma el pedido.** No sale papel ni se muestra
+- **El botón se llama "Preparar", no "Imprimir"** (decidido el 2026-09-28): este sprint no sale
+  papel, y el nombre dice lo que hace. Sólo toma el pedido; no se muestra
   un ticket en pantalla. El ticket con su QR sale el día que haya impresora (ver _Deuda que
   arrastramos_): cuando llegue, el botón es el mismo y sólo cambia que además sale el papel.
 - **El QR del ticket lleva el `TrackingToken`**, el mismo que muestra el cliente para retirar
@@ -220,10 +221,13 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   cada barra va a ver sólo sus pedidos (US-33) y no hay dos KDS en una barra. Lo que sí pasa
   es el doble toque, y lo cubre la transición del dominio: tomar un pedido ya tomado no hace
   nada.
-- **Elegir varios:** tocar la parte de arriba de la tarjeta la elige, y abajo aparece cuántos
+- **Elegir varios:** tocar cualquier parte de la tarjeta la elige, y abajo aparece cuántos
   pedidos hay elegidos con **todos sus tragos sumados** ("2 pedidos elegidos · 4× Gin Tonic ·
   1× Fernet con Coca"). Cada pedido se toma con su propio pedido a la API, así que si uno
   falla los demás quedan tomados igual.
+- **Cada columna scrollea sola** (decidido el 2026-09-28): el tablero ocupa la pantalla justa,
+  el header y la zona de avisos quedan fijos, y bajar por "Nuevos" no mueve "En preparación" ni
+  "Listos". Un error de "Preparar" aparece en esa zona fija, a la vista aunque la cola sea larga.
 - **Sólo se pueden elegir los próximos 10** de "Nuevos" (§11): agrupar el mismo trago es más
   rápido en total, pero sin romper el orden más allá de eso.
 - **Diseño:** `KdsSeleccion.dc.html`. Quedan afuera, anotados en la deuda: `KdsDetalle`, la
@@ -620,7 +624,7 @@ es una decisión de software. Cuando llegue, el documento ya existe: cambia qui�
 columna de preparación, que necesita guardar la hora en que se tomó (columna nueva y
 migración). Ningún criterio los pide.
 
-**Nueva, de US-16: la impresora ya no es sólo un papel.** "Imprimir" hoy sólo toma el pedido.
+**Nueva, de US-16: la impresora ya no es sólo un papel.** "Preparar" hoy sólo toma el pedido.
 Cuando llegue la impresora, además del papel, el ticket tiene que llevar el QR con el
 `TrackingToken`, que es lo que escanea US-18.
 

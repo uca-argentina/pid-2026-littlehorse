@@ -332,7 +332,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Takes an order off Nuevos: the board's Imprimir. Taking it twice changes nothing. */
+    /** Takes a queued order into preparation. Taking it again changes nothing. */
     post: operations['StartPreparingOrder'];
     delete?: never;
     options?: never;
@@ -442,7 +442,7 @@ export interface components {
     /** Format: binary */
     IFormFile: string;
     /** @description One drink on a card of the board, as the bar's tablet reads it. */
-    KdsQueueLineResponse: {
+    KdsQueueOrderItemResponse: {
       productName: string;
       /** Format: int32 */
       quantity: number;
@@ -456,7 +456,7 @@ export interface components {
       /** Format: date-time */
       paidAt: string;
       isForTable: boolean;
-      lines: components['schemas']['KdsQueueLineResponse'][];
+      orderItems: components['schemas']['KdsQueueOrderItemResponse'][];
     };
     /**
      * @description What the client posts. Kept apart from LoginCommand so the wire

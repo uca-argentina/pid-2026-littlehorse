@@ -33,7 +33,7 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     status: 'Queued',
     paidAt: new Date().toISOString(),
     isForTable: false,
-    lines: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
+    orderItems: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
     ...overrides,
   };
 }
@@ -88,7 +88,7 @@ describe('KdsBoardPage', () => {
     await openScreenShowing([
       anOrder({
         customerName: 'Nico',
-        lines: [{ productName: 'Aperol Spritz', quantity: 1, note: 'con mucho hielo' }],
+        orderItems: [{ productName: 'Aperol Spritz', quantity: 1, note: 'con mucho hielo' }],
       }),
     ]);
 
@@ -294,10 +294,10 @@ describe('KdsBoardPage', () => {
     }
 
     // Criterion 1.
-    it('takes an order when its Imprimir is pressed', async () => {
+    it('takes an order when its Preparar is pressed', async () => {
       const { http } = await openScreenShowing([anOrder()]);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Imprimir K-4821' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Preparar K-4821' }));
 
       expect(http.expectOne(startPreparingUrl('K-4821')).request.method).toBe('POST');
     });
@@ -305,7 +305,7 @@ describe('KdsBoardPage', () => {
     it('reloads the queue once the order is taken', async () => {
       const { http } = await openScreenShowing([anOrder()]);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Imprimir K-4821' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Preparar K-4821' }));
       http
         .expectOne(startPreparingUrl('K-4821'))
         .flush(null, { status: 204, statusText: 'No Content' });
@@ -319,7 +319,7 @@ describe('KdsBoardPage', () => {
     it('cannot be pressed again while that order is being taken', async () => {
       await openScreenShowing([anOrder()]);
 
-      const print = screen.getByRole('button', { name: 'Imprimir K-4821' }) as HTMLButtonElement;
+      const print = screen.getByRole('button', { name: 'Preparar K-4821' }) as HTMLButtonElement;
       fireEvent.click(print);
 
       expect(print.disabled).toBe(true);
@@ -328,7 +328,7 @@ describe('KdsBoardPage', () => {
     it('says so when an order cannot be taken', async () => {
       const { rendered, http } = await openScreenShowing([anOrder()]);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Imprimir K-4821' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Preparar K-4821' }));
       http
         .expectOne(startPreparingUrl('K-4821'))
         .flush('', { status: 500, statusText: 'Server Error' });
@@ -338,6 +338,16 @@ describe('KdsBoardPage', () => {
       await settle(rendered.fixture);
 
       expect(screen.getByRole('alert').textContent).toContain('No pudimos tomar el pedido K-4821');
+    });
+
+    // Preparar is its own action: pressing it takes the order, it does not
+    // also choose or unchoose the card underneath.
+    it('does not choose the card when its Preparar is pressed', async () => {
+      await openScreenShowing([anOrder()]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Preparar K-4821' }));
+
+      expect(screen.queryByRole('region', { name: 'Pedidos elegidos' })).toBeNull();
     });
 
     it('chooses a new order when its card is tapped', async () => {
@@ -352,8 +362,8 @@ describe('KdsBoardPage', () => {
     // Criterion 2, and what the bartender is about to make together.
     it('sums every drink of the chosen orders in the bar below', async () => {
       await openScreenShowing([
-        anOrder({ code: 'K-0001', lines: [gin(2), fernet(1)] }),
-        anOrder({ code: 'K-0002', lines: [gin(2)] }),
+        anOrder({ code: 'K-0001', orderItems: [gin(2), fernet(1)] }),
+        anOrder({ code: 'K-0002', orderItems: [gin(2)] }),
       ]);
 
       fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0001' }));
@@ -374,7 +384,7 @@ describe('KdsBoardPage', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0001' }));
       fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0002' }));
-      fireEvent.click(screen.getByRole('button', { name: 'Imprimir 2 tickets' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Preparar 2 pedidos' }));
 
       http.expectOne(startPreparingUrl('K-0001'));
       http.expectOne(startPreparingUrl('K-0002'));
@@ -417,7 +427,7 @@ describe('KdsBoardPage', () => {
     it('reloads the queue when an action fails', async () => {
       const { http } = await openScreenShowing([anOrder()]);
 
-      fireEvent.click(screen.getByRole('button', { name: 'Imprimir K-4821' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Preparar K-4821' }));
       http
         .expectOne(startPreparingUrl('K-4821'))
         .flush('', { status: 400, statusText: 'Bad Request' });

@@ -4,7 +4,10 @@
 .board {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+
+  // Exactly the screen, never taller: the page itself does not scroll, each
+  // column does, so the header and the dock stay put whatever was scrolled.
+  height: 100dvh;
   padding: var(--dk-space-3) var(--dk-space-4);
 }
 
@@ -83,10 +86,18 @@
   display: flex;
   flex-direction: column;
   gap: 9px;
-  overflow: auto;
+
+  // Each column scrolls on its own: Nuevos grows all night while the others
+  // stay short, and scrolling one must not move the rest.
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .card {
+  // What the choose button's stretched area is measured against.
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--dk-space-2);
@@ -206,6 +217,15 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+
+  // The button covers the whole card: a tap on the drinks chooses it too, and
+  // there is still one interactive element, which a keyboard reaches.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
 }
 
 .card.chosen {
@@ -214,6 +234,9 @@
 }
 
 .acts {
+  // Above the choose button's stretched area, so Preparar is its own tap.
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -253,13 +276,30 @@
 
 // The bar under the board while something is chosen: how many, every drink
 // summed, and the two ways out.
+// What the bar has to see whatever card it tapped: a failed action, and the
+// chosen orders waiting to be prepared. Stuck to the bottom of the screen.
+.dock {
+  // The last row of the board: with the page no longer scrolling, it is
+  // always on screen without needing to stick.
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-2);
+  margin-top: var(--dk-space-3);
+
+  &:empty {
+    display: none;
+  }
+
+  .offline {
+    margin: 0;
+  }
+}
+
 .picked {
-  position: sticky;
-  bottom: 0;
   display: flex;
   align-items: center;
   gap: var(--dk-space-3);
-  margin-top: var(--dk-space-3);
   padding: var(--dk-space-3) var(--dk-space-4);
   border-radius: var(--dk-radius-md);
   border: 1.5px solid var(--dk-accent);

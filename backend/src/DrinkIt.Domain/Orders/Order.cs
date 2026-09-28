@@ -146,7 +146,7 @@ public sealed class Order : CreationStamp, IBelongsToVenue
     }
 
     /// <summary>
-    /// The bar took it (US-16) — "Imprimir" on the board, even while no paper
+    /// The bar took it (US-16) — "Preparar" on the board, even while no paper
     /// comes out. Asking again for what already happened changes nothing: a
     /// double tap, or a retry over a bad signal, is not a second order taken.
     /// </summary>

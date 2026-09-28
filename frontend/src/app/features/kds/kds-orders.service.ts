@@ -21,7 +21,7 @@ export function returnToQueueUrl(code: string): string {
 export class KdsOrdersService {
   private readonly http = inject(HttpClient);
 
-  /** The board's "Imprimir". Several chosen together are several calls to this. */
+  /** The board's "Preparar". Several chosen together are several calls to this. */
   startPreparing(code: string): Observable<void> {
     return this.http.post<void>(startPreparingUrl(code), {});
   }
