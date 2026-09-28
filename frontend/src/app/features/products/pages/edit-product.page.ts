@@ -54,7 +54,9 @@ export class EditProductPage {
    * role taken away never will, so only the first one offers it.
    */
   protected readonly failure = computed<'none' | 'forbidden' | 'unreachable'>(() => {
-    const error = this.products.error();
+    // A retry keeps the last error around while it is under way; the outline
+    // is what shows then, not a failure that may be about to go away.
+    const error = this.products.isLoading() ? undefined : this.products.error();
 
     if (error === undefined) return 'none';
 

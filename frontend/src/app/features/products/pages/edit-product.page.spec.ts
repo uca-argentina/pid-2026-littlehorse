@@ -196,6 +196,8 @@ describe('EditProductPage', () => {
       screen.getByRole('button', { name: /reintentar/i }).click();
       rendered.fixture.detectChanges();
 
+      // The last failure goes away while the new attempt is under way.
+      expect(screen.queryByRole('alert')).toBeNull();
       http.expectOne(PRODUCTS_URL);
     });
 
