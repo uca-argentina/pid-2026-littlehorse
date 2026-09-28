@@ -209,7 +209,7 @@ describe('StaffUsersPage', () => {
     it('keeps whoever was deactivated inside their role', async () => {
       const rendered = await openScreenShowing(theTeam);
 
-      pill(/KDS/i).click();
+      pill(/^KDS · \d+$/i).click();
       await rendered.fixture.whenStable();
 
       expect(listed()).toEqual(['pablo.l']);
