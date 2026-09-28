@@ -29,8 +29,8 @@ internal sealed class KdsQueueQueries(DrinkItDbContext context) : IKdsQueueQueri
                 order.Status,
                 order.PaidAt,
                 order.Method,
-                Lines = order.Items
-                    .Select(item => new KdsQueueLine(item.ProductName, item.Quantity, item.Note))
+                OrderItems = order.Items
+                    .Select(item => new KdsQueueOrderItem(item.ProductName, item.Quantity, item.Note))
                     .ToList(),
             })
             .ToListAsync(cancellationToken);
@@ -42,7 +42,7 @@ internal sealed class KdsQueueQueries(DrinkItDbContext context) : IKdsQueueQueri
                 order.Status,
                 order.PaidAt!.Value,
                 order.Method!.Value.IsForTable(),
-                order.Lines))
+                order.OrderItems))
             .ToList();
     }
 }

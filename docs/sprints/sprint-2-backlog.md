@@ -76,6 +76,7 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 | ----- | --------------------------------------------- | ---------- |
 | US-31 | Que el tablero se ponga al día solo           | US-15      |
 | US-32 | Que el tablero me mande a entrar si se venció | US-15      |
+| US-33 | Repartir los pedidos entre las barras         | US-16      |
 
 **Carril del pago** — dejar de simular que confirmar es pagar.
 
@@ -168,7 +169,7 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
    de cada columna del más viejo al más nuevo, con su número, quién lo pidió, si es barra o
    mesa, sus tragos con cantidad y nota, y hace cuánto espera.
 2. **Dado** un pedido que espera hace **menos de 5 minutos**, **cuando** lo miro, **entonces**
-   se ve normal; **a los 5** pasa a ámbar y **a los 10** pasa a rojo y dice "urgente", sin
+   se ve normal; **a los 5** pasa a ámbar y **a los 10** pasa a rojo, sin
    que haga falta leer el reloj de cada tarjeta.
 3. **Dado** que entré con una cuenta que no es de barra, **cuando** abro esa dirección,
    **entonces** el sistema no me la muestra.
@@ -184,6 +185,9 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 - **El umbral salió del wireframe y por eso está en el criterio 2**, no acá: las tarjetas
   dibujadas dicen "11 min · urgente" en rojo, 6 minutos en ámbar y 2 minutos en gris. Un
   umbral que vive en una nota es uno que nadie prueba.
+- **El criterio 2 cambió el 2026-09-28:** decía que a los 10 minutos la tarjeta "pasa a rojo y
+  dice *urgente*". La palabra se sacó: el rojo de la tarjeta ya lo dice, y el texto era ruido.
+  Los umbrales y los colores quedan igual.
 - **Borde de multi-tenancy:** el local sale del token de la estación, **nunca** de la URL.
   Esta pantalla necesita su test de aislamiento igual que el resto.
 - **Borde:** la antigüedad se cuenta **desde que se pagó**, no desde que se armó el carrito
@@ -193,41 +197,49 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 
 > **Como** estación de barra
 > **quiero** tomar uno o varios pedidos y que desaparezcan de la cola de nuevos
-> **para** que la barra de al lado no prepare el mismo trago dos veces.
+> **para** saber qué ya está en marcha y no preparar el mismo trago dos veces.
 
 **Criterios de aceptación**
 
-1. **Dado** un pedido en la cola, **cuando** lo tomo, **entonces** pasa a la columna de
-   preparación con su ticket a la vista y deja de aparecer entre los nuevos.
+1. **Dado** un pedido en la cola, **cuando** lo tomo con "Preparar", **entonces** pasa a la
+   columna de preparación y deja de aparecer entre los nuevos.
 2. **Dado** que elegí varios pedidos para prepararlos juntos, **cuando** los tomo,
-   **entonces** cada uno queda tomado por separado, con su propio número y su propio ticket,
-   y no sale uno combinado.
-3. **Dado** que dos estaciones tienen la misma cola abierta, **cuando** las dos toman el
-   mismo pedido casi a la vez, **entonces** una sola lo toma y la otra recibe un aviso de
-   que ya se lo llevaron.
-4. **Dado** que tomé un pedido por error, **cuando** uso "Devolver a la cola", **entonces**
-   vuelve a los nuevos conservando su antigüedad original.
+   **entonces** cada uno queda tomado por separado, con su propio número, y no sale uno
+   combinado.
+3. **Dado** un pedido que ya tomé, **cuando** lo vuelvo a tomar —un doble toque, o un
+   reintento por mala señal—, **entonces** sigue tomado una sola vez y no aparece ningún error.
+4. **Dado** que tomé un pedido por error, **cuando** uso "Devolver a la cola" en su tarjeta,
+   **entonces** vuelve a los nuevos conservando su antigüedad original.
 
 **Notas**
 
 - **Depende de** US-15.
-- **Acá adentro está el ticket, y era US-17.** La separamos y no tenía sentido: tomar e
-  imprimir son **el mismo gesto** (§11 del diseño funcional, y el wireframe lo dibuja como un
-  solo botón "Imprimir" en la tarjeta). Dos stories para un botón son dos stories que se
-  pisan.
-- **El ticket no se imprime en este sprint: se muestra en pantalla**, con su número, sus
-  tragos con nota, el tipo de entrega y **su QR de verdad**, el que US-18 escanea. La
-  impresora térmica con el QR en ESC/POS —lo que dice el wireframe `KdsDetalle`— es
-  **deuda para un refactor**, y necesita hardware: cuando llegue no cambia nada de esta
-  story, cambia quién recibe el mismo documento.
-- **Dependencia aprobada:** `angularx-qrcode` para dibujar el QR (ver _Dependencias nuevas_).
-- **Diseño:** `KdsSeleccion.dc.html` tiene el multi-selección dibujado, con la barra de abajo
-  que sugiere agrupar ("2 pedidos con Gin Tonic entre los próximos — preparalos juntos") y el
-  "Se imprimió #123 · Devolver a la cola" del criterio 4.
-- **Borde, el importante:** el criterio 3 es una carrera real, dos tablets en la misma barra.
-  Se resuelve en el dominio con la transición, no con un `if` en la pantalla.
-- Se permite elegir cualquiera de los próximos de la cola, no sólo el primero: agrupar
-  pedidos del mismo trago es más rápido en total (§11).
+- **El botón se llama "Preparar", no "Imprimir"** (decidido el 2026-09-28): este sprint no sale
+  papel, y el nombre dice lo que hace. Sólo toma el pedido; no se muestra
+  un ticket en pantalla. El ticket con su QR sale el día que haya impresora (ver _Deuda que
+  arrastramos_): cuando llegue, el botón es el mismo y sólo cambia que además sale el papel.
+- **El QR del ticket lleva el `TrackingToken`**, el mismo que muestra el cliente para retirar
+  (§10). Decidido el 2026-09-28; el porqué está en §10.
+- **El criterio 3 cambió el 2026-09-28.** Decía "dos estaciones con la misma cola", pero
+  cada barra va a ver sólo sus pedidos (US-33) y no hay dos KDS en una barra. Lo que sí pasa
+  es el doble toque, y lo cubre la transición del dominio: tomar un pedido ya tomado no hace
+  nada.
+- **Elegir varios:** tocar cualquier parte de la tarjeta la elige, y abajo aparece cuántos
+  pedidos hay elegidos con **todos sus tragos sumados** ("2 pedidos elegidos · 4× Gin Tonic ·
+  1× Fernet con Coca"). Cada pedido se toma con su propio pedido a la API, así que si uno
+  falla los demás quedan tomados igual.
+- **Cada columna scrollea sola** (decidido el 2026-09-28): el tablero ocupa la pantalla justa,
+  el header y la zona de avisos quedan fijos, y bajar por "Nuevos" no mueve "En preparación" ni
+  "Listos". Un error de "Preparar" aparece en esa zona fija, a la vista aunque la cola sea larga.
+  Cuando una columna se bajó más de una pantalla, aparece abajo de ella "↑ Volver arriba", que la
+  lleva de nuevo a los pedidos más viejos sin mover las otras.
+- **Se puede elegir cualquier pedido de "Nuevos"** (decidido el 2026-09-28, contra el "próximos
+  10" de §11). Con el límite, las tarjetas de más abajo no respondían al toque y nada en pantalla
+  decía por qué: parecía un error. Además ya se podían "Preparar" solas, así que el límite sólo
+  frenaba el elegirlas junto con otras.
+- **Diseño:** `KdsSeleccion.dc.html`. Quedan afuera, anotados en la deuda: `KdsDetalle`, la
+  sugerencia de agrupar ("2 pedidos con Gin Tonic entre los próximos") y el "impreso hace N
+  min" de la columna de preparación.
 
 ### US-18 · Marcar el pedido como listo
 
@@ -258,6 +270,12 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   nativa del navegador en Chrome/Android, que es lo que corre una tablet de barra. Safari,
   iOS y Firefox no la tienen, y ahí entra el polyfill (ver _Dependencias nuevas_). Es la
   misma API en los dos casos: el código se escribe una vez.
+- **Qué lee el escáner:** el QR del ticket lleva el `TrackingToken` del pedido, no su número
+  (§10, decidido en US-16). La búsqueda manual del criterio 3 sigue siendo por número o por
+  nombre: el token no lo tipea nadie.
+- **Pregunta abierta, de US-16:** este sprint no imprime, así que no hay ticket con QR para
+  escanear. Antes de tomar esta story hay que decidir si el criterio 2 espera a la impresora,
+  se prueba con la impresión del navegador, o se reescribe.
 - **Escribirlo como si el lector ya existiera:** lo que avanza el pedido es "este código pasa
   a la siguiente etapa", no "el botón de esta tarjeta". La cámara es una forma de tipear el
   código; el lector USB —que funciona como teclado y manda Enter— es otra; el campo manual es
@@ -373,6 +391,35 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 - **Alcance decidido:** sólo el tablero. Las pantallas de administración tienen el mismo
   hueco, pero ahí alguien termina navegando; llevarlo a toda la app es otra conversación.
 
+### US-33 · Repartir los pedidos entre las barras
+
+> **Como** boliche con más de una barra
+> **quiero** que cada pedido pagado vaya a una sola barra, a la que tenga menos trabajo
+> **para** que ninguna barra se sature mientras otra está libre, y que dos barras nunca
+> preparen el mismo pedido.
+
+**Criterios de aceptación**
+
+1. **Dado** un boliche con dos barras, **cuando** se paga un pedido, **entonces** aparece en
+   la cola de una sola de ellas.
+2. **Dado** que una barra tiene más pedidos esperando que otra, **cuando** se paga uno nuevo,
+   **entonces** va a la que tiene menos.
+3. **Dado** que el pedido cayó en una barra, **cuando** el cliente mira su seguimiento,
+   **entonces** sabe en qué barra lo retira.
+
+**Notas**
+
+- **Sale de US-16**, decidido el 2026-09-28: cada KDS ve sólo los pedidos de su barra. Por eso
+  el criterio 3 de US-16 dejó de ser una carrera entre estaciones.
+- **Preguntas abiertas antes de tomarla:**
+  - Qué cuenta como "carga": pedidos en `Queued`, en `Queued` + `InPreparation`, o tragos
+    en vez de pedidos.
+  - Cómo se ata una cuenta KDS a su `BarStation` (hoy la cuenta no sabe de qué barra es) y
+    quién da de alta las barras.
+  - Qué pasa con los pedidos de una barra que se cierra en medio de la noche.
+- **Borde:** con una sola barra, nada cambia respecto de hoy. Tiene que seguir funcionando
+  sin configurar nada.
+
 ## El cliente
 
 ### US-20 · Que el cliente vea su QR de retiro
@@ -397,6 +444,9 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   no es decorativo: un QR chico sobre fondo negro y con poco brillo no se lee. Se prueba
   contra la pantalla de US-19, no en el navegador.
 - Es el mismo identificador del ticket (§10), mostrado en otro soporte — no son dos códigos.
+  **Ese identificador es el `TrackingToken`** (decidido en US-16, el 2026-09-28): así sólo
+  retira quien tiene el celular. El número del pedido se sigue mostrando al lado, para
+  leerlo, pero no alcanza para retirar.
 - **Dependencia aprobada:** `angularx-qrcode` (ver _Dependencias nuevas_).
 
 ### US-21 · Que me avise el celular
@@ -575,6 +625,15 @@ sprint, pero la de la CI empieza a doler cuando el recorrido tiene cuatro actore
 **Nueva, y de este sprint: la impresora térmica.** El ticket sale por pantalla y no por
 papel. Imprimirlo de verdad con el QR en ESC/POS necesita comprar la impresora, así que no
 es una decisión de software. Cuando llegue, el documento ya existe: cambia quién lo recibe.
+
+**Nueva, de US-16: lo que quedó afuera del wireframe del KDS.** La pantalla de detalle
+(`KdsDetalle`), la sugerencia de agrupar pedidos del mismo trago y el "impreso hace N min" de la
+columna de preparación, que necesita guardar la hora en que se tomó (columna nueva y
+migración). Ningún criterio los pide.
+
+**Nueva, de US-16: la impresora ya no es sólo un papel.** "Preparar" hoy sólo toma el pedido.
+Cuando llegue la impresora, además del papel, el ticket tiene que llevar el QR con el
+`TrackingToken`, que es lo que escanea US-18.
 
 **Nueva, de auditar US-15: el tablero.** Dos huecos que ya tienen story propia, US-31 (se
 pone al día solo si se pierde un aviso) y US-32 (manda al login si la sesión se venció).

@@ -103,6 +103,23 @@ internal sealed partial class OrderRepository(
     }
 
     /// <summary>
+    /// No venue in the WHERE, same as above: the code is unique per venue, and
+    /// the global query filter is what makes it this venue's.
+    /// </summary>
+    public Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken) =>
+        context.Orders
+            .Include(order => order.Items)
+            .FirstOrDefaultAsync(order => order.Code == code, cancellationToken);
+
+    public async Task SaveAsync(Order order, CancellationToken cancellationToken)
+    {
+        await context.SaveChangesAsync(cancellationToken);
+
+        // Committed by now, so the same reasoning as a new order applies.
+        await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
+    }
+
+    /// <summary>
     /// The order is already committed by the time this runs, so a notifier
     /// that is down is not a reason to tell the customer their money did not
     /// go through: it did, and the drinks are queued either way. Losing the

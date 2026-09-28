@@ -42,10 +42,10 @@ public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
         Assert.Equal(order.Code.Value, found.Code);
         Assert.Equal("María Quadro", found.CustomerName);
         Assert.Equal(OrderStatus.Queued, found.Status);
-        KdsQueueLine line = found.Lines.Single();
-        Assert.Equal("Gin Tonic", line.ProductName);
-        Assert.Equal(2, line.Quantity);
-        Assert.Equal("sin hielo", line.Note);
+        KdsQueueOrderItem item = found.OrderItems.Single();
+        Assert.Equal("Gin Tonic", item.ProductName);
+        Assert.Equal(2, item.Quantity);
+        Assert.Equal("sin hielo", item.Note);
     }
 
     [Theory]

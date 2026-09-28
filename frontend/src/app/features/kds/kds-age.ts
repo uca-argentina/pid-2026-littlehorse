@@ -13,9 +13,12 @@ export function ageBandFor(minutes: number): AgeBand {
   return 'ok';
 }
 
-/** What the card actually prints, "urgente" spelled out so nobody has to read a color. */
+/**
+ * What the card prints: just the minutes. The band is the card's color; the
+ * word "urgente" that used to follow was dropped on 2026-09-28 as noise.
+ */
 export function ageLabelFor(minutes: number): string {
   const whole = Math.floor(minutes);
 
-  return ageBandFor(minutes) === 'urg' ? `${whole} min · urgente` : `${whole} min`;
+  return `${whole} min`;
 }

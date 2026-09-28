@@ -4,7 +4,10 @@
 .board {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+
+  // Exactly the screen, never taller: the page itself does not scroll, each
+  // column does, so the header and the dock stay put whatever was scrolled.
+  height: 100dvh;
   padding: var(--dk-space-3) var(--dk-space-4);
 }
 
@@ -48,6 +51,8 @@
 }
 
 .col {
+  // What the "Volver arriba" button floats over.
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--dk-space-2);
@@ -83,10 +88,26 @@
   display: flex;
   flex-direction: column;
   gap: 9px;
-  overflow: auto;
+
+  // Each column scrolls on its own: Nuevos grows all night while the others
+  // stay short, and scrolling one must not move the rest.
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  // No native bar: in Chrome on a desktop it takes width from the cards. The
+  // .scroll-thumb below shows the position instead, only while scrolling.
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .card {
+  // What the choose button's stretched area is measured against.
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--dk-space-2);
@@ -192,4 +213,159 @@
   border-color: var(--dk-accent);
   color: var(--dk-on-accent);
   background: var(--dk-accent);
+}
+
+// US-16. The top of a card among the next ten is a button: tapping it chooses
+// the order, as KdsSeleccion.dc.html draws it. It keeps the row's look.
+.pick {
+  width: 100%;
+  min-height: var(--dk-tap-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  // The button covers the whole card: a tap on the drinks chooses it too, and
+  // there is still one interactive element, which a keyboard reaches.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+}
+
+.card.chosen {
+  border-color: var(--dk-accent);
+  box-shadow: inset 0 0 0 1px var(--dk-accent);
+}
+
+.acts {
+  // Above the choose button's stretched area, so Preparar is its own tap.
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  // The row spans the card, but only its buttons are its own: the empty part,
+  // left of Preparar and down to the border, lets the tap through to the
+  // choose button underneath, like the rest of the card.
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.act {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border-radius: var(--dk-radius-sm);
+  border: 1.5px solid var(--dk-border);
+  background: var(--dk-surface-raised);
+  color: var(--dk-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.act.primary {
+  border-color: var(--dk-accent);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.act:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.picked-tag {
+  color: var(--dk-accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+// The bar under the board while something is chosen: how many, every drink
+// summed, and the two ways out.
+// What the bar has to see whatever card it tapped: a failed action, and the
+// chosen orders waiting to be prepared. Stuck to the bottom of the screen.
+.dock {
+  // The last row of the board: with the page no longer scrolling, it is
+  // always on screen without needing to stick.
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-2);
+  margin-top: var(--dk-space-3);
+
+  &:empty {
+    display: none;
+  }
+
+  .offline {
+    margin: 0;
+  }
+}
+
+.picked {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-3) var(--dk-space-4);
+  border-radius: var(--dk-radius-md);
+  border: 1.5px solid var(--dk-accent);
+  background: var(--dk-surface-raised);
+}
+
+.picked-text {
+  flex-grow: 1;
+  font-size: 17px;
+}
+
+// Floats at the bottom of its own column, over the cards, only once that
+// column is scrolled far down.
+.to-top {
+  position: absolute;
+  bottom: var(--dk-space-3);
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border-radius: var(--dk-radius-pill);
+  border: 1.5px solid var(--dk-accent);
+  background: var(--dk-surface-raised);
+  color: var(--dk-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+}
+
+// Safari's overlay scrollbar, drawn by hand so every browser has it: thin, on
+// the column's edge, over the cards, and only while the column moves.
+.scroll-thumb {
+  position: absolute;
+  right: 2px;
+  z-index: 2;
+  width: 4px;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-text-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+
+  &.showing {
+    opacity: 0.7;
+    transition-duration: 80ms;
+  }
 }

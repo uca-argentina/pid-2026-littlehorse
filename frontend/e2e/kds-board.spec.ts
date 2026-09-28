@@ -77,6 +77,18 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
   expect(created.status()).toBe(201);
 }
 
+/** One card of the queue, as the API would send it, for screens tested on layout alone. */
+function aMockedOrder(code: string, status: string, minutesAgo: number) {
+  return {
+    code,
+    customerName: `Cliente ${code}`,
+    status,
+    paidAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+    isForTable: false,
+    orderItems: [{ productName: 'Aperol Spritz', quantity: 1, note: 'con mucho hielo' }],
+  };
+}
+
 async function logIn(page: Page, username: string, password: string): Promise<void> {
   await page.goto(loginPath);
   await page.getByRole('textbox', { name: /usuario/i }).fill(username);
@@ -129,6 +141,218 @@ test.describe('KDS board', () => {
     });
 
     await expect(card).toContainText(drinkName);
+  });
+
+  // US-16, criteria 1 and 4, through the real API: the order moves column
+  // and comes back, and the board redraws both times without a reload.
+  test('takes an order into En preparación and hands it back to Nuevos', async ({
+    page,
+    browser,
+    request,
+  }) => {
+    const username = await aKdsAccount(request);
+    const customerName = aFullName();
+
+    const customer = await browser.newPage();
+    await anOrderPaidBy(customer, request, customerName);
+    await customer.close();
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const column = (name: string) =>
+      page.getByRole('group', { name }).getByRole('article').filter({ hasText: customerName });
+
+    await column('Nuevos')
+      .getByRole('button', { name: /^Preparar / })
+      .click();
+    await expect(column('En preparación')).toBeVisible();
+    await expect(column('Nuevos')).toHaveCount(0);
+
+    await column('En preparación')
+      .getByRole('button', { name: /a la cola$/ })
+      .click();
+    await expect(column('Nuevos')).toBeVisible();
+    await expect(column('En preparación')).toHaveCount(0);
+  });
+
+  // Behind a bar, with wet hands, a tap lands wherever it lands: anywhere on a
+  // card chooses it, not only its top row. Where a tap lands is layout, so it
+  // is proved here and not in a unit test.
+  test('chooses an order by tapping anywhere on its card', async ({ page, request }) => {
+    const username = await aKdsAccount(request);
+
+    await page.route('**/api/kds/queue', (route) =>
+      route.fulfill({ json: [aMockedOrder('Z-2000', 'Queued', 5)] }),
+    );
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    // A tap at the spot, not a click on the text node: what answers is whatever
+    // the browser finds under the finger, which is exactly what is being proved.
+    const drinks = await page.getByText('con mucho hielo').boundingBox();
+    await page.mouse.click(drinks!.x + drinks!.width / 2, drinks!.y + drinks!.height / 2);
+
+    await expect(page.getByRole('button', { name: 'Elegir Z-2000' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  // The row that holds Preparar spans the card: its empty part, left of the
+  // button and down to the border, is card too and must choose it.
+  test('chooses an order from the empty space beside Preparar', async ({ page, request }) => {
+    const username = await aKdsAccount(request);
+
+    await page.route('**/api/kds/queue', (route) =>
+      route.fulfill({ json: [aMockedOrder('Z-2100', 'Queued', 5)] }),
+    );
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const card = page.getByRole('group', { name: 'Nuevos' }).getByRole('article');
+    const choose = page.getByRole('button', { name: 'Elegir Z-2100' });
+    const cardBox = (await card.boundingBox())!;
+    const prepare = (await page.getByRole('button', { name: 'Preparar Z-2100' }).boundingBox())!;
+
+    // Level with Preparar, well to its left.
+    await page.mouse.click(cardBox.x + 30, prepare.y + prepare.height / 2);
+    await expect(choose).toHaveAttribute('aria-pressed', 'true');
+
+    // Near the bottom border. Measured again: once chosen, "Elegido" stands
+    // where Preparar was and the card is shorter.
+    const chosenBox = (await card.boundingBox())!;
+    await page.mouse.click(chosenBox.x + chosenBox.width / 3, chosenBox.y + chosenBox.height - 5);
+    await expect(choose).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  // Nuevos grows all night; En preparación and Listos stay short. Scrolling one
+  // column must not drag the others, nor the header with the venue on it.
+  test('scrolls each column on its own, under a header that stays', async ({ page, request }) => {
+    const username = await aKdsAccount(request);
+    const queue = [
+      ...Array.from({ length: 20 }, (_, index) =>
+        aMockedOrder(`Z-${String(3000 + index)}`, 'Queued', 40 - index),
+      ),
+      aMockedOrder('Z-4000', 'InPreparation', 3),
+      aMockedOrder('Z-5000', 'Ready', 2),
+    ];
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.route('**/api/kds/queue', (route) => route.fulfill({ json: queue }));
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const inPreparation = page.getByRole('group', { name: 'En preparación' }).getByRole('article');
+    const before = await inPreparation.boundingBox();
+
+    await page.getByRole('group', { name: 'Nuevos' }).getByRole('article').first().hover();
+    await page.mouse.wheel(0, 5000);
+
+    await expect(
+      page
+        .getByRole('group', { name: 'Nuevos' })
+        .getByRole('article')
+        .filter({ hasText: 'Z-3019' }),
+    ).toBeInViewport();
+    await expect(page.getByRole('banner')).toBeInViewport();
+    expect(await inPreparation.boundingBox()).toEqual(before);
+  });
+
+  // Deep in a long Nuevos, the oldest orders — the ones to make first — are
+  // out of sight. One tap brings the column back to them, and only that column.
+  test('brings a scrolled column back to the top with one tap', async ({ page, request }) => {
+    const username = await aKdsAccount(request);
+    const queue = [
+      ...Array.from({ length: 20 }, (_, index) =>
+        aMockedOrder(`Z-${String(6000 + index)}`, 'Queued', 40 - index),
+      ),
+      aMockedOrder('Z-7000', 'InPreparation', 3),
+    ];
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.route('**/api/kds/queue', (route) => route.fulfill({ json: queue }));
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const nuevos = page.getByRole('group', { name: 'Nuevos' });
+    const backToTop = nuevos.getByRole('button', { name: 'Volver arriba' });
+
+    await expect(backToTop).toHaveCount(0);
+
+    await nuevos.getByRole('article').first().hover();
+    await page.mouse.wheel(0, 5000);
+    await expect(backToTop).toBeInViewport();
+    await expect(
+      page
+        .getByRole('group', { name: 'En preparación' })
+        .getByRole('button', { name: 'Volver arriba' }),
+    ).toHaveCount(0);
+
+    await backToTop.click();
+
+    await expect(nuevos.getByRole('article').filter({ hasText: 'Z-6000' })).toBeInViewport();
+    await expect(backToTop).toHaveCount(0);
+  });
+
+  // Like Safari's overlay scrollbars, in every browser: no native bar taking
+  // width from the cards, and a thin thumb that shows while the column moves
+  // and fades out once it stops.
+  test('shows where a column is only while it scrolls', async ({ page, request }) => {
+    const username = await aKdsAccount(request);
+    const queue = Array.from({ length: 20 }, (_, index) =>
+      aMockedOrder(`Z-${String(8000 + index)}`, 'Queued', 40 - index),
+    );
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.route('**/api/kds/queue', (route) => route.fulfill({ json: queue }));
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const nuevos = page.getByRole('group', { name: 'Nuevos' });
+    const thumb = nuevos.getByTestId('scroll-thumb');
+
+    await expect(nuevos.locator('.stack')).toHaveCSS('scrollbar-width', 'none');
+    await expect(thumb).toHaveCSS('opacity', '0');
+
+    await nuevos.getByRole('article').first().hover();
+    await page.mouse.wheel(0, 1500);
+    await expect(thumb).not.toHaveCSS('opacity', '0');
+
+    await expect(thumb).toHaveCSS('opacity', '0', { timeout: 3000 });
+  });
+
+  // A failure is only worth saying if it is seen. With a long queue the page
+  // is taller than the tablet, and a warning drawn at the end of it is below
+  // the fold: the bartender pressed Preparar at the top and saw nothing.
+  // Layout is what this proves, which is why it is here and not in a unit test.
+  test('shows a failed Preparar where it can be seen, however long the queue', async ({
+    page,
+    request,
+  }) => {
+    const username = await aKdsAccount(request);
+    const longQueue = Array.from({ length: 20 }, (_, index) =>
+      aMockedOrder(`Z-${String(1000 + index)}`, 'Queued', 30 - index),
+    );
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.route('**/api/kds/queue', (route) => route.fulfill({ json: longQueue }));
+    await page.route('**/api/kds/orders/*/start-preparing', (route) =>
+      route.fulfill({ status: 500, json: { type: 'about:blank' } }),
+    );
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    await page.getByRole('button', { name: 'Preparar Z-1000' }).click();
+
+    await expect(page.getByRole('alert')).toContainText('No pudimos tomar el pedido Z-1000');
+    await expect(page.getByRole('alert')).toBeInViewport();
   });
 
   // The one thing a unit test cannot prove: the hub, the token in the

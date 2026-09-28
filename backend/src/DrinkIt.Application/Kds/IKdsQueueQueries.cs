@@ -3,7 +3,7 @@ using DrinkIt.Domain.Orders;
 namespace DrinkIt.Application.Kds;
 
 /// <summary>One drink on a queued order, as the bar's tablet draws it.</summary>
-public sealed record KdsQueueLine(string ProductName, int Quantity, string? Note);
+public sealed record KdsQueueOrderItem(string ProductName, int Quantity, string? Note);
 
 /// <summary>
 /// One order on the KDS board (US-15): everything the bar needs to decide what
@@ -21,7 +21,7 @@ public sealed record KdsQueueOrder(
     OrderStatus Status,
     DateTimeOffset PaidAt,
     bool IsForTable,
-    IReadOnlyList<KdsQueueLine> Lines);
+    IReadOnlyList<KdsQueueOrderItem> OrderItems);
 
 /// <summary>
 /// The bar's queue: every order still on its way, oldest paid first (US-15).

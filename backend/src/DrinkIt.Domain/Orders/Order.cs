@@ -146,6 +146,37 @@ public sealed class Order : CreationStamp, IBelongsToVenue
     }
 
     /// <summary>
+    /// The bar took it (US-16) — "Preparar" on the board, even while no paper
+    /// comes out. Asking again for what already happened changes nothing: a
+    /// double tap, or a retry over a bad signal, is not a second order taken.
+    /// </summary>
+    public void StartPreparing()
+    {
+        if (Status == OrderStatus.InPreparation) return;
+
+        EnsureItIs(OrderStatus.Queued);
+
+        Status = OrderStatus.InPreparation;
+        _domainEvents.Add(new OrderPreparationStarted(VenueId));
+    }
+
+    /// <summary>
+    /// Taken by mistake, handed back (US-16, criterion 4). <see cref="PaidAt"/>
+    /// stays as it was, and the board counts its age from there, so it goes
+    /// back exactly as old as it was. Idempotent for the same reason as
+    /// <see cref="StartPreparing"/>.
+    /// </summary>
+    public void ReturnToQueue()
+    {
+        if (Status == OrderStatus.Queued) return;
+
+        EnsureItIs(OrderStatus.InPreparation);
+
+        Status = OrderStatus.Queued;
+        _domainEvents.Add(new OrderRequeued(VenueId));
+    }
+
+    /// <summary>
     /// Forgets what was raised, once whoever saved this aggregate has reacted
     /// to it. Never called from inside the domain itself.
     /// </summary>
