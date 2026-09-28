@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
+using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
@@ -9,6 +10,7 @@ using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Kds;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -90,6 +92,12 @@ app.UseRouting();
 // Before authentication: the browser's preflight carries no token, and refusing
 // it with a 401 would block the real request behind it.
 app.UseCors();
+// Without this the WebSockets transport fails outright — "the connection ID
+// is not present on the server" — before KdsHub sees a single request: the
+// upgrade itself is refused below this middleware. SignalR falls back to
+// long polling, but the bar's tablet has no business paying for that latency
+// every night when the one line above fixes it (US-15).
+app.UseWebSockets();
 app.UseAuthentication();
 app.UseMiddleware<VenueResolutionMiddleware>();
 app.UseAuthorization();
@@ -101,5 +109,13 @@ app.MapOrderTracking();
 app.MapStaffUsers();
 app.MapCategories();
 app.MapProducts();
+app.MapKds();
+app.MapHub<KdsHub>(KdsHubRoute.Path);
 
 await app.RunAsync();
+
+// Top-level statements generate an internal Program by default. Public and
+// partial so WebApplicationFactory<Program> can find it from the test project
+// — needed once, for the KDS hub's own isolation test (US-15): nothing before
+// it in this codebase has spun up the whole app.
+public partial class Program;

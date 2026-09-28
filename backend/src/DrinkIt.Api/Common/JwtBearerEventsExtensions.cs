@@ -16,14 +16,20 @@ internal static class JwtBearerEventsExtensions
     {
         builder.Services.Configure<JwtBearerOptions>(
             JwtBearerDefaults.AuthenticationScheme,
-            options => options.Events = new JwtBearerEvents
+            options =>
             {
-                OnAuthenticationFailed = context =>
+                // Assigning a whole new JwtBearerEvents here — instead of
+                // setting OnAuthenticationFailed on the one already there —
+                // silently threw away KdsHub's OnMessageReceived (US-15):
+                // AddJwtBearer's own Configure call runs first on this same
+                // options instance, so options.Events is already that object.
+                options.Events ??= new JwtBearerEvents();
+                options.Events.OnAuthenticationFailed = context =>
                 {
                     if (context.Exception is SecurityTokenExpiredException) SessionExpiry.Mark(context.HttpContext);
 
                     return Task.CompletedTask;
-                },
+                };
             });
 
         return builder;

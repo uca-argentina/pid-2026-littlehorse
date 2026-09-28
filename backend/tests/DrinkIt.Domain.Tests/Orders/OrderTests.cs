@@ -58,7 +58,7 @@ public class OrderTests
 
         Assert.False(order.IsFinished);
 
-        order.Pay(DateTimeOffset.UtcNow);
+        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
         order.Enqueue();
 
         Assert.False(order.IsFinished);
@@ -195,10 +195,23 @@ public class OrderTests
         {
             Order order = ACartOf();
 
-            order.Pay(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero));
+            order.Pay(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), PaymentMethod.Digital);
 
             Assert.Equal(OrderStatus.Paid, order.Status);
             Assert.Equal(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), order.PaidAt);
+        }
+
+        // US-15: the KDS board tells barra from mesa by the method that paid
+        // for the order, so the method has to survive past the moment of
+        // payment instead of being spent choosing a strategy and forgotten.
+        [Fact]
+        public void Pay_WhenItIsACart_StoresThePaymentMethod()
+        {
+            Order order = ACartOf();
+
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.VipBalance);
+
+            Assert.Equal(PaymentMethod.VipBalance, order.Method);
         }
 
         // Criterion 6 is answered before this, by the idempotency key; this is
@@ -207,9 +220,9 @@ public class OrderTests
         public void Pay_WhenItWasAlreadyPaid_ThrowsInvalidTransition()
         {
             Order order = ACartOf();
-            order.Pay(DateTimeOffset.UtcNow);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
 
-            DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow));
+            DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital));
 
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
@@ -220,7 +233,7 @@ public class OrderTests
         public void Enqueue_WhenItIsPaid_PutsItInTheQueue()
         {
             Order order = ACartOf();
-            order.Pay(DateTimeOffset.UtcNow);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
 
             order.Enqueue();
 
@@ -237,11 +250,26 @@ public class OrderTests
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
 
+        // US-15: the KDS board learns about a new order through this, not by
+        // polling — so a Queued that never raised it is a tablet that never
+        // updates until somebody reloads by hand.
+        [Fact]
+        public void Enqueue_WhenItIsPaid_RaisesOrderQueued()
+        {
+            Order order = ACartOf();
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+
+            order.Enqueue();
+
+            OrderQueued raised = Assert.IsType<OrderQueued>(Assert.Single(order.DomainEvents));
+            Assert.Equal(AVenue, raised.VenueId);
+        }
+
         [Fact]
         public void Enqueue_WhenItIsAlreadyQueued_ThrowsInvalidTransition()
         {
             Order order = ACartOf();
-            order.Pay(DateTimeOffset.UtcNow);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
             order.Enqueue();
 
             DomainException error = Assert.Throws<DomainException>(order.Enqueue);

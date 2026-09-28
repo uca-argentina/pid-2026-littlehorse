@@ -3,6 +3,8 @@
   <ItemGroup>
     <PackageReference Include="Testcontainers.MsSql" />
     <PackageReference Include="Testcontainers.Azurite" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
   </ItemGroup>
 
   <ItemGroup>

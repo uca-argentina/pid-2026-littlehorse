@@ -37,6 +37,8 @@ public sealed class Order : CreationStamp, IBelongsToVenue
 
     private readonly List<OrderItem> _items = [];
 
+    private readonly List<IDomainEvent> _domainEvents = [];
+
     /// <summary>
     /// The lines are filled in afterwards rather than taken here: EF Core reads
     /// a row back through this constructor and cannot hand a navigation to a
@@ -75,7 +77,22 @@ public sealed class Order : CreationStamp, IBelongsToVenue
     /// <summary>When it was paid, or null while nobody has. Stamped once.</summary>
     public DateTimeOffset? PaidAt { get; private set; }
 
+    /// <summary>
+    /// How it was paid, or null while nobody has. Stamped once, alongside
+    /// <see cref="PaidAt"/> — the KDS board reads it back to tell barra from
+    /// mesa (US-15), so it has to outlive the moment the payment strategy
+    /// spends settling the order.
+    /// </summary>
+    public PaymentMethod? Method { get; private set; }
+
     public IReadOnlyList<OrderItem> Items => _items;
+
+    /// <summary>
+    /// Raised and not yet reacted to. Whoever saves this aggregate atomically
+    /// dispatches these and clears them — the domain itself never calls
+    /// anything outside its own boundary.
+    /// </summary>
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents;
 
     /// <summary>Derived, never stored: a total kept apart from the lines is one that can disagree with them.</summary>
     public decimal Total => _items.Sum(item => item.Total);
@@ -110,12 +127,13 @@ public sealed class Order : CreationStamp, IBelongsToVenue
     /// gateway is simulated, as the brief allows — so there is one step and not
     /// a wait for anybody's callback.
     /// </summary>
-    public void Pay(DateTimeOffset at)
+    public void Pay(DateTimeOffset at, PaymentMethod method)
     {
         EnsureItIs(OrderStatus.Cart);
 
         Status = OrderStatus.Paid;
         PaidAt = at;
+        Method = method;
     }
 
     /// <summary>Handed to the bar. Nothing takes it from here until the KDS exists.</summary>
@@ -124,7 +142,14 @@ public sealed class Order : CreationStamp, IBelongsToVenue
         EnsureItIs(OrderStatus.Paid);
 
         Status = OrderStatus.Queued;
+        _domainEvents.Add(new OrderQueued(VenueId));
     }
+
+    /// <summary>
+    /// Forgets what was raised, once whoever saved this aggregate has reacted
+    /// to it. Never called from inside the domain itself.
+    /// </summary>
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     private static OrderItem ToItem(NewOrderItem item)
     {

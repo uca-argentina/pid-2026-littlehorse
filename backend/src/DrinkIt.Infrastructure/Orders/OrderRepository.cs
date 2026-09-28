@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DrinkIt.Infrastructure.Orders;
 
-internal sealed class OrderRepository(DrinkItDbContext context) : IOrderRepository
+internal sealed class OrderRepository(DrinkItDbContext context, IDomainEventDispatcher events) : IOrderRepository
 {
     /// <summary>
     /// No venue in the WHERE: the global query filter adds the one the request
@@ -73,6 +73,8 @@ internal sealed class OrderRepository(DrinkItDbContext context) : IOrderReposito
             await context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
+            await DispatchWithoutFailingTheOrder(order, cancellationToken);
+
             return order;
         }
         catch (DbUpdateException)
@@ -90,6 +92,30 @@ internal sealed class OrderRepository(DrinkItDbContext context) : IOrderReposito
             if (alreadyWritten is null) throw;
 
             return alreadyWritten;
+        }
+    }
+
+    /// <summary>
+    /// The order is already committed by the time this runs, so a notifier
+    /// that is down is not a reason to tell the customer their money did not
+    /// go through: it did, and the drinks are queued either way. The board
+    /// catches up on its own next reload — losing the order over a dropped
+    /// notification would be strictly worse.
+    /// </summary>
+    private async Task DispatchWithoutFailingTheOrder(Order order, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await events.DispatchAsync(order.DomainEvents, cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Swallowed on purpose — see the remarks above. Nothing here is
+            // still in a position to undo the write that already succeeded.
+        }
+        finally
+        {
+            order.ClearDomainEvents();
         }
     }
 }

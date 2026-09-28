@@ -51,6 +51,13 @@
   --dk-danger-zone-title: #e0a79b;
   --dk-danger-zone-action: #c85a4a;
 
+  // How long an order has waited (US-15's KDS board): ámbar at 5 minutes, rojo
+  // at 10 — straight from KdsBoard.dc.html, not chosen to match the feedback
+  // colours above even where a hex happens to agree.
+  --dk-age-warn: #d98a3f;
+  --dk-age-urgent: #c85a4a;
+  --dk-age-urgent-surface: #231714;
+
   // Type. Instrument Serif carries venue and product names, Karla everything
   // else. The design system's third face, IBM Plex Mono, arrives with the
   // first screen that shows a figure needing to line up in a column.
@@ -109,6 +116,9 @@
   --dk-danger-zone-surface: #fdf1ec;
   --dk-danger-zone-title: #963d26;
   --dk-danger-zone-action: #a8422c;
+  --dk-age-warn: #a8611f;
+  --dk-age-urgent: #a8422c;
+  --dk-age-urgent-surface: #fbe9e4;
 
   color-scheme: light;
 }

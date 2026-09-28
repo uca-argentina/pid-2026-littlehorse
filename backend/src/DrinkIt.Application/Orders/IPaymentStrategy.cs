@@ -42,7 +42,7 @@ public sealed class DigitalPaymentStrategy(TimeProvider clock) : IPaymentStrateg
     /// </summary>
     public void Settle(Order order)
     {
-        order.Pay(clock.GetUtcNow());
+        order.Pay(clock.GetUtcNow(), Method);
         order.Enqueue();
     }
 }

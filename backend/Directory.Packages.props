@@ -14,7 +14,6 @@
   </PropertyGroup>
 
   <ItemGroup Label="Security">
-    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.11" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.22.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
@@ -24,8 +23,6 @@
 
   <ItemGroup Label="Persistence">
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
   </ItemGroup>
 
@@ -42,6 +39,16 @@
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+  </ItemGroup>
+
+  <!--
+    US-15's KDS hub isolation test: the first place this repo spins up the
+    whole app (WebApplicationFactory) and drives it with a real SignalR
+    client. Both MIT, same publisher as the rest of ASP.NET Core.
+  -->
+  <ItemGroup Label="Real-time testing">
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.11" />
   </ItemGroup>
 
 </Project>

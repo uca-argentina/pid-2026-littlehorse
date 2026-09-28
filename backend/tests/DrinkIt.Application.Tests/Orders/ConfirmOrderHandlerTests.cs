@@ -325,7 +325,7 @@ public class ConfirmOrderHandlerTests
     {
         public PaymentMethod Method => PaymentMethod.Digital;
 
-        public void Settle(Order order) => order.Pay(now);
+        public void Settle(Order order) => order.Pay(now, Method);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

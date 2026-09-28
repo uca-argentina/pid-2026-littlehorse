@@ -1,0 +1,185 @@
+// Layout and colours straight from design/wireframes/KdsBoard.dc.html — a
+// tablet apaisada, three columns, big tabular numbers read from a metre away.
+
+.board {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: var(--dk-space-3) var(--dk-space-4);
+}
+
+.status {
+  margin: var(--dk-space-6) auto;
+  color: var(--dk-text-muted);
+  font-size: 18px;
+}
+
+.status.empty {
+  color: var(--dk-text);
+}
+
+.offline {
+  margin: 0 0 var(--dk-space-3);
+  padding: var(--dk-space-2) var(--dk-space-3);
+  border-radius: var(--dk-radius-sm);
+  border: 1.5px solid var(--dk-age-warn);
+  background: var(--dk-surface);
+  color: var(--dk-age-warn);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cols {
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: var(--dk-space-3);
+  min-height: 0;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-2);
+  min-height: 0;
+}
+
+.colh {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-2);
+  margin: 0;
+}
+
+.colt {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--dk-text-muted);
+}
+
+.cnt {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dk-on-accent);
+  background: var(--dk-text-muted);
+  border-radius: var(--dk-radius-pill);
+  padding: 2px 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  overflow: auto;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-2);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+  border: 1.5px solid var(--dk-border);
+  padding: var(--dk-space-3) 14px;
+}
+
+.card.warn {
+  border-color: var(--dk-age-warn);
+}
+
+.card.urg {
+  border-color: var(--dk-age-urgent);
+  background: var(--dk-age-urgent-surface);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.grow {
+  flex-grow: 1;
+}
+
+.onum {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.who {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.age {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--dk-text-muted);
+}
+
+.age.warn {
+  color: var(--dk-age-warn);
+}
+
+.age.urg {
+  color: var(--dk-age-urgent);
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.it {
+  display: flex;
+  gap: 11px;
+  font-size: 18px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.q {
+  font-weight: 700;
+  color: var(--dk-accent);
+  min-width: 30px;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dk-accent-hover);
+  background: var(--dk-note-surface);
+  border-radius: var(--dk-radius-sm);
+  padding: 2px 9px;
+}
+
+.chip {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--dk-radius-pill);
+  border: 1.5px solid var(--dk-pill-on-border);
+  color: var(--dk-text-muted);
+  white-space: nowrap;
+}
+
+.chip.mesa {
+  border-color: var(--dk-accent);
+  color: var(--dk-on-accent);
+  background: var(--dk-accent);
+}

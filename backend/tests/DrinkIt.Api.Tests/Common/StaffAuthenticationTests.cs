@@ -2,8 +2,11 @@ using System.Security.Claims;
 using DrinkIt.Api.Common;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Kds;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -35,7 +38,7 @@ public class StaffAuthenticationTests
     [Fact]
     public async Task AdministratorPolicy_WhenTheTokenSaysAdministrator_Allows()
     {
-        AuthorizationResult result = await Authorize(StaffRole.Administrator);
+        AuthorizationResult result = await Authorize(StaffRole.Administrator, Policies.Administrator);
 
         Assert.True(result.Succeeded);
     }
@@ -47,12 +50,57 @@ public class StaffAuthenticationTests
     [InlineData(StaffRole.Waiter)]
     public async Task AdministratorPolicy_WhenTheTokenSaysAnythingElse_Refuses(StaffRole role)
     {
-        AuthorizationResult result = await Authorize(role);
+        AuthorizationResult result = await Authorize(role, Policies.Administrator);
 
         Assert.False(result.Succeeded);
     }
 
-    private static async Task<AuthorizationResult> Authorize(StaffRole role)
+    // US-15, criterion 3: the bar's own tablet, and only the bar's own tablet.
+    [Fact]
+    public async Task KdsPolicy_WhenTheTokenSaysKds_Allows()
+    {
+        AuthorizationResult result = await Authorize(StaffRole.Kds, Policies.Kds);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData(StaffRole.Administrator)]
+    [InlineData(StaffRole.Waiter)]
+    public async Task KdsPolicy_WhenTheTokenSaysAnythingElse_Refuses(StaffRole role)
+    {
+        AuthorizationResult result = await Authorize(role, Policies.Kds);
+
+        Assert.False(result.Succeeded);
+    }
+
+    /// <summary>
+    /// US-15: a browser cannot set a header on a WebSocket or EventSource
+    /// connection, so the KDS hub's own OnMessageReceived reads the token from
+    /// the query string instead. AddExpiredSessionDetection used to assign a
+    /// whole new JwtBearerEvents on top of it — same options instance, later
+    /// in the chain — which silently threw that handler away: every browser
+    /// transport but long polling got a 401, and the only sign of it was a
+    /// tablet whose board never updated by itself.
+    /// </summary>
+    [Fact]
+    public async Task AddStaffAuthentication_WhenTheHubConnectionCarriesTheTokenInTheQueryString_StillReadsIt()
+    {
+        JwtBearerOptions options = ConfiguredBearerOptions();
+
+        DefaultHttpContext context = new();
+        context.Request.Path = KdsHubRoute.Path;
+        context.Request.QueryString = new QueryString("?access_token=a-hub-connection-token");
+
+        AuthenticationScheme scheme = new(JwtBearerDefaults.AuthenticationScheme, null, typeof(JwtBearerHandler));
+        MessageReceivedContext messageReceived = new(context, scheme, options);
+
+        await options.Events!.MessageReceived(messageReceived);
+
+        Assert.Equal("a-hub-connection-token", messageReceived.Token);
+    }
+
+    private static async Task<AuthorizationResult> Authorize(StaffRole role, string policy)
     {
         await using ServiceProvider provider = Configured();
 
@@ -67,7 +115,7 @@ public class StaffAuthenticationTests
 
         return await provider
             .GetRequiredService<IAuthorizationService>()
-            .AuthorizeAsync(user, resource: null, Policies.Administrator);
+            .AuthorizeAsync(user, resource: null, policy);
     }
 
     private static JwtBearerOptions ConfiguredBearerOptions()
