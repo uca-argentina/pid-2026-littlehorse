@@ -212,3 +212,22 @@
   font-size: 14px;
   line-height: 1.55;
 }
+
+// The loading outline: bars where the username, the role and "Editar" will be.
+.skeleton-username {
+  flex: 1;
+  max-width: 180px;
+  height: 18px;
+  margin-right: auto;
+}
+
+.skeleton-chip {
+  width: 90px;
+  height: 26px;
+  border-radius: var(--dk-radius-pill);
+}
+
+.skeleton-edit {
+  width: 72px;
+  height: var(--dk-tap-min);
+}

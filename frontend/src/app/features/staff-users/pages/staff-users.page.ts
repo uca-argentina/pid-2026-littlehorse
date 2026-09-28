@@ -6,6 +6,7 @@ import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { STAFF_ROLE_DESCRIPTIONS, staffRoleName } from '../../../core/staff/staff-roles';
 import type { StaffRole } from '../../../core/staff/staff-roles';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
+import { slowLoading } from '../../../shared/loading/slow-loading';
 import { STAFF_USERS_URL } from '../staff-users.service';
 import type { StaffUser } from '../staff-users.service';
 
@@ -46,6 +47,11 @@ export class StaffUsersPage {
    * arrive as signals, which is exactly the three states this screen draws.
    */
   protected readonly staff = httpResource<StaffUser[]>(() => STAFF_USERS_URL);
+
+  protected readonly isSlow = slowLoading(() => this.staff.isLoading());
+
+  /** Enough outlines to fill the first screen, not the size of any real team. */
+  protected readonly skeletonRows = [1, 2, 3, 4];
 
   /**
    * What the administrator typed, and which role they narrowed to. Both are
