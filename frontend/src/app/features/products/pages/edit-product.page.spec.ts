@@ -155,6 +155,51 @@ function nightlySwitch(): HTMLButtonElement {
 }
 
 describe('EditProductPage', () => {
+  describe('while the product loads', () => {
+    // Nothing answered yet: the listing request stays pending.
+    async function openScreenLoading() {
+      return render(EditProductPage, {
+        inputs: { venueSlug: 'bar-alfa', id: 'id-2' },
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: ProductsService, useValue: {} },
+        ],
+      });
+    }
+
+    it('draws the outline of the form', async () => {
+      await openScreenLoading();
+
+      const skeleton = screen.getByTestId('product-skeleton');
+      expect(skeleton.closest('[aria-busy="true"]')).not.toBeNull();
+      expect(screen.getByRole('status').textContent).toContain('Buscando');
+    });
+
+    it('drops the outline once the product arrives', async () => {
+      await openScreenFor('id-2');
+
+      expect(screen.queryByTestId('product-skeleton')).toBeNull();
+    });
+
+    describe('when it takes long', () => {
+      beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+      afterEach(() => vi.useRealTimers());
+
+      it('says it is still on it after a few seconds', async () => {
+        const rendered = await openScreenLoading();
+
+        expect(screen.getByRole('status').textContent).not.toContain('tardando');
+
+        vi.advanceTimersByTime(5000);
+        rendered.fixture.detectChanges();
+
+        expect(screen.getByRole('status').textContent).toContain('tardando');
+      });
+    });
+  });
+
   // US-30, criterion 2: who changed the price, and when.
   it('says who made the product and who last changed it', async () => {
     await openScreenFor('id-3');

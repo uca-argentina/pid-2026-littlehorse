@@ -2,6 +2,7 @@ import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
+import { slowLoading } from '../../../shared/loading/slow-loading';
 import { EditProductStore } from '../edit-product.store';
 import { ProductForm } from '../product-form/product-form';
 import type { ProductFormValue } from '../product-form/product-form';
@@ -33,6 +34,11 @@ export class EditProductPage {
    * nobody needs — the same trade the search on the listing makes.
    */
   protected readonly products = httpResource<Product[]>(() => PRODUCTS_URL);
+
+  protected readonly isSlow = slowLoading(() => this.products.isLoading());
+
+  /** The fields on the left of the form, one outline each. */
+  protected readonly skeletonFields = [1, 2, 3, 4];
 
   /** What the API last said about it: the listing at first, then each answer. */
   protected readonly product = computed<Product | undefined>(
