@@ -423,3 +423,22 @@ drinkit-theme-toggle {
 .retry:hover {
   background: var(--dk-accent-hover);
 }
+
+// The loading outline: the card's own thumb and box, and three bars where the
+// name, the description and the price will be.
+.skeleton-name {
+  width: 60%;
+  height: 22px;
+}
+
+.skeleton-line {
+  width: 85%;
+  height: 14px;
+  margin-top: 8px;
+}
+
+.skeleton-price {
+  width: 30%;
+  height: 17px;
+  margin-top: 8px;
+}

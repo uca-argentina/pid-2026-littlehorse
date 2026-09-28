@@ -123,6 +123,40 @@ describe('MenuPage', () => {
     expect(screen.getByRole('status').textContent).toContain('Buscando');
   });
 
+  // The shape of the cards before the cards themselves: a blank page on a slow
+  // connection reads as an app that broke.
+  it('draws the outline of the menu while it loads', async () => {
+    await openScreen();
+
+    expect(screen.getByTestId('menu-skeleton')).not.toBeNull();
+    expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('drops the outline once the menu arrives', async () => {
+    await openScreenShowing(carta);
+
+    expect(screen.queryByTestId('menu-skeleton')).toBeNull();
+    expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('false');
+  });
+
+  // A cold start of the API and the database together takes most of a minute,
+  // and an outline that sits still that long looks frozen.
+  describe('when the menu takes long', () => {
+    beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+    afterEach(() => vi.useRealTimers());
+
+    it('says it is still on it after a few seconds', async () => {
+      const { rendered } = await openScreen();
+
+      expect(screen.getByRole('status').textContent).not.toContain('tardando');
+
+      vi.advanceTimersByTime(5000);
+      rendered.fixture.detectChanges();
+
+      expect(screen.getByRole('status').textContent).toContain('tardando');
+    });
+  });
+
   // Criterion 4. A dropped connection is the case that a retry can fix.
   it('says so and offers to try again when the menu cannot be fetched', async () => {
     const { rendered, http } = await openScreen();

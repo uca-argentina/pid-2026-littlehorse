@@ -84,6 +84,36 @@ describe('ProductsPage', () => {
     expect(screen.getByRole('link', { name: /nuevo producto/i })).not.toBeNull();
   });
 
+  it('draws the outline of the list while it loads', async () => {
+    await openScreen();
+
+    const skeleton = screen.getByTestId('products-skeleton');
+    expect(skeleton.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('Cargando');
+  });
+
+  it('drops the outline once the list arrives', async () => {
+    await openScreenShowing(theMenu);
+
+    expect(screen.queryByTestId('products-skeleton')).toBeNull();
+  });
+
+  describe('when the list takes long', () => {
+    beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+    afterEach(() => vi.useRealTimers());
+
+    it('says it is still on it after a few seconds', async () => {
+      const { rendered } = await openScreen();
+
+      expect(screen.getByRole('status').textContent).not.toContain('tardando');
+
+      vi.advanceTimersByTime(5000);
+      rendered.fixture.detectChanges();
+
+      expect(screen.getByRole('status').textContent).toContain('tardando');
+    });
+  });
+
   it('lists every product of the venue', async () => {
     await openScreenShowing(theMenu);
 

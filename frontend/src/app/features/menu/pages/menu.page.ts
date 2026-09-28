@@ -8,6 +8,7 @@ import { anonymously } from '../../../core/auth/anonymous-request';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 import { formatPrice } from '../../../shared/money/price';
+import { slowLoading } from '../../../shared/loading/slow-loading';
 import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
 import { menuUrl } from '../menu.service';
 import type { Menu, MenuItem } from '../menu.service';
@@ -157,6 +158,11 @@ export class MenuPage {
   protected noteFor(productId: string, event: Event): void {
     this.cart.setNote(productId, (event.target as HTMLInputElement).value);
   }
+
+  /** Enough outlines to fill a phone's first screen, not the length of any real menu. */
+  protected readonly skeletonCards = [1, 2, 3, 4];
+
+  protected readonly isSlow = slowLoading(() => this.menu.isLoading());
 
   constructor() {
     // The order belongs to the venue whose address is open, and switching
