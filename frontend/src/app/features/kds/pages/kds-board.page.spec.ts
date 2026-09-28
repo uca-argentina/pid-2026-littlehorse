@@ -3,7 +3,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { render, screen } from '@testing-library/angular';
-import { KdsBoardChannel } from '../../../core/kds/kds-board-channel';
+import { SessionStorage } from '../../../core/auth/session-storage';
+import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
 import type { KdsLinkState } from '../../../core/kds/kds-board-channel';
 import { KDS_QUEUE_URL } from '../kds-queue';
 import type { KdsQueueOrder } from '../kds-queue';
@@ -40,6 +41,7 @@ async function openScreen() {
   const channel = new FakeKdsBoardChannel();
 
   const rendered = await render(KdsBoardPage, {
+    inputs: { venueSlug: 'bar-alfa' },
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
@@ -73,10 +75,12 @@ describe('KdsBoardPage', () => {
     expect(screen.getByText('En preparación').closest('section')?.textContent).toContain('K-4821');
   });
 
-  it('shows a finished order under Listos', async () => {
+  it('shows a finished order under Listos en la barra', async () => {
     await openScreenShowing([anOrder({ status: 'Ready' })]);
 
-    expect(screen.getByText('Listos').closest('section')?.textContent).toContain('K-4821');
+    expect(screen.getByText('Listos en la barra').closest('section')?.textContent).toContain(
+      'K-4821',
+    );
   });
 
   it('shows who ordered, the drinks with quantity and note, and the wait', async () => {
@@ -135,6 +139,96 @@ describe('KdsBoardPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('alert')).not.toBeNull();
+  });
+
+  // Settles a failed request and lets the page react, without whenStable:
+  // these tests run on fake timers, and the retry is exactly a timer.
+  async function failNextLoad(http: HttpTestingController, fixture: { detectChanges(): void }) {
+    http.expectOne(KDS_QUEUE_URL).flush('', { status: 500, statusText: 'Server Error' });
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+  }
+
+  // Fake timers go on only once the screen is open: whenStable, which opening
+  // it waits on, never settles under them.
+  describe('when a reload fails', () => {
+    afterEach(() => vi.useRealTimers());
+
+    // Mid-service, a blip on one reload must not wipe what the bar is making.
+    it('keeps the cards on screen and says the queue could not be refreshed', async () => {
+      const { rendered, channel, http } = await openScreenShowing([anOrder()]);
+      vi.useFakeTimers();
+
+      channel.onChanged?.();
+      rendered.fixture.detectChanges();
+      await failNextLoad(http, rendered.fixture);
+
+      expect(screen.getByText('K-4821')).not.toBeNull();
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos actualizar la cola');
+    });
+
+    // Nobody behind the bar has a free hand to tap "Reintentar".
+    it('retries on its own after a failed reload', async () => {
+      const { rendered, channel, http } = await openScreenShowing([anOrder()]);
+      vi.useFakeTimers();
+
+      channel.onChanged?.();
+      rendered.fixture.detectChanges();
+      await failNextLoad(http, rendered.fixture);
+
+      http.expectNone(KDS_QUEUE_URL);
+      await vi.advanceTimersByTimeAsync(KDS_RETRY_MS);
+      rendered.fixture.detectChanges();
+
+      http.expectOne(KDS_QUEUE_URL);
+    });
+
+    it('drops the warning once a retry succeeds', async () => {
+      const { rendered, channel, http } = await openScreenShowing([anOrder()]);
+      vi.useFakeTimers();
+
+      channel.onChanged?.();
+      rendered.fixture.detectChanges();
+      await failNextLoad(http, rendered.fixture);
+      await vi.advanceTimersByTimeAsync(KDS_RETRY_MS);
+      rendered.fixture.detectChanges();
+
+      http.expectOne(KDS_QUEUE_URL).flush([anOrder()]);
+      await vi.advanceTimersByTimeAsync(0);
+      rendered.fixture.detectChanges();
+
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByText('K-4821')).not.toBeNull();
+    });
+
+    // A tablet switched on before the wifi came up must not stay dead.
+    it('retries on its own when the very first load fails', async () => {
+      const { rendered, http } = await openScreen();
+      vi.useFakeTimers();
+
+      await failNextLoad(http, rendered.fixture);
+      await vi.advanceTimersByTimeAsync(KDS_RETRY_MS);
+      rendered.fixture.detectChanges();
+
+      http.expectOne(KDS_QUEUE_URL);
+    });
+  });
+
+  // The wireframe's header: which venue, and which station's tablet this is.
+  it('shows the venue and the station account in the header', async () => {
+    const { rendered } = await openScreenShowing([]);
+
+    rendered.fixture.debugElement.injector.get(SessionStorage).remember({
+      token: 'un-token',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      username: 'barra-principal',
+      role: 'Kds',
+    });
+    await rendered.fixture.whenStable();
+
+    const header = screen.getByRole('banner');
+    expect(header.textContent).toContain('bar-alfa');
+    expect(header.textContent).toContain('barra-principal');
   });
 
   // US-15: this is the whole point of SignalR — a new order shows up without

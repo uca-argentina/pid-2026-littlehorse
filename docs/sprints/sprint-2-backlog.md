@@ -69,6 +69,14 @@ se marca agotado, se da de baja y nada se borra.
 | US-22 | Que el estado se actualice solo      | US-12, US-18 |
 | US-23 | Cancelar un pedido                   | US-15        |
 
+**Deuda del tablero** — salió de auditar US-15 ya mergeada. Ninguna rompe un criterio, pero
+las dos dejan a la barra sin ver algo sin que nadie se entere.
+
+| ID    | Story                                         | Depende de |
+| ----- | --------------------------------------------- | ---------- |
+| US-31 | Que el tablero se ponga al día solo           | US-15      |
+| US-32 | Que el tablero me mande a entrar si se venció | US-15      |
+
 **Carril del pago** — dejar de simular que confirmar es pagar.
 
 | ID    | Story                          | Depende de   |
@@ -317,6 +325,54 @@ se marca agotado, se da de baja y nada se borra.
 - **Borde:** qué pasa con un pedido que nadie retira en toda la noche. Proponemos **no**
   cancelarlo solo en este sprint — un vencimiento automático necesita su propia discusión.
 
+### US-31 · Que el tablero se ponga al día solo
+
+> **Como** estación de barra
+> **quiero** que la cola se actualice sola cada tanto, aunque no llegue ningún aviso
+> **para** que un pedido pagado no quede fuera de la tablet porque se perdió una notificación.
+
+**Criterios de aceptación**
+
+1. **Dado** un pedido pagado cuyo aviso al tablero no llegó, **cuando** pasa el intervalo de
+   respaldo, **entonces** el pedido aparece en la cola sin que nadie toque la tablet.
+2. **Dado** que el tablero está recibiendo avisos con normalidad, **cuando** pasa el
+   intervalo, **entonces** la recarga no hace parpadear las tarjetas ni muestra "Cargando".
+
+**Notas**
+
+- **Depende de** US-15.
+- **De dónde sale:** hoy el tablero sólo recarga cuando llega un aviso por SignalR o cuando
+  se reconecta. Si el aviso falla después de guardado el pedido, el pedido existe pero la
+  barra no lo ve hasta que llegue **otro**. Ya quedó en el log (`OrderRepository`) y el
+  despacho ya no se cancela si el cliente cierra la app, pero nada lo recupera solo.
+- **A decidir antes de tomarla:** cada cuánto. Se habló de 30 o 60 segundos: es una GET
+  liviana por tablet, y el peor caso pasa a ser ese atraso en vez de un pedido invisible.
+
+### US-32 · Que el tablero me mande a entrar si se venció
+
+> **Como** estación de barra
+> **quiero** que, si mi sesión se venció, el tablero me lleve a la pantalla de ingreso
+> **para** no quedarme mirando una cola vieja que dice "reintentando" para siempre.
+
+**Criterios de aceptación**
+
+1. **Dado** que la sesión de la tablet se venció, **cuando** el tablero pide la cola,
+   **entonces** me lleva a la pantalla de ingreso avisando que la sesión terminó.
+2. **Dado** que la sesión se venció y se cortó la conexión en vivo, **cuando** el tablero
+   intenta reconectarse, **entonces** me lleva a la misma pantalla en vez de reintentar sin
+   fin.
+
+**Notas**
+
+- **Depende de** US-15.
+- **De dónde sale:** el token dura 8 horas y una noche de boliche puede durar más. Cuando la
+  API contesta 401, el interceptor borra la sesión, pero **nadie navega al login**: el
+  guard sólo corre al cambiar de ruta, y en la tablet nadie cambia de ruta. Además, la
+  conexión de SignalR no pasa por el interceptor, así que un 401 al reconectar se reintenta
+  cada 5 segundos para siempre.
+- **Alcance decidido:** sólo el tablero. Las pantallas de administración tienen el mismo
+  hueco, pero ahí alguien termina navegando; llevarlo a toda la app es otra conversación.
+
 ## El cliente
 
 ### US-20 · Que el cliente vea su QR de retiro
@@ -520,6 +576,16 @@ sprint, pero la de la CI empieza a doler cuando el recorrido tiene cuatro actore
 papel. Imprimirlo de verdad con el QR en ESC/POS necesita comprar la impresora, así que no
 es una decisión de software. Cuando llegue, el documento ya existe: cambia quién lo recibe.
 
+**Nueva, de auditar US-15: el tablero.** Dos huecos que ya tienen story propia, US-31 (se
+pone al día solo si se pierde un aviso) y US-32 (manda al login si la sesión se venció).
+
+**Nueva, de auditar US-15: los enums del contrato viajan como `string`.** Los siete —`role`
+en el login, en el personal y en sus altas y cambios, y `status` en el pedido confirmado, en
+el seguimiento y en la cola del KDS— salen con `.ToString()`, así que el `schema.d.ts`
+generado dice `string` y el front compara contra literales que nada controla. Se arregla
+publicándolos como enum de OpenAPI **en los siete a la vez**: hacerlo en uno solo deja el
+contrato con dos convenciones.
+
 ## Dependencias nuevas
 
 Aprobadas el **2026-09-23**. Las tres son **MIT** y están vivas — se verificó contra el
@@ -547,3 +613,14 @@ está en modo mantenimiento declarado por sus propios autores — `zxing-wasm` e
 vivo. No entra nada de Scanbot ni STRICH: son comerciales.
 
 **Instalar cuando arranque la story, no ahora.** Hoy quedan aprobadas y escritas.
+
+**Aprobada el 2026-09-28, con el PR #18 (US-15): `@microsoft/signalr`.** Entró con el
+tablero sin figurar en esta lista; queda escrita acá para que la lista diga la verdad.
+
+| Paquete              | Versión | Licencia | Última publicación | Para qué                                          |
+| -------------------- | ------- | -------- | ------------------ | ------------------------------------------------- |
+| `@microsoft/signalr` | 10.0.11 | MIT      | 2026-08-04         | Que el tablero del KDS escuche la cola en vivo    |
+
+Es el cliente oficial de Microsoft para el hub que ya vive en el backend (SignalR es parte
+del framework de ASP.NET Core, no una dependencia aparte). La licencia se verificó contra el
+registro de npm el 2026-09-28.

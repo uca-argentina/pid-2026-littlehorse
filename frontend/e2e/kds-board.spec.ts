@@ -122,6 +122,7 @@ test.describe('KDS board', () => {
     await logIn(page, username, aNewPassword);
 
     await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+    await expect(page.getByRole('banner')).toContainText(username);
 
     const card = page.getByRole('group', { name: 'Nuevos' }).getByRole('article').filter({
       hasText: customerName,

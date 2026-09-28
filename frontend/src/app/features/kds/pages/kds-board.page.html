@@ -1,57 +1,71 @@
 <div class="board">
+  <header class="head">
+    <drinkit-venue-brand [venue]="venueSlug()" [context]="station()" />
+  </header>
+
   @if (channel.state() === 'reconnecting') {
     <p class="offline" role="status">
       Sin conexión con la barra — reintentando. Lo que ves puede estar desactualizado.
     </p>
   }
 
-  <!-- Only the first load: a reload keeps the orders already on screen. -->
-  @if (queue.isLoading() && !queue.hasValue()) {
-    <p class="status">Cargando la cola…</p>
-  } @else if (failure() !== 'none') {
-    <p class="status" role="alert">No pudimos cargar la cola de la barra.</p>
-  } @else if (isEmpty()) {
-    <p class="status empty">La cola está vacía.</p>
+  <!-- Once a queue has arrived it stays on screen: a failed reload only adds a warning over it. -->
+  @if (orders() === null) {
+    @if (failed()) {
+      <p class="status" role="alert">No pudimos cargar la cola de la barra — reintentando.</p>
+    } @else {
+      <p class="status">Cargando la cola…</p>
+    }
   } @else {
-    <div class="cols">
-      @for (column of columns(); track column.key) {
-        <section class="col" role="group" [attr.aria-label]="column.title">
-          <h2 class="colh">
-            <span class="colt">{{ column.title }}</span>
-            <span class="cnt">{{ column.orders.length }}</span>
-          </h2>
-          <div class="stack">
-            @for (order of column.orders; track order.code) {
-              <article
-                class="card"
-                [class.warn]="ageBand(order) === 'warn'"
-                [class.urg]="ageBand(order) === 'urg'"
-              >
-                <div class="top">
-                  <span class="onum">{{ order.code }}</span>
-                  <span class="who">{{ order.customerName }}</span>
-                  <span class="grow"></span>
-                  <span class="chip" [class.mesa]="order.isForTable">{{
-                    deliveryLabel(order)
-                  }}</span>
-                  <span class="age" [class]="ageBand(order)">{{ ageLabel(order) }}</span>
-                </div>
-                <div class="items">
-                  @for (line of order.lines; track line.productName) {
-                    <div class="it">
-                      <span class="q">{{ line.quantity }}×</span>
-                      <span>{{ line.productName }}</span>
-                      @if (line.note) {
-                        <span class="note">{{ line.note }}</span>
-                      }
-                    </div>
-                  }
-                </div>
-              </article>
-            }
-          </div>
-        </section>
-      }
-    </div>
+    @if (failed()) {
+      <p class="offline" role="alert">
+        No pudimos actualizar la cola — reintentando. Lo que ves puede estar desactualizado.
+      </p>
+    }
+
+    @if (isEmpty()) {
+      <p class="status empty">La cola está vacía.</p>
+    } @else {
+      <div class="cols">
+        @for (column of columns(); track column.key) {
+          <section class="col" role="group" [attr.aria-label]="column.title">
+            <h2 class="colh">
+              <span class="colt">{{ column.title }}</span>
+              <span class="cnt">{{ column.orders.length }}</span>
+            </h2>
+            <div class="stack">
+              @for (order of column.orders; track order.code) {
+                <article
+                  class="card"
+                  [class.warn]="ageBand(order) === 'warn'"
+                  [class.urg]="ageBand(order) === 'urg'"
+                >
+                  <div class="top">
+                    <span class="onum">{{ order.code }}</span>
+                    <span class="who">{{ order.customerName }}</span>
+                    <span class="grow"></span>
+                    <span class="chip" [class.mesa]="order.isForTable">{{
+                      deliveryLabel(order)
+                    }}</span>
+                    <span class="age" [class]="ageBand(order)">{{ ageLabel(order) }}</span>
+                  </div>
+                  <div class="items">
+                    @for (line of order.lines; track line.productName) {
+                      <div class="it">
+                        <span class="q">{{ line.quantity }}×</span>
+                        <span>{{ line.productName }}</span>
+                        @if (line.note) {
+                          <span class="note">{{ line.note }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                </article>
+              }
+            </div>
+          </section>
+        }
+      </div>
+    }
   }
 </div>

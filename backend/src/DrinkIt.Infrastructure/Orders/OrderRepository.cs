@@ -5,10 +5,14 @@ using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 
 namespace DrinkIt.Infrastructure.Orders;
 
-internal sealed class OrderRepository(DrinkItDbContext context, IDomainEventDispatcher events) : IOrderRepository
+internal sealed partial class OrderRepository(
+    DrinkItDbContext context,
+    IDomainEventDispatcher events,
+    ILogger<OrderRepository> logger) : IOrderRepository
 {
     /// <summary>
     /// No venue in the WHERE: the global query filter adds the one the request
@@ -73,7 +77,10 @@ internal sealed class OrderRepository(DrinkItDbContext context, IDomainEventDisp
             await context.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
-            await DispatchWithoutFailingTheOrder(order, cancellationToken);
+            // Not the request's token: the order is committed, and a customer
+            // who closes the app right after paying must not cancel the
+            // notification that puts their drink in front of the bar.
+            await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
 
             return order;
         }
@@ -98,24 +105,34 @@ internal sealed class OrderRepository(DrinkItDbContext context, IDomainEventDisp
     /// <summary>
     /// The order is already committed by the time this runs, so a notifier
     /// that is down is not a reason to tell the customer their money did not
-    /// go through: it did, and the drinks are queued either way. The board
-    /// catches up on its own next reload — losing the order over a dropped
-    /// notification would be strictly worse.
+    /// go through: it did, and the drinks are queued either way. Losing the
+    /// order over a dropped notification would be strictly worse.
     /// </summary>
+    /// <remarks>
+    /// The board does not catch up on its own yet: it only reloads on the next
+    /// notification or when its connection comes back. That is US-31. Until
+    /// then the log line is the only trace of an order the bar never saw.
+    /// </remarks>
     private async Task DispatchWithoutFailingTheOrder(Order order, CancellationToken cancellationToken)
     {
         try
         {
             await events.DispatchAsync(order.DomainEvents, cancellationToken);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            // Swallowed on purpose — see the remarks above. Nothing here is
-            // still in a position to undo the write that already succeeded.
+            // Not rethrown — see the remarks above. Nothing here is still in a
+            // position to undo the write that already succeeded.
+            LogBoardNotNotified(logger, order.Code.Value, exception);
         }
         finally
         {
             order.ClearDomainEvents();
         }
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Error,
+        Message = "Order {OrderCode} was saved, but the KDS board could not be notified")]
+    private static partial void LogBoardNotNotified(ILogger logger, string orderCode, Exception exception);
 }
