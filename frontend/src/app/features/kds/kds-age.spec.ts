@@ -19,8 +19,9 @@ describe('ageLabelFor', () => {
     expect(ageLabelFor(2)).toBe('2 min');
   });
 
-  it('reads an urgent wait with the word that makes it impossible to miss', () => {
-    expect(ageLabelFor(11)).toBe('11 min · urgente');
+  // Decided on 2026-09-28: the red card says it; the word was noise.
+  it('reads an urgent wait as just the minutes too', () => {
+    expect(ageLabelFor(11)).toBe('11 min');
   });
 
   it('rounds down instead of showing a decimal nobody asked for', () => {

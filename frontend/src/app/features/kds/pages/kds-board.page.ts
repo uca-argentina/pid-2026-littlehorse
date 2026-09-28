@@ -21,9 +21,6 @@ import { KdsOrdersService } from '../kds-orders.service';
 import { KDS_QUEUE_URL } from '../kds-queue';
 import type { KdsQueueOrder } from '../kds-queue';
 
-/** §11: the bar may pick among the next ten in the queue, not the whole night. */
-const CHOOSABLE = 10;
-
 /** How often the clock ticks to re-read every card's age, independent of any SignalR message. */
 const AGE_TICK_MS = 15_000;
 
@@ -49,6 +46,19 @@ interface ActionFailure {
   readonly action: 'take' | 'return';
   readonly code: string;
 }
+
+/** Where a column's scroll thumb is drawn, and whether it is showing. */
+interface ScrollThumb {
+  readonly top: number;
+  readonly height: number;
+  readonly visible: boolean;
+}
+
+/** How long after the column stops moving its thumb fades out, like Safari's. */
+const THUMB_FADE_AFTER_MS = 1_000;
+
+/** Never shorter than this, so a thumb over a very long column is still seen. */
+const THUMB_MIN_PX = 32;
 
 @Component({
   selector: 'drinkit-kds-board-page',
@@ -125,26 +135,39 @@ export class KdsBoardPage {
   /** Orders with a request in flight: their buttons stay pressed until it lands. */
   private readonly busy = signal<ReadonlySet<string>>(new Set());
 
+  /** Columns scrolled more than a screen down, each on its own. */
+  private readonly farDown = signal<ReadonlySet<ColumnKey>>(new Set());
+
+  /**
+   * Where each column's scroll thumb sits, while it is moving. The native bar
+   * is hidden — in Chrome on a desktop it takes width from the cards — and this
+   * stands in for Safari's overlay one: it shows while the column scrolls and
+   * fades out once it stops.
+   */
+  private readonly thumbs = signal<ReadonlyMap<ColumnKey, ScrollThumb>>(new Map());
+
+  private readonly thumbTimers = new Map<ColumnKey, ReturnType<typeof setTimeout>>();
+
   /** What the last action on an order could not do, said to the bar. */
   protected readonly actionFailure = signal<ActionFailure | null>(null);
 
   /**
-   * The next ten, oldest paid first — the order the queue already arrives in.
-   * Everything newer waits until it moves up.
+   * Every order in Nuevos. Decided on 2026-09-28, against §11's "next ten": a
+   * card that can be prepared on its own can be chosen with others too, and a
+   * limit nothing on screen showed looked like a broken tap.
    */
   private readonly choosable = computed(
     () =>
       new Set(
         (this.orders() ?? [])
           .filter((order) => order.status === 'Queued')
-          .slice(0, CHOOSABLE)
           .map((order) => order.code),
       ),
   );
 
   /**
    * The codes somebody tapped to take together (US-16, criterion 2). An order
-   * that leaves the next ten — taken, or moved on another reload — is
+   * that leaves Nuevos — taken, or moved on another reload — is
    * forgotten, not just hidden: if it came back, an old tap nobody remembers
    * must not take it.
    */
@@ -185,6 +208,7 @@ export class KdsBoardPage {
 
     this.destroyRef.onDestroy(() => {
       clearInterval(ticking);
+      for (const timer of this.thumbTimers.values()) clearTimeout(timer);
       this.channel.disconnect();
     });
   }
@@ -226,6 +250,70 @@ export class KdsBoardPage {
 
       return next;
     });
+  }
+
+  /**
+   * Called on every scroll of one column's list. More than one screen of that
+   * column down is "far": the way back to its oldest orders shows up.
+   */
+  protected onColumnScroll(key: ColumnKey, stack: HTMLElement): void {
+    this.showThumb(key, stack);
+
+    const far = stack.scrollTop > stack.clientHeight;
+
+    if (far === this.farDown().has(key)) return;
+
+    this.farDown.update((columns) => {
+      const next = new Set(columns);
+
+      if (far) next.add(key);
+      else next.delete(key);
+
+      return next;
+    });
+  }
+
+  protected thumbOf(key: ColumnKey): ScrollThumb | undefined {
+    return this.thumbs().get(key);
+  }
+
+  /** Sized like a native thumb: as tall as the share of the column in view. */
+  private showThumb(key: ColumnKey, stack: HTMLElement): void {
+    const scrollable = stack.scrollHeight - stack.clientHeight;
+
+    if (scrollable <= 0) return;
+
+    const height = Math.max(
+      THUMB_MIN_PX,
+      (stack.clientHeight / stack.scrollHeight) * stack.clientHeight,
+    );
+    const top = stack.offsetTop + (stack.scrollTop / scrollable) * (stack.clientHeight - height);
+
+    this.setThumb(key, { top, height, visible: true });
+
+    const running = this.thumbTimers.get(key);
+    if (running !== undefined) clearTimeout(running);
+
+    this.thumbTimers.set(
+      key,
+      setTimeout(() => {
+        const thumb = this.thumbs().get(key);
+        if (thumb) this.setThumb(key, { ...thumb, visible: false });
+      }, THUMB_FADE_AFTER_MS),
+    );
+  }
+
+  private setThumb(key: ColumnKey, thumb: ScrollThumb): void {
+    this.thumbs.update((thumbs) => new Map(thumbs).set(key, thumb));
+  }
+
+  protected isFarDown(key: ColumnKey): boolean {
+    return this.farDown().has(key);
+  }
+
+  /** Smooth, so the bartender sees the column move rather than jump. */
+  protected backToTop(stack: HTMLElement): void {
+    stack.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   protected clearChoice(): void {

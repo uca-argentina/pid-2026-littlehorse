@@ -173,7 +173,7 @@ mano. Después de la entrega, el QR ya no sirve para retirar.
 
 - **No es una pantalla por bartender** — es una pantalla/tablet **por estación de trabajo**, compartida por todos los que preparan ahí (mismo patrón que un KDS de cocina de restaurante). Reduce mucho la inversión en hardware.
 - Muestra la cola de pedidos "Nuevos", ordenados por **antigüedad (FIFO)** desde el momento del pago — el objetivo del sistema es minimizar el tiempo total desde el pago hasta la entrega.
-- El bartender **no está obligado al FIFO estricto**: puede elegir entre los **próximos 10 pedidos** de la cola, para poder agrupar pedidos del mismo trago y prepararlos juntos (más eficiente en tiempo total agregado, aunque rompa el orden estricto de un pedido individual).
+- El bartender **no está obligado al FIFO estricto**: puede elegir entre los **próximos 10 pedidos** de la cola, para poder agrupar pedidos del mismo trago y prepararlos juntos (más eficiente en tiempo total agregado, aunque rompa el orden estricto de un pedido individual). **Actualizado el 2026-09-28 (US-16): puede elegir cualquier pedido de la cola, sin el tope de 10** — el tope no se veía en pantalla y las tarjetas de más abajo parecían no responder.
 - El ticket **no se imprime automáticamente** al confirmarse el pago — el bartender selecciona manualmente qué pedido(s) imprimir. Al imprimir, el pedido se saca de la cola de "Nuevos" para que otro bartender no lo tome también (funciona como un "tomar pedido" implícito).
 - Al agrupar varios pedidos para prepararlos juntos, **se imprime un ticket individual por cada pedido** (no un ticket combinado) — cada uno mantiene su propio ticket y QR. El bartender simplemente los imprime y prepara juntos.
 

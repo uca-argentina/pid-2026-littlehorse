@@ -200,6 +200,34 @@ test.describe('KDS board', () => {
     );
   });
 
+  // The row that holds Preparar spans the card: its empty part, left of the
+  // button and down to the border, is card too and must choose it.
+  test('chooses an order from the empty space beside Preparar', async ({ page, request }) => {
+    const username = await aKdsAccount(request);
+
+    await page.route('**/api/kds/queue', (route) =>
+      route.fulfill({ json: [aMockedOrder('Z-2100', 'Queued', 5)] }),
+    );
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const card = page.getByRole('group', { name: 'Nuevos' }).getByRole('article');
+    const choose = page.getByRole('button', { name: 'Elegir Z-2100' });
+    const cardBox = (await card.boundingBox())!;
+    const prepare = (await page.getByRole('button', { name: 'Preparar Z-2100' }).boundingBox())!;
+
+    // Level with Preparar, well to its left.
+    await page.mouse.click(cardBox.x + 30, prepare.y + prepare.height / 2);
+    await expect(choose).toHaveAttribute('aria-pressed', 'true');
+
+    // Near the bottom border. Measured again: once chosen, "Elegido" stands
+    // where Preparar was and the card is shorter.
+    const chosenBox = (await card.boundingBox())!;
+    await page.mouse.click(chosenBox.x + chosenBox.width / 3, chosenBox.y + chosenBox.height - 5);
+    await expect(choose).toHaveAttribute('aria-pressed', 'false');
+  });
+
   // Nuevos grows all night; En preparación and Listos stay short. Scrolling one
   // column must not drag the others, nor the header with the venue on it.
   test('scrolls each column on its own, under a header that stays', async ({ page, request }) => {
@@ -232,6 +260,71 @@ test.describe('KDS board', () => {
     ).toBeInViewport();
     await expect(page.getByRole('banner')).toBeInViewport();
     expect(await inPreparation.boundingBox()).toEqual(before);
+  });
+
+  // Deep in a long Nuevos, the oldest orders — the ones to make first — are
+  // out of sight. One tap brings the column back to them, and only that column.
+  test('brings a scrolled column back to the top with one tap', async ({ page, request }) => {
+    const username = await aKdsAccount(request);
+    const queue = [
+      ...Array.from({ length: 20 }, (_, index) =>
+        aMockedOrder(`Z-${String(6000 + index)}`, 'Queued', 40 - index),
+      ),
+      aMockedOrder('Z-7000', 'InPreparation', 3),
+    ];
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.route('**/api/kds/queue', (route) => route.fulfill({ json: queue }));
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const nuevos = page.getByRole('group', { name: 'Nuevos' });
+    const backToTop = nuevos.getByRole('button', { name: 'Volver arriba' });
+
+    await expect(backToTop).toHaveCount(0);
+
+    await nuevos.getByRole('article').first().hover();
+    await page.mouse.wheel(0, 5000);
+    await expect(backToTop).toBeInViewport();
+    await expect(
+      page
+        .getByRole('group', { name: 'En preparación' })
+        .getByRole('button', { name: 'Volver arriba' }),
+    ).toHaveCount(0);
+
+    await backToTop.click();
+
+    await expect(nuevos.getByRole('article').filter({ hasText: 'Z-6000' })).toBeInViewport();
+    await expect(backToTop).toHaveCount(0);
+  });
+
+  // Like Safari's overlay scrollbars, in every browser: no native bar taking
+  // width from the cards, and a thin thumb that shows while the column moves
+  // and fades out once it stops.
+  test('shows where a column is only while it scrolls', async ({ page, request }) => {
+    const username = await aKdsAccount(request);
+    const queue = Array.from({ length: 20 }, (_, index) =>
+      aMockedOrder(`Z-${String(8000 + index)}`, 'Queued', 40 - index),
+    );
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.route('**/api/kds/queue', (route) => route.fulfill({ json: queue }));
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const nuevos = page.getByRole('group', { name: 'Nuevos' });
+    const thumb = nuevos.getByTestId('scroll-thumb');
+
+    await expect(nuevos.locator('.stack')).toHaveCSS('scrollbar-width', 'none');
+    await expect(thumb).toHaveCSS('opacity', '0');
+
+    await nuevos.getByRole('article').first().hover();
+    await page.mouse.wheel(0, 1500);
+    await expect(thumb).not.toHaveCSS('opacity', '0');
+
+    await expect(thumb).toHaveCSS('opacity', '0', { timeout: 3000 });
   });
 
   // A failure is only worth saying if it is seen. With a long queue the page

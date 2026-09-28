@@ -114,7 +114,7 @@ describe('KdsBoardPage', () => {
   it.each([
     [4, 'ok' as const, '4 min'],
     [5, 'warn' as const, '5 min'],
-    [10, 'urg' as const, '10 min · urgente'],
+    [10, 'urg' as const, '10 min'],
   ])('paints a %s-minute wait as %s', async (minutesAgo, band, label) => {
     const paidAt = new Date(Date.now() - Number(minutesAgo) * 60_000).toISOString();
 
@@ -436,18 +436,23 @@ describe('KdsBoardPage', () => {
       http.expectOne(KDS_QUEUE_URL);
     });
 
-    // §11: free to pick among the next ten, not the whole night.
-    it('does not let an order beyond the next ten be chosen', async () => {
-      const eleven = Array.from({ length: 11 }, (_, index) =>
+    // Decided on 2026-09-28, against §11's "next ten": a card that can be
+    // prepared on its own can be chosen too, however far down Nuevos it is.
+    it('lets any new order be chosen, however far down the queue', async () => {
+      const twenty = Array.from({ length: 20 }, (_, index) =>
         anOrder({
           code: `K-${String(1000 + index)}`,
-          paidAt: new Date(Date.now() - (20 - index) * 60_000).toISOString(),
+          paidAt: new Date(Date.now() - (30 - index) * 60_000).toISOString(),
         }),
       );
-      await openScreenShowing(eleven);
+      await openScreenShowing(twenty);
 
-      expect(screen.getByRole('button', { name: 'Elegir K-1009' })).not.toBeNull();
-      expect(screen.queryByRole('button', { name: 'Elegir K-1010' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-1000' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-1019' }));
+
+      expect(screen.getByRole('region', { name: 'Pedidos elegidos' }).textContent).toContain(
+        '2 pedidos elegidos',
+      );
     });
 
     // Criterion 4.

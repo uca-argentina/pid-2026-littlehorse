@@ -169,7 +169,7 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
    de cada columna del más viejo al más nuevo, con su número, quién lo pidió, si es barra o
    mesa, sus tragos con cantidad y nota, y hace cuánto espera.
 2. **Dado** un pedido que espera hace **menos de 5 minutos**, **cuando** lo miro, **entonces**
-   se ve normal; **a los 5** pasa a ámbar y **a los 10** pasa a rojo y dice "urgente", sin
+   se ve normal; **a los 5** pasa a ámbar y **a los 10** pasa a rojo, sin
    que haga falta leer el reloj de cada tarjeta.
 3. **Dado** que entré con una cuenta que no es de barra, **cuando** abro esa dirección,
    **entonces** el sistema no me la muestra.
@@ -185,6 +185,9 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 - **El umbral salió del wireframe y por eso está en el criterio 2**, no acá: las tarjetas
   dibujadas dicen "11 min · urgente" en rojo, 6 minutos en ámbar y 2 minutos en gris. Un
   umbral que vive en una nota es uno que nadie prueba.
+- **El criterio 2 cambió el 2026-09-28:** decía que a los 10 minutos la tarjeta "pasa a rojo y
+  dice *urgente*". La palabra se sacó: el rojo de la tarjeta ya lo dice, y el texto era ruido.
+  Los umbrales y los colores quedan igual.
 - **Borde de multi-tenancy:** el local sale del token de la estación, **nunca** de la URL.
   Esta pantalla necesita su test de aislamiento igual que el resto.
 - **Borde:** la antigüedad se cuenta **desde que se pagó**, no desde que se armó el carrito
@@ -228,8 +231,12 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 - **Cada columna scrollea sola** (decidido el 2026-09-28): el tablero ocupa la pantalla justa,
   el header y la zona de avisos quedan fijos, y bajar por "Nuevos" no mueve "En preparación" ni
   "Listos". Un error de "Preparar" aparece en esa zona fija, a la vista aunque la cola sea larga.
-- **Sólo se pueden elegir los próximos 10** de "Nuevos" (§11): agrupar el mismo trago es más
-  rápido en total, pero sin romper el orden más allá de eso.
+  Cuando una columna se bajó más de una pantalla, aparece abajo de ella "↑ Volver arriba", que la
+  lleva de nuevo a los pedidos más viejos sin mover las otras.
+- **Se puede elegir cualquier pedido de "Nuevos"** (decidido el 2026-09-28, contra el "próximos
+  10" de §11). Con el límite, las tarjetas de más abajo no respondían al toque y nada en pantalla
+  decía por qué: parecía un error. Además ya se podían "Preparar" solas, así que el límite sólo
+  frenaba el elegirlas junto con otras.
 - **Diseño:** `KdsSeleccion.dc.html`. Quedan afuera, anotados en la deuda: `KdsDetalle`, la
   sugerencia de agrupar ("2 pedidos con Gin Tonic entre los próximos") y el "impreso hace N
   min" de la columna de preparación.

@@ -33,7 +33,7 @@
               <span class="colt">{{ column.title }}</span>
               <span class="cnt">{{ column.orders.length }}</span>
             </h2>
-            <div class="stack">
+            <div class="stack" #stack (scroll)="onColumnScroll(column.key, stack)">
               @for (order of column.orders; track order.code) {
                 <article
                   class="card"
@@ -42,7 +42,7 @@
                   [class.chosen]="isChosen(order)"
                 >
                   <!--
-                    One of the next ten: tapping anywhere on the card chooses it
+                    A new order: tapping anywhere on the card chooses it
                     (US-16). The button's area is stretched over the whole card
                     by the stylesheet, so there is still a single control.
                   -->
@@ -111,6 +111,23 @@
                 </article>
               }
             </div>
+
+            <!-- Stands in for the native scrollbar, hidden so it takes no width: see thumbs in the component. -->
+            <div
+              class="scroll-thumb"
+              data-testid="scroll-thumb"
+              aria-hidden="true"
+              [class.showing]="thumbOf(column.key)?.visible"
+              [style.top.px]="thumbOf(column.key)?.top ?? 0"
+              [style.height.px]="thumbOf(column.key)?.height ?? 0"
+            ></div>
+
+            <!-- Deep in a long column the oldest orders are out of sight: one tap back to them. -->
+            @if (isFarDown(column.key)) {
+              <button type="button" class="to-top" (click)="backToTop(stack)">
+                <span aria-hidden="true">↑</span> Volver arriba
+              </button>
+            }
           </section>
         }
       </div>
