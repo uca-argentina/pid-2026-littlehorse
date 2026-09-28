@@ -51,6 +51,7 @@ if (!builder.Environment.IsDevelopment() && jwt.SigningKey.StartsWith("dev-", St
 
 builder.Services.AddStaffAuthentication(jwt);
 builder.Services.AddFrontendCors(builder.Configuration);
+builder.Services.AddTelemetry(builder.Configuration);
 
 builder.Services.AddProblemDetailsForEveryError();
 // Numbers are numbers on the wire. ASP.NET's default also reads them from
