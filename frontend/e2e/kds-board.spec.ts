@@ -131,6 +131,39 @@ test.describe('KDS board', () => {
     await expect(card).toContainText(drinkName);
   });
 
+  // US-16, criteria 1 and 4, through the real API: the order moves column
+  // and comes back, and the board redraws both times without a reload.
+  test('takes an order into En preparación and hands it back to Nuevos', async ({
+    page,
+    browser,
+    request,
+  }) => {
+    const username = await aKdsAccount(request);
+    const customerName = aFullName();
+
+    const customer = await browser.newPage();
+    await anOrderPaidBy(customer, request, customerName);
+    await customer.close();
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const column = (name: string) =>
+      page.getByRole('group', { name }).getByRole('article').filter({ hasText: customerName });
+
+    await column('Nuevos')
+      .getByRole('button', { name: /^Imprimir / })
+      .click();
+    await expect(column('En preparación')).toBeVisible();
+    await expect(column('Nuevos')).toHaveCount(0);
+
+    await column('En preparación')
+      .getByRole('button', { name: /a la cola$/ })
+      .click();
+    await expect(column('Nuevos')).toBeVisible();
+    await expect(column('En preparación')).toHaveCount(0);
+  });
+
   // The one thing a unit test cannot prove: the hub, the token in the
   // connection, and the proxy all actually agree with each other.
   test('shows a new order live, without anybody reloading the tablet', async ({

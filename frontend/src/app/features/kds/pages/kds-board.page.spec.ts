@@ -2,10 +2,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { render, screen } from '@testing-library/angular';
+import { fireEvent, render, screen } from '@testing-library/angular';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
 import type { KdsLinkState } from '../../../core/kds/kds-board-channel';
+import { returnToQueueUrl, startPreparingUrl } from '../kds-orders.service';
 import { KDS_QUEUE_URL } from '../kds-queue';
 import type { KdsQueueOrder } from '../kds-queue';
 import { KdsBoardPage } from './kds-board.page';
@@ -281,5 +282,171 @@ describe('KdsBoardPage', () => {
     rendered.fixture.destroy();
 
     expect(channel.onChanged).toBeNull();
+  });
+
+  // US-16: taking orders off Nuevos, one or several, and handing one back.
+  describe('taking orders', () => {
+    const gin = (quantity: number) => ({ productName: 'Gin Tonic', quantity, note: null });
+    const fernet = (quantity: number) => ({ productName: 'Fernet con Coca', quantity, note: null });
+
+    async function settle(fixture: { whenStable(): Promise<unknown> }) {
+      await fixture.whenStable();
+    }
+
+    // Criterion 1.
+    it('takes an order when its Imprimir is pressed', async () => {
+      const { http } = await openScreenShowing([anOrder()]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Imprimir K-4821' }));
+
+      expect(http.expectOne(startPreparingUrl('K-4821')).request.method).toBe('POST');
+    });
+
+    it('reloads the queue once the order is taken', async () => {
+      const { http } = await openScreenShowing([anOrder()]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Imprimir K-4821' }));
+      http
+        .expectOne(startPreparingUrl('K-4821'))
+        .flush(null, { status: 204, statusText: 'No Content' });
+      // Not whenStable: it would wait on the very reload this test is looking for.
+      TestBed.tick();
+
+      http.expectOne(KDS_QUEUE_URL);
+    });
+
+    // Criterion 3's double tap: the second tap has nothing to press.
+    it('cannot be pressed again while that order is being taken', async () => {
+      await openScreenShowing([anOrder()]);
+
+      const print = screen.getByRole('button', { name: 'Imprimir K-4821' }) as HTMLButtonElement;
+      fireEvent.click(print);
+
+      expect(print.disabled).toBe(true);
+    });
+
+    it('says so when an order cannot be taken', async () => {
+      const { rendered, http } = await openScreenShowing([anOrder()]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Imprimir K-4821' }));
+      http
+        .expectOne(startPreparingUrl('K-4821'))
+        .flush('', { status: 500, statusText: 'Server Error' });
+      // The failure reloads the queue; the warning has to outlive that reload.
+      TestBed.tick();
+      http.expectOne(KDS_QUEUE_URL).flush([anOrder()]);
+      await settle(rendered.fixture);
+
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos tomar el pedido K-4821');
+    });
+
+    it('chooses a new order when its card is tapped', async () => {
+      await openScreenShowing([anOrder()]);
+
+      const pick = screen.getByRole('button', { name: 'Elegir K-4821' });
+      fireEvent.click(pick);
+
+      expect(pick.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    // Criterion 2, and what the bartender is about to make together.
+    it('sums every drink of the chosen orders in the bar below', async () => {
+      await openScreenShowing([
+        anOrder({ code: 'K-0001', lines: [gin(2), fernet(1)] }),
+        anOrder({ code: 'K-0002', lines: [gin(2)] }),
+      ]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0001' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0002' }));
+
+      const bar = screen.getByRole('region', { name: 'Pedidos elegidos' });
+      expect(bar.textContent).toContain('2 pedidos elegidos');
+      expect(bar.textContent).toContain('4× Gin Tonic');
+      expect(bar.textContent).toContain('1× Fernet con Coca');
+    });
+
+    // Criterion 2: each one taken on its own, never one combined.
+    it('takes every chosen order with a request of its own', async () => {
+      const { http } = await openScreenShowing([
+        anOrder({ code: 'K-0001' }),
+        anOrder({ code: 'K-0002' }),
+      ]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0001' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0002' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Imprimir 2 tickets' }));
+
+      http.expectOne(startPreparingUrl('K-0001'));
+      http.expectOne(startPreparingUrl('K-0002'));
+    });
+
+    it('lets go of the chosen orders when Cancelar is pressed', async () => {
+      await openScreenShowing([anOrder()]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-4821' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(screen.queryByRole('region', { name: 'Pedidos elegidos' })).toBeNull();
+    });
+
+    // A choice belongs to the moment it was made: an order that left Nuevos
+    // and came back must not be taken by an old tap nobody remembers.
+    it('forgets a choice once that order leaves Nuevos', async () => {
+      const { rendered, channel, http } = await openScreenShowing([anOrder()]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-4821' }));
+
+      channel.onChanged?.();
+      rendered.fixture.detectChanges();
+      http.expectOne(KDS_QUEUE_URL).flush([anOrder({ status: 'InPreparation' })]);
+      await rendered.fixture.whenStable();
+
+      channel.onChanged?.();
+      rendered.fixture.detectChanges();
+      http.expectOne(KDS_QUEUE_URL).flush([anOrder({ status: 'Queued' })]);
+      await rendered.fixture.whenStable();
+
+      expect(
+        screen.getByRole('button', { name: 'Elegir K-4821' }).getAttribute('aria-pressed'),
+      ).toBe('false');
+      expect(screen.queryByRole('region', { name: 'Pedidos elegidos' })).toBeNull();
+    });
+
+    // A failed action usually means the card is stale: reloading shows the
+    // bar what the order really is now.
+    it('reloads the queue when an action fails', async () => {
+      const { http } = await openScreenShowing([anOrder()]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Imprimir K-4821' }));
+      http
+        .expectOne(startPreparingUrl('K-4821'))
+        .flush('', { status: 400, statusText: 'Bad Request' });
+      TestBed.tick();
+
+      http.expectOne(KDS_QUEUE_URL);
+    });
+
+    // §11: free to pick among the next ten, not the whole night.
+    it('does not let an order beyond the next ten be chosen', async () => {
+      const eleven = Array.from({ length: 11 }, (_, index) =>
+        anOrder({
+          code: `K-${String(1000 + index)}`,
+          paidAt: new Date(Date.now() - (20 - index) * 60_000).toISOString(),
+        }),
+      );
+      await openScreenShowing(eleven);
+
+      expect(screen.getByRole('button', { name: 'Elegir K-1009' })).not.toBeNull();
+      expect(screen.queryByRole('button', { name: 'Elegir K-1010' })).toBeNull();
+    });
+
+    // Criterion 4.
+    it('hands an order in preparation back to the queue', async () => {
+      const { http } = await openScreenShowing([anOrder({ status: 'InPreparation' })]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Devolver K-4821 a la cola' }));
+
+      expect(http.expectOne(returnToQueueUrl('K-4821')).request.method).toBe('POST');
+    });
   });
 });

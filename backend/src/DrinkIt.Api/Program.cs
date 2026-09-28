@@ -21,6 +21,7 @@ builder.Services.AddLoginHandlers();
 builder.Services.AddStaffHandlers();
 builder.Services.AddMenuHandlers();
 builder.Services.AddOrderHandlers();
+builder.Services.AddKdsHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.

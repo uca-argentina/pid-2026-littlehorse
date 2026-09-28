@@ -39,16 +39,30 @@
                   class="card"
                   [class.warn]="ageBand(order) === 'warn'"
                   [class.urg]="ageBand(order) === 'urg'"
+                  [class.chosen]="isChosen(order)"
                 >
-                  <div class="top">
-                    <span class="onum">{{ order.code }}</span>
-                    <span class="who">{{ order.customerName }}</span>
-                    <span class="grow"></span>
-                    <span class="chip" [class.mesa]="order.isForTable">{{
-                      deliveryLabel(order)
-                    }}</span>
-                    <span class="age" [class]="ageBand(order)">{{ ageLabel(order) }}</span>
-                  </div>
+                  <!-- One of the next ten: tapping the top of the card chooses it (US-16). -->
+                  @if (canChoose(order)) {
+                    <button
+                      type="button"
+                      class="top pick"
+                      [attr.aria-label]="'Elegir ' + order.code"
+                      [attr.aria-pressed]="isChosen(order)"
+                      (click)="toggle(order)"
+                    >
+                      <ng-container
+                        [ngTemplateOutlet]="summary"
+                        [ngTemplateOutletContext]="{ $implicit: order }"
+                      />
+                    </button>
+                  } @else {
+                    <div class="top">
+                      <ng-container
+                        [ngTemplateOutlet]="summary"
+                        [ngTemplateOutletContext]="{ $implicit: order }"
+                      />
+                    </div>
+                  }
                   <div class="items">
                     @for (line of order.lines; track line.productName) {
                       <div class="it">
@@ -60,6 +74,36 @@
                       </div>
                     }
                   </div>
+
+                  @if (order.status === 'Queued') {
+                    <div class="acts">
+                      @if (isChosen(order)) {
+                        <span class="picked-tag">Elegido</span>
+                      } @else {
+                        <button
+                          type="button"
+                          class="act primary"
+                          [attr.aria-label]="'Imprimir ' + order.code"
+                          [disabled]="isBusy(order)"
+                          (click)="take(order)"
+                        >
+                          Imprimir
+                        </button>
+                      }
+                    </div>
+                  } @else if (order.status === 'InPreparation') {
+                    <div class="acts">
+                      <button
+                        type="button"
+                        class="act"
+                        [attr.aria-label]="'Devolver ' + order.code + ' a la cola'"
+                        [disabled]="isBusy(order)"
+                        (click)="returnToQueue(order)"
+                      >
+                        Devolver a la cola
+                      </button>
+                    </div>
+                  }
                 </article>
               }
             </div>
@@ -68,4 +112,34 @@
       </div>
     }
   }
+
+  @if (actionFailure(); as failure) {
+    <p class="offline" role="alert">{{ failure }}</p>
+  }
+
+  @if (chosen().length > 0) {
+    <section class="picked" aria-label="Pedidos elegidos">
+      <div class="picked-text">
+        <strong>
+          {{ chosen().length }}
+          {{ chosen().length === 1 ? 'pedido elegido' : 'pedidos elegidos' }}
+        </strong>
+        @for (drink of chosenDrinks(); track drink) {
+          <span> · {{ drink }}</span>
+        }
+      </div>
+      <button type="button" class="act" (click)="clearChoice()">Cancelar</button>
+      <button type="button" class="act primary" (click)="takeChosen()">
+        Imprimir {{ chosen().length }} {{ chosen().length === 1 ? 'ticket' : 'tickets' }}
+      </button>
+    </section>
+  }
 </div>
+
+<ng-template #summary let-order>
+  <span class="onum">{{ order.code }}</span>
+  <span class="who">{{ order.customerName }}</span>
+  <span class="grow"></span>
+  <span class="chip" [class.mesa]="order.isForTable">{{ deliveryLabel(order) }}</span>
+  <span class="age" [class]="ageBand(order)">{{ ageLabel(order) }}</span>
+</ng-template>

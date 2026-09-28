@@ -155,6 +155,13 @@ Mismo identificador de pedido, mostrado en dos soportes distintos según el mome
 
 No son dos códigos distintos — es el mismo QR/identificador del pedido, solo que aparece en dos lugares según la etapa.
 
+**Ese identificador es el `TrackingToken` del pedido, no su número** (decidido el 2026-09-28, en
+US-16). El número se canta en la barra y aparece en el tablero, así que cualquiera que lo escuche
+podría reclamar un trago ajeno; el token es un secreto que sólo tiene el celular del cliente. Que
+también vaya impreso en el ticket no lo debilita: **el ticket se queda del lado de la barra (o con
+el mozo) hasta que se entrega el trago**, y ahí sólo lo ve el personal, que ya tiene el trago en la
+mano. Después de la entrega, el QR ya no sirve para retirar.
+
 ### Integración técnica del QR/lector
 
 - Lectores de QR/código de barras USB/Bluetooth funcionan como **teclado (HID)**: no necesitan drivers ni librerías de cámara — el dispositivo "tipea" el contenido escaneado en un `<input>` enfocado y manda un `Enter`. Simplifica mucho la implementación.
