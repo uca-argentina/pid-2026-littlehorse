@@ -8,6 +8,7 @@ import { anonymously } from '../../../core/auth/anonymous-request';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 import { formatPrice } from '../../../shared/money/price';
+import { slowLoading } from '../../../shared/loading/slow-loading';
 import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
 import { menuUrl } from '../menu.service';
 import type { Menu, MenuItem } from '../menu.service';
@@ -25,8 +26,6 @@ interface MenuCard {
 
 /** US-14: the tab the menu opens on. A category's id is a guid and never equals it. */
 const ALL = 'all';
-
-const SLOW_AFTER_MS = 5000;
 
 interface CategoryTab {
   readonly filter: string;
@@ -163,22 +162,9 @@ export class MenuPage {
   /** Enough outlines to fill a phone's first screen, not the length of any real menu. */
   protected readonly skeletonCards = [1, 2, 3, 4];
 
-  /**
-   * Past a few seconds still loading. A cold start of the API and the database
-   * together takes most of a minute, and an outline that sits still that long
-   * looks frozen.
-   */
-  protected readonly isSlow = signal(false);
+  protected readonly isSlow = slowLoading(() => this.menu.isLoading());
 
   constructor() {
-    effect((onCleanup) => {
-      this.isSlow.set(false);
-      if (!this.menu.isLoading()) return;
-
-      const timer = setTimeout(() => this.isSlow.set(true), SLOW_AFTER_MS);
-      onCleanup(() => clearTimeout(timer));
-    });
-
     // The order belongs to the venue whose address is open, and switching
     // venues has to switch orders rather than carry one into the other.
     effect(() => this.cart.open(this.venueSlug()));

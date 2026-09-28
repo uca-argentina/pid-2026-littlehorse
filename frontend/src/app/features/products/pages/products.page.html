@@ -1,7 +1,7 @@
 <div class="frame">
   <drinkit-admin-header [venueSlug]="venueSlug()" />
 
-  <section class="body">
+  <section class="body" [attr.aria-busy]="products.isLoading()">
     <div class="bar">
       <h1 class="title">Productos</h1>
       <div class="actions">
@@ -47,7 +47,28 @@
     </div>
 
     @if (products.isLoading()) {
-      <p class="note" role="status">Cargando la carta…</p>
+      <!-- Read aloud from the start, drawn only once it has something to add
+           to the outline below. -->
+      <p class="note" role="status" [class.dk-sr-only]="!isSlow()">
+        Cargando la carta…
+        @if (isSlow()) {
+          Está tardando más de lo normal, seguimos buscando.
+        }
+      </p>
+
+      <ul class="rows" data-testid="products-skeleton" aria-hidden="true">
+        @for (row of skeletonRows; track row) {
+          <li class="row">
+            <div class="thumb dk-skeleton"></div>
+            <div class="about">
+              <div class="dk-skeleton skeleton-name"></div>
+              <div class="dk-skeleton skeleton-line"></div>
+            </div>
+            <div class="dk-skeleton skeleton-price"></div>
+            <div class="dk-skeleton skeleton-switch"></div>
+          </li>
+        }
+      </ul>
     }
 
     @if (failure() === 'forbidden') {
