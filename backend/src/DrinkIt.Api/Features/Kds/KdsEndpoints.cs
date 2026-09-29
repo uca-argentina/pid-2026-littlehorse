@@ -14,6 +14,7 @@ public sealed record KdsQueueOrderResponse(
     string CustomerName,
     KdsOrderStatus Status,
     DateTimeOffset PaidAt,
+    DateTimeOffset? LastModifiedAt,
     bool IsForTable,
     IReadOnlyList<KdsQueueOrderItemResponse> OrderItems);
 
@@ -57,6 +58,38 @@ internal static class KdsEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        orders
+            .MapPost("/mark-ready", MarkReadyAsync)
+            .WithName("MarkOrderReady")
+            .WithSummary("Marks an order in preparation ready. Marking it again changes nothing.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        orders
+            .MapPost("/return-to-preparation", ReturnToPreparationAsync)
+            .WithName("ReturnOrderToPreparation")
+            .WithSummary("Sends an order marked ready by mistake back to preparation.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        orders
+            .MapPost("/deliver", DeliverAsync)
+            .WithName("DeliverOrder")
+            .WithSummary("Hands a ready order over at the bar, when it cannot be scanned. Delivering it again changes nothing.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        orders
+            .MapPost("/undo-delivery", UndoDeliveryAsync)
+            .WithName("UndoOrderDelivery")
+            .WithSummary("Undoes a delivery made moments ago; the order is ready again. Refused once the grace has passed.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         return endpoints;
     }
 
@@ -69,6 +102,30 @@ internal static class KdsEndpoints
     internal static async Task<IResult> ReturnToQueueAsync(
         string code,
         ReturnToQueueHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(code, cancellationToken));
+
+    internal static async Task<IResult> MarkReadyAsync(
+        string code,
+        MarkReadyHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(code, cancellationToken));
+
+    internal static async Task<IResult> ReturnToPreparationAsync(
+        string code,
+        ReturnToPreparationHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(code, cancellationToken));
+
+    internal static async Task<IResult> DeliverAsync(
+        string code,
+        DeliverHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(code, cancellationToken));
+
+    internal static async Task<IResult> UndoDeliveryAsync(
+        string code,
+        UndoDeliveryHandler handler,
         CancellationToken cancellationToken) =>
         Answer(await handler.HandleAsync(code, cancellationToken));
 
@@ -98,6 +155,7 @@ internal static class KdsEndpoints
                 order.CustomerName,
                 order.Status.ToKdsStatus(),
                 order.PaidAt,
+                order.LastModifiedAt,
                 order.IsForTable,
                 [.. order.OrderItems.Select(item => new KdsQueueOrderItemResponse(item.ProductName, item.Quantity, item.Note))]))]);
     }

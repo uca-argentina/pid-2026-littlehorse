@@ -82,6 +82,157 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
         Assert.Equal(PaidAt, stored.PaidAt);
     }
 
+    private static readonly DateTimeOffset Tonight = PaidAt.AddMinutes(8);
+
+    // Decided on 2026-09-28: each column's clock is the order's audit stamp
+    // of its last change, written on save with who made it — the station.
+    [Fact]
+    public async Task StartPreparing_WhenTaken_StampsWhenAndWhichStation()
+    {
+        Venue venue = await ASeededVenue();
+        Order order = await AQueuedOrder(venue);
+
+        await AsTheStationAt(venue, Tonight, context =>
+            new StartPreparingHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+
+        Order stored = await StoredAsync(venue, order);
+        Assert.Equal(Tonight, stored.LastModifiedAt);
+        Assert.Equal("barra.demo", stored.LastModifiedBy);
+    }
+
+    // Moving to the next column starts its clock again.
+    [Fact]
+    public async Task MarkReady_WhenInPreparation_RestartsTheClock()
+    {
+        Venue venue = await ASeededVenue();
+        Order order = await AQueuedOrder(venue);
+        DateTimeOffset later = Tonight.AddMinutes(4);
+
+        await AsTheStationAt(venue, Tonight, context =>
+            new StartPreparingHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+        await AsTheStationAt(venue, later, context =>
+            new MarkReadyHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+
+        Order stored = await StoredAsync(venue, order);
+        Assert.Equal(OrderStatus.Ready, stored.Status);
+        Assert.Equal(later, stored.LastModifiedAt);
+    }
+
+    // A double tap changes nothing, so nothing is saved and the clock keeps
+    // counting from when it really moved.
+    [Fact]
+    public async Task StartPreparing_WhenTappedTwice_KeepsTheFirstMoment()
+    {
+        Venue venue = await ASeededVenue();
+        Order order = await AQueuedOrder(venue);
+
+        await AsTheStationAt(venue, Tonight, context =>
+            new StartPreparingHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+        await AsTheStationAt(venue, Tonight.AddMinutes(3), context =>
+            new StartPreparingHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+
+        Assert.Equal(Tonight, (await StoredAsync(venue, order)).LastModifiedAt);
+    }
+
+    [Fact]
+    public async Task MarkReady_WhenTheOrderBelongsToAnotherVenue_FindsNothingAndChangesNothing()
+    {
+        Venue mine = await ASeededVenue();
+        Venue theirs = await ASeededVenue();
+        Order order = await AQueuedOrder(theirs);
+        await TakeAsync(theirs, order.Code.Value);
+
+        Result<OrderStatus> result = await MoveAsync(mine, context =>
+            new MarkReadyHandler(Repository(context, new SpyDispatcher()))
+                .HandleAsync(order.Code.Value, CancellationToken.None));
+
+        Assert.Equal(KdsErrors.OrderNotFound, result.Error);
+        Assert.Equal(OrderStatus.InPreparation, await StatusOf(theirs, order));
+    }
+
+    // Delivered leaves the board: the queue no longer carries it.
+    [Fact]
+    public async Task Deliver_WhenReady_StoresItDeliveredAndTakesItOffTheQueue()
+    {
+        Venue venue = await ASeededVenue();
+        Order order = await AReadyOrder(venue);
+
+        await MoveAsync(venue, context => new DeliverHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight))
+            .HandleAsync(order.Code.Value, CancellationToken.None));
+
+        Assert.Equal(Tonight, (await StoredAsync(venue, order)).DeliveredAt);
+        await using DrinkItDbContext queue = sql.CreateContext(venue.Id);
+        Assert.Empty(await new DrinkIt.Infrastructure.Kds.KdsQueueQueries(queue).GetQueueAsync(CancellationToken.None));
+    }
+
+    // The 58 orders a demo marked delivered by hand have no moment. An undo
+    // that cannot be timed must not reopen one of them.
+    [Fact]
+    public async Task UndoDelivery_WhenNoMomentWasRecorded_RefusesIt()
+    {
+        Venue venue = await ASeededVenue();
+        Order order = await AQueuedOrder(venue);
+
+        await using (DrinkItDbContext moving = sql.CreateContext(venue.Id))
+        {
+            await moving.Orders
+                .Where(row => row.Id == order.Id)
+                .ExecuteUpdateAsync(row => row.SetProperty(o => o.Status, OrderStatus.Delivered));
+        }
+
+        DomainException error = await Assert.ThrowsAsync<DomainException>(() => MoveAsync(venue, context =>
+            new UndoDeliveryHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight))
+                .HandleAsync(order.Code.Value, CancellationToken.None)));
+
+        Assert.Equal(Order.ErrorCodes.UndoWindowPassed, error.Code);
+        Assert.Equal(OrderStatus.Delivered, await StatusOf(venue, order));
+    }
+
+    /// <summary>With the audit stamp a real request registers, at a known moment, as the station.</summary>
+    private async Task<Result<OrderStatus>> AsTheStationAt(
+        Venue venue,
+        DateTimeOffset at,
+        Func<DrinkItDbContext, Task<Result<OrderStatus>>> move)
+    {
+        await using DrinkItDbContext context = sql.CreateContext(venue.Id, new AuditInterceptor(new FixedClock(at), new Station()));
+
+        return await move(context);
+    }
+
+    private sealed class Station : ICurrentStaffUser
+    {
+        public string? Username => "barra.demo";
+    }
+
+    private async Task<Result<OrderStatus>> MoveAsync(Venue venue, Func<DrinkItDbContext, Task<Result<OrderStatus>>> move)
+    {
+        await using DrinkItDbContext context = sql.CreateContext(venue.Id);
+
+        return await move(context);
+    }
+
+    private async Task<Order> AReadyOrder(Venue venue)
+    {
+        Order order = await AQueuedOrder(venue);
+        await TakeAsync(venue, order.Code.Value);
+        await MoveAsync(venue, context => new MarkReadyHandler(Repository(context, new SpyDispatcher()))
+            .HandleAsync(order.Code.Value, CancellationToken.None));
+
+        return order;
+    }
+
+    private async Task<Order> StoredAsync(Venue venue, Order order)
+    {
+        await using DrinkItDbContext check = sql.CreateContext(venue.Id);
+
+        return await check.Orders.SingleAsync(row => row.Id == order.Id);
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
     private async Task<Result<OrderStatus>> TakeAsync(Venue venue, string code, SpyDispatcher? spy = null)
     {
         await using DrinkItDbContext context = sql.CreateContext(venue.Id);

@@ -3,11 +3,18 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { fireEvent, render, screen } from '@testing-library/angular';
+import { fireEvent, render, screen, within } from '@testing-library/angular';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
 import type { KdsLinkState } from '../../../core/kds/kds-board-channel';
-import { returnToQueueUrl, startPreparingUrl } from '../kds-orders.service';
+import {
+  deliverUrl,
+  markReadyUrl,
+  returnToPreparationUrl,
+  returnToQueueUrl,
+  startPreparingUrl,
+  undoDeliveryUrl,
+} from '../kds-orders.service';
 import { KDS_QUEUE_URL } from '../kds-queue';
 import type { KdsQueueOrder } from '../kds-queue';
 import { KdsBoardPage } from './kds-board.page';
@@ -33,6 +40,7 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     customerName: 'María Quadro',
     status: 'Queued',
     paidAt: new Date().toISOString(),
+    lastModifiedAt: null,
     isForTable: false,
     orderItems: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
     ...overrides,
@@ -161,6 +169,52 @@ describe('KdsBoardPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('alert')).not.toBeNull();
+  });
+
+  it('draws the outline of the three columns while the queue loads', async () => {
+    await openScreen();
+
+    const skeleton = screen.getByTestId('kds-skeleton');
+    expect(skeleton.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(skeleton.textContent).toContain('Nuevos');
+    expect(skeleton.textContent).toContain('En preparación');
+    expect(skeleton.textContent).toContain('Listos en la barra');
+    expect(screen.getByRole('status').textContent).toContain('Cargando');
+  });
+
+  it('drops the outline once the queue arrives', async () => {
+    await openScreenShowing([anOrder()]);
+
+    expect(screen.queryByTestId('kds-skeleton')).toBeNull();
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  // A shimmer says "on its way"; after a failure the warning says what is true.
+  it('drops the outline when the first load fails', async () => {
+    const { rendered, http } = await openScreen();
+
+    http.expectOne(KDS_QUEUE_URL).flush('', { status: 500, statusText: 'Server Error' });
+    await rendered.fixture.whenStable();
+
+    expect(screen.queryByTestId('kds-skeleton')).toBeNull();
+  });
+
+  describe('when the first load takes long', () => {
+    beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+    afterEach(() => vi.useRealTimers());
+
+    // A cold start of the API takes most of a minute: an outline that sits
+    // still that long looks like a frozen tablet.
+    it('says it is still on it after a few seconds', async () => {
+      const { rendered } = await openScreen();
+
+      expect(screen.getByRole('status').textContent).not.toContain('tardando');
+
+      vi.advanceTimersByTime(5000);
+      rendered.fixture.detectChanges();
+
+      expect(screen.getByRole('status').textContent).toContain('tardando');
+    });
   });
 
   // Settles a failed request and lets the page react, without whenStable:
@@ -500,6 +554,212 @@ describe('KdsBoardPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Devolver K-4821 a la cola' }));
 
       expect(http.expectOne(returnToQueueUrl('K-4821')).request.method).toBe('POST');
+    });
+  });
+
+  // US-18: Listo, several at once, back to preparation, the Listos column,
+  // Entregado with its Deshacer, and the search.
+  describe('marking ready and delivering', () => {
+    const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+    function aReadyOrder(code: string, readyMinutesAgo: number): KdsQueueOrder {
+      return anOrder({
+        code,
+        status: 'Ready',
+        paidAt: minutesAgo(30),
+        lastModifiedAt: minutesAgo(readyMinutesAgo),
+      });
+    }
+
+    const noContent = { status: 204, statusText: 'No Content' };
+
+    // Decided on 2026-09-28: the clock restarts when the order enters the
+    // column, and the colors keep working there too.
+    it('counts an order in preparation from when it was taken, with its own colors', async () => {
+      await openScreenShowing([
+        anOrder({
+          code: 'K-0001',
+          status: 'InPreparation',
+          paidAt: minutesAgo(30),
+          lastModifiedAt: minutesAgo(2),
+        }),
+        anOrder({
+          code: 'K-0002',
+          status: 'InPreparation',
+          paidAt: minutesAgo(30),
+          lastModifiedAt: minutesAgo(6),
+        }),
+      ]);
+
+      const fresh = screen.getByText('K-0001').closest('.card');
+      const slow = screen.getByText('K-0002').closest('.card');
+      expect(fresh?.querySelector('.age')?.textContent?.trim()).toBe('2 min');
+      expect(fresh?.classList.contains('urg')).toBe(false);
+      expect(slow?.classList.contains('warn')).toBe(true);
+    });
+
+    it('lists orders in preparation from the one taken longest ago', async () => {
+      await openScreenShowing([
+        anOrder({
+          code: 'K-0001',
+          status: 'InPreparation',
+          paidAt: minutesAgo(40),
+          lastModifiedAt: minutesAgo(1),
+        }),
+        anOrder({
+          code: 'K-0002',
+          status: 'InPreparation',
+          paidAt: minutesAgo(10),
+          lastModifiedAt: minutesAgo(4),
+        }),
+      ]);
+
+      const cards = within(screen.getByRole('group', { name: 'En preparación' })).getAllByRole(
+        'article',
+      );
+      expect(cards.map((card) => card.querySelector('.onum')?.textContent)).toEqual([
+        'K-0002',
+        'K-0001',
+      ]);
+    });
+
+    // Criterion 1.
+    it('marks an order in preparation ready when its Listo is pressed', async () => {
+      const { http } = await openScreenShowing([anOrder({ status: 'InPreparation' })]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Listo K-4821' }));
+
+      expect(http.expectOne(markReadyUrl('K-4821')).request.method).toBe('POST');
+    });
+
+    it('marks every chosen order in preparation ready with a request of its own', async () => {
+      const { http } = await openScreenShowing([
+        anOrder({ code: 'K-0001', status: 'InPreparation' }),
+        anOrder({ code: 'K-0002', status: 'InPreparation' }),
+      ]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0001' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0002' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Marcar listos 2 pedidos' }));
+
+      http.expectOne(markReadyUrl('K-0001'));
+      http.expectOne(markReadyUrl('K-0002'));
+    });
+
+    // One column at a time: the bar below always offers a single action.
+    it('lets go of the chosen new orders when one in preparation is chosen', async () => {
+      await openScreenShowing([
+        anOrder({ code: 'K-0001', status: 'Queued' }),
+        anOrder({ code: 'K-0002', status: 'InPreparation' }),
+      ]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0001' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Elegir K-0002' }));
+
+      const bar = screen.getByRole('region', { name: 'Pedidos elegidos' });
+      expect(bar.textContent).toContain('1 pedido elegido');
+      expect(screen.getByRole('button', { name: 'Marcar listos 1 pedido' })).not.toBeNull();
+      expect(
+        screen.getByRole('button', { name: 'Elegir K-0001' }).getAttribute('aria-pressed'),
+      ).toBe('false');
+    });
+
+    it('sends a ready order back to preparation', async () => {
+      const { http } = await openScreenShowing([aReadyOrder('K-4821', 2)]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Volver K-4821 a preparación' }));
+
+      expect(http.expectOne(returnToPreparationUrl('K-4821')).request.method).toBe('POST');
+    });
+
+    // Decided on 2026-09-28: minutes since it was made, and no color.
+    it('says how long a ready order has waited since it was made, without color', async () => {
+      await openScreenShowing([aReadyOrder('K-4821', 7)]);
+
+      const card = screen.getByText('K-4821').closest('.card');
+      expect(card?.querySelector('.age')?.textContent?.trim()).toBe('7 min');
+      expect(card?.classList.contains('warn') || card?.classList.contains('urg')).toBe(false);
+    });
+
+    it('shows the ten most recently made ready orders and counts every one', async () => {
+      await openScreenShowing(
+        Array.from({ length: 12 }, (_, index) =>
+          aReadyOrder(`K-${String(1000 + index)}`, 20 - index),
+        ),
+      );
+
+      const listos = screen.getByRole('group', { name: 'Listos en la barra' });
+      expect(within(listos).getAllByRole('article')).toHaveLength(10);
+      expect(within(listos).queryByText('K-1000')).toBeNull();
+      expect(listos.textContent).toContain('+2 más viejos');
+      expect(listos.querySelector('.cnt')?.textContent?.trim()).toBe('12');
+    });
+
+    it('delivers a ready order and offers to undo it', async () => {
+      const { rendered, http } = await openScreenShowing([aReadyOrder('K-4821', 2)]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Entregado K-4821' }));
+      http.expectOne(deliverUrl('K-4821')).flush(null, noContent);
+      TestBed.tick();
+      http.expectOne(KDS_QUEUE_URL).flush([]);
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('status', { name: 'Entregado' }).textContent).toContain(
+        'Entregado K-4821',
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'Deshacer' }));
+
+      expect(http.expectOne(undoDeliveryUrl('K-4821')).request.method).toBe('POST');
+    });
+
+    it('stops offering the undo after ten seconds', async () => {
+      const { rendered, http } = await openScreenShowing([aReadyOrder('K-4821', 2)]);
+      vi.useFakeTimers();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Entregado K-4821' }));
+      http.expectOne(deliverUrl('K-4821')).flush(null, noContent);
+      await vi.advanceTimersByTimeAsync(0);
+      rendered.fixture.detectChanges();
+      expect(screen.queryByRole('button', { name: 'Deshacer' })).not.toBeNull();
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      rendered.fixture.detectChanges();
+
+      expect(screen.queryByRole('button', { name: 'Deshacer' })).toBeNull();
+      vi.useRealTimers();
+    });
+
+    // Criterion 3: no camera, so the order is found by number or name.
+    it('shows only what matches the search, in every column', async () => {
+      const { rendered } = await openScreenShowing([
+        anOrder({ code: 'K-0066', customerName: 'Pablo Díaz', status: 'Queued' }),
+        anOrder({ code: 'K-0067', customerName: 'Sofi Gómez', status: 'InPreparation' }),
+      ]);
+
+      fireEvent.input(screen.getByRole('searchbox', { name: 'Buscar pedido' }), {
+        target: { value: 'pablo' },
+      });
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByText('K-0066')).not.toBeNull();
+      expect(screen.queryByText('K-0067')).toBeNull();
+    });
+
+    // A ready order out of view is still Listo, and the search is how it is found.
+    it('finds a ready order that is out of view', async () => {
+      const { rendered } = await openScreenShowing(
+        Array.from({ length: 12 }, (_, index) =>
+          aReadyOrder(`K-${String(1000 + index)}`, 20 - index),
+        ),
+      );
+
+      fireEvent.input(screen.getByRole('searchbox', { name: 'Buscar pedido' }), {
+        target: { value: '1000' },
+      });
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByText('K-1000')).not.toBeNull();
     });
   });
 });

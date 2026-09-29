@@ -409,4 +409,185 @@ public class OrderTests
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
     }
+
+    public class ReadyAndDelivered
+    {
+        private static readonly DateTimeOffset PaidAt = new(2026, 9, 28, 1, 0, 0, TimeSpan.Zero);
+
+        private static readonly DateTimeOffset DeliveredAt = PaidAt.AddMinutes(9);
+
+        private static Order AnOrderInPreparation()
+        {
+            Order order = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.Pay(PaidAt, PaymentMethod.Digital);
+            order.Enqueue();
+            order.StartPreparing();
+            order.ClearDomainEvents();
+
+            return order;
+        }
+
+        private static Order AReadyOrder()
+        {
+            Order order = AnOrderInPreparation();
+            order.MarkReady();
+            order.ClearDomainEvents();
+
+            return order;
+        }
+
+        private static Order ADeliveredOrder()
+        {
+            Order order = AReadyOrder();
+            order.Deliver(DeliveredAt);
+            order.ClearDomainEvents();
+
+            return order;
+        }
+
+        // US-18, criterion 1. When it happened is the audit stamp's to write,
+        // on save: the domain only moves the order.
+        [Fact]
+        public void MarkReady_WhenInPreparation_MovesItToReady()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.MarkReady();
+
+            Assert.Equal(OrderStatus.Ready, order.Status);
+        }
+
+        // The event US-21's push will hang off, so it names the order.
+        [Fact]
+        public void MarkReady_WhenInPreparation_RaisesOrderReadyForThatOrder()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.MarkReady();
+
+            OrderReady raised = Assert.IsType<OrderReady>(Assert.Single(order.DomainEvents));
+            Assert.Equal(AVenue, raised.VenueId);
+            Assert.Equal(order.Id, raised.OrderId);
+        }
+
+        // A double tap: already true, so nothing changes — and with nothing to
+        // save, the audit stamp, which is the board's clock, does not move.
+        [Fact]
+        public void MarkReady_WhenAlreadyReady_ChangesNothing()
+        {
+            Order order = AReadyOrder();
+
+            order.MarkReady();
+
+            Assert.Equal(OrderStatus.Ready, order.Status);
+            Assert.Empty(order.DomainEvents);
+        }
+
+        // "Sólo desde En preparación": a queued order has to be prepared first.
+        [Fact]
+        public void MarkReady_WhenStillQueued_ThrowsInvalidTransition()
+        {
+            Order order = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.Pay(PaidAt, PaymentMethod.Digital);
+            order.Enqueue();
+
+            DomainException error = Assert.Throws<DomainException>(order.MarkReady);
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+
+        // Marked ready by mistake: back to the bar.
+        [Fact]
+        public void ReturnToPreparation_WhenReady_PutsItBackInPreparation()
+        {
+            Order order = AReadyOrder();
+
+            order.ReturnToPreparation();
+
+            Assert.Equal(OrderStatus.InPreparation, order.Status);
+            Assert.IsType<OrderReturnedToPreparation>(Assert.Single(order.DomainEvents));
+        }
+
+        [Fact]
+        public void ReturnToPreparation_WhenAlreadyInPreparation_ChangesNothing()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.ReturnToPreparation();
+
+            Assert.Equal(OrderStatus.InPreparation, order.Status);
+            Assert.Empty(order.DomainEvents);
+        }
+
+        // Delivered by hand, when the scan cannot be done.
+        [Fact]
+        public void Deliver_WhenReady_MarksItDeliveredAndStampsTheMoment()
+        {
+            Order order = AReadyOrder();
+
+            order.Deliver(DeliveredAt);
+
+            Assert.Equal(OrderStatus.Delivered, order.Status);
+            Assert.Equal(DeliveredAt, order.DeliveredAt);
+            Assert.IsType<OrderDelivered>(Assert.Single(order.DomainEvents));
+        }
+
+        [Fact]
+        public void Deliver_WhenAlreadyDelivered_ChangesNothing()
+        {
+            Order order = ADeliveredOrder();
+
+            order.Deliver(DeliveredAt.AddMinutes(1));
+
+            Assert.Equal(DeliveredAt, order.DeliveredAt);
+            Assert.Empty(order.DomainEvents);
+        }
+
+        [Fact]
+        public void Deliver_WhenNotReadyYet_ThrowsInvalidTransition()
+        {
+            Order order = AnOrderInPreparation();
+
+            DomainException error = Assert.Throws<DomainException>(() => order.Deliver(DeliveredAt));
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+
+        // "Deshacer": a mistaken tap is caught right away, so the order is Ready again.
+        [Fact]
+        public void UndoDelivery_WithinTheWindow_PutsItBackToReady()
+        {
+            Order order = ADeliveredOrder();
+
+            order.UndoDelivery(DeliveredAt + Order.DeliveryUndoWindow);
+
+            Assert.Equal(OrderStatus.Ready, order.Status);
+            Assert.Null(order.DeliveredAt);
+            Assert.IsType<OrderDeliveryUndone>(Assert.Single(order.DomainEvents));
+        }
+
+        // Delivered is final. The undo is a short grace, not a way to reopen
+        // any order handed over during the night.
+        [Fact]
+        public void UndoDelivery_AfterTheWindow_ThrowsUndoWindowPassed()
+        {
+            Order order = ADeliveredOrder();
+
+            DomainException error = Assert.Throws<DomainException>(
+                () => order.UndoDelivery(DeliveredAt + Order.DeliveryUndoWindow + TimeSpan.FromSeconds(1)));
+
+            Assert.Equal(Order.ErrorCodes.UndoWindowPassed, error.Code);
+            Assert.Equal(OrderStatus.Delivered, order.Status);
+        }
+
+        [Fact]
+        public void UndoDelivery_WhenNotDelivered_ThrowsInvalidTransition()
+        {
+            Order order = AReadyOrder();
+
+            DomainException error = Assert.Throws<DomainException>(() => order.UndoDelivery(DeliveredAt));
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+    }
 }

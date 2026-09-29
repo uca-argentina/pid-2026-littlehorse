@@ -17,13 +17,16 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.ToTable("Orders");
-        builder.HasCreationTime();
+        // Full audit since 2026-09-28: the last change's moment is each board
+        // column's clock, and its author says which station moved the order.
+        builder.HasAuditColumns();
         builder.HasKey(order => order.Id);
 
         builder.Property(order => order.CustomerName).HasMaxLength(Order.CustomerNameMaxLength).IsRequired();
         builder.Property(order => order.Status).IsRequired();
         builder.Property(order => order.PaidAt);
         builder.Property(order => order.Method);
+        builder.Property(order => order.DeliveredAt);
 
         // Stored as the six characters the customer reads, not as two columns:
         // it is one thing, and every query looks it up whole.

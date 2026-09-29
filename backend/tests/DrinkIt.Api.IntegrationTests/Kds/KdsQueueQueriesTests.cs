@@ -112,6 +112,28 @@ public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
         Assert.Empty(await Queries(mine).GetQueueAsync(CancellationToken.None));
     }
 
+    // Each column's clock counts from the order's last change, so the queue carries it.
+    [Fact]
+    public async Task GetQueueAsync_WhenAnOrderMoved_CarriesWhenItLastChanged()
+    {
+        Venue venue = await ASeededVenue();
+        Order order = await AnOrderQueuedAt(venue, "Euge", new DateTimeOffset(2026, 9, 28, 1, 0, 0, TimeSpan.Zero));
+        DateTimeOffset changedAt = new(2026, 9, 28, 1, 7, 0, TimeSpan.Zero);
+
+        await using (DrinkItDbContext moving = sql.CreateContext(venue.Id))
+        {
+            await moving.Orders
+                .Where(row => row.Id == order.Id)
+                .ExecuteUpdateAsync(row => row
+                    .SetProperty(o => o.Status, OrderStatus.Ready)
+                    .SetProperty(o => o.LastModifiedAt, changedAt));
+        }
+
+        KdsQueueOrder found = Assert.Single(await Queries(venue).GetQueueAsync(CancellationToken.None));
+
+        Assert.Equal(changedAt, found.LastModifiedAt);
+    }
+
     [Fact]
     public async Task GetQueueAsync_WhenNothingIsWaiting_ReturnsEmpty()
     {

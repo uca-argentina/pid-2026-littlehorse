@@ -369,3 +369,82 @@
     transition-duration: 80ms;
   }
 }
+
+// US-18: the board's search, at the end of the header.
+.search {
+  margin-left: auto;
+  width: min(360px, 40%);
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-3);
+  border-radius: var(--dk-radius-sm);
+  border: 1.5px solid var(--dk-border);
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font: inherit;
+  font-size: 16px;
+}
+
+// The ready orders out of view, above the ones drawn.
+.more {
+  margin: 0;
+  padding: var(--dk-space-2) var(--dk-space-3);
+  border-radius: var(--dk-radius-sm);
+  border: 1.5px dashed var(--dk-border);
+  color: var(--dk-text-muted);
+  font-size: 14px;
+}
+
+.acts {
+  gap: var(--dk-space-2);
+}
+
+// "Entregado A-0066 · Deshacer", for a few seconds after a delivery.
+.done {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-3);
+  margin: 0;
+  padding: var(--dk-space-2) var(--dk-space-4);
+  border-radius: var(--dk-radius-md);
+  border: 1.5px solid var(--dk-border);
+  background: var(--dk-surface-raised);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+// The first load: the board's own outline, each block the size of what will
+// replace it, so the cards land where the eye already is.
+.skeleton-count {
+  width: 28px;
+  height: 21px;
+  border-radius: var(--dk-radius-pill);
+}
+
+.skeleton-code {
+  width: 76px;
+  height: 22px;
+}
+
+.skeleton-name {
+  width: 110px;
+  height: 18px;
+}
+
+.skeleton-age {
+  width: 44px;
+  height: 15px;
+}
+
+.skeleton-item {
+  width: 70%;
+  height: 18px;
+
+  &.short {
+    width: 45%;
+  }
+}
+
+.skeleton-action {
+  width: 112px;
+  height: var(--dk-tap-min);
+}

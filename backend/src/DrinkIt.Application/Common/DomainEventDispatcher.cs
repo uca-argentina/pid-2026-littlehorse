@@ -32,6 +32,10 @@ public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard) : IDomainE
         OrderQueued queued => queued.VenueId,
         OrderPreparationStarted taken => taken.VenueId,
         OrderRequeued requeued => requeued.VenueId,
+        OrderReady ready => ready.VenueId,
+        OrderReturnedToPreparation returned => returned.VenueId,
+        OrderDelivered delivered => delivered.VenueId,
+        OrderDeliveryUndone undone => undone.VenueId,
         _ => null,
     };
 }

@@ -190,7 +190,7 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   Los umbrales y los colores quedan igual.
 - **Borde de multi-tenancy:** el local sale del token de la estación, **nunca** de la URL.
   Esta pantalla necesita su test de aislamiento igual que el resto.
-- **Borde:** la antigüedad se cuenta **desde que se pagó**, no desde que se armó el carrito
+- **Borde:** la antigüedad de "Nuevos" se cuenta **desde que se pagó**, no desde que se armó el carrito
   — si no, un carrito abandonado a las 23:00 entra a la cola en rojo.
 
 ### US-16 · Tomar un pedido y sacarlo de la cola
@@ -250,46 +250,56 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 **Criterios de aceptación**
 
 1. **Dado** un pedido en preparación, **cuando** toco "Listo" en su tarjeta, **entonces**
-   pasa a la columna de listos y se le avisa al cliente.
-2. **Dado** que tengo el ticket en la mano, **cuando** escaneo su QR con la cámara,
-   **entonces** queda listo sin que tenga que buscarlo entre las tarjetas.
-3. **Dado** que la cámara no está —sin permiso, sin luz, ticket mojado—, **cuando** busco el
-   pedido por su número o por el nombre del cliente, **entonces** lo marco listo igual.
-4. **Dado** que escaneo o escribo un código que no es de ningún pedido de mi local, **o** uno
-   de un pedido ya entregado o cancelado, **entonces** el sistema me lo dice y no cambia
-   nada.
+   pasa a la columna de listos y el cliente lo ve en su seguimiento.
+2. **Dado** que preparé varios pedidos juntos, **cuando** los elijo en "En preparación" y toco
+   "Marcar listos", **entonces** cada uno pasa a listo por separado.
+3. **Dado** que no tengo cámara ni lector, **cuando** busco el pedido por su número o por el
+   nombre del cliente, **entonces** lo encuentro —aunque esté fuera de la vista— y lo marco
+   listo igual.
+4. **Dado** que toco "Listo" en una tarjeta vieja —el pedido ya cambió en otra tablet, se
+   entregó o se canceló—, **entonces** el sistema me lo dice, no cambia nada y el tablero se
+   pone al día.
 
 **Notas**
 
 - **Depende de** US-16.
-- **Son tres caminos al mismo lugar, y se construyen en este orden:** primero el botón, que
-  no necesita nada y deja la story cerrable; después la búsqueda por código o nombre; el
-  escaneo último. Si la cámara da problemas, se recorta el criterio 2 y la story igual cierra
-  — al revés, se cae entera.
-- **El escaneo se puede hacer hoy y sin comprar el lector.** `BarcodeDetector` es una API
-  nativa del navegador en Chrome/Android, que es lo que corre una tablet de barra. Safari,
-  iOS y Firefox no la tienen, y ahí entra el polyfill (ver _Dependencias nuevas_). Es la
-  misma API en los dos casos: el código se escribe una vez.
-- **Qué lee el escáner:** el QR del ticket lleva el `TrackingToken` del pedido, no su número
-  (§10, decidido en US-16). La búsqueda manual del criterio 3 sigue siendo por número o por
-  nombre: el token no lo tipea nadie.
-- **Pregunta abierta, de US-16:** este sprint no imprime, así que no hay ticket con QR para
-  escanear. Antes de tomar esta story hay que decidir si el criterio 2 espera a la impresora,
-  se prueba con la impresión del navegador, o se reescribe.
-- **Escribirlo como si el lector ya existiera:** lo que avanza el pedido es "este código pasa
-  a la siguiente etapa", no "el botón de esta tarjeta". La cámara es una forma de tipear el
-  código; el lector USB —que funciona como teclado y manda Enter— es otra; el campo manual es
-  la tercera. Con el caso de uso recibiendo un código, **los tests y el E2E le pasan el
-  código y nunca necesitan una cámara**, y el día que se compre el lector no se toca nada.
-- El criterio 3 ya está en el wireframe ("¿El lector no lo toma? Buscá el pedido a mano — por
-  número o por el nombre del cliente"). En un boliche la cámara falla seguido.
-- **Borde de la cámara:** la tablet está montada en un soporte, así que acercarle el ticket
-  es incómodo. Es un argumento para comprar el lector, no para no hacer la story — y es
-  exactamente por qué el criterio 1 existe.
-- Marcar listo es lo que dispara el aviso al cliente (US-21). El dominio publica el evento;
-  nadie llama al servicio de push desde la barra.
+- **Rehecha el 2026-09-28**, después de debatir los flujos:
+  - **El escaneo sale de esta story.** No hay ticket impreso que escanear, así que la
+    cámara llega con US-20 (el cliente ve su QR) y su propia pantalla de escaneo: "un
+    escaneo, sin modo" como el wireframe `KdsEscanear` — en preparación pasa a Listo, listo
+    pasa a Entregado. Los errores por código escaneado o tipeado (otro local, desconocido,
+    entregado, cancelado) van con ese escaneo, que es donde existe el código.
+  - **El aviso al cliente es su seguimiento**, que ya se consulta cada tres segundos. El push
+    al celular es US-21, que escucha el evento `OrderReady` que esta story ya levanta.
+  - **Sólo desde "En preparación".** Un pedido nuevo se prepara primero.
+  - **"Volver a preparación"** deshace un "Listo" por error, como "Devolver a la cola".
+  - **"Listos en la barra"** cuenta los minutos desde que quedó listo, sin color. Se ven
+    los **10 más recientes**; los que más esperan salen de la vista (siguen listos, el número
+    de la columna los cuenta y el buscador los encuentra) y la columna avisa "+N más viejos".
+  - **El reloj de cada columna arranca cuando el pedido entra en ella** (2026-09-28):
+    "Nuevos" cuenta desde el pago (devolverlo a la cola conserva su antigüedad), "En
+    preparación" desde que se tomó —con ámbar a los 5 minutos y rojo a los 10— y "Listos"
+    desde que quedó listo. Cada columna se ordena por su propio reloj. La tarjeta muestra sólo
+    los minutos.
+  - **Ese reloj es la auditoría del pedido.** `Order` pasó a tener la auditoría completa
+    (`LastModifiedAt`, `LastModifiedBy`), que sólo escriben los cambios de estado de la barra:
+    así además queda qué cuenta de barra movió cada pedido. Un doble toque no guarda nada y no
+    reinicia el reloj. Si más adelante otra cosa edita un pedido sin moverlo de etapa, también
+    reiniciaría el reloj: es el costo aceptado de no tener un campo propio. Ya pasa con
+    **"Deshacer" una entrega**: el pedido vuelve a "Listos" contando desde cero y se ordena como
+    el más nuevo, aunque haya esperado 20 minutos (aceptado en el code review del 2026-09-28).
+  - **Se elige en una sola columna a la vez**: la barra de abajo ofrece "Preparar N" o
+    "Marcar listos N", nunca las dos.
+  - **"Entregado" a mano se adelantó de US-19**, para cuando no se puede escanear: entrega
+    directo y durante 10 segundos ofrece "Deshacer". El dominio acepta deshacer hasta 30
+    segundos después (margen para una red lenta); pasado eso, entregado es final. Un pedido
+    entregado sin hora registrada —anterior a la columna— no se puede deshacer.
 
 ### US-19 · Entregar el pedido en la barra
+
+> **Estado al 2026-09-28:** el **criterio 2 quedó hecho en US-18** (buscador en el tablero y
+> "Entregado" en la tarjeta, con "Deshacer"). Los **criterios 1, 3 y 4 necesitan escanear** el QR
+> del cliente, que todavía no existe: **pasan a US-20**, junto con la pantalla de escaneo.
 
 > **Como** estación de barra
 > **quiero** marcar que ya le di el pedido al cliente
@@ -315,8 +325,14 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   el código, mira en qué estado está el pedido y lo avanza. Ticket de barra → listo. QR del
   cliente → entregado.
 - **Acá el escaneo importa más que en US-18**, porque es lo único que verifica que el pedido
-  es de quien lo reclama. Por eso el botón del criterio 2 va detrás de buscar el pedido, y no
-  suelto en la tarjeta: obliga a mirar el número antes de entregar.
+  es de quien lo reclama.
+- **"Entregado" va suelto en la tarjeta de "Listos"** (decidido el 2026-09-28, contra lo que
+  proponía esta nota: ponerlo detrás de buscar el pedido). La red es "Deshacer" durante unos
+  segundos, y el camino principal sigue siendo el QR.
+- **El escaneo es una acción aparte de los botones** (2026-09-28). Los botones toleran el doble
+  toque —entregar algo ya entregado no hace nada—; el escaneo, en cambio, avisa lo que encontró:
+  "no está listo", "ya se entregó" (criterio 4: dos personas reclamando el mismo número) o "no
+  es de este local".
 - **Borde del criterio 2:** quien sepa un número ajeno podría reclamarlo. Es aceptable porque
   hay una persona mirando, y es justamente por eso que el camino principal es el QR.
 
@@ -421,6 +437,11 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   - Qué pasa con los pedidos de una barra que se cierra en medio de la noche.
 - **Borde:** con una sola barra, nada cambia respecto de hoy. Tiene que seguir funcionando
   sin configurar nada.
+- **Concurrencia (code review de US-18, 2026-09-28):** `Order` no tiene token de concurrencia,
+  así que dos tablets moviendo el mismo pedido a la vez se pisan (por ejemplo, "Entregado" y
+  "Volver a preparación" juntos dejan un pedido en preparación con fecha de entrega). Hoy no
+  pasa porque hay **una sola tablet por barra**, y con este reparto cada pedido llega a una sola
+  tablet. Si alguna vez dos tablets comparten una cola, hace falta el token.
 
 ## El cliente
 
@@ -450,6 +471,11 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   retira quien tiene el celular. El número del pedido se sigue mostrando al lado, para
   leerlo, pero no alcanza para retirar.
 - **Dependencia aprobada:** `angularx-qrcode` (ver _Dependencias nuevas_).
+- **Suma lo que quedó de US-19 (2026-09-28):** con el QR a la vista, se hace la **pantalla de
+  escaneo** como el wireframe `KdsEscanear` —cámara, "Últimos escaneos" y búsqueda manual—, a la
+  que se llega desde el tablero. Un escaneo, sin modo: en preparación pasa a Listo, listo pasa
+  a Entregado, y cualquier otro caso avisa sin cambiar nada. Cierra los criterios 1, 3 y 4 de
+  US-19. Usa `barcode-detector` y `zxing-wasm` (aprobadas el 2026-09-23).
 
 ### US-21 · Que me avise el celular
 

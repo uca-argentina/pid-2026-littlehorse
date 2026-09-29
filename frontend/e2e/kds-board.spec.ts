@@ -84,6 +84,7 @@ function aMockedOrder(code: string, status: string, minutesAgo: number) {
     customerName: `Cliente ${code}`,
     status,
     paidAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
+    lastModifiedAt: status === 'Queued' ? null : new Date(Date.now() - 60_000).toISOString(),
     isForTable: false,
     orderItems: [{ productName: 'Aperol Spritz', quantity: 1, note: 'con mucho hielo' }],
   };
@@ -174,6 +175,46 @@ test.describe('KDS board', () => {
       .click();
     await expect(column('Nuevos')).toBeVisible();
     await expect(column('En preparación')).toHaveCount(0);
+  });
+
+  // US-18 end to end: the order goes all the way to the counter, a mistaken
+  // Entregado is taken back, and the customer's link follows along.
+  test('takes an order through Listo and Entregado, and undoes the delivery', async ({
+    page,
+    browser,
+    request,
+  }) => {
+    const username = await aKdsAccount(request);
+    const customerName = aFullName();
+
+    const customer = await browser.newPage();
+    await anOrderPaidBy(customer, request, customerName);
+
+    await logIn(page, username, aNewPassword);
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+
+    const column = (name: string) =>
+      page.getByRole('group', { name }).getByRole('article').filter({ hasText: customerName });
+
+    await column('Nuevos')
+      .getByRole('button', { name: /^Preparar / })
+      .click();
+    await column('En preparación')
+      .getByRole('button', { name: /^Listo / })
+      .click();
+    await expect(column('Listos en la barra')).toContainText('0 min');
+
+    // The customer's own screen says so, without anybody telling them.
+    await expect(customer.getByText(/está listo/i)).toBeVisible({ timeout: 15000 });
+
+    await column('Listos en la barra')
+      .getByRole('button', { name: /^Entregado / })
+      .click();
+    await expect(column('Listos en la barra')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Deshacer' }).click();
+    await expect(column('Listos en la barra')).toBeVisible();
+    await customer.close();
   });
 
   // Behind a bar, with wet hands, a tap lands wherever it lands: anywhere on a

@@ -49,6 +49,31 @@ public class DomainEventDispatcherTests
         Assert.Equal(venueId, Assert.Single(notifier.NotifiedVenues));
     }
 
+    // US-18: every move out of preparation changes a column too, on every
+    // tablet of the venue.
+    public static TheoryData<IDomainEvent> MovesOnTheBoard(Guid venueId) =>
+    [
+        new OrderReady(venueId, Guid.CreateVersion7()),
+        new OrderReturnedToPreparation(venueId),
+        new OrderDelivered(venueId),
+        new OrderDeliveryUndone(venueId),
+    ];
+
+    [Fact]
+    public async Task DispatchAsync_WhenAnOrderMovesOutOfPreparation_NotifiesTheKdsBoard()
+    {
+        Guid venueId = Guid.CreateVersion7();
+
+        foreach (IDomainEvent moved in MovesOnTheBoard(venueId))
+        {
+            SpyNotifier notifier = new();
+
+            await new DomainEventDispatcher(notifier).DispatchAsync([moved], CancellationToken.None);
+
+            Assert.True(notifier.NotifiedVenues.SequenceEqual([venueId]), $"{moved.GetType().Name} did not reach the board.");
+        }
+    }
+
     // A future event this dispatcher does not yet know how to react to must
     // not throw: it is simply not its reaction to make, same as an unhandled
     // status in a switch that only some callers care about.

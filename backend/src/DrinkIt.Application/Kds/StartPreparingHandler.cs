@@ -11,18 +11,6 @@ namespace DrinkIt.Application.Kds;
 /// </summary>
 public sealed class StartPreparingHandler(IOrderRepository orders)
 {
-    public async Task<Result<OrderStatus>> HandleAsync(string code, CancellationToken cancellationToken)
-    {
-        if (!OrderCode.TryParse(code, out OrderCode? parsed)) return KdsErrors.OrderNotFound;
-
-        Order? order = await orders.GetForUpdateAsync(parsed!, cancellationToken);
-
-        if (order is null) return KdsErrors.OrderNotFound;
-
-        order.StartPreparing();
-
-        await orders.SaveAsync(order, cancellationToken);
-
-        return order.Status;
-    }
+    public Task<Result<OrderStatus>> HandleAsync(string code, CancellationToken cancellationToken) =>
+        KdsOrderMove.ApplyAsync(orders, code, order => order.StartPreparing(), cancellationToken);
 }

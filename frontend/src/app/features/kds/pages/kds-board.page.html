@@ -1,6 +1,17 @@
-<div class="board">
+<div class="board" [attr.aria-busy]="isFirstLoad()">
   <header class="head">
     <drinkit-venue-brand [venue]="venueSlug()" [context]="station()" />
+
+    <!-- US-18, criterion 3: no camera at hand, so the order is found by number or name. -->
+    <input
+      #query
+      class="search"
+      type="search"
+      aria-label="Buscar pedido"
+      placeholder="Buscar por número o nombre"
+      [value]="search()"
+      (input)="search.set(query.value)"
+    />
   </header>
 
   @if (channel.state() === 'reconnecting') {
@@ -14,7 +25,41 @@
     @if (failed()) {
       <p class="status" role="alert">No pudimos cargar la cola de la barra — reintentando.</p>
     } @else {
-      <p class="status">Cargando la cola…</p>
+      <!-- Read aloud from the start, drawn only once it has something to add to the outline. -->
+      <p class="status" role="status" [class.dk-sr-only]="!isSlow()">
+        Cargando la cola…
+        @if (isSlow()) {
+          Está tardando más de lo normal, seguimos buscando.
+        }
+      </p>
+
+      <div class="cols" data-testid="kds-skeleton" aria-hidden="true">
+        @for (column of skeletonColumns; track column.key) {
+          <section class="col">
+            <h2 class="colh">
+              <span class="colt">{{ column.title }}</span>
+              <span class="dk-skeleton skeleton-count"></span>
+            </h2>
+            <div class="stack">
+              @for (card of skeletonCards[column.key]; track card) {
+                <div class="card">
+                  <div class="top">
+                    <div class="dk-skeleton skeleton-code"></div>
+                    <div class="dk-skeleton skeleton-name"></div>
+                    <span class="grow"></span>
+                    <div class="dk-skeleton skeleton-age"></div>
+                  </div>
+                  <div class="dk-skeleton skeleton-item"></div>
+                  <div class="dk-skeleton skeleton-item short"></div>
+                  <div class="acts">
+                    <div class="dk-skeleton skeleton-action"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      </div>
     }
   } @else {
     @if (failed()) {
@@ -31,9 +76,13 @@
           <section class="col" role="group" [attr.aria-label]="column.title">
             <h2 class="colh">
               <span class="colt">{{ column.title }}</span>
-              <span class="cnt">{{ column.orders.length }}</span>
+              <span class="cnt">{{ column.total }}</span>
             </h2>
             <div class="stack" #stack (scroll)="onColumnScroll(column.key, stack)">
+              <!-- Listos draws the most recently made; the ones waiting longest step out of view. -->
+              @if (column.hidden > 0) {
+                <p class="more">+{{ column.hidden }} más viejos · buscalos por número o nombre</p>
+              }
               @for (order of column.orders; track order.code) {
                 <article
                   class="card"
@@ -42,9 +91,9 @@
                   [class.chosen]="isChosen(order)"
                 >
                   <!--
-                    A new order: tapping anywhere on the card chooses it
-                    (US-16). The button's area is stretched over the whole card
-                    by the stylesheet, so there is still a single control.
+                    New or in preparation: tapping anywhere on the card chooses
+                    it (US-16, US-18). The button's area is stretched over the
+                    whole card by the stylesheet, so there is still one control.
                   -->
                   @if (canChoose(order)) {
                     <button
@@ -97,14 +146,48 @@
                     </div>
                   } @else if (order.status === 'InPreparation') {
                     <div class="acts">
+                      @if (isChosen(order)) {
+                        <span class="picked-tag">Elegido</span>
+                      } @else {
+                        <button
+                          type="button"
+                          class="act"
+                          [attr.aria-label]="'Devolver ' + order.code + ' a la cola'"
+                          [disabled]="isBusy(order)"
+                          (click)="returnToQueue(order)"
+                        >
+                          Devolver a la cola
+                        </button>
+                        <button
+                          type="button"
+                          class="act primary"
+                          [attr.aria-label]="'Listo ' + order.code"
+                          [disabled]="isBusy(order)"
+                          (click)="markReady(order)"
+                        >
+                          Listo
+                        </button>
+                      }
+                    </div>
+                  } @else {
+                    <div class="acts">
                       <button
                         type="button"
                         class="act"
-                        [attr.aria-label]="'Devolver ' + order.code + ' a la cola'"
+                        [attr.aria-label]="'Volver ' + order.code + ' a preparación'"
                         [disabled]="isBusy(order)"
-                        (click)="returnToQueue(order)"
+                        (click)="returnToPreparation(order)"
                       >
-                        Devolver a la cola
+                        Volver a preparación
+                      </button>
+                      <button
+                        type="button"
+                        class="act primary"
+                        [attr.aria-label]="'Entregado ' + order.code"
+                        [disabled]="isBusy(order)"
+                        (click)="deliver(order)"
+                      >
+                        Entregado
                       </button>
                     </div>
                   }
@@ -142,12 +225,35 @@
   <div class="dock">
     @if (actionFailure(); as failure) {
       <p class="offline" role="alert">
-        @if (failure.action === 'take') {
-          No pudimos tomar el pedido {{ failure.code }}.
-        } @else {
-          No pudimos devolver a la cola el pedido {{ failure.code }}.
+        @switch (failure.action) {
+          @case ('take') {
+            No pudimos tomar el pedido {{ failure.code }}.
+          }
+          @case ('return') {
+            No pudimos devolver a la cola el pedido {{ failure.code }}.
+          }
+          @case ('ready') {
+            No pudimos marcar listo el pedido {{ failure.code }}.
+          }
+          @case ('backToPreparation') {
+            No pudimos volver a preparación el pedido {{ failure.code }}.
+          }
+          @case ('deliver') {
+            No pudimos entregar el pedido {{ failure.code }}.
+          }
+          @case ('undo') {
+            No pudimos deshacer la entrega del pedido {{ failure.code }}.
+          }
         }
         Probá de nuevo.
+      </p>
+    }
+
+    <!-- A mistaken "Entregado" is caught right away: a few seconds to take it back. -->
+    @if (justDelivered(); as delivered) {
+      <p class="done" role="status" aria-label="Entregado">
+        <span>Entregado {{ delivered }}</span>
+        <button type="button" class="act" (click)="undoDelivery(delivered)">Deshacer</button>
       </p>
     }
 
@@ -163,9 +269,15 @@
           }
         </div>
         <button type="button" class="act" (click)="clearChoice()">Cancelar</button>
-        <button type="button" class="act primary" (click)="takeChosen()">
-          Preparar {{ chosen().length }} {{ chosen().length === 1 ? 'pedido' : 'pedidos' }}
-        </button>
+        @if (chosenColumn() === 'InPreparation') {
+          <button type="button" class="act primary" (click)="markChosenReady()">
+            Marcar listos {{ chosen().length }} {{ chosen().length === 1 ? 'pedido' : 'pedidos' }}
+          </button>
+        } @else {
+          <button type="button" class="act primary" (click)="takeChosen()">
+            Preparar {{ chosen().length }} {{ chosen().length === 1 ? 'pedido' : 'pedidos' }}
+          </button>
+        }
       </section>
     }
   </div>
