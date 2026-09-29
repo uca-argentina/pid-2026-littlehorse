@@ -17,7 +17,7 @@ namespace DrinkIt.Domain.Orders;
 /// answer would carry a half-moved order forward, and that is the bug this
 /// design exists to make impossible.
 /// </remarks>
-public sealed class Order : CreationStamp, IBelongsToVenue
+public sealed class Order : AuditStamps, IBelongsToVenue
 {
     public static class ErrorCodes
     {
@@ -30,6 +30,7 @@ public sealed class Order : CreationStamp, IBelongsToVenue
         public const string DuplicateItem = "order.duplicate_item";
         public const string NoteLength = "order.note_length";
         public const string InvalidTransition = "order.invalid_transition";
+        public const string UndoWindowPassed = "order.undo_window_passed";
     }
 
     /// <summary>Room for a full name on a ticket, and no more.</summary>
@@ -84,6 +85,16 @@ public sealed class Order : CreationStamp, IBelongsToVenue
     /// spends settling the order.
     /// </summary>
     public PaymentMethod? Method { get; private set; }
+
+    /// <summary>When it was handed over, or null while nobody has picked it up.</summary>
+    public DateTimeOffset? DeliveredAt { get; private set; }
+
+    /// <summary>
+    /// How long after a delivery it can still be undone. The screen offers it
+    /// for a few seconds; this is the margin a slow request still fits in.
+    /// Delivered is final after that.
+    /// </summary>
+    public static readonly TimeSpan DeliveryUndoWindow = TimeSpan.FromSeconds(30);
 
     public IReadOnlyList<OrderItem> Items => _items;
 
@@ -174,6 +185,66 @@ public sealed class Order : CreationStamp, IBelongsToVenue
 
         Status = OrderStatus.Queued;
         _domainEvents.Add(new OrderRequeued(VenueId));
+    }
+
+    /// <summary>
+    /// The drink is made (US-18, criterion 1). Only from preparation: a queued
+    /// order is prepared first. Asking again for what already happened changes
+    /// nothing, so nothing is saved and the board's clock — the audit stamp of
+    /// the last change — keeps counting from when it really became ready.
+    /// </summary>
+    public void MarkReady()
+    {
+        if (Status == OrderStatus.Ready) return;
+
+        EnsureItIs(OrderStatus.InPreparation);
+
+        Status = OrderStatus.Ready;
+        _domainEvents.Add(new OrderReady(VenueId, Id));
+    }
+
+    /// <summary>Marked ready by mistake: back to the bar, as if it never was.</summary>
+    public void ReturnToPreparation()
+    {
+        if (Status == OrderStatus.InPreparation) return;
+
+        EnsureItIs(OrderStatus.Ready);
+
+        Status = OrderStatus.InPreparation;
+        _domainEvents.Add(new OrderReturnedToPreparation(VenueId));
+    }
+
+    /// <summary>
+    /// Handed over. By hand for now (US-18), when there is no scan to verify
+    /// who is picking it up; the scan of US-19 ends here too.
+    /// </summary>
+    public void Deliver(DateTimeOffset at)
+    {
+        if (Status == OrderStatus.Delivered) return;
+
+        EnsureItIs(OrderStatus.Ready);
+
+        Status = OrderStatus.Delivered;
+        DeliveredAt = at;
+        _domainEvents.Add(new OrderDelivered(VenueId));
+    }
+
+    /// <summary>
+    /// "Deshacer", right after a mistaken delivery. Only within
+    /// <see cref="DeliveryUndoWindow"/>: past it, a delivered order stays
+    /// delivered.
+    /// </summary>
+    public void UndoDelivery(DateTimeOffset now)
+    {
+        EnsureItIs(OrderStatus.Delivered);
+
+        // No moment recorded — delivered before the column existed — reads as
+        // too late: an undo that cannot be timed must not reopen anything.
+        if (DeliveredAt is null || now - DeliveredAt > DeliveryUndoWindow) throw new DomainException(ErrorCodes.UndoWindowPassed, "It is too late to undo that delivery.");
+
+        Status = OrderStatus.Ready;
+        DeliveredAt = null;
+        _domainEvents.Add(new OrderDeliveryUndone(VenueId));
     }
 
     /// <summary>

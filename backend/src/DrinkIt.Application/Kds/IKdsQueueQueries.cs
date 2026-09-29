@@ -20,6 +20,7 @@ public sealed record KdsQueueOrder(
     string CustomerName,
     OrderStatus Status,
     DateTimeOffset PaidAt,
+    DateTimeOffset? LastModifiedAt,
     bool IsForTable,
     IReadOnlyList<KdsQueueOrderItem> OrderItems);
 

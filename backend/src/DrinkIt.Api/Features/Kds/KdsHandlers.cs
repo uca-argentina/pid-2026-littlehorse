@@ -7,5 +7,9 @@ internal static class KdsHandlers
 {
     public static IServiceCollection AddKdsHandlers(this IServiceCollection services) => services
         .AddScoped<StartPreparingHandler>()
-        .AddScoped<ReturnToQueueHandler>();
+        .AddScoped<ReturnToQueueHandler>()
+        .AddScoped<MarkReadyHandler>()
+        .AddScoped<ReturnToPreparationHandler>()
+        .AddScoped<DeliverHandler>()
+        .AddScoped<UndoDeliveryHandler>();
 }

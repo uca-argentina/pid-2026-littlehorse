@@ -4,6 +4,7 @@ using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DrinkIt.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(DrinkItDbContext))]
-    partial class DrinkItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260929012001_AddOrderReadyAndDeliveredAt")]
+    partial class AddOrderReadyAndDeliveredAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -134,10 +137,6 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("CustomerName")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -151,17 +150,13 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTimeOffset?>("LastModifiedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("LastModifiedBy")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<int?>("Method")
                         .HasColumnType("int");
 
                     b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ReadyAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<int>("Status")

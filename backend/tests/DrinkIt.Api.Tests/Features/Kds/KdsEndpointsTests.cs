@@ -72,6 +72,93 @@ public class KdsEndpointsTests
         Assert.Equal("urn:drinkit:problem:kds:order-not-found", response.Text("type"));
     }
 
+    private static readonly DateTimeOffset Now = new(2026, 9, 28, 2, 0, 0, TimeSpan.Zero);
+
+    // US-18: Listo, Volver a preparación, Entregado and Deshacer answer the
+    // same way Preparar does — nothing to hand back, the board reloads.
+    [Fact]
+    public async Task MarkReadyAsync_WhenInPreparation_RespondsWithNoContent()
+    {
+        Order order = AQueuedOrder();
+        order.StartPreparing();
+
+        IResult result = await KdsEndpoints.MarkReadyAsync(
+            "K-4821",
+            new MarkReadyHandler(new Fake.Orders(order)),
+            CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status204NoContent, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
+        Assert.Equal(OrderStatus.Ready, order.Status);
+    }
+
+    [Fact]
+    public async Task ReturnToPreparationAsync_WhenReady_RespondsWithNoContent()
+    {
+        Order order = AReadyOrder();
+
+        IResult result = await KdsEndpoints.ReturnToPreparationAsync(
+            "K-4821",
+            new ReturnToPreparationHandler(new Fake.Orders(order)),
+            CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status204NoContent, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
+        Assert.Equal(OrderStatus.InPreparation, order.Status);
+    }
+
+    [Fact]
+    public async Task DeliverAsync_WhenReady_RespondsWithNoContent()
+    {
+        Order order = AReadyOrder();
+
+        IResult result = await KdsEndpoints.DeliverAsync(
+            "K-4821",
+            new DeliverHandler(new Fake.Orders(order), new FixedClock(Now)),
+            CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status204NoContent, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
+        Assert.Equal(OrderStatus.Delivered, order.Status);
+    }
+
+    [Fact]
+    public async Task UndoDeliveryAsync_RightAfterDelivering_RespondsWithNoContent()
+    {
+        Order order = AReadyOrder();
+        order.Deliver(Now);
+
+        IResult result = await KdsEndpoints.UndoDeliveryAsync(
+            "K-4821",
+            new UndoDeliveryHandler(new Fake.Orders(order), new FixedClock(Now.AddSeconds(5))),
+            CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status204NoContent, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
+        Assert.Equal(OrderStatus.Ready, order.Status);
+    }
+
+    [Fact]
+    public async Task DeliverAsync_WhenNoOrderHereHasThatCode_RespondsWithNotFound()
+    {
+        IResult result = await KdsEndpoints.DeliverAsync(
+            "K-9999",
+            new DeliverHandler(new Fake.Orders(), new FixedClock(Now)),
+            CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status404NotFound, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
+    }
+
+    private static Order AReadyOrder()
+    {
+        Order order = AQueuedOrder();
+        order.StartPreparing();
+        order.MarkReady();
+
+        return order;
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
     private static Order AQueuedOrder()
     {
         Order order = Order.Place(
