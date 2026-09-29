@@ -171,6 +171,52 @@ describe('KdsBoardPage', () => {
     expect(screen.getByRole('alert')).not.toBeNull();
   });
 
+  it('draws the outline of the three columns while the queue loads', async () => {
+    await openScreen();
+
+    const skeleton = screen.getByTestId('kds-skeleton');
+    expect(skeleton.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(skeleton.textContent).toContain('Nuevos');
+    expect(skeleton.textContent).toContain('En preparación');
+    expect(skeleton.textContent).toContain('Listos en la barra');
+    expect(screen.getByRole('status').textContent).toContain('Cargando');
+  });
+
+  it('drops the outline once the queue arrives', async () => {
+    await openScreenShowing([anOrder()]);
+
+    expect(screen.queryByTestId('kds-skeleton')).toBeNull();
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  // A shimmer says "on its way"; after a failure the warning says what is true.
+  it('drops the outline when the first load fails', async () => {
+    const { rendered, http } = await openScreen();
+
+    http.expectOne(KDS_QUEUE_URL).flush('', { status: 500, statusText: 'Server Error' });
+    await rendered.fixture.whenStable();
+
+    expect(screen.queryByTestId('kds-skeleton')).toBeNull();
+  });
+
+  describe('when the first load takes long', () => {
+    beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+    afterEach(() => vi.useRealTimers());
+
+    // A cold start of the API takes most of a minute: an outline that sits
+    // still that long looks like a frozen tablet.
+    it('says it is still on it after a few seconds', async () => {
+      const { rendered } = await openScreen();
+
+      expect(screen.getByRole('status').textContent).not.toContain('tardando');
+
+      vi.advanceTimersByTime(5000);
+      rendered.fixture.detectChanges();
+
+      expect(screen.getByRole('status').textContent).toContain('tardando');
+    });
+  });
+
   // Settles a failed request and lets the page react, without whenStable:
   // these tests run on fake timers, and the retry is exactly a timer.
   async function failNextLoad(http: HttpTestingController, fixture: { detectChanges(): void }) {

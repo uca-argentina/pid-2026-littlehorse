@@ -15,6 +15,7 @@ import { Router } from '@angular/router';
 import type { Observable } from 'rxjs';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
+import { slowLoading } from '../../../shared/loading/slow-loading';
 import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
 import type { AgeBand } from '../kds-age';
 import { ageBandFor, ageLabelFor } from '../kds-age';
@@ -133,6 +134,26 @@ export class KdsBoardPage {
       return false;
     },
   });
+
+  /**
+   * Nothing has arrived yet and nothing has failed: the board draws its own
+   * outline. Only the first load — a reload keeps the cards that are there.
+   */
+  protected readonly isFirstLoad = computed(() => this.orders() === null && !this.failed());
+
+  protected readonly isSlow = slowLoading(() => this.isFirstLoad());
+
+  /** The three columns drawn empty, while the first queue is on its way. */
+  protected readonly skeletonColumns = (['Queued', 'InPreparation', 'Ready'] as const).map(
+    (key) => ({ key, title: COLUMN_TITLES[key] }),
+  );
+
+  /** How many ghost cards each column gets: Nuevos is the one that fills up. */
+  protected readonly skeletonCards: Record<ColumnKey, number[]> = {
+    Queued: [1, 2, 3],
+    InPreparation: [1, 2],
+    Ready: [1],
+  };
 
   /** What is typed in the board's search: number or name (US-18, criterion 3). */
   protected readonly search = signal('');

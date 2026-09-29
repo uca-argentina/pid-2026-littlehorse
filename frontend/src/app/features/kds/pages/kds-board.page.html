@@ -1,4 +1,4 @@
-<div class="board">
+<div class="board" [attr.aria-busy]="isFirstLoad()">
   <header class="head">
     <drinkit-venue-brand [venue]="venueSlug()" [context]="station()" />
 
@@ -25,7 +25,41 @@
     @if (failed()) {
       <p class="status" role="alert">No pudimos cargar la cola de la barra — reintentando.</p>
     } @else {
-      <p class="status">Cargando la cola…</p>
+      <!-- Read aloud from the start, drawn only once it has something to add to the outline. -->
+      <p class="status" role="status" [class.dk-sr-only]="!isSlow()">
+        Cargando la cola…
+        @if (isSlow()) {
+          Está tardando más de lo normal, seguimos buscando.
+        }
+      </p>
+
+      <div class="cols" data-testid="kds-skeleton" aria-hidden="true">
+        @for (column of skeletonColumns; track column.key) {
+          <section class="col">
+            <h2 class="colh">
+              <span class="colt">{{ column.title }}</span>
+              <span class="dk-skeleton skeleton-count"></span>
+            </h2>
+            <div class="stack">
+              @for (card of skeletonCards[column.key]; track card) {
+                <div class="card">
+                  <div class="top">
+                    <div class="dk-skeleton skeleton-code"></div>
+                    <div class="dk-skeleton skeleton-name"></div>
+                    <span class="grow"></span>
+                    <div class="dk-skeleton skeleton-age"></div>
+                  </div>
+                  <div class="dk-skeleton skeleton-item"></div>
+                  <div class="dk-skeleton skeleton-item short"></div>
+                  <div class="acts">
+                    <div class="dk-skeleton skeleton-action"></div>
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+      </div>
     }
   } @else {
     @if (failed()) {
