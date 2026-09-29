@@ -3,8 +3,9 @@ import { render, screen } from '@testing-library/angular';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import type { StaffSession } from '../../../core/auth/staff-session';
 import { StaffHomePage } from './staff-home.page';
+import type { StaffRole } from '../../../core/staff/staff-roles';
 
-function sessionFor(role: string): StaffSession {
+function sessionFor(role: StaffRole): StaffSession {
   return {
     token: 'un-token',
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
@@ -13,7 +14,7 @@ function sessionFor(role: string): StaffSession {
   };
 }
 
-async function openScreenAs(role: string) {
+async function openScreenAs(role: StaffRole) {
   const rendered = await render(StaffHomePage, {
     inputs: { venueSlug: 'bar-alfa' },
     // Salir navigates for real: without a route to land on, the router rejects

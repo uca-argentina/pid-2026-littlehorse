@@ -1,5 +1,5 @@
 import { Injectable, InjectionToken, inject, signal } from '@angular/core';
-import { HubConnectionBuilder } from '@microsoft/signalr';
+import { HttpError, HubConnectionBuilder } from '@microsoft/signalr';
 import { API_BASE_URL } from '../api/api-base-url-interceptor';
 import { SessionStorage } from '../auth/session-storage';
 
@@ -13,6 +13,23 @@ export const BOARD_CHANGED_MESSAGE = 'BoardChanged';
  */
 export const KDS_RETRY_MS = 5_000;
 
+/**
+ * The hub said the token is no good any more — the shift outlived it. Asking
+ * again with the same token can only get the same answer (US-32).
+ */
+function isRefusedToken(error: unknown): boolean {
+  return error instanceof HttpError && error.statusCode === 401;
+}
+
+/**
+ * SignalR's own reconnect loop, which runs before the channel hears of any
+ * close: forever for a dropped link, never for a refused token. Returning null
+ * is how that loop is told to stop, and then the connection closes.
+ */
+export function kdsRetryDelay(retryReason: Error | undefined): number | null {
+  return isRefusedToken(retryReason) ? null : KDS_RETRY_MS;
+}
+
 /** Whether the board is hearing the hub, as the screen needs to tell the bartender. */
 export type KdsLinkState = 'connecting' | 'connected' | 'reconnecting';
 
@@ -21,7 +38,7 @@ export interface KdsHubConnection {
   on(method: string, handler: () => void): void;
   onreconnecting(callback: () => void): void;
   onreconnected(callback: () => void): void;
-  onclose(callback: () => void): void;
+  onclose(callback: (error?: Error) => void): void;
   start(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -49,7 +66,9 @@ export const KDS_HUB_CONNECTION = new InjectionToken<
         // cookie. Left on, the cross-origin negotiate is refused in Azure.
         withCredentials: false,
       })
-      .withAutomaticReconnect({ nextRetryDelayInMilliseconds: () => KDS_RETRY_MS })
+      .withAutomaticReconnect({
+        nextRetryDelayInMilliseconds: (context) => kdsRetryDelay(context.retryReason),
+      })
       .build(),
 });
 
@@ -102,8 +121,9 @@ export class KdsBoardChannel {
     });
     // Only still ours when the automatic reconnect gave up or the server shut
     // it: disconnect() lets go of it before stopping.
-    connection.onclose(() => {
+    connection.onclose((error) => {
       if (this.connection !== connection) return;
+      if (isRefusedToken(error)) return this.sessionIsOver();
 
       this.current.set('reconnecting');
       this.startLater(connection, onChanged);
@@ -133,8 +153,9 @@ export class KdsBoardChannel {
   ): Promise<void> {
     try {
       await connection.start();
-    } catch {
+    } catch (error: unknown) {
       if (this.connection !== connection) return;
+      if (isRefusedToken(error)) return this.sessionIsOver();
 
       this.current.set('reconnecting');
       this.startLater(connection, onChanged);
@@ -146,6 +167,15 @@ export class KdsBoardChannel {
 
     this.current.set('connected');
     if (afterAGap) onChanged();
+  }
+
+  /**
+   * Drops the session the same way authenticationInterceptor does for an
+   * ordinary request: the SignalR client makes its own requests, so the
+   * interceptor never sees this 401. The screen takes it from there.
+   */
+  private sessionIsOver(): void {
+    this.sessions.forget('expired');
   }
 
   private startLater(connection: KdsHubConnection, onChanged: () => void): void {

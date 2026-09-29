@@ -1,18 +1,23 @@
+import type { components } from '../api/schema';
+
 /**
  * The roles a venue can hand out, and what each one is called on screen. The
  * API speaks English and the venue does not.
  *
- * Written by hand, unlike every DTO: the contract types `role` as a plain
- * string, so there is nothing to generate from. What keeps this honest is the
- * end-to-end spec, which creates a user of each role through the real API.
+ * The names come from the generated contract: a role written here that the
+ * API does not hand out fails to compile.
  *
  * There is no "bartender": the KDS is the bar station's own account, shared by
  * everyone preparing there, because the tablet belongs to the station and not
  * to a person (functional design, §11).
  */
-export const STAFF_ROLES = ['Administrator', 'Kds', 'Waiter'] as const;
+export type StaffRole = components['schemas']['StaffRoleName'];
 
-export type StaffRole = (typeof STAFF_ROLES)[number];
+export const STAFF_ROLES = [
+  'Administrator',
+  'Kds',
+  'Waiter',
+] as const satisfies readonly StaffRole[];
 
 export interface StaffRoleDescription {
   readonly role: StaffRole;

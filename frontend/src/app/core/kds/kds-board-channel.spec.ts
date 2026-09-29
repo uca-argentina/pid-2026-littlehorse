@@ -1,6 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpError } from '@microsoft/signalr';
+import { SessionStorage } from '../auth/session-storage';
 import type { KdsHubConnection } from './kds-board-channel';
-import { KDS_HUB_CONNECTION, KDS_RETRY_MS, KdsBoardChannel, kdsHubUrl } from './kds-board-channel';
+import {
+  KDS_HUB_CONNECTION,
+  KDS_RETRY_MS,
+  KdsBoardChannel,
+  kdsHubUrl,
+  kdsRetryDelay,
+} from './kds-board-channel';
 
 describe('kdsHubUrl', () => {
   // Development: the Angular proxy forwards /api and strips it on the way.
@@ -17,7 +25,7 @@ describe('kdsHubUrl', () => {
 
 /** Stands in for the SignalR connection: each start() answers with the next outcome queued. */
 class FakeHubConnection implements KdsHubConnection {
-  readonly outcomes: ('ok' | 'fail')[] = [];
+  readonly outcomes: ('ok' | 'fail' | 'unauthorized')[] = [];
 
   starts = 0;
 
@@ -29,7 +37,7 @@ class FakeHubConnection implements KdsHubConnection {
 
   private reconnected: (() => void) | null = null;
 
-  private closed: (() => void) | null = null;
+  private closed: ((error?: Error) => void) | null = null;
 
   on(method: string, handler: () => void): void {
     this.handlers.set(method, handler);
@@ -43,14 +51,18 @@ class FakeHubConnection implements KdsHubConnection {
     this.reconnected = callback;
   }
 
-  onclose(callback: () => void): void {
+  onclose(callback: (error?: Error) => void): void {
     this.closed = callback;
   }
 
   start(): Promise<void> {
     this.starts += 1;
 
-    return this.outcomes.shift() === 'fail'
+    const outcome = this.outcomes.shift();
+
+    if (outcome === 'unauthorized') return Promise.reject(new HttpError('Unauthorized', 401));
+
+    return outcome === 'fail'
       ? Promise.reject(new Error('The API is not answering.'))
       : Promise.resolve();
   }
@@ -70,8 +82,8 @@ class FakeHubConnection implements KdsHubConnection {
     this.reconnected?.();
   }
 
-  givesUp(): void {
-    this.closed?.();
+  givesUp(error?: Error): void {
+    this.closed?.(error);
   }
 }
 
@@ -168,6 +180,52 @@ describe('KdsBoardChannel', () => {
     expect(reloads).toBe(1);
   });
 
+  // US-32: the token outlived the night. Retrying with it would say
+  // "reintentando" forever; the session is over, and the board goes to sign in.
+  describe('when the hub refuses the token', () => {
+    let sessions: SessionStorage;
+
+    beforeEach(() => {
+      sessions = TestBed.inject(SessionStorage);
+      sessions.remember({
+        token: 'un-token',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        username: 'barra.demo',
+        role: 'Kds',
+      });
+    });
+
+    it('ends the session as expired when connecting', async () => {
+      connection.outcomes.push('unauthorized');
+
+      channel.connect(reload);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(sessions.session()).toBeNull();
+      expect(sessions.expired()).toBe(true);
+    });
+
+    it('stops retrying with a token that is no good', async () => {
+      connection.outcomes.push('unauthorized');
+
+      channel.connect(reload);
+      await vi.advanceTimersByTimeAsync(KDS_RETRY_MS * 3);
+
+      expect(connection.starts).toBe(1);
+    });
+
+    it('ends the session as expired when the connection closes over it', async () => {
+      channel.connect(reload);
+      await vi.advanceTimersByTimeAsync(0);
+
+      connection.givesUp(new HttpError('Unauthorized', 401));
+      await vi.advanceTimersByTimeAsync(KDS_RETRY_MS * 3);
+
+      expect(sessions.expired()).toBe(true);
+      expect(connection.starts).toBe(1);
+    });
+  });
+
   it('stops retrying once the screen closes', async () => {
     connection.outcomes.push('fail');
 
@@ -178,5 +236,17 @@ describe('KdsBoardChannel', () => {
 
     expect(connection.starts).toBe(1);
     expect(connection.stopped).toBe(true);
+  });
+});
+
+// SignalR's own reconnect loop, which runs before the channel ever hears of a
+// close: it must give up on a refused token instead of asking again forever.
+describe('kdsRetryDelay', () => {
+  it('keeps retrying after any other failure', () => {
+    expect(kdsRetryDelay(new Error('The API is not answering.'))).toBe(KDS_RETRY_MS);
+  });
+
+  it('gives up once the hub refuses the token', () => {
+    expect(kdsRetryDelay(new HttpError('Unauthorized', 401))).toBeNull();
   });
 });

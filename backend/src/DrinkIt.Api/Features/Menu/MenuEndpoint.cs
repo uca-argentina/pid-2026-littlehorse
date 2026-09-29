@@ -15,12 +15,13 @@ public sealed record MenuItemResponse(
     Guid CategoryId,
     bool IsOrderable);
 
-/// <summary>
-/// The venue's menu. The name travels with it because the customer scanned a
-/// QR and never typed where they are: the screen is what tells them. The
-/// categories travel with it too, because they are the venue's own and the
-/// screen has nowhere else to learn them from.
-/// </summary>
+/// <summary>The venue's menu: its name, its categories and its products.</summary>
+/// <remarks>
+/// The name travels with it because the customer scanned a QR and never typed
+/// where they are: the screen is what tells them. The categories travel with
+/// it too, because they are the venue's own and the screen has nowhere else to
+/// learn them from.
+/// </remarks>
 public sealed record MenuResponse(
     string VenueName,
     IReadOnlyList<CategoryResponse> Categories,
@@ -46,12 +47,12 @@ internal static class MenuEndpoint
         return endpoints;
     }
 
-    /// <summary>
+    /// <remarks>
     /// Both halves of the answer come from the one venue the middleware
     /// resolved from the slug: the name from what it remembered, the products
     /// from the query filter it set. Looking the venue up again here is how a
     /// single response ends up naming one venue and listing another's drinks.
-    /// </summary>
+    /// </remarks>
     internal static async Task<IResult> GetAsync(
         string venueSlug,
         CurrentVenue venue,

@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
@@ -38,12 +39,32 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
   };
 }
 
+/**
+ * The board only ever opens with the station signed in: the route's guards see
+ * to it. Stored the way SessionStorage reads it back, before the screen exists.
+ */
+function signedInAsTheStation(): void {
+  sessionStorage.setItem(
+    'drinkit.staff-session',
+    JSON.stringify({
+      token: 'un-token',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      username: 'barra.demo',
+      role: 'Kds',
+    }),
+  );
+}
+
+afterEach(() => sessionStorage.clear());
+
 async function openScreen() {
+  signedInAsTheStation();
   const channel = new FakeKdsBoardChannel();
 
   const rendered = await render(KdsBoardPage, {
     inputs: { venueSlug: 'bar-alfa' },
     providers: [
+      provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: KdsBoardChannel, useValue: channel },
@@ -274,6 +295,23 @@ describe('KdsBoardPage', () => {
     await openScreenShowing([anOrder()]);
 
     expect(screen.queryByText(/sin conexión/i)).toBeNull();
+  });
+
+  // US-32: nobody navigates on a tablet behind the bar, so when the session
+  // ends — the API or the hub refused the token — the board itself goes to
+  // sign in, saying why, instead of sitting on a queue it can no longer read.
+  it('sends the station to sign in again when its session expires', async () => {
+    const { rendered } = await openScreenShowing([anOrder()]);
+    const sessions = rendered.fixture.debugElement.injector.get(SessionStorage);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    TestBed.tick();
+
+    sessions.forget('expired');
+    TestBed.tick();
+
+    expect(navigate).toHaveBeenCalledWith(['/', 'bar-alfa', 'staff', 'login'], {
+      queryParams: { expired: true },
+    });
   });
 
   it('disconnects the channel when the screen closes', async () => {

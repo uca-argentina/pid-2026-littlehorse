@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import type { Observable } from 'rxjs';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
@@ -19,12 +20,12 @@ import type { AgeBand } from '../kds-age';
 import { ageBandFor, ageLabelFor } from '../kds-age';
 import { KdsOrdersService } from '../kds-orders.service';
 import { KDS_QUEUE_URL } from '../kds-queue';
-import type { KdsQueueOrder } from '../kds-queue';
+import type { KdsOrderStatus, KdsQueueOrder } from '../kds-queue';
 
 /** How often the clock ticks to re-read every card's age, independent of any SignalR message. */
 const AGE_TICK_MS = 15_000;
 
-type ColumnKey = 'Queued' | 'InPreparation' | 'Ready';
+type ColumnKey = KdsOrderStatus;
 
 interface Column {
   readonly key: ColumnKey;
@@ -76,6 +77,8 @@ export class KdsBoardPage {
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly sessions = inject(SessionStorage);
+
+  private readonly router = inject(Router);
 
   /**
    * The station's own account stands in for "Barra principal" until there is
@@ -194,6 +197,17 @@ export class KdsBoardPage {
 
   constructor() {
     this.channel.connect(() => this.queue.reload());
+
+    // US-32: the session ends while the board is open — the API or the hub
+    // refused the token — and nobody navigates on a tablet behind the bar, so
+    // the guard that would send them to sign in never runs. The board does it.
+    effect(() => {
+      if (this.sessions.session() !== null) return;
+
+      void this.router.navigate(['/', this.venueSlug(), 'staff', 'login'], {
+        queryParams: this.sessions.expired() ? { expired: true } : {},
+      });
+    });
 
     // Nobody behind the bar has a free hand to tap "Reintentar", and a tablet
     // switched on before the wifi came up must not stay dead.

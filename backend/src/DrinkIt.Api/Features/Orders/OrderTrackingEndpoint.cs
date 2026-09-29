@@ -19,7 +19,7 @@ public sealed record TrackedOrderItemResponse(string ProductName, int Quantity, 
 public sealed record TrackedOrderResponse(
     string Code,
     string CustomerName,
-    string Status,
+    CustomerOrderStatus Status,
     decimal Total,
     DateTimeOffset? PaidAt,
     IReadOnlyList<TrackedOrderItemResponse> Items);
@@ -48,9 +48,12 @@ internal static class OrderTrackingEndpoint
     /// <summary>
     /// Answers 404 to every way of not getting in: a wrong token, a code that
     /// belongs to nobody, another venue's order, and an order already handed
-    /// over. A 403 would confirm to somebody working through codes that this
-    /// one exists, which is the half of the answer worth hiding.
+    /// over.
     /// </summary>
+    /// <remarks>
+    /// A 403 would confirm to somebody working through codes that this one
+    /// exists, which is the half of the answer worth hiding.
+    /// </remarks>
     internal static async Task<IResult> FollowAsync(
         string venueSlug,
         string code,
@@ -68,7 +71,7 @@ internal static class OrderTrackingEndpoint
         return TypedResults.Ok(new TrackedOrderResponse(
             found.Code,
             found.CustomerName,
-            found.Status.ToString(),
+            found.Status.ToCustomerStatus(),
             found.Total,
             found.PaidAt,
             [.. found.Items.Select(item =>

@@ -89,6 +89,18 @@ public class OrdersEndpointsTests
         Assert.Contains("Gin Tonic", response.Text("detail"), StringComparison.Ordinal);
     }
 
+    // The detail is English, for developers; the screen talks to a customer in
+    // Spanish, so the drink travels on its own for it to name.
+    [Fact]
+    public async Task ConfirmAsync_WhenADrinkRanOut_NamesTheDrinkApartFromTheDetail()
+    {
+        _gin = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 1, Guid.CreateVersion7());
+
+        HttpResponseSnapshot response = await Confirm(ARequestFor(2));
+
+        Assert.Equal("Gin Tonic", response.Text("productName"));
+    }
+
     [Fact]
     public async Task ConfirmAsync_WhenNoVenueHasThatSlug_RespondsWithNotFound()
     {

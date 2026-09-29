@@ -29,7 +29,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Both halves of the answer come from the one venue the middleware
+     * The menu a customer reads after scanning the venue's QR.
+     * @description Both halves of the answer come from the one venue the middleware
      *     resolved from the slug: the name from what it remembered, the products
      *     from the query filter it set. Looking the venue up again here is how a
      *     single response ends up naming one venue and listing another's drinks.
@@ -70,8 +71,9 @@ export interface paths {
     /**
      * Answers 404 to every way of not getting in: a wrong token, a code that
      *     belongs to nobody, another venue's order, and an order already handed
-     *     over. A 403 would confirm to somebody working through codes that this
-     *     one exists, which is the half of the answer worth hiding.
+     *     over.
+     * @description A 403 would confirm to somebody working through codes that this one
+     *     exists, which is the half of the answer worth hiding.
      */
     get: operations['FollowOrder'];
     put?: never;
@@ -349,7 +351,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Hands an order taken by mistake back to Nuevos, as old as it was. */
+    /** Hands an order in preparation back to the queue, keeping when it was paid. */
     post: operations['ReturnOrderToQueue'];
     delete?: never;
     options?: never;
@@ -363,18 +365,15 @@ export interface components {
   schemas: {
     /**
      * @description How much the stock moves: positive when units arrived, negative when it was
-     *     loaded wrong. Never the new total: a change is what keeps a sale made while
-     *     the screen was open from being overwritten.
+     *     loaded wrong. A change, never the new total.
      */
     AdjustProductStockRequest: {
       /** Format: int32 */
       change: number;
     };
     /**
-     * @description Who made something and who last touched it, as the administration screens
-     *     read it (US-30). Every part travels as null when there is none: a row from
-     *     before the columns existed has no date, and the screen says "sin registro"
-     *     instead of showing one that was never recorded.
+     * @description Who made something and who last touched it, and when. Every part is null
+     *     when it was never recorded.
      */
     AuditResponse: {
       /** Format: date-time */
@@ -391,7 +390,7 @@ export interface components {
     };
     /** @description What the administration screen sends to correct somebody's role. */
     ChangeStaffUserRoleRequest: {
-      role: string;
+      role: components['schemas']['StaffRoleName'];
     };
     /** @description The order as the confirmation screen shows it. */
     ConfirmedOrderResponse: {
@@ -402,7 +401,7 @@ export interface components {
       customerName: string;
       /** Format: double */
       total: number;
-      status: string;
+      status: components['schemas']['CustomerOrderStatus'];
       /** Format: date-time */
       paidAt: string;
     };
@@ -437,10 +436,21 @@ export interface components {
     CreateStaffUserRequest: {
       username: string;
       password: string;
-      role: string;
+      role: components['schemas']['StaffRoleName'];
     };
+    /**
+     * @description Where an order is, as the customer's phone reads it.
+     * @enum {string}
+     */
+    CustomerOrderStatus:
+      'AwaitingPayment' | 'Paid' | 'Queued' | 'InPreparation' | 'Ready' | 'Delivered' | 'Canceled';
     /** Format: binary */
     IFormFile: string;
+    /**
+     * @description Which column of the bar's board an order is in.
+     * @enum {string}
+     */
+    KdsOrderStatus: 'Queued' | 'InPreparation' | 'Ready';
     /** @description One drink on a card of the board, as the bar's tablet reads it. */
     KdsQueueOrderItemResponse: {
       productName: string;
@@ -448,20 +458,17 @@ export interface components {
       quantity: number;
       note: null | string;
     };
-    /** @description One card of the bar's board (US-15). */
+    /** @description One order on the bar's board: who asked, what for, since when, and where it is. */
     KdsQueueOrderResponse: {
       code: string;
       customerName: string;
-      status: string;
+      status: components['schemas']['KdsOrderStatus'];
       /** Format: date-time */
       paidAt: string;
       isForTable: boolean;
       orderItems: components['schemas']['KdsQueueOrderItemResponse'][];
     };
-    /**
-     * @description What the client posts. Kept apart from LoginCommand so the wire
-     *         contract can change without dragging the use case with it.
-     */
+    /** @description The credentials a staff member signs in with. */
     LoginRequest: {
       username: string;
       password: string;
@@ -471,7 +478,7 @@ export interface components {
       /** Format: date-time */
       expiresAt: string;
       username: string;
-      role: string;
+      role: components['schemas']['StaffRoleName'];
     };
     /** @description One card of the menu, as the customer's phone receives it. */
     MenuItemResponse: {
@@ -486,18 +493,13 @@ export interface components {
       categoryId: string;
       isOrderable: boolean;
     };
-    /**
-     * @description The venue's menu. The name travels with it because the customer scanned a
-     *     QR and never typed where they are: the screen is what tells them. The
-     *     categories travel with it too, because they are the venue's own and the
-     *     screen has nowhere else to learn them from.
-     */
+    /** @description The venue's menu: its name, its categories and its products. */
     MenuResponse: {
       venueName: string;
       categories: components['schemas']['CategoryResponse'][];
       items: components['schemas']['MenuItemResponse'][];
     };
-    /** @description One drink, as the phone asks for it. What it costs is not in here on purpose. */
+    /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
       /** Format: uuid */
       productId: string;
@@ -538,11 +540,16 @@ export interface components {
     ResetStaffUserPasswordRequest: {
       password: string;
     };
+    /**
+     * @description A staff member's role, as the contract names it.
+     * @enum {string}
+     */
+    StaffRoleName: 'Administrator' | 'Kds' | 'Waiter';
     StaffUserResponse: {
       /** Format: uuid */
       id: string;
       username: string;
-      role: string;
+      role: components['schemas']['StaffRoleName'];
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
     };
@@ -557,7 +564,7 @@ export interface components {
     TrackedOrderResponse: {
       code: string;
       customerName: string;
-      status: string;
+      status: components['schemas']['CustomerOrderStatus'];
       /** Format: double */
       total: number;
       /** Format: date-time */
@@ -565,9 +572,8 @@ export interface components {
       items: components['schemas']['TrackedOrderItemResponse'][];
     };
     /**
-     * @description US-08: what the correction form posts, plus US-14's category. No stock, no
-     *     picture, no switches — each of those has its own action, so a screen that
-     *     only touches one of them cannot accidentally overwrite the rest.
+     * @description A product's name, description, price and category. Stock, picture and
+     *     availability each have their own action.
      */
     UpdateProductRequest: {
       name: string;

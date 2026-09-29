@@ -185,7 +185,7 @@ public class ConfirmOrderHandlerTests
             AnOrderOf(Two(menu.Gin), One(menu.Fernet)), CancellationToken.None);
 
         Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
-        Assert.Contains("Gin Tonic", result.Error.Message, StringComparison.Ordinal);
+        Assert.Equal("Gin Tonic", result.Error.Subject);
         Assert.Null(_orders.Added);
     }
 
@@ -197,7 +197,7 @@ public class ConfirmOrderHandlerTests
         Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
 
         Assert.Equal(ConfirmOrderHandler.NotOnTheMenu.Code, result.Error!.Code);
-        Assert.Contains("Gin Tonic", result.Error.Message, StringComparison.Ordinal);
+        Assert.Equal("Gin Tonic", result.Error.Subject);
     }
 
     [Fact]

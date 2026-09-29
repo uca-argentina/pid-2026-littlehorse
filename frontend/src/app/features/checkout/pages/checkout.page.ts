@@ -1,7 +1,9 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, input } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { ProblemTypes } from '../../../core/api/problem-types';
 import { Cart } from '../../../core/cart/cart';
 import { formatPrice } from '../../../shared/money/price';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
@@ -39,7 +41,7 @@ const FULL_NAME = /^\p{L}+(?:\s+\p{L}+)+$/u;
  */
 @Component({
   selector: 'drinkit-checkout-page',
-  imports: [ReactiveFormsModule, RouterLink, GlassMark],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, RouterLink, GlassMark],
   providers: [CheckoutStore],
   styleUrl: './checkout.page.scss',
   templateUrl: './checkout.page.html',
@@ -48,6 +50,9 @@ export class CheckoutPage {
   protected readonly cart = inject(Cart);
 
   protected readonly store = inject(CheckoutStore);
+
+  /** For the template to tell one refusal from another. */
+  protected readonly problems = ProblemTypes;
 
   readonly venueSlug = input.required<string>();
 

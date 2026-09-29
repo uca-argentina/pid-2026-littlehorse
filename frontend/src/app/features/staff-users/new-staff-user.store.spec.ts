@@ -5,7 +5,7 @@ import { Subject, of, throwError } from 'rxjs';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { NewStaffUserStore } from './new-staff-user.store';
 import { StaffUsersService } from './staff-users.service';
-import type { StaffUser } from './staff-users.service';
+import type { NewStaffUser, StaffUser } from './staff-users.service';
 
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
 
@@ -21,7 +21,11 @@ const created: StaffUser = {
   audit: noAudit,
 };
 
-const aNewUser = { username: 'martin.p', password: 'a long enough one', role: 'Waiter' };
+const aNewUser: NewStaffUser = {
+  username: 'martin.p',
+  password: 'a long enough one',
+  role: 'Waiter',
+};
 
 describe('NewStaffUserStore', () => {
   let store: NewStaffUserStore;

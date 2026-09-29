@@ -48,7 +48,7 @@ builder.Services.AddProblemDetailsForEveryError();
 // generated Angular client typed as "number | string".
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict);
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddSchemaTransformer<ContractEnumSchemaTransformer>());
 
 WebApplication app = builder.Build();
 

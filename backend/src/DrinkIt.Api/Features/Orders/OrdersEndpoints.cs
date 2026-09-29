@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Orders;
 
-/// <summary>One drink, as the phone asks for it. What it costs is not in here on purpose.</summary>
+/// <summary>One drink, as the phone asks for it. No price: the venue's menu sets it.</summary>
 public sealed record OrderLineRequestBody(Guid ProductId, int Quantity, string? Note);
 
 /// <summary>
@@ -37,7 +37,7 @@ public sealed record ConfirmedOrderResponse(
     string TrackingToken,
     string CustomerName,
     decimal Total,
-    string Status,
+    CustomerOrderStatus Status,
     DateTimeOffset PaidAt);
 
 internal static class OrdersEndpoints
@@ -93,7 +93,7 @@ internal static class OrdersEndpoints
                 order.TrackingToken,
                 order.CustomerName,
                 order.Total,
-                order.Status.ToString(),
+                order.Status.ToCustomerStatus(),
                 order.PaidAt));
     }
 
@@ -123,7 +123,12 @@ internal static class OrdersEndpoints
             title: TitleByStatus.GetValueOrDefault(status, "Invalid request"),
             detail: error.Message,
             statusCode: status,
-            type: ProblemTypes.For(error.Code));
+            type: ProblemTypes.For(error.Code),
+            // The detail is English, for developers. The customer's screen
+            // names the drink itself, in Spanish, so it travels on its own.
+            extensions: error.Subject is null
+                ? null
+                : new Dictionary<string, object?> { ["productName"] = error.Subject });
     }
 
     /// <summary>
