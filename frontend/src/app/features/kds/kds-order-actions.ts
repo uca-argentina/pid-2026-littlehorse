@@ -2,6 +2,8 @@ import { DestroyRef, Injectable, InjectionToken, inject, signal } from '@angular
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
 import { KdsOrdersService } from './kds-orders.service';
+import { ProblemTypes } from '../../core/api/problem-types';
+import { problemTypeOf } from '../../core/api/problem-type-of';
 
 /** How long "Entregado A-0066 · Deshacer" stays on screen after a delivery (US-18). */
 export const UNDO_OFFER_MS = new InjectionToken<number>('UNDO_OFFER_MS', {
@@ -16,6 +18,11 @@ export const UNDO_OFFER_MS = new InjectionToken<number>('UNDO_OFFER_MS', {
 export interface ActionFailure {
   readonly action: 'take' | 'return' | 'ready' | 'backToPreparation' | 'deliver' | 'undo';
   readonly code: string;
+  /**
+   * Another tablet moved it in the same instant and its move stands: trying
+   * again is not the answer, looking at where the order went is.
+   */
+  readonly movedElsewhere: boolean;
 }
 
 /**
@@ -135,8 +142,12 @@ export class KdsOrderActions {
         done?.();
         settle();
       },
-      error: () => {
-        this.lastFailure.set({ action, code });
+      error: (error: unknown) => {
+        this.lastFailure.set({
+          action,
+          code,
+          movedElsewhere: problemTypeOf(error) === ProblemTypes.orderChangedMeanwhile,
+        });
         settle();
       },
     });

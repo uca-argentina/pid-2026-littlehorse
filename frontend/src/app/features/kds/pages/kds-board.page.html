@@ -219,29 +219,35 @@
   -->
   <div class="dock">
     @if (actionFailure(); as failure) {
-      <p class="offline" role="alert">
-        @switch (failure.action) {
-          @case ('take') {
-            No pudimos tomar el pedido {{ failure.code }}.
+      @if (failure.movedElsewhere) {
+        <p class="offline" role="alert">
+          Otra tablet movió el pedido {{ failure.code }} al mismo tiempo. Fijate dónde quedó.
+        </p>
+      } @else {
+        <p class="offline" role="alert">
+          @switch (failure.action) {
+            @case ('take') {
+              No pudimos tomar el pedido {{ failure.code }}.
+            }
+            @case ('return') {
+              No pudimos devolver a la cola el pedido {{ failure.code }}.
+            }
+            @case ('ready') {
+              No pudimos marcar listo el pedido {{ failure.code }}.
+            }
+            @case ('backToPreparation') {
+              No pudimos volver a preparación el pedido {{ failure.code }}.
+            }
+            @case ('deliver') {
+              No pudimos entregar el pedido {{ failure.code }}.
+            }
+            @case ('undo') {
+              No pudimos deshacer la entrega del pedido {{ failure.code }}.
+            }
           }
-          @case ('return') {
-            No pudimos devolver a la cola el pedido {{ failure.code }}.
-          }
-          @case ('ready') {
-            No pudimos marcar listo el pedido {{ failure.code }}.
-          }
-          @case ('backToPreparation') {
-            No pudimos volver a preparación el pedido {{ failure.code }}.
-          }
-          @case ('deliver') {
-            No pudimos entregar el pedido {{ failure.code }}.
-          }
-          @case ('undo') {
-            No pudimos deshacer la entrega del pedido {{ failure.code }}.
-          }
-        }
-        Probá de nuevo.
-      </p>
+          Probá de nuevo.
+        </p>
+      }
     }
 
     <!-- A mistaken "Entregado" is caught right away: a few seconds to take it back. -->

@@ -1,3 +1,4 @@
+import { ProblemTypes } from '../../../core/api/problem-types';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
@@ -430,6 +431,25 @@ describe('KdsBoardPage', () => {
       await settle(rendered.fixture);
 
       expect(screen.getByRole('alert').textContent).toContain('No pudimos tomar el pedido K-4821');
+    });
+
+    it('says another tablet moved it, instead of asking to try again', async () => {
+      const { rendered, http } = await openScreenShowing([anOrder()]);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Preparar K-4821' }));
+      http
+        .expectOne(startPreparingUrl('K-4821'))
+        .flush(
+          { type: ProblemTypes.orderChangedMeanwhile },
+          { status: 409, statusText: 'Conflict' },
+        );
+      TestBed.tick();
+      http.expectOne(KDS_QUEUE_URL).flush([anOrder()]);
+      await settle(rendered.fixture);
+
+      const alert = screen.getByRole('alert').textContent ?? '';
+      expect(alert).toContain('Otra tablet movió el pedido K-4821 al mismo tiempo');
+      expect(alert).not.toContain('Probá de nuevo');
     });
 
     // Preparar is its own action: pressing it takes the order, it does not

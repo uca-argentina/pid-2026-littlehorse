@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
+using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Orders;
 
 namespace DrinkIt.Application.Tests.Kds;
@@ -46,6 +47,18 @@ public class StartPreparingHandlerTests
         await new StartPreparingHandler(orders).HandleAsync("K-4821", CancellationToken.None);
 
         Assert.Equal(1, orders.Saves);
+    }
+
+    // Another tablet moved it in the same instant and got there first.
+    [Fact]
+    public async Task HandleAsync_WhenAnotherTabletMovedItAtTheSameTime_SaysItChangedMeanwhile()
+    {
+        KdsOrdersInMemory orders = new(AQueuedOrder());
+        orders.RefusesTheNextSave();
+
+        Result<OrderStatus> result = await new StartPreparingHandler(orders).HandleAsync("K-4821", CancellationToken.None);
+
+        Assert.Equal(OrderErrors.ChangedMeanwhile, result.Error);
     }
 
     // Another venue's order looks exactly like this too: the filter hides it.

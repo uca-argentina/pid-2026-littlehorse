@@ -26,10 +26,22 @@ internal sealed class KdsOrdersInMemory(params Order[] stored) : IOrderRepositor
     public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
         Task.FromResult(_stored.SingleOrDefault(order => order.TrackingToken == token));
 
-    public Task SaveAsync(Order order, CancellationToken cancellationToken)
+    private bool _refusesTheNextSave;
+
+    /// <summary>Loses the next save to somebody else's, the way two screens racing do.</summary>
+    public void RefusesTheNextSave() => _refusesTheNextSave = true;
+
+    public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken)
     {
+        if (_refusesTheNextSave)
+        {
+            _refusesTheNextSave = false;
+
+            return Task.FromResult<Result<Order>>(OrderErrors.ChangedMeanwhile);
+        }
+
         Saves += 1;
-        return Task.CompletedTask;
+        return Task.FromResult<Result<Order>>(order);
     }
 
     public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>

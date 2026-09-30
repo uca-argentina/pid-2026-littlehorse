@@ -54,7 +54,11 @@ public sealed class ScanHandler(IOrderRepository orders, TimeProvider clock)
         if (outcome == ScanOutcome.Delivered)
         {
             order.Deliver(clock.GetUtcNow());
-            await orders.SaveAsync(order, cancellationToken);
+
+            // Handed over by another tablet in the same instant: this scan did nothing.
+            Result<Order> saved = await orders.SaveAsync(order, cancellationToken);
+
+            if (!saved.IsSuccess) return saved.Error!;
         }
 
         return new ScannedOrder(order.Code.ToString(), order.CustomerName, outcome);

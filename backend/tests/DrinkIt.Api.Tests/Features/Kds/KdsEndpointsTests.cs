@@ -159,6 +159,39 @@ public class KdsEndpointsTests
         public override DateTimeOffset GetUtcNow() => now;
     }
 
+    // Another tablet moved it in the same instant: a conflict, not a missing order.
+    [Fact]
+    public async Task StartPreparingAsync_WhenAnotherTabletMovedItAtTheSameTime_RespondsWithConflict()
+    {
+        IResult result = await KdsEndpoints.StartPreparingAsync(
+            "K-4821",
+            new StartPreparingHandler(new Fake.Orders(AQueuedOrder()) { LosesTheRace = true }),
+            CancellationToken.None);
+
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:order:changed-meanwhile", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task ScanAsync_WhenAnotherTabletHandedItOverAtTheSameTime_RespondsWithConflict()
+    {
+        Order order = AQueuedOrder();
+        order.StartPreparing();
+        order.MarkReady();
+
+        IResult result = await KdsEndpoints.ScanAsync(
+            new ScanRequest(order.TrackingToken.Value),
+            new ScanHandler(new Fake.Orders(order) { LosesTheRace = true }, new FixedClock(Now)),
+            CancellationToken.None);
+
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, "/kds/scan", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:order:changed-meanwhile", response.Text("type"));
+    }
+
     private static Order AQueuedOrder()
     {
         Order order = Order.Place(
@@ -182,7 +215,11 @@ public class KdsEndpointsTests
             public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
                 Task.FromResult(stored.SingleOrDefault(order => order.TrackingToken == token));
 
-            public Task SaveAsync(Order order, CancellationToken cancellationToken) => Task.CompletedTask;
+            /// <summary>Another tablet saved first, the way two screens racing do.</summary>
+            public bool LosesTheRace { get; init; }
+
+            public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
+                Task.FromResult<Result<Order>>(LosesTheRace ? OrderErrors.ChangedMeanwhile : order);
 
             public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The bar never places an order.");

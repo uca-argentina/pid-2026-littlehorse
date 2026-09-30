@@ -13,8 +13,9 @@ internal static class KdsOrderMove
 {
     /// <summary>
     /// The order's new status, or <see cref="KdsErrors.OrderNotFound"/> for a
-    /// code that is not one of this venue's orders — malformed ones included.
-    /// A move the order cannot make throws from the domain, as ever.
+    /// code that is not one of this venue's orders — malformed ones included —
+    /// or <see cref="OrderErrors.ChangedMeanwhile"/> when another tablet moved
+    /// it first. A move the order cannot make throws from the domain, as ever.
     /// </summary>
     public static async Task<Result<OrderStatus>> ApplyAsync(
         IOrderRepository orders,
@@ -30,8 +31,10 @@ internal static class KdsOrderMove
 
         move(order);
 
-        await orders.SaveAsync(order, cancellationToken);
+        // Another tablet moved it in the same instant and got there first:
+        // theirs stands, and the board reloads with it from their notification.
+        Result<Order> saved = await orders.SaveAsync(order, cancellationToken);
 
-        return order.Status;
+        return saved.IsSuccess ? order.Status : saved.Error!;
     }
 }

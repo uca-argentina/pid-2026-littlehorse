@@ -121,12 +121,28 @@ internal sealed partial class OrderRepository(
             .Include(order => order.Items)
             .FirstOrDefaultAsync(order => order.TrackingToken == token, cancellationToken);
 
-    public async Task SaveAsync(Order order, CancellationToken cancellationToken)
+    public async Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken)
     {
-        await context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Somebody else saved this order after it was loaded here (see
+            // Version in OrderConfiguration). Nothing was written, so nobody
+            // hears about it: the events are forgotten with the change.
+            order.ClearDomainEvents();
+            context.ChangeTracker.Clear();
+            LogChangedMeanwhile(logger, order.Code.Value);
+
+            return OrderErrors.ChangedMeanwhile;
+        }
 
         // Committed by now, so the same reasoning as a new order applies.
         await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
+
+        return order;
     }
 
     /// <summary>
@@ -157,6 +173,11 @@ internal sealed partial class OrderRepository(
             order.ClearDomainEvents();
         }
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Order {OrderCode} was changed by somebody else while this change was on its way; nothing was saved")]
+    private static partial void LogChangedMeanwhile(ILogger logger, string orderCode);
 
     [LoggerMessage(
         Level = LogLevel.Error,

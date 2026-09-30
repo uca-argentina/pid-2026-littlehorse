@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ProblemTypes } from '../../core/api/problem-types';
 import { UNDO_OFFER_MS, KdsOrderActions } from './kds-order-actions';
 import { deliverUrl, markReadyUrl, undoDeliveryUrl } from './kds-orders.service';
 
@@ -59,7 +60,20 @@ describe('KdsOrderActions', () => {
     actions.deliver('K-4821');
     http.expectOne(deliverUrl('K-4821')).flush({}, { status: 400, statusText: 'Bad Request' });
 
-    expect(actions.failure()).toEqual({ action: 'deliver', code: 'K-4821' });
+    expect(actions.failure()).toEqual({ action: 'deliver', code: 'K-4821', movedElsewhere: false });
+  });
+
+  // Another tablet moved it in the same instant: trying again would not help,
+  // it is already somewhere else.
+  it('tells a lost race apart from a failure worth retrying', () => {
+    const { actions, http } = someActions();
+
+    actions.markReady('K-4821');
+    http
+      .expectOne(markReadyUrl('K-4821'))
+      .flush({ type: ProblemTypes.orderChangedMeanwhile }, { status: 409, statusText: 'Conflict' });
+
+    expect(actions.failure()).toEqual({ action: 'ready', code: 'K-4821', movedElsewhere: true });
   });
 
   it('forgets the last failure once another action starts', () => {

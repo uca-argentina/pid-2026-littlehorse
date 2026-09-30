@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
+using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Orders;
 
 namespace DrinkIt.Application.Tests.Kds;
@@ -66,6 +67,19 @@ public class ScanHandlerTests
     /// the only QR there is is the customer's, and showing it early must not
     /// mark a drink ready that nobody made.
     /// </summary>
+    // Another tablet handed it over in the same instant: this scan did nothing.
+    [Fact]
+    public async Task HandleAsync_WhenAnotherTabletHandedItOverAtTheSameTime_SaysItChangedMeanwhile()
+    {
+        Order order = AReadyOrder();
+        KdsOrdersInMemory orders = new(order);
+        orders.RefusesTheNextSave();
+
+        Result<ScannedOrder> result = await HandlerOver(orders).HandleAsync(order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Equal(OrderErrors.ChangedMeanwhile, result.Error);
+    }
+
     [Fact]
     public async Task HandleAsync_WhenTheOrderIsInPreparation_SaysItIsNotReadyAndLeavesIt()
     {

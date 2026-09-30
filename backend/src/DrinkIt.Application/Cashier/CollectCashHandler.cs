@@ -28,7 +28,12 @@ public sealed class CollectCashHandler(IOrderRepository orders, TimeProvider clo
         // name here; the domain refuses the order rather than a blank one.
         order.CollectCash(clock.GetUtcNow(), cashier.Username ?? string.Empty);
 
-        await orders.SaveAsync(order, cancellationToken);
+        Result<Order> saved = await orders.SaveAsync(order, cancellationToken);
+
+        // Another till collected it in the same instant and got there first.
+        // Waiting for cash, collecting is the only thing anybody can do to it,
+        // so for this till it is simply already paid.
+        if (!saved.IsSuccess) return CashierErrors.AlreadyPaid;
 
         return order.Status;
     }

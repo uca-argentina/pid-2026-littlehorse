@@ -1,6 +1,7 @@
 using DrinkIt.Api.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
+using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Orders;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -47,7 +48,8 @@ internal static class KdsEndpoints
             .WithTags("Kds")
             .WithSummary("Hands over the ready order a customer's QR leads to, or says why it did not.")
             .Produces<ScannedOrderResponse>()
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         RouteGroupBuilder orders = endpoints
             .MapGroup("/kds/orders/{code}")
@@ -62,7 +64,8 @@ internal static class KdsEndpoints
             // An order no longer where the board thought it was: a broken
             // transition, answered by the global exception handler.
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         orders
             .MapPost("/return-to-queue", ReturnToQueueAsync)
@@ -72,7 +75,8 @@ internal static class KdsEndpoints
             // An order no longer where the board thought it was: a broken
             // transition, answered by the global exception handler.
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         orders
             .MapPost("/mark-ready", MarkReadyAsync)
@@ -80,7 +84,8 @@ internal static class KdsEndpoints
             .WithSummary("Marks an order in preparation ready. Marking it again changes nothing.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         orders
             .MapPost("/return-to-preparation", ReturnToPreparationAsync)
@@ -88,7 +93,8 @@ internal static class KdsEndpoints
             .WithSummary("Sends an order marked ready by mistake back to preparation.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         orders
             .MapPost("/deliver", DeliverAsync)
@@ -96,7 +102,8 @@ internal static class KdsEndpoints
             .WithSummary("Hands a ready order over at the bar, when it cannot be scanned. Delivering it again changes nothing.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         orders
             .MapPost("/undo-delivery", UndoDeliveryAsync)
@@ -104,7 +111,8 @@ internal static class KdsEndpoints
             .WithSummary("Undoes a delivery made moments ago; the order is ready again. Refused once the grace has passed.")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return endpoints;
     }
@@ -156,7 +164,7 @@ internal static class KdsEndpoints
     {
         Result<ScannedOrder> result = await handler.HandleAsync(request.Read, cancellationToken);
 
-        if (!result.IsSuccess) return NotFound(result.Error!);
+        if (!result.IsSuccess) return Rejected(result.Error!);
 
         ScannedOrder scanned = result.Value;
 
@@ -171,16 +179,24 @@ internal static class KdsEndpoints
     {
         if (result.IsSuccess) return TypedResults.NoContent();
 
-        // The only expected failure of these use cases.
-        return NotFound(result.Error!);
+        return Rejected(result.Error!);
     }
 
-    private static ProblemHttpResult NotFound(Error error) =>
-        TypedResults.Problem(
-            title: "Not found",
+    /// <summary>
+    /// A code that is no order of this venue is a 404. Another tablet moving
+    /// the order in the same instant is a conflict: the order is there, it
+    /// just is not where this tablet thought, and the board reloads with it.
+    /// </summary>
+    private static ProblemHttpResult Rejected(Error error)
+    {
+        bool changedMeanwhile = error.Code == OrderErrors.ChangedMeanwhile.Code;
+
+        return TypedResults.Problem(
+            title: changedMeanwhile ? "Conflict" : "Not found",
             detail: error.Message,
-            statusCode: StatusCodes.Status404NotFound,
+            statusCode: changedMeanwhile ? StatusCodes.Status409Conflict : StatusCodes.Status404NotFound,
             type: ProblemTypes.For(error.Code));
+    }
 
     internal static async Task<IResult> GetQueueAsync(IKdsQueueQueries queue, CancellationToken cancellationToken)
     {

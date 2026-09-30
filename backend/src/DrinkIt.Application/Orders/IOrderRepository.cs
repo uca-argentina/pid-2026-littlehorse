@@ -66,5 +66,11 @@ public interface IOrderRepository
     /// the order raised — so the board never hears about a change that did not
     /// make it to the database.
     /// </summary>
-    Task SaveAsync(Order order, CancellationToken cancellationToken);
+    /// <remarks>
+    /// Refused with <see cref="OrderErrors.ChangedMeanwhile"/> when somebody
+    /// else saved the same order after it was loaded here: two tills collecting
+    /// it, two tablets moving it. Nothing is written and nobody is notified;
+    /// the first one stands.
+    /// </remarks>
+    Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken);
 }
