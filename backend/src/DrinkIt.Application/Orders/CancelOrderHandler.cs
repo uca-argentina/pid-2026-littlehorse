@@ -29,6 +29,8 @@ public sealed class CancelOrderHandler(IOrderRepository orders)
 
         Result<Order> saved = await orders.SaveCancellationAsync(order, cancellationToken);
 
-        return saved.IsSuccess ? order.Status : saved.Error!;
+        // The till collected it in the same instant and got there first: for
+        // the customer it is paid, the same answer CancelAtTillHandler gives.
+        return saved.IsSuccess ? order.Status : OrderErrors.NotCancelable;
     }
 }

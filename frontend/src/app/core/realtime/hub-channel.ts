@@ -117,8 +117,7 @@ export abstract class HubChannel {
     connection.onreconnecting(() => this.current.set('reconnecting'));
     connection.onreconnected(() => {
       this.current.set('connected');
-      onChanged();
-      this.joined?.(connection, onChanged);
+      this.catchUp(connection, onChanged);
     });
     // Only still ours when the automatic reconnect gave up or the server shut
     // it: disconnect() lets go of it before stopping.
@@ -167,8 +166,19 @@ export abstract class HubChannel {
     if (this.connection !== connection) return;
 
     this.current.set('connected');
-    if (afterAGap) onChanged();
-    this.joined?.(connection, onChanged);
+    if (afterAGap || this.joined) this.catchUp(connection, onChanged);
+  }
+
+  /**
+   * Asks once for what was missed while the link was down. A hub that is
+   * joined by asking (see joined) asks right after joining, because a move
+   * made before joining reaches nobody. Asking here as well would make every
+   * screen ask twice each time the link comes back.
+   */
+  private catchUp(connection: HubConnectionLike, onChanged: () => void): void {
+    if (this.joined) return this.joined(connection, onChanged);
+
+    onChanged();
   }
 
   /** What the hub is asked to prove who is listening: the staff session, by default. */

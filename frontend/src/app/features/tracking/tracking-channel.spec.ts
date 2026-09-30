@@ -142,4 +142,18 @@ describe('TrackingChannel', () => {
       ['Follow', token],
     ]);
   });
+
+  // When the link comes back, following the order again already asks once.
+  // Asking before that as well would make every phone in the venue ask twice
+  // each time the wifi drops for a moment.
+  it('asks once, not twice, when the link comes back', async () => {
+    channel.follow(token, askAgain);
+    await vi.advanceTimersByTimeAsync(0);
+    asks = 0;
+
+    connection.getsItBack();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(asks).toBe(1);
+  });
 });

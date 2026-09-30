@@ -63,6 +63,29 @@ public sealed class TrackingHubTests(SqlServerFixture sql) : IAsyncDisposable
         Assert.False(theirsNotified.Task.IsCompleted);
     }
 
+    // One connection, one order, like the screen it serves. Otherwise a single
+    // connection could join groups without end and keep them all in memory.
+    [Fact]
+    public async Task Follow_WhenAnotherOrderIsFollowedLater_StopsHearingTheFirst()
+    {
+        TrackingToken first = TrackingToken.New();
+        TrackingToken second = TrackingToken.New();
+
+        await using HubConnection connection = await Following(first.Value);
+        await connection.InvokeAsync(nameof(TrackingHub.Follow), second.Value);
+
+        TaskCompletionSource heard = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        connection.On(TrackingHub.OrderChanged, () => heard.TrySetResult());
+
+        await Followers().NotifyOrderChangedAsync(first, CancellationToken.None);
+        await Task.WhenAny(heard.Task, Task.Delay(TimeSpan.FromSeconds(1)));
+        Assert.False(heard.Task.IsCompleted);
+
+        // Still following the second: letting go of the first is not letting go of everything.
+        await Followers().NotifyOrderChangedAsync(second, CancellationToken.None);
+        await heard.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
     // Whatever a stranger sends is an answer, not a crash: a link somebody
     // mangled while copying it must not take the connection down.
     [Theory]

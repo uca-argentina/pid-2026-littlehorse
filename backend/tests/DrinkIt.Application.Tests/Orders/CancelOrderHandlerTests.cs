@@ -98,9 +98,11 @@ public class CancelOrderHandlerTests
         Assert.Equal(0, orders.Cancellations);
     }
 
-    // The till collected it in the same instant: theirs stands.
+    // The till collected it in the same instant: theirs stands, and for the
+    // customer it is paid — the same answer the till gives (CancelAtTillHandler).
+    // "Somebody else changed it" would send them to check their connection.
     [Fact]
-    public async Task HandleAsync_WhenSomebodyElseChangedItMeanwhile_ReturnsChangedMeanwhile()
+    public async Task HandleAsync_WhenSomebodyElseChangedItMeanwhile_RefusesAsNotCancelable()
     {
         Order order = AnOrderWaitingForCash();
         KdsOrdersInMemory orders = new(order);
@@ -109,6 +111,6 @@ public class CancelOrderHandlerTests
         Result<OrderStatus> result = await new CancelOrderHandler(orders)
             .HandleAsync("K-4821", order.TrackingToken.Value, CancellationToken.None);
 
-        Assert.Equal(OrderErrors.ChangedMeanwhile, result.Error);
+        Assert.Equal(OrderErrors.NotCancelable, result.Error);
     }
 }
