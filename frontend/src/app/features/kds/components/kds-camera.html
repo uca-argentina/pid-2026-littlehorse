@@ -1,0 +1,28 @@
+<div class="camera" [class.camera-off]="state() !== 'reading'">
+  <!-- Muted and inline: iOS will not play a video on its own otherwise. -->
+  <video #video class="feed" muted playsinline aria-hidden="true"></video>
+
+  @switch (state()) {
+    @case ('starting') {
+      <p class="note" role="status">Abriendo la cámara…</p>
+    }
+    @case ('reading') {
+      <p class="note note-over" role="status">Apuntá al QR del cliente</p>
+    }
+    @case ('denied') {
+      <p class="note" role="status">
+        La cámara no tiene permiso. Usá el lector o buscá el pedido a mano.
+      </p>
+    }
+    @case ('missing') {
+      <p class="note" role="status">
+        No hay cámara en esta tablet. Usá el lector o buscá el pedido a mano.
+      </p>
+    }
+    @case ('failed') {
+      <p class="note" role="status">
+        No pudimos abrir la cámara. Usá el lector o buscá el pedido a mano.
+      </p>
+    }
+  }
+</div>

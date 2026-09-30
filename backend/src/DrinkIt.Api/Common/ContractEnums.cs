@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DrinkIt.Application.Kds;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Staff;
 
@@ -34,6 +35,15 @@ public enum KdsOrderStatus
     Queued,
     InPreparation,
     Ready,
+}
+
+/// <summary>What a scan at the bar did, or why it did nothing.</summary>
+[JsonConverter(typeof(StrictStringEnumConverter<ScanOutcomeName>))]
+public enum ScanOutcomeName
+{
+    Delivered,
+    NotReadyYet,
+    AlreadyDelivered,
 }
 
 /// <summary>
@@ -106,5 +116,13 @@ public static class ContractEnums
         OrderStatus.InPreparation => KdsOrderStatus.InPreparation,
         OrderStatus.Ready => KdsOrderStatus.Ready,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "The bar's board never shows an order in this state."),
+    };
+
+    public static ScanOutcomeName ToContract(this ScanOutcome outcome) => outcome switch
+    {
+        ScanOutcome.Delivered => ScanOutcomeName.Delivered,
+        ScanOutcome.NotReadyYet => ScanOutcomeName.NotReadyYet,
+        ScanOutcome.AlreadyDelivered => ScanOutcomeName.AlreadyDelivered,
+        _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "A scan outcome the contract has no name for."),
     };
 }

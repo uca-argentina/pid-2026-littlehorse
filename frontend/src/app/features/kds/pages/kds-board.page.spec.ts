@@ -692,6 +692,8 @@ describe('KdsBoardPage', () => {
       expect(within(listos).getAllByRole('article')).toHaveLength(10);
       expect(within(listos).queryByText('K-1000')).toBeNull();
       expect(listos.textContent).toContain('+2 más viejos');
+      // Out of view is not out of reach: the note says where to find them.
+      expect(listos.textContent).toMatch(/escane/i);
       expect(listos.querySelector('.cnt')?.textContent?.trim()).toBe('12');
     });
 
@@ -730,36 +732,20 @@ describe('KdsBoardPage', () => {
       vi.useRealTimers();
     });
 
-    // Criterion 3: no camera, so the order is found by number or name.
-    it('shows only what matches the search, in every column', async () => {
-      const { rendered } = await openScreenShowing([
-        anOrder({ code: 'K-0066', customerName: 'Pablo Díaz', status: 'Queued' }),
-        anOrder({ code: 'K-0067', customerName: 'Sofi Gómez', status: 'InPreparation' }),
-      ]);
+    // US-18, criterion 3, moved to the scan screen on 2026-09-29: the board
+    // only points to it.
+    it('offers the scan screen, where orders are scanned and searched', async () => {
+      await openScreenShowing([]);
 
-      fireEvent.input(screen.getByRole('searchbox', { name: 'Buscar pedido' }), {
-        target: { value: 'pablo' },
-      });
-      await rendered.fixture.whenStable();
-
-      expect(screen.getByText('K-0066')).not.toBeNull();
-      expect(screen.queryByText('K-0067')).toBeNull();
+      expect(screen.getByRole('link', { name: 'Escanear o buscar' }).getAttribute('href')).toBe(
+        '/bar-alfa/staff/kds/scan',
+      );
     });
 
-    // A ready order out of view is still Listo, and the search is how it is found.
-    it('finds a ready order that is out of view', async () => {
-      const { rendered } = await openScreenShowing(
-        Array.from({ length: 12 }, (_, index) =>
-          aReadyOrder(`K-${String(1000 + index)}`, 20 - index),
-        ),
-      );
+    it('has no search of its own', async () => {
+      await openScreenShowing([anOrder()]);
 
-      fireEvent.input(screen.getByRole('searchbox', { name: 'Buscar pedido' }), {
-        target: { value: '1000' },
-      });
-      await rendered.fixture.whenStable();
-
-      expect(screen.getByText('K-1000')).not.toBeNull();
+      expect(screen.queryByRole('searchbox')).toBeNull();
     });
   });
 });

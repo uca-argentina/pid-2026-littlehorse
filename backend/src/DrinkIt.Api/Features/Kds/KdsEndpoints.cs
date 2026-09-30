@@ -2,6 +2,7 @@ using DrinkIt.Api.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
 using DrinkIt.Domain.Orders;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Kds;
 
@@ -18,6 +19,12 @@ public sealed record KdsQueueOrderResponse(
     bool IsForTable,
     IReadOnlyList<KdsQueueOrderItemResponse> OrderItems);
 
+/// <summary>What the bar's camera or reader read off the customer's phone.</summary>
+public sealed record ScanRequest(string? Read);
+
+/// <summary>Whose order a scan found, and what it did with it.</summary>
+public sealed record ScannedOrderResponse(string Code, string CustomerName, ScanOutcomeName Outcome);
+
 internal static class KdsEndpoints
 {
     public static IEndpointRouteBuilder MapKds(this IEndpointRouteBuilder endpoints)
@@ -32,6 +39,15 @@ internal static class KdsEndpoints
             .WithTags("Kds")
             .WithSummary("The bar's queue: every paid order still on its way, oldest paid first.")
             .Produces<IReadOnlyList<KdsQueueOrderResponse>>();
+
+        endpoints
+            .MapPost("/kds/scan", ScanAsync)
+            .RequireAuthorization(Policies.Kds)
+            .WithName("ScanOrder")
+            .WithTags("Kds")
+            .WithSummary("Hands over the ready order a customer's QR leads to, or says why it did not.")
+            .Produces<ScannedOrderResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         RouteGroupBuilder orders = endpoints
             .MapGroup("/kds/orders/{code}")
@@ -130,6 +146,24 @@ internal static class KdsEndpoints
         Answer(await handler.HandleAsync(code, cancellationToken));
 
     /// <summary>
+    /// "Not ready yet" and "already delivered" are answers, not failures: the
+    /// screen still needs whose order it was to say so.
+    /// </summary>
+    internal static async Task<IResult> ScanAsync(
+        ScanRequest request,
+        ScanHandler handler,
+        CancellationToken cancellationToken)
+    {
+        Result<ScannedOrder> result = await handler.HandleAsync(request.Read, cancellationToken);
+
+        if (!result.IsSuccess) return NotFound(result.Error!);
+
+        ScannedOrder scanned = result.Value;
+
+        return TypedResults.Ok(new ScannedOrderResponse(scanned.Code, scanned.CustomerName, scanned.Outcome.ToContract()));
+    }
+
+    /// <summary>
     /// Nothing to hand back on success: the board reloads its queue when the
     /// hub says it changed, which is also how every other tablet finds out.
     /// </summary>
@@ -138,12 +172,15 @@ internal static class KdsEndpoints
         if (result.IsSuccess) return TypedResults.NoContent();
 
         // The only expected failure of these use cases.
-        return TypedResults.Problem(
-            title: "Not found",
-            detail: result.Error!.Message,
-            statusCode: StatusCodes.Status404NotFound,
-            type: ProblemTypes.For(result.Error.Code));
+        return NotFound(result.Error!);
     }
+
+    private static ProblemHttpResult NotFound(Error error) =>
+        TypedResults.Problem(
+            title: "Not found",
+            detail: error.Message,
+            statusCode: StatusCodes.Status404NotFound,
+            type: ProblemTypes.For(error.Code));
 
     internal static async Task<IResult> GetQueueAsync(IKdsQueueQueries queue, CancellationToken cancellationToken)
     {

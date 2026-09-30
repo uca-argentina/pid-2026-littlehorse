@@ -476,6 +476,16 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   que se llega desde el tablero. Un escaneo, sin modo: en preparación pasa a Listo, listo pasa
   a Entregado, y cualquier otro caso avisa sin cambiar nada. Cierra los criterios 1, 3 y 4 de
   US-19. Usa `barcode-detector` y `zxing-wasm` (aprobadas el 2026-09-23).
+- **Deuda del code review (2026-09-29)**, anotada y no arreglada:
+  - **Dos escaneos simultáneos del mismo pedido listo contestan "Entregado" los dos.** Es la
+    falta de token de concurrencia en `Order` que ya anota US-33; hoy no pasa porque hay una
+    sola tablet por barra.
+  - **El escaneo de un pedido cancelado o sin pagar diría "Todavía no está listo".** Hoy no hay
+    transición a esos estados; cuando lleguen US-23 y US-25, el escaneo necesita su propio aviso
+    para cada uno.
+  - **Los colores del QR repiten a mano `--dk-paper` y `--dk-on-paper`**, porque la librería
+    los pide como valores y no como CSS. Si cambia el token, hay que cambiar las constantes de
+    `tracking.page.ts`.
 
 ### US-21 · Que me avise el celular
 

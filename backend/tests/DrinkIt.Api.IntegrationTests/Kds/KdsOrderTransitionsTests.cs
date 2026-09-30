@@ -7,6 +7,7 @@ using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -163,6 +164,66 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
         Assert.Equal(Tonight, (await StoredAsync(venue, order)).DeliveredAt);
         await using DrinkItDbContext queue = sql.CreateContext(venue.Id);
         Assert.Empty(await new DrinkIt.Infrastructure.Kds.KdsQueueQueries(queue).GetQueueAsync(CancellationToken.None));
+    }
+
+    // US-20: the QR on the customer's phone carries the token, and the bar
+    // finds the order by it — through the value conversion, in SQL.
+    [Fact]
+    public async Task Scan_WhenTheOrderIsReady_StoresItDelivered()
+    {
+        Venue venue = await ASeededVenue();
+        Order order = await AReadyOrder(venue);
+
+        Result<ScannedOrder> result = await ScanAsync(venue, order.TrackingToken.Value);
+
+        Assert.Equal(ScanOutcome.Delivered, result.Value.Outcome);
+        Order stored = await StoredAsync(venue, order);
+        Assert.Equal(OrderStatus.Delivered, stored.Status);
+        Assert.Equal(Tonight, stored.DeliveredAt);
+    }
+
+    // The invariant CLAUDE.md asks for, now by token: another venue's QR reads
+    // exactly like a stranger's.
+    [Fact]
+    public async Task Scan_WhenTheOrderBelongsToAnotherVenue_ReturnsUnknownCodeAndChangesNothing()
+    {
+        Venue mine = await ASeededVenue();
+        Venue theirs = await ASeededVenue();
+        Order order = await AReadyOrder(theirs);
+
+        Result<ScannedOrder> result = await ScanAsync(mine, order.TrackingToken.Value);
+
+        Assert.Equal(KdsErrors.UnknownCode, result.Error);
+        Assert.Equal(OrderStatus.Ready, await StatusOf(theirs, order));
+    }
+
+    // The scan hands over the one order a token leads to. Two of a venue's
+    // orders sharing one would make that a coin toss, so the database refuses
+    // it rather than trusting 128 random bits alone.
+    [Fact]
+    public async Task Save_WhenTwoOrdersOfOneVenueShareATrackingToken_IsRefused()
+    {
+        Venue venue = await ASeededVenue();
+        Order first = await AQueuedOrder(venue);
+        Order second = await AQueuedOrder(venue);
+
+        await using DrinkItDbContext context = sql.CreateContext(venue.Id);
+
+        // Straight to SQL, past SaveChanges, so it arrives unwrapped: 2601 is
+        // SQL Server refusing a duplicate in a unique index.
+        SqlException error = await Assert.ThrowsAsync<SqlException>(() => context.Orders
+            .Where(row => row.Id == second.Id)
+            .ExecuteUpdateAsync(row => row.SetProperty(o => o.TrackingToken, first.TrackingToken)));
+
+        Assert.Equal(2601, error.Number);
+    }
+
+    private async Task<Result<ScannedOrder>> ScanAsync(Venue venue, string read)
+    {
+        await using DrinkItDbContext context = sql.CreateContext(venue.Id);
+
+        return await new ScanHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight))
+            .HandleAsync(read, CancellationToken.None);
     }
 
     // The 58 orders a demo marked delivered by hand have no moment. An undo

@@ -371,17 +371,18 @@
 }
 
 // US-18: the board's search, at the end of the header.
-.search {
-  margin-left: auto;
-  width: min(360px, 40%);
+.to-scan {
+  display: flex;
   min-height: var(--dk-tap-min);
-  padding: 0 var(--dk-space-3);
+  align-items: center;
+  padding: 0 var(--dk-space-4);
+  border: 1.5px solid var(--dk-accent);
   border-radius: var(--dk-radius-sm);
-  border: 1.5px solid var(--dk-border);
-  background: var(--dk-surface);
-  color: var(--dk-text);
-  font: inherit;
+  margin-left: auto;
+  color: var(--dk-accent);
   font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
 }
 
 // The ready orders out of view, above the ones drawn.

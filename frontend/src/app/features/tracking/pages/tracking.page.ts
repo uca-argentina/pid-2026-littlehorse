@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { QRCodeComponent } from 'angularx-qrcode';
 import type { CustomerOrderStatus } from '../tracking.service';
 import { TrackingStore } from '../tracking.store';
 
@@ -33,9 +34,25 @@ const WHAT_IS_HAPPENING: Partial<Record<CustomerOrderStatus, string>> = {
   Paid: 'Ya está pago. Te avisamos cuando lo estén preparando.',
   Queued: 'Ya está pago y esperando en la barra.',
   InPreparation: 'Lo están preparando.',
-  Ready: '¡Está listo! Acercate a la barra y decí tu código.',
+  Ready: '¡Está listo! Acercate a la barra y mostrá tu QR.',
   Delivered: 'Entregado. ¡Que lo disfrutes!',
 };
+
+/**
+ * The statuses in which there is something to pick up at the bar with the QR:
+ * paid and not yet handed over. Before paying, the cashier needs the code, not
+ * this; once handed over, it must not look like it still claims anything.
+ */
+const CLAIMABLE: readonly CustomerOrderStatus[] = ['Paid', 'Queued', 'InPreparation', 'Ready'];
+
+/**
+ * Colours of the QR itself, which the library takes as values rather than
+ * CSS: the same paper and ink as the block around it (--dk-paper and
+ * --dk-on-paper), so the quiet zone and the block read as one light surface.
+ */
+const QR_PAPER = '#f7f4ed';
+
+const QR_INK = '#12100e';
 
 /**
  * Where somebody's order is.
@@ -50,7 +67,7 @@ const WHAT_IS_HAPPENING: Partial<Record<CustomerOrderStatus, string>> = {
  */
 @Component({
   selector: 'drinkit-tracking-page',
-  imports: [RouterLink],
+  imports: [RouterLink, QRCodeComponent],
   providers: [TrackingStore],
   styleUrl: './tracking.page.scss',
   templateUrl: './tracking.page.html',
@@ -85,6 +102,17 @@ export class TrackingPage {
 
     return status === null ? '' : (WHAT_IS_HAPPENING[status] ?? '');
   });
+
+  /** US-20: the pickup QR, only while there is something to pick up. */
+  protected readonly showsQr = computed(() => {
+    const status = this.status();
+
+    return status !== null && CLAIMABLE.includes(status);
+  });
+
+  protected readonly qrPaper = QR_PAPER;
+
+  protected readonly qrInk = QR_INK;
 
   protected readonly steps = computed<Step[]>(() =>
     JOURNEY.map((step) => {

@@ -23,6 +23,9 @@ internal sealed class KdsOrdersInMemory(params Order[] stored) : IOrderRepositor
     public Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken) =>
         Task.FromResult(_stored.SingleOrDefault(order => order.Code == code));
 
+    public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
+        Task.FromResult(_stored.SingleOrDefault(order => order.TrackingToken == token));
+
     public Task SaveAsync(Order order, CancellationToken cancellationToken)
     {
         Saves += 1;

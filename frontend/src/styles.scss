@@ -31,10 +31,22 @@
   --dk-accent-disabled: #8a7038;
   --dk-on-accent: #12100e; // text placed on top of the accent
 
+  // Paper: whatever another pair of eyes or a scanner has to read off the
+  // screen — the pickup QR — sits on this, light inside the dark app. A 2D
+  // reader needs the light background; it is not decoration. Kept the same
+  // in both palettes, like the accent.
+  --dk-paper: #f7f4ed;
+  --dk-on-paper: #12100e;
+
   // Feedback. Not in the wireframes, which only draw the happy path, so these
   // are chosen to sit inside the same palette.
   --dk-danger: #e07a5c;
   --dk-danger-surface: #2a1b16;
+
+  // Handed over: the "ENTREGADO" tag of KdsEscanear, the one feedback color
+  // the wireframes do draw.
+  --dk-done: #6e9e7f;
+  --dk-on-done: #12100e;
   --dk-danger-alert-text: #f2c9ba; // body copy on --dk-danger-surface
 
   // A handful of surfaces and borders that recur across screens with the same

@@ -1,8 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { render, screen } from '@testing-library/angular';
+import { QRCodeComponent } from 'angularx-qrcode';
 import { TRACKING_INTERVAL_MS, TrackingStore } from '../tracking.store';
 import { trackingUrl } from '../tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
@@ -119,6 +121,53 @@ describe('TrackingPage', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('status').textContent).toMatch(/entregado/i);
     expect(steps().every((step) => step.reached)).toBe(true);
+  });
+
+  /**
+   * US-20, criterion 1: the QR the bar scans to hand the drinks over.
+   *
+   * It carries the token and nothing else — not the link, which any phone
+   * pointed at it would open, and not the code, which is shouted
+   * across the bar. Whether the tablet reads it is criterion 2, and that is
+   * proved against a real phone, not here.
+   */
+  it('shows a qr carrying the token once the order is paid', async () => {
+    const { rendered } = await openScreenShowing('Ready');
+
+    const qr = rendered.fixture.debugElement.query(By.directive(QRCodeComponent));
+
+    expect(qr).not.toBeNull();
+    expect((qr.componentInstance as QRCodeComponent).qrdata).toBe(token);
+    expect(screen.getByRole('img', { name: /qr.*K-4821/i })).toBeTruthy();
+  });
+
+  it('shows the qr while the order is still waiting at the bar', async () => {
+    const { rendered } = await openScreenShowing('Queued');
+
+    expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).not.toBeNull();
+  });
+
+  // Nothing to claim at the bar before paying: the cashier needs the code, not this.
+  it('does not show a qr while the order awaits payment', async () => {
+    const { rendered } = await openScreenShowing('AwaitingPayment');
+
+    expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).toBeNull();
+  });
+
+  // Criterion 3: handed over, so there is nothing left to claim with it.
+  it('takes the qr away once the order is handed over', async () => {
+    const { rendered, http, store } = await openScreenShowing('Ready');
+
+    store.askAgain();
+    http
+      .expectOne(url)
+      .flush(
+        { type: 'urn:drinkit:problem:order:not-found', detail: 'no existe' },
+        { status: 404, statusText: 'Not Found' },
+      );
+    await rendered.fixture.whenStable();
+
+    expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).toBeNull();
   });
 
   it('offers the way back to the menu of this venue', async () => {

@@ -45,6 +45,7 @@ public sealed partial class OpenApiContractTests(SqlServerFixture sql) : IAsyncD
     [InlineData("ConfirmedOrderResponse", "status", "AwaitingPayment,Paid,Queued,InPreparation,Ready,Delivered,Canceled")]
     [InlineData("TrackedOrderResponse", "status", "AwaitingPayment,Paid,Queued,InPreparation,Ready,Delivered,Canceled")]
     [InlineData("KdsQueueOrderResponse", "status", "Queued,InPreparation,Ready")]
+    [InlineData("ScannedOrderResponse", "outcome", "Delivered,NotReadyYet,AlreadyDelivered")]
     public async Task OpenApi_Always_PublishesEachEnumByItsNames(string schema, string property, string names)
     {
         using HttpClient client = _factory.CreateClient();
