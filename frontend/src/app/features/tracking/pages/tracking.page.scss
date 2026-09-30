@@ -1,5 +1,4 @@
-// Traced from design/wireframes/EstadoPedido.dc.html, minus the pickup QR,
-// which belongs with the bar's screens and is out of Sprint 1.
+// Traced from design/wireframes/EstadoPedido.dc.html.
 
 .frame {
   display: flex;
@@ -60,6 +59,19 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
   line-height: 1.05;
+}
+
+// The pickup QR (US-20) on paper: light inside the dark app, because a 2D
+// reader needs it and a phone turned down to its lowest brightness gives it
+// little else to work with. Big for the same reason.
+.paper {
+  display: flex;
+  padding: 6px;
+  border-radius: 18px;
+  margin: 2px 0;
+  background: var(--dk-paper);
+  color: var(--dk-on-paper);
+  line-height: 0;
 }
 
 .journey {

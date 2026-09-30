@@ -1,9 +1,19 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
+import type { components } from '../../core/api/schema';
 
 /** No venue in the path: the station's token carries it, same as every other staff route. */
 const KDS_ORDERS_URL = '/api/kds/orders';
+
+/** US-20: what the bar's camera or reader read off the customer's phone. */
+export const SCAN_URL = '/api/kds/scan';
+
+/** Whose order a scan found and what it did — from the generated contract. */
+export type ScannedOrder = components['schemas']['ScannedOrderResponse'];
+
+/** What a scan did, or why it did nothing. */
+export type ScanOutcome = components['schemas']['ScanOutcomeName'];
 
 export function startPreparingUrl(code: string): string {
   return `${KDS_ORDERS_URL}/${encodeURIComponent(code)}/start-preparing`;
@@ -63,5 +73,13 @@ export class KdsOrdersService {
   /** "Deshacer", right after a mistaken delivery. */
   undoDelivery(code: string): Observable<void> {
     return this.http.post<void>(undoDeliveryUrl(code), {});
+  }
+
+  /**
+   * US-20: hands over the ready order a customer's QR leads to. Unlike the
+   * buttons, it answers whose order it was and why it did nothing, if it did.
+   */
+  scan(read: string): Observable<ScannedOrder> {
+    return this.http.post<ScannedOrder>(SCAN_URL, { read });
   }
 }

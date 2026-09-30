@@ -62,6 +62,28 @@ public class TrackingTokenTests
     }
 
     /// <summary>
+    /// What the bar's scanner reads comes from outside — a phone's screen, a
+    /// reader typing into a field — so reading it must not throw.
+    /// </summary>
+    [Fact]
+    public void TryParse_WhenTheShapeIsRight_ReadsItBack()
+    {
+        Assert.True(TrackingToken.TryParse("9f3c2ba7d81e4c06a1b2c3d4e5f60718", out TrackingToken? token));
+        Assert.Equal("9f3c2ba7d81e4c06a1b2c3d4e5f60718", token!.Value);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("K-4821")]
+    [InlineData("9F3C2BA7D81E4C06A1B2C3D4E5F60718")]
+    public void TryParse_WhenTheShapeIsWrong_ReturnsFalse(string? value)
+    {
+        Assert.False(TrackingToken.TryParse(value, out TrackingToken? token));
+        Assert.Null(token);
+    }
+
+    /// <summary>
     /// Compared in constant time: a comparison that stops at the first wrong
     /// character tells whoever is guessing how much of it they got right, and
     /// this is the one value in the system worth guessing.

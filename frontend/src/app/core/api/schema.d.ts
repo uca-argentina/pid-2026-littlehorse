@@ -101,6 +101,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/kds/scan': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * "Not ready yet" and "already delivered" are answers, not failures: the
+     *     screen still needs whose order it was to say so.
+     */
+    post: operations['ScanOrder'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/users': {
     parameters: {
       query?: never;
@@ -610,6 +630,21 @@ export interface components {
     ResetStaffUserPasswordRequest: {
       password: string;
     };
+    /** @description Whose order a scan found, and what it did with it. */
+    ScannedOrderResponse: {
+      code: string;
+      customerName: string;
+      outcome: components['schemas']['ScanOutcomeName'];
+    };
+    /**
+     * @description What a scan at the bar did, or why it did nothing.
+     * @enum {string}
+     */
+    ScanOutcomeName: 'Delivered' | 'NotReadyYet' | 'AlreadyDelivered';
+    /** @description What the bar's camera or reader read off the customer's phone. */
+    ScanRequest: {
+      read: null | string;
+    };
     /**
      * @description A staff member's role, as the contract names it.
      * @enum {string}
@@ -828,6 +863,39 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['KdsQueueOrderResponse'][];
+        };
+      };
+    };
+  };
+  ScanOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ScanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScannedOrderResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
     };

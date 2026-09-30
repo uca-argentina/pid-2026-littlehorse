@@ -10,17 +10,15 @@ import {
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
-import type { Observable } from 'rxjs';
+import { Router, RouterLink } from '@angular/router';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
 import { slowLoading } from '../../../shared/loading/slow-loading';
 import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
 import type { AgeBand } from '../kds-age';
 import { ageBandFor, ageLabelFor } from '../kds-age';
-import { byTimeInColumn, matchesSearch, minutesInColumn, readyShelf } from '../kds-board-view';
-import { KdsOrdersService } from '../kds-orders.service';
+import { byTimeInColumn, minutesInColumn, readyShelf } from '../kds-board-view';
+import { KdsOrderActions } from '../kds-order-actions';
 import { KDS_QUEUE_URL } from '../kds-queue';
 import type { KdsOrderStatus, KdsQueueOrder } from '../kds-queue';
 
@@ -32,7 +30,7 @@ type ColumnKey = KdsOrderStatus;
 interface Column {
   readonly key: ColumnKey;
   readonly title: string;
-  /** What is drawn: in Listos, only the most recently made unless searching. */
+  /** What is drawn: in Listos, only the most recently made. */
   readonly orders: KdsQueueOrder[];
   /** What the column's number says: every order in it, drawn or not. */
   readonly total: number;
@@ -45,18 +43,6 @@ const COLUMN_TITLES: Record<ColumnKey, string> = {
   InPreparation: 'En preparación',
   Ready: 'Listos en la barra',
 };
-
-/**
- * Which action on which order did not go through. Data and not a sentence: the
- * template says it, in Spanish, like every other text the bar reads.
- */
-interface ActionFailure {
-  readonly action: 'take' | 'return' | 'ready' | 'backToPreparation' | 'deliver' | 'undo';
-  readonly code: string;
-}
-
-/** How long "Entregado A-0066 · Deshacer" stays on screen after a delivery (US-18). */
-const UNDO_OFFER_MS = 10_000;
 
 /** Where a column's scroll thumb is drawn, and whether it is showing. */
 interface ScrollThumb {
@@ -73,7 +59,8 @@ const THUMB_MIN_PX = 32;
 
 @Component({
   selector: 'drinkit-kds-board-page',
-  imports: [NgTemplateOutlet, VenueBrand],
+  imports: [NgTemplateOutlet, RouterLink, VenueBrand],
+  providers: [KdsOrderActions],
   styleUrl: './kds-board.page.scss',
   templateUrl: './kds-board.page.html',
 })
@@ -82,7 +69,7 @@ export class KdsBoardPage {
 
   protected readonly channel = inject(KdsBoardChannel);
 
-  private readonly kdsOrders = inject(KdsOrdersService);
+  private readonly actions = inject(KdsOrderActions);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -155,17 +142,15 @@ export class KdsBoardPage {
     Ready: [1],
   };
 
-  /** What is typed in the board's search: number or name (US-18, criterion 3). */
-  protected readonly search = signal('');
+  /** Where orders are scanned, and searched by number or name (US-20). */
+  protected readonly scanLink = computed(() => ['/', this.venueSlug(), 'staff', 'kds', 'scan']);
 
   protected readonly columns = computed<Column[]>(() => {
-    const query = this.search();
-    const searching = query.trim() !== '';
-    const matching = (this.orders() ?? []).filter((order) => matchesSearch(order, query));
+    const orders = this.orders() ?? [];
 
     return (['Queued', 'InPreparation', 'Ready'] as const).map((key) => {
       // Nuevos arrives oldest paid first; the others go by their own clock.
-      const inStatus = matching.filter((order) => order.status === key);
+      const inStatus = orders.filter((order) => order.status === key);
       const inColumn = key === 'Queued' ? inStatus : byTimeInColumn(inStatus);
 
       if (key !== 'Ready')
@@ -177,8 +162,7 @@ export class KdsBoardPage {
           hidden: 0,
         };
 
-      // A search is how an order out of view is found, so it shows them all.
-      const shelf = readyShelf(inColumn, searching ? inColumn.length : undefined);
+      const shelf = readyShelf(inColumn);
 
       return {
         key,
@@ -191,9 +175,6 @@ export class KdsBoardPage {
   });
 
   protected readonly isEmpty = computed(() => this.orders()?.length === 0);
-
-  /** Orders with a request in flight: their buttons stay pressed until it lands. */
-  private readonly busy = signal<ReadonlySet<string>>(new Set());
 
   /** Columns scrolled more than a screen down, each on its own. */
   private readonly farDown = signal<ReadonlySet<ColumnKey>>(new Set());
@@ -209,7 +190,7 @@ export class KdsBoardPage {
   private readonly thumbTimers = new Map<ColumnKey, ReturnType<typeof setTimeout>>();
 
   /** What the last action on an order could not do, said to the bar. */
-  protected readonly actionFailure = signal<ActionFailure | null>(null);
+  protected readonly actionFailure = this.actions.failure;
 
   /**
    * Every order in Nuevos, and every one in preparation (US-18: several made
@@ -252,9 +233,7 @@ export class KdsBoardPage {
   );
 
   /** The order just delivered by hand, while its "Deshacer" is on offer. */
-  protected readonly justDelivered = signal<string | null>(null);
-
-  private undoOffer: ReturnType<typeof setTimeout> | null = null;
+  protected readonly justDelivered = this.actions.justDelivered;
 
   /** Every drink of the chosen orders, summed: what the bartender is about to make together. */
   protected readonly chosenDrinks = computed(() => {
@@ -269,6 +248,19 @@ export class KdsBoardPage {
 
   constructor() {
     this.channel.connect(() => this.queue.reload());
+
+    // Once an action lands the order is let go of — taken, marked ready, or
+    // refused — and the queue is read again: a refusal usually means the card
+    // was stale and the order moved on elsewhere.
+    this.actions.whenSettled((code) => {
+      this.picked.update((picked) => {
+        const next = new Map(picked);
+        next.delete(code);
+
+        return next;
+      });
+      this.queue.reload();
+    });
 
     // US-32: the session ends while the board is open — the API or the hub
     // refused the token — and nobody navigates on a tablet behind the bar, so
@@ -295,7 +287,6 @@ export class KdsBoardPage {
     this.destroyRef.onDestroy(() => {
       clearInterval(ticking);
       for (const timer of this.thumbTimers.values()) clearTimeout(timer);
-      if (this.undoOffer !== null) clearTimeout(this.undoOffer);
       this.channel.disconnect();
     });
   }
@@ -327,7 +318,7 @@ export class KdsBoardPage {
   }
 
   protected isBusy(order: KdsQueueOrder): boolean {
-    return this.busy().has(order.code);
+    return this.actions.isBusy(order.code);
   }
 
   /** One column at a time: choosing in another column lets go of the first. */
@@ -414,7 +405,7 @@ export class KdsBoardPage {
 
   /** The card's own "Preparar": that order alone. */
   protected take(order: KdsQueueOrder): void {
-    this.act(order.code, this.kdsOrders.startPreparing(order.code), 'take');
+    this.actions.startPreparing(order.code);
   }
 
   /**
@@ -426,12 +417,12 @@ export class KdsBoardPage {
   }
 
   protected returnToQueue(order: KdsQueueOrder): void {
-    this.act(order.code, this.kdsOrders.returnToQueue(order.code), 'return');
+    this.actions.returnToQueue(order.code);
   }
 
   /** US-18, criterion 1: "Listo" on a card in preparation. */
   protected markReady(order: KdsQueueOrder): void {
-    this.act(order.code, this.kdsOrders.markReady(order.code), 'ready');
+    this.actions.markReady(order.code);
   }
 
   /** One request per order, as with Preparar. */
@@ -440,70 +431,15 @@ export class KdsBoardPage {
   }
 
   protected returnToPreparation(order: KdsQueueOrder): void {
-    this.act(order.code, this.kdsOrders.returnToPreparation(order.code), 'backToPreparation');
+    this.actions.returnToPreparation(order.code);
   }
 
   /** "Entregado" by hand, with a few seconds to undo a mistaken tap. */
   protected deliver(order: KdsQueueOrder): void {
-    this.act(order.code, this.kdsOrders.deliver(order.code), 'deliver', () =>
-      this.offerUndo(order.code),
-    );
+    this.actions.deliver(order.code);
   }
 
   protected undoDelivery(code: string): void {
-    this.withdrawUndo();
-    this.act(code, this.kdsOrders.undoDelivery(code), 'undo');
-  }
-
-  private offerUndo(code: string): void {
-    this.withdrawUndo();
-    this.justDelivered.set(code);
-    this.undoOffer = setTimeout(() => this.withdrawUndo(), UNDO_OFFER_MS);
-  }
-
-  private withdrawUndo(): void {
-    if (this.undoOffer !== null) clearTimeout(this.undoOffer);
-    this.undoOffer = null;
-    this.justDelivered.set(null);
-  }
-
-  private act(
-    code: string,
-    request: Observable<void>,
-    action: ActionFailure['action'],
-    done?: () => void,
-  ): void {
-    this.actionFailure.set(null);
-    this.busy.update((busy) => new Set(busy).add(code));
-
-    const settle = (): void => {
-      this.busy.update((busy) => {
-        const next = new Set(busy);
-        next.delete(code);
-
-        return next;
-      });
-      this.picked.update((picked) => {
-        const next = new Map(picked);
-        next.delete(code);
-
-        return next;
-      });
-    };
-
-    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
-        settle();
-        done?.();
-        this.queue.reload();
-      },
-      // A failed action usually means the card was stale — the order moved
-      // on elsewhere — so the queue is read again to show what it is now.
-      error: () => {
-        settle();
-        this.actionFailure.set({ action, code });
-        this.queue.reload();
-      },
-    });
+    this.actions.undoDelivery(code);
   }
 }

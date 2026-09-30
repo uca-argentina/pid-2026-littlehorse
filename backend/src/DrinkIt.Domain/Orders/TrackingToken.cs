@@ -51,6 +51,17 @@ public sealed record TrackingToken
     }
 
     /// <summary>
+    /// For what arrives from outside — the bar's scanner reading a phone — where
+    /// a wrong shape is an answer, not a bug.
+    /// </summary>
+    public static bool TryParse(string? value, out TrackingToken? token)
+    {
+        token = IsWellShaped(value) ? new TrackingToken(value!) : null;
+
+        return token is not null;
+    }
+
+    /// <summary>
     /// Whether that is this token, compared in constant time.
     /// </summary>
     /// <remarks>

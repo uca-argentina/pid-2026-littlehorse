@@ -2,16 +2,11 @@
   <header class="head">
     <drinkit-venue-brand [venue]="venueSlug()" [context]="station()" />
 
-    <!-- US-18, criterion 3: no camera at hand, so the order is found by number or name. -->
-    <input
-      #query
-      class="search"
-      type="search"
-      aria-label="Buscar pedido"
-      placeholder="Buscar por número o nombre"
-      [value]="search()"
-      (input)="search.set(query.value)"
-    />
+    <!--
+      US-20: scanning and the search by number or name (US-18, criterion 3)
+      live on their own screen since 2026-09-29.
+    -->
+    <a class="to-scan" [routerLink]="scanLink()">Escanear o buscar</a>
   </header>
 
   @if (channel.state() === 'reconnecting') {
@@ -81,7 +76,7 @@
             <div class="stack" #stack (scroll)="onColumnScroll(column.key, stack)">
               <!-- Listos draws the most recently made; the ones waiting longest step out of view. -->
               @if (column.hidden > 0) {
-                <p class="more">+{{ column.hidden }} más viejos · buscalos por número o nombre</p>
+                <p class="more">+{{ column.hidden }} más viejos · buscalos en Escanear o buscar</p>
               }
               @for (order of column.orders; track order.code) {
                 <article

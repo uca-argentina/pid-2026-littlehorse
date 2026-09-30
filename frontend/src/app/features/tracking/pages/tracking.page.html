@@ -47,6 +47,34 @@
 
       <p class="code" data-testid="order-code">{{ store.order()!.code }}</p>
 
+      <!--
+        US-20. Only the token goes in it, and not the tracking link: a phone
+        that happens to point its camera at it opens nothing, and a reader that
+        types like a keyboard cannot garble a ':' or a '/' on the way. It is not
+        a secret from whoever photographs the whole screen — the code is printed
+        right above it — which is why it only claims an order at a bar with a
+        person looking. Level L gives the biggest modules the token fits in
+        (version 2, 25×25), which is what a tablet reads off a dim phone; the
+        four-module margin is the quiet zone a reader needs, on paper too.
+      -->
+      @if (showsQr()) {
+        <figure
+          class="paper"
+          role="img"
+          [attr.aria-label]="'Código QR para retirar el pedido ' + store.order()!.code"
+        >
+          <qrcode
+            [qrdata]="token()"
+            [width]="260"
+            [margin]="4"
+            errorCorrectionLevel="L"
+            elementType="svg"
+            [colorDark]="qrInk"
+            [colorLight]="qrPaper"
+          />
+        </figure>
+      }
+
       <p class="what what-now" role="status">{{ whatIsHappening() }}</p>
 
       <ol class="journey">

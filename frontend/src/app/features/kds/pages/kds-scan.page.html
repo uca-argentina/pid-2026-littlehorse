@@ -1,0 +1,196 @@
+<div class="scan">
+  <header class="head">
+    <a class="back" [routerLink]="boardLink()" aria-label="Volver al tablero">
+      <span aria-hidden="true">←</span>
+    </a>
+
+    <drinkit-venue-brand [venue]="venueSlug()" [context]="station()" />
+  </header>
+
+  <main class="body">
+    <section class="target" aria-labelledby="scan-title" [attr.data-flash]="flashing()">
+      @if (!cameraOpen()) {
+        <svg
+          class="tico"
+          aria-hidden="true"
+          width="44"
+          height="44"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"
+          />
+          <rect x="7" y="7" width="4" height="4" />
+          <rect x="13" y="13" width="4" height="4" />
+          <path d="M13 7h4v2M7 15v2h2" />
+        </svg>
+      }
+
+      <h1 id="scan-title" class="title">Escaneá el QR del cliente</h1>
+
+      <p class="rule">Pedido listo <span class="tag tag-done">ENTREGADO</span></p>
+
+      <p class="hint">
+        No elegís nada: si el pedido está listo, queda entregado. Si no, te avisa y no cambia nada.
+      </p>
+
+      @if (cameraOpen()) {
+        <drinkit-kds-camera (read)="cameraRead($event)" />
+      }
+
+      <!--
+        A reader plugged into the tablet types the code here and presses Enter.
+        inputmode none: focused, it must not bring up the tablet's keyboard over
+        the camera.
+      -->
+      <input
+        #reader
+        class="reader"
+        type="text"
+        inputmode="none"
+        autocomplete="off"
+        aria-label="Lectura del lector"
+        placeholder="▌|▌ Esperando lectura…"
+        (keydown.enter)="readerRead(reader)"
+      />
+
+      @if (cameraOpen()) {
+        <button class="act" type="button" (click)="closeCamera()">Cancelar</button>
+      } @else {
+        <button class="act primary" type="button" (click)="openCamera()">Usar la cámara</button>
+      }
+    </section>
+
+    <section class="last" role="status" aria-label="Último escaneo">
+      @if (latest(); as scan) {
+        @let line = lineFor(scan);
+        <p
+          class="last-tag"
+          [class.tone-done]="line.tone === 'done'"
+          [class.tone-warn]="line.tone === 'warn'"
+        >
+          {{ line.tag }}
+        </p>
+        @if (line.who) {
+          <p class="last-who">{{ line.who }}</p>
+        }
+        @if (line.note) {
+          <p class="last-note">{{ line.note }}</p>
+        }
+      }
+    </section>
+
+    @if (justDelivered(); as code) {
+      <p class="undo" role="status" aria-label="Entregado">
+        Entregado {{ code }}
+        <button class="act" type="button" (click)="undoDelivery(code)">Deshacer</button>
+      </p>
+    }
+
+    @if (scans.recent().length > 0) {
+      <h2 id="recent-title" class="lab">Últimos escaneos</h2>
+
+      <ul class="feed" aria-labelledby="recent-title">
+        @for (scan of scans.recent(); track scan.id) {
+          @let line = lineFor(scan);
+          <li class="row">
+            <span class="rid">{{ line.who ?? '—' }}</span>
+            <span
+              class="tag"
+              [class.tag-done]="line.tone === 'done'"
+              [class.tag-warn]="line.tone === 'warn'"
+            >
+              {{ line.tag }}
+            </span>
+            <span class="when">{{ ago(scan) }}</span>
+          </li>
+        }
+      </ul>
+    }
+
+    <section class="fall" aria-labelledby="fall-title">
+      <h2 id="fall-title" class="ft">¿El lector no lo toma?</h2>
+
+      <p class="fd">
+        Pasa cuando la pantalla del cliente está rayada, con poco brillo o sin batería. Buscá el
+        pedido a mano — por número o por el nombre del cliente.
+      </p>
+
+      <input
+        #query
+        class="search"
+        type="search"
+        aria-label="Buscar pedido"
+        placeholder="Buscar por número o nombre"
+        [value]="search()"
+        (input)="search.set(query.value)"
+        (keydown.enter)="searchEntered(query)"
+      />
+
+      @if (actionFailure(); as failure) {
+        <p class="failure" role="alert">
+          @switch (failure.action) {
+            @case ('ready') {
+              No pudimos marcar listo {{ failure.code }}. Mirá si cambió y probá de nuevo.
+            }
+            @case ('deliver') {
+              No pudimos entregar {{ failure.code }}. Mirá si cambió y probá de nuevo.
+            }
+            @case ('undo') {
+              No pudimos deshacer la entrega de {{ failure.code }}. Ya pasó el tiempo o se cortó la
+              conexión.
+            }
+          }
+        </p>
+      }
+
+      @if (search().trim() !== '') {
+        @if (queue.error() && !queue.hasValue()) {
+          <p class="fd" role="alert">No pudimos traer los pedidos — reintentando.</p>
+        } @else if (found().length === 0) {
+          <p class="fd" role="status">Ningún pedido coincide con “{{ search() }}”.</p>
+        } @else {
+          <ul class="results" aria-label="Pedidos encontrados">
+            @for (order of found(); track order.code) {
+              <li class="result">
+                <span class="rid">{{ order.code }}</span>
+                <span class="who">{{ order.customerName }}</span>
+                <span class="state">{{ statusName(order) }}</span>
+
+                @switch (order.status) {
+                  @case ('InPreparation') {
+                    <button
+                      class="act primary"
+                      type="button"
+                      [attr.aria-label]="'Listo ' + order.code"
+                      [disabled]="isBusy(order)"
+                      (click)="markReady(order)"
+                    >
+                      Listo
+                    </button>
+                  }
+                  @case ('Ready') {
+                    <button
+                      class="act primary"
+                      type="button"
+                      [attr.aria-label]="'Entregado ' + order.code"
+                      [disabled]="isBusy(order)"
+                      (click)="deliver(order)"
+                    >
+                      Entregado
+                    </button>
+                  }
+                }
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+  </main>
+</div>

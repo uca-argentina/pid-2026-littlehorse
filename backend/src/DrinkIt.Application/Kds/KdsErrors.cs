@@ -12,4 +12,12 @@ public static class KdsErrors
     /// </summary>
     public static readonly Error OrderNotFound =
         new("kds.order_not_found", "This venue has no order with that code.");
+
+    /// <summary>
+    /// What was scanned leads to none of this venue's orders. Same reasoning as
+    /// <see cref="OrderNotFound"/>: another venue's QR, a stranger's QR and
+    /// something that is not a QR of ours at all read alike.
+    /// </summary>
+    public static readonly Error UnknownCode =
+        new("kds.unknown_code", "What was scanned is not one of this venue's orders.");
 }

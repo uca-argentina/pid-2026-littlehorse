@@ -2,7 +2,8 @@ import type { KdsQueueOrder } from './kds-queue';
 
 /**
  * How many ready orders the Listos column draws (US-18, decided on 2026-09-28):
- * the most recently made ones. The rest stay Listo and the search finds them.
+ * the most recently made ones. The rest stay Listo and the scan screen's search
+ * finds them.
  */
 export const READY_SHOWN = 10;
 
@@ -19,7 +20,7 @@ function digitsOf(text: string): string {
 }
 
 /**
- * Whether an order answers to what was typed in the board's search: by its
+ * Whether an order answers to what was typed in the scan screen's search: by its
  * customer's name or by its number, the digits alone included — "66" is what
  * somebody reads out for A-0066.
  */
@@ -43,12 +44,11 @@ export interface ReadyShelf {
 
 /**
  * The ready orders from the longest waiting to the newest, keeping only the
- * last {@link READY_SHOWN} on sight — or as many as asked, when a search is
- * looking for one that would otherwise be out of view.
+ * last {@link READY_SHOWN} on sight.
  */
-export function readyShelf(ready: readonly KdsQueueOrder[], shownAtMost = READY_SHOWN): ReadyShelf {
+export function readyShelf(ready: readonly KdsQueueOrder[]): ReadyShelf {
   const byWait = byTimeInColumn(ready);
-  const hidden = Math.max(0, byWait.length - shownAtMost);
+  const hidden = Math.max(0, byWait.length - READY_SHOWN);
 
   return { shown: byWait.slice(hidden), hidden };
 }

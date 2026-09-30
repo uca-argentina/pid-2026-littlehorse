@@ -111,6 +111,16 @@ internal sealed partial class OrderRepository(
             .Include(order => order.Items)
             .FirstOrDefaultAsync(order => order.Code == code, cancellationToken);
 
+    /// <summary>
+    /// An equality in SQL rather than <see cref="TrackingToken.Matches"/>: the
+    /// constant-time comparison guards a guess against one known order, and
+    /// here there is no order yet — only an index to look the token up in.
+    /// </summary>
+    public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
+        context.Orders
+            .Include(order => order.Items)
+            .FirstOrDefaultAsync(order => order.TrackingToken == token, cancellationToken);
+
     public async Task SaveAsync(Order order, CancellationToken cancellationToken)
     {
         await context.SaveChangesAsync(cancellationToken);

@@ -179,6 +179,9 @@ public class KdsEndpointsTests
             public Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken) =>
                 Task.FromResult(stored.SingleOrDefault(order => order.Code == code));
 
+            public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
+                Task.FromResult(stored.SingleOrDefault(order => order.TrackingToken == token));
+
             public Task SaveAsync(Order order, CancellationToken cancellationToken) => Task.CompletedTask;
 
             public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>

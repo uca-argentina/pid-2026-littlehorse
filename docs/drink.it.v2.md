@@ -162,12 +162,19 @@ también vaya impreso en el ticket no lo debilita: **el ticket se queda del lado
 el mozo) hasta que se entrega el trago**, y ahí sólo lo ve el personal, que ya tiene el trago en la
 mano. Después de la entrega, el QR ya no sirve para retirar.
 
+**Mientras no haya impresora** (decidido el 2026-09-29, en US-20) el único QR que existe es el del
+cliente, así que escanear **sólo entrega**: un pedido que todavía no está listo avisa y no cambia.
+El paso 1 —ticket → "Listo"— llega con la impresora. El QR lleva el token y nada más (ni el link
+ni el número), y un QR de otro boliche recibe el mismo aviso que uno desconocido.
+
 ### Integración técnica del QR/lector
 
 - Lectores de QR/código de barras USB/Bluetooth funcionan como **teclado (HID)**: no necesitan drivers ni librerías de cámara — el dispositivo "tipea" el contenido escaneado en un `<input>` enfocado y manda un `Enter`. Simplifica mucho la implementación.
 - Comprar lector **2D** (imaging), que lee tanto QR como códigos de barra 1D.
 - El ticket se imprime con QR usando comandos ESC/POS estándar en impresoras térmicas comunes.
 - Mantener siempre un **input de búsqueda manual** como respaldo, por si falla el lector o se rompe/moja el ticket.
+- Además del lector, la tablet puede leer con su **cámara**, a pedido (US-20). Usa la API
+  `BarcodeDetector` del navegador, y ZXing compilado a WebAssembly donde el navegador no la trae.
 
 ## 11. Pantalla / tablet del bartender
 

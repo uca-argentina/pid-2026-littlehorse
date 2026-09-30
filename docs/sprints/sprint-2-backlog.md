@@ -269,6 +269,12 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
     escaneo, sin modo" como el wireframe `KdsEscanear` — en preparación pasa a Listo, listo
     pasa a Entregado. Los errores por código escaneado o tipeado (otro local, desconocido,
     entregado, cancelado) van con ese escaneo, que es donde existe el código.
+    **Cómo quedó en US-20 (2026-09-29):** mientras no haya ticket impreso, el escaneo **sólo
+    entrega** —en preparación avisa "todavía no está listo"—, y un QR de otro local recibe el
+    mismo aviso que uno desconocido.
+  - **El buscador del criterio 3 se mudó a la pantalla de escaneo** (2026-09-29, US-20). El
+    tablero ya no busca: tiene un botón "Escanear o buscar", y el "+N más viejos" de Listos
+    remite ahí.
   - **El aviso al cliente es su seguimiento**, que ya se consulta cada tres segundos. El push
     al celular es US-21, que escucha el evento `OrderReady` que esta story ya levanta.
   - **Sólo desde "En preparación".** Un pedido nuevo se prepara primero.
@@ -297,9 +303,9 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 
 ### US-19 · Entregar el pedido en la barra
 
-> **Estado al 2026-09-28:** el **criterio 2 quedó hecho en US-18** (buscador en el tablero y
-> "Entregado" en la tarjeta, con "Deshacer"). Los **criterios 1, 3 y 4 necesitan escanear** el QR
-> del cliente, que todavía no existe: **pasan a US-20**, junto con la pantalla de escaneo.
+> **Estado al 2026-09-29: ✅ terminada.** El **criterio 2 quedó hecho en US-18** ("Entregado" en
+> la tarjeta, con "Deshacer"; el buscador después se mudó a la pantalla de escaneo). Los
+> **criterios 1, 3 y 4 se hicieron en US-20**, con la pantalla de escaneo.
 
 > **Como** estación de barra
 > **quiero** marcar que ya le di el pedido al cliente
@@ -447,6 +453,9 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 
 ### US-20 · Que el cliente vea su QR de retiro
 
+**Estado:** ✅ hecha el 2026-09-29. Falta la **prueba a mano del criterio 2**: un celular real
+con el brillo al mínimo contra la tablet de la barra.
+
 > **Como** cliente que ya pagó
 > **quiero** tener mi código a la vista en la pantalla de seguimiento
 > **para** mostrarlo en la barra y llevarme mi trago sin discutir con nadie.
@@ -476,6 +485,45 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
   que se llega desde el tablero. Un escaneo, sin modo: en preparación pasa a Listo, listo pasa
   a Entregado, y cualquier otro caso avisa sin cambiar nada. Cierra los criterios 1, 3 y 4 de
   US-19. Usa `barcode-detector` y `zxing-wasm` (aprobadas el 2026-09-23).
+- **Cómo quedó, decidido al hacerla (2026-09-29):**
+  - **El escaneo sólo entrega.** Sin ticket impreso, el único QR que existe es el del cliente,
+    y mostrarlo antes de tiempo no puede marcar listo un trago sin hacer. En la cola o en
+    preparación avisa "Todavía no está listo" y no cambia nada. El paso a Listo llega con la
+    impresora.
+  - **El QR lleva sólo el token**, ni el link ni el número: un celular que lo enfoque no abre
+    nada, y un lector que tipea como teclado no rompe un `:` ni un `/`. No es secreto para quien
+    fotografía toda la pantalla —el número está impreso arriba—, y por eso sólo sirve para
+    retirar en una barra con alguien mirando.
+  - **Otro local, un token que no existe o algo que no es un token** dan el mismo aviso: "No
+    reconocemos este código". Distinguir "otro local" exigiría consultar saltando el filtro de
+    tenant.
+  - **Se lee de dos formas que terminan en lo mismo:** un lector USB o Bluetooth que tipea en un
+    campo con foco (§10), y la cámara, **a pedido**: el bloque se ve como el wireframe, y el botón
+    "Usar la cámara" la abre para un cliente. Se cierra al leer, a los 30 segundos sin leer nada
+    o con "Cancelar".
+  - **Cada escaneo enviado hace destellar el bloque**, igual para todos los resultados; el
+    resultado se lee en el texto. Con "reducir movimiento" se ilumina el borde en vez de
+    destellar.
+  - **"Últimos escaneos"** muestra los cinco más recientes, sólo en memoria de la tablet y
+    nunca con el token. La misma lectura repetida dentro de tres segundos se ignora: la cámara
+    ve el mismo QR en cada cuadro.
+  - **"Deshacer" también después de escanear**, durante 10 segundos, como el botón manual.
+  - **Si se corta la red** no sabemos si el escaneo llegó, y la pantalla lo dice así: "No
+    sabemos si se registró. Escaneá de nuevo: si dice 'Ya se entregó', fue este escaneo". Decir
+    "sin conexión" a secas hacía que se rechazara al cliente al que ya se le había entregado.
+  - **La búsqueda manual se mudó del tablero** a esta pantalla, con "Listo", "Entregado" y
+    "Deshacer". Si el lector tipea en el buscador, se envía como escaneo y el token no queda en
+    pantalla.
+- **Deuda del code review (2026-09-29)**, anotada y no arreglada:
+  - **Dos escaneos simultáneos del mismo pedido listo contestan "Entregado" los dos.** Es la
+    falta de token de concurrencia en `Order` que ya anota US-33; hoy no pasa porque hay una
+    sola tablet por barra.
+  - **El escaneo de un pedido cancelado o sin pagar diría "Todavía no está listo".** Hoy no hay
+    transición a esos estados; cuando lleguen US-23 y US-25, el escaneo necesita su propio aviso
+    para cada uno.
+  - **Los colores del QR repiten a mano `--dk-paper` y `--dk-on-paper`**, porque la librería
+    los pide como valores y no como CSS. Si cambia el token, hay que cambiar las constantes de
+    `tracking.page.ts`.
 
 ### US-21 · Que me avise el celular
 
@@ -661,7 +709,8 @@ migración). Ningún criterio los pide.
 
 **Nueva, de US-16: la impresora ya no es sólo un papel.** "Preparar" hoy sólo toma el pedido.
 Cuando llegue la impresora, además del papel, el ticket tiene que llevar el QR con el
-`TrackingToken`, que es lo que escanea US-18.
+`TrackingToken`, que es lo que escanea la pantalla de US-20. Ese día el escaneo suma el paso a
+Listo: hoy sólo entrega, porque el único QR que existe es el del cliente.
 
 **Nueva, de auditar US-15: el tablero.** Dos huecos que ya tienen story propia, US-31 (se
 pone al día solo si se pierde un aviso) y US-32 (manda al login si la sesión se venció).
@@ -695,7 +744,7 @@ registro de npm el mismo día, no contra lo que decía un tutorial.
 | ------------------ | ------- | -------- | ------------------ | -------------------------------------------- |
 | `angularx-qrcode`  | 22.0.1  | MIT      | 2026-07-24         | Dibujar el QR del cliente y el del ticket    |
 | `barcode-detector` | 3.2.2   | MIT      | 2026-08-16         | Leerlo donde el navegador no sabe            |
-| `zxing-wasm`       | 3.1.4   | MIT      | 2026-09-10         | Lo trae `barcode-detector`, no se instala solo |
+| `zxing-wasm`       | 3.1.3   | MIT      | 2026-09-10         | Lo trae `barcode-detector`, no se instala solo |
 
 **Leer el QR casi no es una dependencia.** `BarcodeDetector` es una **API nativa del
 navegador**: en Chrome sobre Android —que es lo que corre la tablet de la barra— se lee con
@@ -712,7 +761,20 @@ cargarlo sólo cuando hace falta.
 está en modo mantenimiento declarado por sus propios autores — `zxing-wasm` es el sucesor
 vivo. No entra nada de Scanbot ni STRICH: son comerciales.
 
-**Instalar cuando arranque la story, no ahora.** Hoy quedan aprobadas y escritas.
+**Instaladas el 2026-09-29, con US-20.** Dos cambios respecto de lo aprobado:
+
+- **`zxing-wasm` es la 3.1.3, no la 3.1.4.** Es la que fija `barcode-detector` 3.2.2; la tabla
+  de arriba ya lo dice.
+- **`zxing-wasm` sí se instala sola, fijada en 3.1.3.** Por defecto la librería baja su `.wasm`
+  de jsDelivr; nosotros lo servimos desde nuestros propios assets (`/zxing/`), para que una red
+  de boliche que filtre ese CDN no deje ciega a la cámara. Angular sólo lo puede copiar si el
+  paquete figura en `package.json`. El riesgo es que se desalineen las dos versiones al
+  actualizar una: `qr-reader.spec.ts` falla si la que fija `barcode-detector` y la nuestra no
+  coinciden.
+
+Se usa el **ponyfill** y no el polyfill: no se parchea `window`. Donde el navegador trae
+`BarcodeDetector` y sabe leer QR se usa el nativo; si no, se carga el de la librería, en un
+chunk aparte.
 
 **Aprobada el 2026-09-28, con el PR #18 (US-15): `@microsoft/signalr`.** Entró con el
 tablero sin figurar en esta lista; queda escrita acá para que la lista diga la verdad.
