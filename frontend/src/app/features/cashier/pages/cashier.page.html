@@ -14,6 +14,16 @@
           {{ outcomeCode() }} cobrado. Ya está en la cola de la barra.
         </p>
       }
+      @case ('canceled') {
+        <p class="note note-good" role="status">
+          {{ outcomeCode() }} cancelado. No se cobró y los tragos volvieron al stock.
+        </p>
+      }
+      @case ('wasCanceled') {
+        <p class="note note-bad" role="alert">
+          El pedido {{ outcomeCode() }} fue cancelado. No hay nada que cobrar.
+        </p>
+      }
       @case ('notFound') {
         <p class="note note-bad" role="alert">
           No hay ningún pedido con el código {{ outcomeCode() }}. Pedile al cliente que te lo
@@ -35,6 +45,11 @@
           No pudimos buscar el pedido. Revisá la conexión y probá de nuevo.
         </p>
       }
+      @case ('cancelFailed') {
+        <p class="note note-bad" role="alert">
+          No pudimos cancelar el pedido. Revisá la conexión y probá de nuevo.
+        </p>
+      }
       @case ('collectFailed') {
         <p class="note note-bad" role="alert">
           No pudimos confirmar el cobro. Revisá la conexión y probá de nuevo: no se cobra dos veces.
@@ -46,8 +61,10 @@
       <drinkit-order-to-collect
         [order]="order"
         [collecting]="collecting()"
+        [canceling]="canceling()"
         (collect)="collect()"
-        (backToScanning)="cancel()"
+        (backToScanning)="backToScanning()"
+        (cancelOrder)="cancelOrder()"
       />
     } @else {
       <section class="scan" aria-labelledby="scan-title">

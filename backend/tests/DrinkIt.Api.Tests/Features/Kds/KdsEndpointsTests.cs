@@ -221,6 +221,9 @@ public class KdsEndpointsTests
             public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
                 Task.FromResult<Result<Order>>(LosesTheRace ? OrderErrors.ChangedMeanwhile : order);
 
+            public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("The bar never cancels an order.");
+
             public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The bar never places an order.");
 

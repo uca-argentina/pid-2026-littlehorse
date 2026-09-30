@@ -41,8 +41,10 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
 
         // Every way of not getting in answers the same. The token is compared
         // after the row is read and in constant time, so nothing about how long
-        // this took says how close a guess was.
-        if (found is null || !found.TrackingToken.Matches(token) || found.Status.IsFinished()) return null;
+        // this took says how close a guess was. Delivered is the only status
+        // that closes the link (2026-09-17): a canceled order (US-23) has
+        // nothing to pick up either, but the customer has to see it say so.
+        if (found is null || !found.TrackingToken.Matches(token) || found.Status == OrderStatus.Delivered) return null;
 
         return new TrackedOrder(
             found.Code.Value,

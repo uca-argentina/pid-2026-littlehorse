@@ -4,12 +4,13 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { render, screen } from '@testing-library/angular';
+import { fireEvent, render, screen } from '@testing-library/angular';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { TrackingChannel } from '../tracking-channel';
 import { TrackingStore } from '../tracking.store';
-import { trackingUrl } from '../tracking.service';
+import { cancelOrderUrl, trackingUrl } from '../tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
+import { ProblemTypes } from '../../../core/api/problem-types';
 import { TrackingPage } from './tracking.page';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
@@ -263,6 +264,86 @@ describe('TrackingPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('alert').textContent).toMatch(/no lleva a ning[úu]n pedido/i);
+  });
+
+  // US-23: changed their mind before paying at the till.
+  it('offers to cancel while it waits to be paid at the till', async () => {
+    await openScreenShowing('AwaitingPayment');
+
+    expect(screen.getByRole('button', { name: /^cancelar pedido$/i })).not.toBeNull();
+  });
+
+  // Paid, by any method, is the bar's.
+  it('does not offer to cancel once it is paid', async () => {
+    await openScreenShowing('Queued');
+
+    expect(screen.queryByRole('button', { name: /cancelar pedido/i })).toBeNull();
+  });
+
+  it('asks before canceling, and sends nothing yet', async () => {
+    const { rendered, http } = await openScreenShowing('AwaitingPayment');
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('button', { name: /sí, cancelar/i })).not.toBeNull();
+    http.expectNone(cancelOrderUrl('bar-alfa', 'K-4821', token));
+  });
+
+  it('cancels the order, and then says so', async () => {
+    const { rendered, http } = await openScreenShowing('AwaitingPayment');
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+    fireEvent.click(screen.getByRole('button', { name: /sí, cancelar/i }));
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne({ method: 'POST', url: cancelOrderUrl('bar-alfa', 'K-4821', token) })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne(url).flush(anOrder('Canceled'));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/tu pedido fue cancelado/i);
+  });
+
+  // The cashier took the money a moment before: it is the bar's now.
+  it('says it was already paid when canceling is refused', async () => {
+    const { rendered, http } = await openScreenShowing('AwaitingPayment');
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+    fireEvent.click(screen.getByRole('button', { name: /sí, cancelar/i }));
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(cancelOrderUrl('bar-alfa', 'K-4821', token))
+      .flush({ type: ProblemTypes.orderNotCancelable }, { status: 409, statusText: 'Conflict' });
+    http.expectOne(url).flush(anOrder('Queued'));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/ya estaba pago/i);
+    expect(screen.queryByRole('button', { name: /cancelar pedido/i })).toBeNull();
+  });
+
+  // Canceled at the till or from here: nothing to pick up, nothing to wait for.
+  it('says plainly when the order was canceled', async () => {
+    await openScreenShowing('Canceled');
+
+    expect(screen.getByRole('alert').textContent).toMatch(/tu pedido fue cancelado/i);
+    expect(screen.getByText(/pedir algo más/i)).not.toBeNull();
+  });
+
+  it('does not show a qr once the order is canceled', async () => {
+    const { rendered } = await openScreenShowing('Canceled');
+
+    expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).toBeNull();
+  });
+
+  it('does not draw the journey once the order is canceled', async () => {
+    await openScreenShowing('Canceled');
+
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 
   /*

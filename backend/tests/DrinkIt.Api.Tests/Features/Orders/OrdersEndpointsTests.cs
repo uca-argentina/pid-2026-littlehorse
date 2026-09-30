@@ -229,6 +229,9 @@ public class OrdersEndpointsTests
 
             public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("Confirming saves through AddAsync.");
+
+            public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming saves through AddAsync.");
         }
 
         public sealed class Menu(params Product[] products) : IProductsForOrdering

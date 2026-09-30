@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, untracked } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { QRCodeComponent } from 'angularx-qrcode';
 import type { CustomerOrderStatus } from '../tracking.service';
@@ -107,6 +107,12 @@ export class TrackingPage {
 
   /** Paying in cash: the code is for the cashier first, and the bar only after (US-25). */
   protected readonly paysAtTheTill = computed(() => this.status() === 'AwaitingPayment');
+
+  /** US-23: nothing to pick up and nothing left to wait for, so the journey is not drawn. */
+  protected readonly isCanceled = computed(() => this.status() === 'Canceled');
+
+  /** "Cancelar pedido" was tapped once: it asks before doing it. */
+  protected readonly confirmingCancel = signal(false);
 
   protected readonly whatIsHappening = computed(() => {
     const status = this.status();

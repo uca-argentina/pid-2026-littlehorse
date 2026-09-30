@@ -1,6 +1,8 @@
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Tenancy;
+using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Domain.Orders;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Orders;
@@ -42,6 +44,18 @@ internal static class OrderTrackingEndpoint
             .Produces<TrackedOrderResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        // US-23: from the same link, and proven the same way — the token in it.
+        endpoints
+            .MapPost("/{venueSlug}/orders/{code}/{token}/cancel", CancelAsync)
+            .AllowAnonymous()
+            .WithMetadata(new ScopedBySlugAttribute())
+            .WithName("CancelMyOrder")
+            .WithTags("Orders")
+            .WithSummary("Cancels an order still waiting to be paid at the till, for the customer holding its link.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         return endpoints;
     }
 
@@ -76,6 +90,30 @@ internal static class OrderTrackingEndpoint
             found.PaidAt,
             [.. found.Items.Select(item =>
                 new TrackedOrderItemResponse(item.ProductName, item.Quantity, item.Note))]));
+    }
+
+    // US-23: 404 for every way of not getting in, like following it; 409 once
+    // it was paid, which the screen names instead of showing an error.
+    internal static async Task<IResult> CancelAsync(
+        string venueSlug,
+        string code,
+        string token,
+        CurrentVenue venue,
+        CancelOrderHandler handler,
+        CancellationToken cancellationToken)
+    {
+        if (venue.Identity is null) return NoSuchOrder();
+
+        Result<OrderStatus> result = await handler.HandleAsync(code, token, cancellationToken);
+
+        if (result.IsSuccess) return TypedResults.NoContent();
+        if (result.Error!.Code == OrderErrors.NotFound.Code) return NoSuchOrder();
+
+        return TypedResults.Problem(
+            title: "Conflict",
+            detail: result.Error.Message,
+            statusCode: StatusCodes.Status409Conflict,
+            type: ProblemTypes.For(result.Error.Code));
     }
 
     private static ProblemHttpResult NoSuchOrder() =>

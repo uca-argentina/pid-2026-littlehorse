@@ -38,7 +38,7 @@
       <span class="amount-value">$ {{ price(current.total) }}</span>
     </p>
 
-    <button class="cta" type="button" [disabled]="collecting()" (click)="collect.emit()">
+    <button class="cta" type="button" [disabled]="busy()" (click)="collect.emit()">
       <svg
         aria-hidden="true"
         width="22"
@@ -55,8 +55,46 @@
       <span>{{ collecting() ? 'Confirmando…' : 'Confirmar cobro' }}</span>
     </button>
 
-    <button class="ghost" type="button" [disabled]="collecting()" (click)="backToScanning.emit()">
-      Cancelar y volver a escanear
+    <button class="ghost" type="button" [disabled]="busy()" (click)="backToScanning.emit()">
+      Volver a escanear
     </button>
+
+    <!--
+      US-23: the customer left without paying. It cannot be undone, so it is
+      asked twice, and never on the same spot as "Confirmar cobro".
+    -->
+    @if (confirmingCancel()) {
+      <div class="confirm-cancel" role="group" aria-label="Confirmar cancelación">
+        <p class="confirm-text">
+          ¿Cancelar el pedido de {{ current.customerName }}? No se cobra y los tragos vuelven al
+          stock.
+        </p>
+        <button
+          class="danger-button"
+          type="button"
+          [disabled]="busy()"
+          (click)="cancelOrder.emit()"
+        >
+          {{ canceling() ? 'Cancelando…' : 'Sí, cancelar pedido' }}
+        </button>
+        <button
+          class="ghost"
+          type="button"
+          [disabled]="busy()"
+          (click)="confirmingCancel.set(false)"
+        >
+          No
+        </button>
+      </div>
+    } @else {
+      <button
+        class="danger-button"
+        type="button"
+        [disabled]="busy()"
+        (click)="confirmingCancel.set(true)"
+      >
+        Cancelar pedido
+      </button>
+    }
   </div>
 </section>

@@ -5,9 +5,9 @@ using DrinkIt.Domain.Orders;
 namespace DrinkIt.Application.Tests.Kds;
 
 /// <summary>
-/// The order repository as the bar's use cases see it: find one by its code,
-/// change it, save it. Shared by the KDS handler specs so they do not each
-/// carry a copy of the same double.
+/// The order repository as the staff's and the customer's use cases see it:
+/// find one, change it, save it. Shared by the handler specs so they do not
+/// each carry a copy of the same double.
 /// </summary>
 /// <remarks>
 /// It only ever holds one venue's orders, like the real one behind the global
@@ -41,6 +41,22 @@ internal sealed class KdsOrdersInMemory(params Order[] stored) : IOrderRepositor
         }
 
         Saves += 1;
+        return Task.FromResult<Result<Order>>(order);
+    }
+
+    /// <summary>How many cancellations were committed, drinks put back on the shelf included.</summary>
+    public int Cancellations { get; private set; }
+
+    public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken)
+    {
+        if (_refusesTheNextSave)
+        {
+            _refusesTheNextSave = false;
+
+            return Task.FromResult<Result<Order>>(OrderErrors.ChangedMeanwhile);
+        }
+
+        Cancellations += 1;
         return Task.FromResult<Result<Order>>(order);
     }
 

@@ -1,6 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ProblemTypes } from '../../core/api/problem-types';
+import { problemTypeOf } from '../../core/api/problem-type-of';
 import { TrackingChannel } from './tracking-channel';
 import { TrackingService } from './tracking.service';
 import type { TrackedOrder } from './tracking.service';
@@ -30,6 +32,12 @@ export const TRACKING_RETRY_MS = new InjectionToken<number>('TRACKING_RETRY_MS',
  * where the order is fine and what is on screen may just be old.
  */
 export type TrackingStatus = 'starting' | 'following' | 'unreachable' | 'nowhere' | 'over';
+
+/**
+ * Why a cancellation did not go through (US-23): paid at the till a moment
+ * before, or no answer at all.
+ */
+export type CancelProblem = 'alreadyPaid' | 'failed';
 
 @Injectable()
 export class TrackingStore {
@@ -67,6 +75,15 @@ export class TrackingStore {
 
   /** The last thing the server said. Kept through a dropped connection. */
   readonly order = this.known.asReadonly();
+
+  private readonly cancelingNow = signal(false);
+
+  /** While a cancellation is on its way: the button says so and takes no second tap. */
+  readonly canceling = this.cancelingNow.asReadonly();
+
+  private readonly cancelRefusal = signal<CancelProblem | null>(null);
+
+  readonly cancelProblem = this.cancelRefusal.asReadonly();
 
   /**
    * Whether there is anything left to hear about (US-22, criterion 3). A
@@ -145,6 +162,35 @@ export class TrackingStore {
           // never led anywhere if it was not.
           this.state.set(this.known() === null ? 'nowhere' : 'over');
           this.stop();
+        },
+      });
+  }
+
+  /**
+   * US-23: changed their mind before paying at the till. Either way it asks
+   * again right after, rather than waiting for the live link: what the screen
+   * shows next is the order as it is now — canceled, or paid a moment ago.
+   */
+  cancel(): void {
+    if (this.where === null || this.cancelingNow()) return;
+
+    this.cancelingNow.set(true);
+    this.cancelRefusal.set(null);
+
+    this.tracking
+      .cancel(this.where.venueSlug, this.where.code, this.where.token)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.cancelingNow.set(false);
+          this.askAgain();
+        },
+        error: (error: unknown) => {
+          this.cancelingNow.set(false);
+          this.cancelRefusal.set(
+            problemTypeOf(error) === ProblemTypes.orderNotCancelable ? 'alreadyPaid' : 'failed',
+          );
+          this.askAgain();
         },
       });
   }

@@ -204,3 +204,46 @@
   color: var(--dk-text);
   font-size: 16px;
 }
+
+// US-23: the one thing on the card that takes the order away. Dashed and apart
+// from "Confirmar cobro", like the deactivate zone of a product.
+.confirm-cancel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-4);
+  border: 1px dashed var(--dk-danger-zone-border);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-danger-zone-surface);
+}
+
+.confirm-text {
+  margin: 0;
+  color: var(--dk-danger-zone-title);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.danger-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border: 1px solid var(--dk-danger-zone-border);
+  border-radius: var(--dk-radius-lg);
+  background: none;
+  color: var(--dk-danger-zone-action);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: var(--dk-danger-surface);
+}

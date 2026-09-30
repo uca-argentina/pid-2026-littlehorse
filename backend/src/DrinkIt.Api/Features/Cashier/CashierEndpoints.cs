@@ -66,6 +66,14 @@ internal static class CashierEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        orders
+            .MapPost("/{code}/cancel", CancelAsync)
+            .WithName("CancelAtTheTill")
+            .WithSummary("Cancels an order still waiting to be paid in cash, and puts its drinks back on the shelf.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         endpoints
             // POST with the token in the body, like the bar's scan: the token is
             // the customer's proof, and a URL ends up in access logs.
@@ -105,6 +113,15 @@ internal static class CashierEndpoints
     /// the bar hears about it through its hub like any other queued order.
     /// </summary>
     internal static async Task<IResult> CollectAsync(string code, CollectCashHandler handler, CancellationToken cancellationToken)
+    {
+        Result<OrderStatus> result = await handler.HandleAsync(code, cancellationToken);
+
+        return result.IsSuccess ? TypedResults.NoContent() : Rejected(result.Error!);
+    }
+
+    // US-23: the customer left without paying. Nothing to hand back either:
+    // the order leaves "Por cobrar" through the till's hub.
+    internal static async Task<IResult> CancelAsync(string code, CancelAtTillHandler handler, CancellationToken cancellationToken)
     {
         Result<OrderStatus> result = await handler.HandleAsync(code, cancellationToken);
 

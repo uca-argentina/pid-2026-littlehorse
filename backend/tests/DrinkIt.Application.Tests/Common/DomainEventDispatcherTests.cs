@@ -79,14 +79,21 @@ public class DomainEventDispatcherTests
     }
 
     // US-26: the till's "Por cobrar" updates on its own — a new order to
-    // collect, or one another till just collected.
+    // collect, or one another till just collected. US-23: or one canceled,
+    // at another till or from the customer's phone.
     [Theory]
     [InlineData(nameof(OrderAwaitingPayment))]
     [InlineData(nameof(OrderCollected))]
+    [InlineData(nameof(OrderCanceled))]
     public async Task DispatchAsync_WhenTheCashWaitingChanges_NotifiesTheTillAndNotTheBoard(string what)
     {
         Guid venueId = Guid.CreateVersion7();
-        IDomainEvent changed = what == nameof(OrderCollected) ? new OrderCollected(venueId, AToken) : new OrderAwaitingPayment(venueId, AToken);
+        IDomainEvent changed = what switch
+        {
+            nameof(OrderCollected) => new OrderCollected(venueId, AToken),
+            nameof(OrderCanceled) => new OrderCanceled(venueId, AToken),
+            _ => new OrderAwaitingPayment(venueId, AToken),
+        };
         SpyNotifier board = new();
         SpyTill till = new();
 

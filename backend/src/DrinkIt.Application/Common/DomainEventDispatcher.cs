@@ -40,11 +40,16 @@ public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotif
         }
     }
 
-    /// <summary>The venue whose tills have to reload "Por cobrar", or null when nothing waits for cash differently.</summary>
+    /// <summary>
+    /// The venue whose tills have to reload "Por cobrar", or null when nothing
+    /// waits for cash differently. A cancellation is one (US-23): only an order
+    /// waiting for cash can be canceled, and it leaves the list.
+    /// </summary>
     private static Guid? VenueWhoseTillChanged(IDomainEvent domainEvent) => domainEvent switch
     {
         OrderAwaitingPayment waiting => waiting.VenueId,
         OrderCollected collected => collected.VenueId,
+        OrderCanceled canceled => canceled.VenueId,
         _ => null,
     };
 

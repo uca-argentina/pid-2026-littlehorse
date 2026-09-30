@@ -32,11 +32,14 @@ import { TillChannel } from '../till-channel';
  */
 type Outcome =
   | { readonly kind: 'collected'; readonly code: string }
+  | { readonly kind: 'canceled'; readonly code: string }
+  | { readonly kind: 'wasCanceled'; readonly code: string }
   | { readonly kind: 'notFound'; readonly code: string }
   | { readonly kind: 'unknownQr' }
   | { readonly kind: 'alreadyPaid'; readonly code: string; readonly paidAt: string | null }
   | { readonly kind: 'searchFailed' }
-  | { readonly kind: 'collectFailed' };
+  | { readonly kind: 'collectFailed' }
+  | { readonly kind: 'cancelFailed' };
 
 /** What the customer's QR carries: the order's tracking token. Codes have a dash. */
 const TOKEN = /^[0-9a-f]{32}$/i;
@@ -132,6 +135,8 @@ export class CashierPage {
 
   protected readonly collecting = signal(false);
 
+  protected readonly canceling = signal(false);
+
   protected readonly price = formatPrice;
 
   constructor() {
@@ -187,9 +192,56 @@ export class CashierPage {
     this.show(order);
   }
 
-  protected cancel(): void {
+  protected backToScanning(): void {
     this.selected.set(null);
     this.focusTheEntry();
+  }
+
+  /**
+   * US-23: the customer left without paying. The drinks go back on the shelf
+   * and the order leaves "Por cobrar"; the customer's own screen says so.
+   */
+  protected cancelOrder(): void {
+    const order = this.selected();
+
+    if (order === null || this.canceling()) return;
+
+    this.canceling.set(true);
+    this.outcome.set(null);
+
+    this.cashier
+      .cancel(order.code)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.canceling.set(false);
+          this.selected.set(null);
+          this.read.set('');
+          this.outcome.set({ kind: 'canceled', code: order.code });
+          this.reloadTheLists();
+          this.focusTheEntry();
+        },
+        error: (error: unknown) => {
+          this.canceling.set(false);
+
+          const problem = problemTypeOf(error);
+
+          // The same reading as collecting: refused on its merits, it comes off
+          // the screen; a dropped connection leaves it there to try again.
+          if (problem === ProblemTypes.cashierAlreadyPaid || isNotFound(error)) {
+            this.selected.set(null);
+            this.reloadTheLists();
+          }
+
+          if (problem === ProblemTypes.cashierAlreadyPaid) {
+            this.outcome.set({ kind: 'alreadyPaid', code: order.code, paidAt: null });
+          } else if (isNotFound(error)) {
+            this.outcome.set({ kind: 'notFound', code: order.code });
+          } else {
+            this.outcome.set({ kind: 'cancelFailed' });
+          }
+        },
+      });
   }
 
   protected collect(): void {
@@ -276,6 +328,13 @@ export class CashierPage {
   private show(order: CashierOrder): void {
     if (order.status === 'AwaitingPayment') {
       this.selected.set(order);
+
+      return;
+    }
+
+    if (order.status === 'Canceled') {
+      this.outcome.set({ kind: 'wasCanceled', code: order.code });
+      this.focusTheEntry();
 
       return;
     }

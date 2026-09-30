@@ -286,6 +286,23 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     }
 
     /// <summary>
+    /// Not going ahead (US-23): only while it waits to be paid at the till,
+    /// asked by the cashier or by the customer. Once paid, by any method, it is
+    /// the bar's, and paid orders are not given back (docs/modelo-de-datos.md).
+    /// Asking again for what already happened changes nothing: a double tap,
+    /// or the cashier and the customer at once, is not a second cancellation.
+    /// </summary>
+    public void Cancel()
+    {
+        if (Status == OrderStatus.Canceled) return;
+
+        EnsureItIs(OrderStatus.AwaitingPayment);
+
+        Status = OrderStatus.Canceled;
+        _domainEvents.Add(new OrderCanceled(VenueId, TrackingToken));
+    }
+
+    /// <summary>
     /// Forgets what was raised, once whoever saved this aggregate has reacted
     /// to it. Never called from inside the domain itself.
     /// </summary>

@@ -679,13 +679,99 @@ public class OrderTests
         }
     }
 
+    // US-23: only an order waiting to be paid at the till can be canceled —
+    // by the cashier or by the customer. Once paid, by any method, it is the
+    // bar's, and paid orders are not given back (docs/modelo-de-datos.md).
+    public class Cancelling
+    {
+        private static Order AnOrderAwaitingPayment()
+        {
+            Order order = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.AwaitPayment(PaymentMethod.Cash);
+            order.ClearDomainEvents();
+
+            return order;
+        }
+
+        [Fact]
+        public void Cancel_WhenAwaitingPayment_MarksItCanceled()
+        {
+            Order order = AnOrderAwaitingPayment();
+
+            order.Cancel();
+
+            Assert.Equal(OrderStatus.Canceled, order.Status);
+        }
+
+        [Fact]
+        public void Cancel_WhenAwaitingPayment_RaisesOrderCanceled()
+        {
+            Order order = AnOrderAwaitingPayment();
+
+            order.Cancel();
+
+            OrderCanceled raised = Assert.IsType<OrderCanceled>(Assert.Single(order.DomainEvents));
+            Assert.Equal(AVenue, raised.VenueId);
+        }
+
+        // A double tap, or the cashier and the customer at the same time, is
+        // not a second cancellation.
+        [Fact]
+        public void Cancel_WhenAlreadyCanceled_ChangesNothing()
+        {
+            Order order = AnOrderAwaitingPayment();
+            order.Cancel();
+            order.ClearDomainEvents();
+
+            order.Cancel();
+
+            Assert.Equal(OrderStatus.Canceled, order.Status);
+            Assert.Empty(order.DomainEvents);
+        }
+
+        [Fact]
+        public void Cancel_WhenPaidDigitally_ThrowsInvalidTransition()
+        {
+            Order order = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.Pay(new DateTimeOffset(2026, 9, 30, 1, 0, 0, TimeSpan.Zero), PaymentMethod.Digital);
+            order.Enqueue();
+
+            DomainException error = Assert.Throws<DomainException>(order.Cancel);
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+            Assert.Equal(OrderStatus.Queued, order.Status);
+        }
+
+        [Fact]
+        public void Cancel_WhenTheTillAlreadyCollectedIt_ThrowsInvalidTransition()
+        {
+            Order order = AnOrderAwaitingPayment();
+            order.CollectCash(new DateTimeOffset(2026, 9, 30, 1, 0, 0, TimeSpan.Zero), "laura.caja");
+
+            DomainException error = Assert.Throws<DomainException>(order.Cancel);
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+            Assert.Equal(OrderStatus.Queued, order.Status);
+        }
+
+        [Fact]
+        public void Cancel_WhileStillACart_ThrowsInvalidTransition()
+        {
+            Order order = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+
+            DomainException error = Assert.Throws<DomainException>(order.Cancel);
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+    }
+
     // US-22: whoever holds the order's link hears of every move it makes, so
     // every event an order raises names it by the one thing that link carries.
     public class Following
     {
         private static readonly DateTimeOffset At = new(2026, 9, 30, 1, 0, 0, TimeSpan.Zero);
 
-        /// <summary>Every move an order can make, paid in cash and digitally, with who raised each one.</summary>
+        /// <summary>Every move an order can make — paid in cash, digitally, or canceled — with who raised each one.</summary>
         private static List<(Order Order, IDomainEvent Raised)> EveryMove()
         {
             Order cash = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
@@ -704,7 +790,16 @@ public class OrderTests
             digital.Deliver(At);
             digital.UndoDelivery(At);
 
-            return [.. cash.DomainEvents.Select(raised => (cash, raised)), .. digital.DomainEvents.Select(raised => (digital, raised))];
+            Order canceled = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4823"), [AGinTonic()]);
+            canceled.AwaitPayment(PaymentMethod.Cash);
+            canceled.Cancel();
+
+            return
+            [
+                .. cash.DomainEvents.Select(raised => (cash, raised)),
+                .. digital.DomainEvents.Select(raised => (digital, raised)),
+                .. canceled.DomainEvents.Select(raised => (canceled, raised)),
+            ];
         }
 
         [Fact]

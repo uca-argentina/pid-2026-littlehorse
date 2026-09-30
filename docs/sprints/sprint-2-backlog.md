@@ -344,26 +344,37 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 
 ### US-23 · Cancelar un pedido
 
-> **Como** estación de barra
-> **quiero** cancelar un pedido que no se va a preparar
-> **para** que la cola muestre lo que de verdad hay que hacer.
+> **Como** cliente que eligió pagar en efectivo, o como cajero
+> **quiero** cancelar un pedido que todavía no se pagó en la caja
+> **para** que no quede trabado en "Por cobrar" ni reteniendo stock.
 
 **Criterios de aceptación**
 
-1. **Dado** un pedido en la cola o en preparación, **cuando** lo cancelo indicando el motivo,
-   **entonces** queda cancelado y el cliente lo ve en su pantalla de seguimiento.
-2. **Dado** un pedido ya entregado, **cuando** intento cancelarlo, **entonces** el sistema no
-   me deja.
-3. **Dado** que cancelo un pedido pagado, **cuando** lo confirmo, **entonces** el sistema deja
-   registrado que hay plata a devolver, aunque la devolución se haga fuera del sistema.
+1. **Dado** un pedido esperando el cobro en la caja, **cuando** el cliente lo cancela desde su
+   pantalla de seguimiento o el cajero desde "Por cobrar", **entonces** queda cancelado, sale
+   de "Por cobrar" y el cliente lo ve en su pantalla sin recargar.
+2. **Dado** un pedido ya pagado —en la caja o desde el celular—, **cuando** alguien intenta
+   cancelarlo, **entonces** el sistema no lo deja y lo dice.
+3. **Dado** que se cancela un pedido, **cuando** se confirma, **entonces** los tragos vuelven al
+   stock.
 
 **Notas**
 
-- **Depende de** US-15.
-- El diseño funcional deja las reglas de cancelación **explícitamente sin definir** (§5). Lo
-  de arriba es una propuesta mínima: hay que confirmarla antes de construirla.
-- **Borde:** qué pasa con un pedido que nadie retira en toda la noche. Proponemos **no**
-  cancelarlo solo en este sprint — un vencimiento automático necesita su propia discusión.
+- **Decidido el 2026-09-30:** sólo se cancela en `AwaitingPayment`. Coincide con
+  `docs/modelo-de-datos.md`: los pedidos pagos no se devuelven, en ningún método de pago. Por
+  eso no hay devolución que registrar ni motivo que pedir, y el KDS no cancela: los pedidos
+  que ve ya están pagos.
+- **Pide confirmación** en las dos pantallas: no se puede deshacer. En la caja, el botón
+  que volvía a escanear pasó a decir "Volver a escanear", para que no se confunda con cancelar.
+- **El cliente** cancela con el mismo token de su enlace (`POST
+  /{venueSlug}/orders/{code}/{token}/cancel`), y recibe el mismo 404 ante cualquier forma de
+  no entrar. **El cajero**, con `POST /cashier/orders/{code}/cancel`.
+- **Stock:** vuelve en la misma transacción que la cancelación. Si la caja cobró el pedido
+  en el mismo instante, la cancelación se rechaza y no se mueve nada.
+- Un pedido cancelado **sigue apareciendo** en el seguimiento, a diferencia del entregado,
+  para que el cliente vea que se canceló. Escanear en la caja un pedido cancelado lo dice.
+- **Borde:** qué pasa con un pedido en efectivo que nadie cobra ni cancela en toda la noche.
+  La cancelación automática por tiempo sigue sin definir (§15).
 
 ### US-31 · Que el tablero se ponga al día solo
 
