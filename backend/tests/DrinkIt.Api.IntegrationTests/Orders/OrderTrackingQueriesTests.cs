@@ -115,10 +115,8 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
     /// handed over, so the one left in a shared phone's history stops being a
     /// way in.
     /// </summary>
-    [Theory]
-    [InlineData(OrderStatus.Delivered)]
-    [InlineData(OrderStatus.Canceled)]
-    public async Task FindAsync_WhenTheOrderIsOver_FindsNothing(OrderStatus over)
+    [Fact]
+    public async Task FindAsync_WhenTheOrderWasDelivered_FindsNothing()
     {
         (Venue venue, Order order) = await AVenueWithAnOrderFor("María Quadro");
 
@@ -126,11 +124,31 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
         {
             await moving.Orders
                 .Where(row => row.Id == order.Id)
-                .ExecuteUpdateAsync(row => row.SetProperty(o => o.Status, over));
+                .ExecuteUpdateAsync(row => row.SetProperty(o => o.Status, OrderStatus.Delivered));
         }
 
         Assert.Null(await Tracking(venue)
             .FindAsync(order.Code.Value, order.TrackingToken.Value, CancellationToken.None));
+    }
+
+    // US-23: a canceled order has nothing to pick up either, but whoever
+    // canceled it — or had it canceled at the till — has to see it say so.
+    [Fact]
+    public async Task FindAsync_WhenTheOrderWasCanceled_StillFindsIt()
+    {
+        (Venue venue, Order order) = await AVenueWithAnOrderFor("María Quadro");
+
+        await using (DrinkItDbContext moving = sql.CreateContext(venue.Id))
+        {
+            await moving.Orders
+                .Where(row => row.Id == order.Id)
+                .ExecuteUpdateAsync(row => row.SetProperty(o => o.Status, OrderStatus.Canceled));
+        }
+
+        TrackedOrder? found = await Tracking(venue)
+            .FindAsync(order.Code.Value, order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Equal(OrderStatus.Canceled, found?.Status);
     }
 
     // Criterion 3 is a screen asking again every three seconds, so this query

@@ -1,6 +1,7 @@
 using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
+using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Orders;
 
@@ -12,14 +13,16 @@ namespace DrinkIt.Application.Tests.Common;
 /// </summary>
 public class DomainEventDispatcherTests
 {
+    private static readonly TrackingToken AToken = TrackingToken.New();
+
     [Fact]
     public async Task DispatchAsync_WhenAnOrderIsQueued_NotifiesTheKdsBoard()
     {
         Guid venueId = Guid.CreateVersion7();
         SpyNotifier notifier = new();
-        DomainEventDispatcher dispatcher = new(notifier, new SpyTill());
+        DomainEventDispatcher dispatcher = new(notifier, new SpyTill(), new SpyFollowers());
 
-        await dispatcher.DispatchAsync([new OrderQueued(venueId)], CancellationToken.None);
+        await dispatcher.DispatchAsync([new OrderQueued(venueId, AToken)], CancellationToken.None);
 
         Assert.Equal(venueId, Assert.Single(notifier.NotifiedVenues));
     }
@@ -31,9 +34,9 @@ public class DomainEventDispatcherTests
     {
         Guid venueId = Guid.CreateVersion7();
         SpyNotifier notifier = new();
-        DomainEventDispatcher dispatcher = new(notifier, new SpyTill());
+        DomainEventDispatcher dispatcher = new(notifier, new SpyTill(), new SpyFollowers());
 
-        await dispatcher.DispatchAsync([new OrderPreparationStarted(venueId)], CancellationToken.None);
+        await dispatcher.DispatchAsync([new OrderPreparationStarted(venueId, AToken)], CancellationToken.None);
 
         Assert.Equal(venueId, Assert.Single(notifier.NotifiedVenues));
     }
@@ -43,9 +46,9 @@ public class DomainEventDispatcherTests
     {
         Guid venueId = Guid.CreateVersion7();
         SpyNotifier notifier = new();
-        DomainEventDispatcher dispatcher = new(notifier, new SpyTill());
+        DomainEventDispatcher dispatcher = new(notifier, new SpyTill(), new SpyFollowers());
 
-        await dispatcher.DispatchAsync([new OrderRequeued(venueId)], CancellationToken.None);
+        await dispatcher.DispatchAsync([new OrderRequeued(venueId, AToken)], CancellationToken.None);
 
         Assert.Equal(venueId, Assert.Single(notifier.NotifiedVenues));
     }
@@ -54,10 +57,10 @@ public class DomainEventDispatcherTests
     // tablet of the venue.
     public static TheoryData<IDomainEvent> MovesOnTheBoard(Guid venueId) =>
     [
-        new OrderReady(venueId, Guid.CreateVersion7()),
-        new OrderReturnedToPreparation(venueId),
-        new OrderDelivered(venueId),
-        new OrderDeliveryUndone(venueId),
+        new OrderReady(venueId, Guid.CreateVersion7(), AToken),
+        new OrderReturnedToPreparation(venueId, AToken),
+        new OrderDelivered(venueId, AToken),
+        new OrderDeliveryUndone(venueId, AToken),
     ];
 
     [Fact]
@@ -69,25 +72,32 @@ public class DomainEventDispatcherTests
         {
             SpyNotifier notifier = new();
 
-            await new DomainEventDispatcher(notifier, new SpyTill()).DispatchAsync([moved], CancellationToken.None);
+            await new DomainEventDispatcher(notifier, new SpyTill(), new SpyFollowers()).DispatchAsync([moved], CancellationToken.None);
 
             Assert.True(notifier.NotifiedVenues.SequenceEqual([venueId]), $"{moved.GetType().Name} did not reach the board.");
         }
     }
 
     // US-26: the till's "Por cobrar" updates on its own — a new order to
-    // collect, or one another till just collected.
+    // collect, or one another till just collected. US-23: or one canceled,
+    // at another till or from the customer's phone.
     [Theory]
     [InlineData(nameof(OrderAwaitingPayment))]
     [InlineData(nameof(OrderCollected))]
+    [InlineData(nameof(OrderCanceled))]
     public async Task DispatchAsync_WhenTheCashWaitingChanges_NotifiesTheTillAndNotTheBoard(string what)
     {
         Guid venueId = Guid.CreateVersion7();
-        IDomainEvent changed = what == nameof(OrderCollected) ? new OrderCollected(venueId) : new OrderAwaitingPayment(venueId);
+        IDomainEvent changed = what switch
+        {
+            nameof(OrderCollected) => new OrderCollected(venueId, AToken),
+            nameof(OrderCanceled) => new OrderCanceled(venueId, AToken),
+            _ => new OrderAwaitingPayment(venueId, AToken),
+        };
         SpyNotifier board = new();
         SpyTill till = new();
 
-        await new DomainEventDispatcher(board, till).DispatchAsync([changed], CancellationToken.None);
+        await new DomainEventDispatcher(board, till, new SpyFollowers()).DispatchAsync([changed], CancellationToken.None);
 
         Assert.Equal(venueId, Assert.Single(till.NotifiedVenues));
         Assert.Empty(board.NotifiedVenues);
@@ -98,10 +108,39 @@ public class DomainEventDispatcherTests
     {
         SpyTill till = new();
 
-        await new DomainEventDispatcher(new SpyNotifier(), till)
-            .DispatchAsync([new OrderQueued(Guid.CreateVersion7())], CancellationToken.None);
+        await new DomainEventDispatcher(new SpyNotifier(), till, new SpyFollowers())
+            .DispatchAsync([new OrderQueued(Guid.CreateVersion7(), AToken)], CancellationToken.None);
 
         Assert.Empty(till.NotifiedVenues);
+    }
+
+    // US-22: whoever holds the order's link hears of every move it makes, the
+    // till's and the bar's alike, and hears it by that link's token.
+    [Fact]
+    public async Task DispatchAsync_WhenAnOrderChanges_NotifiesWhoeverFollowsIt()
+    {
+        TrackingToken token = TrackingToken.New();
+        SpyFollowers followers = new();
+
+        await new DomainEventDispatcher(new SpyNotifier(), new SpyTill(), followers)
+            .DispatchAsync([new OrderPreparationStarted(Guid.CreateVersion7(), token)], CancellationToken.None);
+
+        Assert.Equal(token, Assert.Single(followers.Notified));
+    }
+
+    // Collecting cash raises two events for one move — queued and collected.
+    // The phone would ask twice for the same answer.
+    [Fact]
+    public async Task DispatchAsync_WhenOneOrderRaisesSeveralEvents_NotifiesItsFollowersOnce()
+    {
+        Guid venueId = Guid.CreateVersion7();
+        TrackingToken token = TrackingToken.New();
+        SpyFollowers followers = new();
+
+        await new DomainEventDispatcher(new SpyNotifier(), new SpyTill(), followers)
+            .DispatchAsync([new OrderQueued(venueId, token), new OrderCollected(venueId, token)], CancellationToken.None);
+
+        Assert.Equal(token, Assert.Single(followers.Notified));
     }
 
     // A future event this dispatcher does not yet know how to react to must
@@ -111,11 +150,12 @@ public class DomainEventDispatcherTests
     public async Task DispatchAsync_WhenTheEventIsNotOneItReactsTo_DoesNothing()
     {
         SpyNotifier notifier = new();
-        DomainEventDispatcher dispatcher = new(notifier, new SpyTill());
+        SpyFollowers followers = new();
 
-        await dispatcher.DispatchAsync([new SomeOtherEvent()], CancellationToken.None);
+        await new DomainEventDispatcher(notifier, new SpyTill(), followers).DispatchAsync([new SomeOtherEvent()], CancellationToken.None);
 
         Assert.Empty(notifier.NotifiedVenues);
+        Assert.Empty(followers.Notified);
     }
 
     private sealed record SomeOtherEvent : IDomainEvent;
@@ -138,6 +178,17 @@ public class DomainEventDispatcherTests
         public Task NotifyTillChangedAsync(Guid venueId, CancellationToken cancellationToken)
         {
             NotifiedVenues.Add(venueId);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class SpyFollowers : IOrderFollowers
+    {
+        public List<TrackingToken> Notified { get; } = [];
+
+        public Task NotifyOrderChangedAsync(TrackingToken order, CancellationToken cancellationToken)
+        {
+            Notified.Add(order);
             return Task.CompletedTask;
         }
     }

@@ -159,3 +159,43 @@
   background: var(--dk-danger-surface);
   color: var(--dk-danger-alert-text);
 }
+
+// US-23: the one thing on the screen that takes the order away, set apart
+// from the code and the QR the customer is here for.
+.confirm-cancel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 15px;
+  border: 1px dashed var(--dk-danger-zone-border);
+  border-radius: 14px;
+  background: var(--dk-danger-zone-surface);
+}
+
+.confirm-text {
+  margin: 0;
+  color: var(--dk-danger-zone-title);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+.danger-button {
+  display: flex;
+  width: 100%;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dk-danger-zone-border);
+  border-radius: 14px;
+  background: none;
+  color: var(--dk-danger-zone-action);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

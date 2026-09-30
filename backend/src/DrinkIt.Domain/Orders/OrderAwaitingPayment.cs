@@ -1,5 +1,3 @@
-using DrinkIt.Domain.Common;
-
 namespace DrinkIt.Domain.Orders;
 
 /// <summary>
@@ -7,12 +5,15 @@ namespace DrinkIt.Domain.Orders;
 /// so it shows up in "Por cobrar" without anybody reloading. The bar does not
 /// care: nothing is to be made yet.
 /// </summary>
-public sealed record OrderAwaitingPayment : IDomainEvent
+public sealed record OrderAwaitingPayment : IOrderChanged
 {
-    public OrderAwaitingPayment(Guid venueId)
+    public OrderAwaitingPayment(Guid venueId, TrackingToken trackingToken)
     {
         VenueId = venueId;
+        TrackingToken = trackingToken;
     }
 
     public Guid VenueId { get; }
+
+    public TrackingToken TrackingToken { get; }
 }

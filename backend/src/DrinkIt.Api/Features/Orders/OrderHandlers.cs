@@ -6,5 +6,7 @@ namespace DrinkIt.Api.Features.Orders;
 internal static class OrderHandlers
 {
     public static IServiceCollection AddOrderHandlers(this IServiceCollection services) =>
-        services.AddScoped<ConfirmOrderHandler>();
+        services
+            .AddScoped<ConfirmOrderHandler>()
+            .AddScoped<CancelOrderHandler>();
 }

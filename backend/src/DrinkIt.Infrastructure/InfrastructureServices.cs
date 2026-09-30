@@ -81,6 +81,7 @@ public static class InfrastructureServices
         services.AddSignalR();
         services.AddSingleton<IKdsBoardNotifier, KdsBoardNotifier>();
         services.AddSingleton<ITillNotifier, TillNotifier>();
+        services.AddSingleton<IOrderFollowers, OrderFollowers>();
 
         // Registered as a collection on purpose: the handler picks the strategy
         // that matches the method asked for, so adding cash or VIP balance is

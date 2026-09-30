@@ -13,6 +13,7 @@ using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
+using DrinkIt.Infrastructure.Orders;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -116,6 +117,7 @@ app.MapProducts();
 app.MapKds();
 app.MapHub<KdsHub>(KdsHubRoute.Path);
 app.MapHub<TillHub>(TillHubRoute.Path);
+app.MapHub<TrackingHub>(TrackingHubRoute.Path);
 app.MapCashier();
 
 await app.RunAsync();

@@ -20,6 +20,11 @@ export function collectUrl(code: string): string {
   return `${cashierOrderUrl(code)}/collect`;
 }
 
+/** US-23: the customer left without paying. */
+export function cancelAtTheTillUrl(code: string): string {
+  return `${cashierOrderUrl(code)}/cancel`;
+}
+
 /** Taken from the generated contract, so nothing here can drift from the API. */
 export type CashierOrder = components['schemas']['CashierOrderResponse'];
 
@@ -38,5 +43,9 @@ export class CashierService {
 
   collect(code: string): Observable<void> {
     return this.http.post<void>(collectUrl(code), {});
+  }
+
+  cancel(code: string): Observable<void> {
+    return this.http.post<void>(cancelAtTheTillUrl(code), {});
   }
 }

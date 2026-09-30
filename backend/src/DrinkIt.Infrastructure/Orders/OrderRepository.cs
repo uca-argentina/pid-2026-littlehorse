@@ -121,6 +121,58 @@ internal sealed partial class OrderRepository(
             .Include(order => order.Items)
             .FirstOrDefaultAsync(order => order.TrackingToken == token, cancellationToken);
 
+    /// <summary>
+    /// The cancellation and the stock it gives back, in one transaction. The
+    /// order is written first, so a cancellation that lost to the till's
+    /// collection is refused before a single drink moves.
+    /// </summary>
+    /// <remarks>
+    /// The stock goes back with one relative statement per drink — "put three
+    /// back" — for the same reason it comes down that way in
+    /// <see cref="AddAsync"/>: writing back a number read seconds ago would
+    /// undo whatever the bar sold meanwhile.
+    /// </remarks>
+    public async Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken)
+    {
+        await using IDbContextTransaction transaction =
+            await context.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // See SaveAsync: somebody else saved it first, and theirs stands.
+            await transaction.RollbackAsync(cancellationToken);
+            order.ClearDomainEvents();
+            context.ChangeTracker.Clear();
+            LogChangedMeanwhile(logger, order.Code.Value);
+
+            return OrderErrors.ChangedMeanwhile;
+        }
+
+        foreach (OrderItem item in order.Items)
+        {
+            int quantity = item.Quantity;
+
+            // The venue filter applies here too, and a product deleted since
+            // simply matches no row: there is no shelf to put it back on.
+            await context.Products
+                .Where(product => product.Id == item.ProductId)
+                .ExecuteUpdateAsync(
+                    row => row.SetProperty(product => product.Stock, product => product.Stock + quantity),
+                    cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
+        // Committed by now, so the same reasoning as a new order applies.
+        await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
+
+        return order;
+    }
+
     public async Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken)
     {
         try
