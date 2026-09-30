@@ -62,6 +62,25 @@ public interface IOrderRepository
     Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The same, found by its id — what a payment gateway carries back as its
+    /// external reference (US-24). Another venue's order is null here too.
+    /// </summary>
+    Task<Order?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// This venue's orders still waiting for a payment that were placed before
+    /// <paramref name="before"/>, whole and tracked, so each can be canceled.
+    /// </summary>
+    Task<IReadOnlyList<Order>> GetAwaitingPaymentCreatedBeforeAsync(DateTimeOffset before, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Commits an order canceled because nobody paid for it (US-24), putting
+    /// the drinks it took back on the menu in the same write: they were never
+    /// sold.
+    /// </summary>
+    Task SaveReturningStockAsync(Order order, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Commits what the use case changed, and only then reacts to the events
     /// the order raised — so the board never hears about a change that did not
     /// make it to the database.

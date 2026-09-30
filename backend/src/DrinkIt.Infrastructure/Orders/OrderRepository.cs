@@ -121,6 +121,51 @@ internal sealed partial class OrderRepository(
             .Include(order => order.Items)
             .FirstOrDefaultAsync(order => order.TrackingToken == token, cancellationToken);
 
+    /// <summary>By the id the payment gateway carries back. Filtered by venue like the rest.</summary>
+    public Task<Order?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+        context.Orders
+            .Include(order => order.Items)
+            .FirstOrDefaultAsync(order => order.Id == id, cancellationToken);
+
+    /// <summary>
+    /// The creation stamp is when it started waiting: a digital order is born
+    /// waiting for its payment (US-24).
+    /// </summary>
+    public async Task<IReadOnlyList<Order>> GetAwaitingPaymentCreatedBeforeAsync(
+        DateTimeOffset before,
+        CancellationToken cancellationToken) =>
+        await context.Orders
+            .Include(order => order.Items)
+            .Where(order => order.Status == OrderStatus.AwaitingPayment && order.CreatedAt < before)
+            .ToListAsync(cancellationToken);
+
+    /// <summary>
+    /// The cancel and the drinks going back, in one transaction, the mirror of
+    /// <see cref="AddAsync"/>: an order canceled while its stock stayed taken,
+    /// or stock returned for an order still waiting, must never be left behind.
+    /// </summary>
+    public async Task SaveReturningStockAsync(Order order, CancellationToken cancellationToken)
+    {
+        await using IDbContextTransaction transaction =
+            await context.Database.BeginTransactionAsync(cancellationToken);
+
+        foreach (OrderItem item in order.Items)
+        {
+            int quantity = item.Quantity;
+
+            await context.Products
+                .Where(product => product.Id == item.ProductId)
+                .ExecuteUpdateAsync(
+                    row => row.SetProperty(product => product.Stock, product => product.Stock + quantity),
+                    cancellationToken);
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
+    }
+
     public async Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken)
     {
         try

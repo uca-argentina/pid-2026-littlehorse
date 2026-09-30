@@ -142,6 +142,39 @@ describe('CheckoutPage', () => {
     expect(http.expectOne(ordersUrl('bar-alfa')).request.body.method).toBe('Cash');
   });
 
+  // US-24: the payment happens on Mercado Pago's page, and the button says so.
+  it('offers to pay with Mercado Pago', async () => {
+    await openScreenWith(anOrderOfTwoGins);
+
+    expect(payButton().textContent).toMatch(/pagar con mercado pago/i);
+    expect(payButton().getAttribute('data-mp-checkout-cta')).toBe('checkout-pro');
+  });
+
+  // It is not simulated any more: saying so would be a lie.
+  it('no longer says the payment is simulated', async () => {
+    await openScreenWith(anOrderOfTwoGins);
+
+    expect(screen.queryByText(/simulado/i)).toBeNull();
+  });
+
+  it('says the payment could not be started when Mercado Pago does not answer', async () => {
+    const { rendered, http } = await openScreenWith(anOrderOfTwoGins);
+
+    fireEvent.input(name(), { target: { value: 'María Quadro' } });
+    await rendered.fixture.whenStable();
+    payButton().click();
+    await rendered.fixture.whenStable();
+    http
+      .expectOne(ordersUrl('bar-alfa'))
+      .flush(
+        { type: 'urn:drinkit:problem:payment:gateway-unavailable' },
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/mercado pago no respondi[óo]/i);
+  });
+
   it('says it is working while the payment is going through', async () => {
     const { rendered } = await openScreenWith(anOrderOfTwoGins);
 

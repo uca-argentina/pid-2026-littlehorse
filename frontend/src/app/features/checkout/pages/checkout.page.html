@@ -110,6 +110,13 @@
         <p class="note note-bad" role="alert"><ng-container [ngTemplateOutlet]="refusal" /></p>
       }
 
+      @if (store.status() === 'gatewayUnavailable') {
+        <p class="note note-bad" role="alert">
+          Mercado Pago no respondió y no pudimos empezar el pago. No se cobró nada: probá de nuevo
+          en un momento.
+        </p>
+      }
+
       @if (store.status() === 'unreachable') {
         <p class="note note-bad" role="alert">
           No pudimos confirmar tu pedido. Fijate la señal y probá de nuevo: si ya se había
@@ -121,11 +128,21 @@
 
   @if (!cart.isEmpty()) {
     <footer class="foot">
-      <button class="cta" type="button" [disabled]="!canPay() || store.isPaying()" (click)="pay()">
+      <!--
+        US-24: cash is only confirmed here, and paid at the till showing the
+        code; digital confirms and leaves for Mercado Pago's page.
+      -->
+      <button
+        class="cta"
+        type="button"
+        [attr.data-mp-checkout-cta]="paysAtTheTill() ? null : 'checkout-pro'"
+        [disabled]="!canPay() || store.isPaying()"
+        (click)="pay()"
+      >
         @if (store.isPaying()) {
           <span>Procesando…</span>
         } @else {
-          <span>{{ paysAtTheTill() ? 'Confirmar pedido' : 'Pagar' }}</span>
+          <span>{{ paysAtTheTill() ? 'Confirmar pedido' : 'Pagar con Mercado Pago' }}</span>
         }
         <span class="num">$ {{ total() }}</span>
       </button>
@@ -133,7 +150,7 @@
       @if (paysAtTheTill()) {
         <p class="safe">Pagás en la caja, mostrando el código que te damos.</p>
       } @else {
-        <p class="safe">El pago está simulado: todavía no se cobra nada de verdad.</p>
+        <p class="safe">Vas a terminar de pagar en la página de Mercado Pago.</p>
       }
     </footer>
   }

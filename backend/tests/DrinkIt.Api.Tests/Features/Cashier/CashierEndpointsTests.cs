@@ -155,6 +155,15 @@ public class CashierEndpointsTests
 
             public Task<Result<Order>> AddAsync(Order order, string idempotencyKey, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The till never places an order.");
+
+            public Task<Order?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("The till finds orders by code or by token.");
+
+            public Task<IReadOnlyList<Order>> GetAwaitingPaymentCreatedBeforeAsync(DateTimeOffset before, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("The till never expires an order.");
+
+            public Task SaveReturningStockAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("The till never cancels an unpaid order.");
         }
 
         public sealed class Cashier : ICurrentStaffUser

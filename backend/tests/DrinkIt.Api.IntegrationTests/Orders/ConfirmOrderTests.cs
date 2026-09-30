@@ -304,11 +304,11 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
                 logger ?? NullLogger<OrderRepository>.Instance),
             new ProductsForOrdering(context),
             new OrderCodeSequence(context, current),
-            [new DigitalPaymentStrategy(new FixedClock(Tonight))],
+            [new SettlesOnTheSpot(Tonight)],
             current);
 
         return await handler.HandleAsync(
-            new ConfirmOrderCommand(name, PaymentMethod.Digital, key, lines),
+            new ConfirmOrderCommand(name, PaymentMethod.Digital, key, lines, "bar-alfa"),
             cancellationToken);
     }
 
@@ -377,5 +377,21 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
     {
         public Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("The board is unreachable.");
+    }
+
+    /// <summary>
+    /// Pays and queues the moment the order is confirmed. What is proved here
+    /// is the write — stock, codes, retries — not any one way of paying, and
+    /// digital now waits for Mercado Pago (US-24).
+    /// </summary>
+    private sealed class SettlesOnTheSpot(DateTimeOffset now) : IPaymentStrategy
+    {
+        public PaymentMethod Method => PaymentMethod.Digital;
+
+        public void Settle(Order order)
+        {
+            order.Pay(now, Method);
+            order.Enqueue();
+        }
     }
 }

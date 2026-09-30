@@ -44,6 +44,15 @@ internal sealed class KdsOrdersInMemory(params Order[] stored) : IOrderRepositor
         return Task.FromResult<Result<Order>>(order);
     }
 
+    public Task<Order?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("The bar finds orders by code or by token.");
+
+    public Task<IReadOnlyList<Order>> GetAwaitingPaymentCreatedBeforeAsync(DateTimeOffset before, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("The bar never sees an unpaid order.");
+
+    public Task SaveReturningStockAsync(Order order, CancellationToken cancellationToken) =>
+        throw new NotSupportedException("The bar never cancels an unpaid order.");
+
     public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
         throw new NotSupportedException("The bar never places an order.");
 

@@ -6,6 +6,7 @@ using DrinkIt.Api.Features.Cashier;
 using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Orders;
+using DrinkIt.Api.Features.Payments;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
@@ -25,6 +26,7 @@ builder.Services.AddMenuHandlers();
 builder.Services.AddOrderHandlers();
 builder.Services.AddKdsHandlers();
 builder.Services.AddCashierHandlers();
+builder.Services.AddPaymentHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
@@ -114,6 +116,7 @@ app.MapStaffUsers();
 app.MapCategories();
 app.MapProducts();
 app.MapKds();
+app.MapPayments();
 app.MapHub<KdsHub>(KdsHubRoute.Path);
 app.MapHub<TillHub>(TillHubRoute.Path);
 app.MapCashier();

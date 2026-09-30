@@ -71,7 +71,8 @@
               "buildTarget": "frontend:build:production"
             },
             "development": {
-              "buildTarget": "frontend:build:development"
+              "buildTarget": "frontend:build:development",
+              "allowedHosts": [".trycloudflare.com"]
             }
           },
           "defaultConfiguration": "development",

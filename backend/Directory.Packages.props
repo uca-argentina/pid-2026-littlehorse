@@ -26,6 +26,16 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
   </ItemGroup>
 
+  <!--
+    US-24: Mercado Pago's official .NET SDK, for Checkout Pro. MIT, published by
+    Mercado Pago (github.com/mercadopago/dx-dotnet). The package id is
+    "mercadopago-sdk": the bare "MercadoPago" id on NuGet is an unrelated,
+    unlicensed package from 2012.
+  -->
+  <ItemGroup Label="Payments">
+    <PackageVersion Include="mercadopago-sdk" Version="3.7.0" />
+  </ItemGroup>
+
   <!-- Product pictures. MIT, like the Azurite emulator that stands in for it locally. -->
   <ItemGroup Label="Storage">
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.2" />

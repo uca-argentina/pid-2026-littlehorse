@@ -12,6 +12,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     /// shadow property because it is how the request arrived and not something
     /// true about the drinks: the domain never sees it. See IOrderRepository.
     /// </summary>
+    public const int PaymentUrlMaxLength = 500;
+
     public const string IdempotencyKey = "IdempotencyKey";
 
     /// <summary>The concurrency token: see its configuration below.</summary>
@@ -38,6 +40,10 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // matches no row and is refused instead of overwriting theirs. A
         // shadow property because the domain has no business knowing it.
         builder.Property<byte[]>(Version).IsRowVersion();
+
+        // Mercado Pago's checkout address (US-24). Room to spare over what it
+        // sends today, so a longer URL is not a failed payment.
+        builder.Property(order => order.PaymentUrl).HasMaxLength(OrderConfiguration.PaymentUrlMaxLength);
 
         // Stored as the six characters the customer reads, not as two columns:
         // it is one thing, and every query looks it up whole.

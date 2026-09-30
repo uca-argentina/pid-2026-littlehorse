@@ -80,12 +80,21 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     public DateTimeOffset? PaidAt { get; private set; }
 
     /// <summary>
-    /// How it was paid, or null while nobody has. Stamped once, alongside
-    /// <see cref="PaidAt"/> — the KDS board reads it back to tell barra from
+    /// How it is paid, or null while nobody has chosen. Stamped alongside
+    /// <see cref="PaidAt"/>, or earlier, when the order waits for a gateway
+    /// (<see cref="AwaitPayment"/>) — the KDS board reads it back to tell barra from
     /// mesa (US-15), so it has to outlive the moment the payment strategy
     /// spends settling the order.
     /// </summary>
     public PaymentMethod? Method { get; private set; }
+
+    /// <summary>
+    /// Where the customer pays it, while it waits for a gateway — Mercado
+    /// Pago's page (US-24). Kept so a retry of the same confirmation sends them
+    /// to the same page: one checkout per order, never two that could both be
+    /// paid. Null for an order paid on the spot.
+    /// </summary>
+    public string? PaymentUrl { get; private set; }
 
     /// <summary>When it was handed over, or null while nobody has picked it up.</summary>
     public DateTimeOffset? DeliveredAt { get; private set; }
@@ -141,23 +150,10 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     }
 
     /// <summary>
-    /// Paid from the phone, straight from the cart — the gateway is simulated,
-    /// as the brief allows. Cash goes through <see cref="CollectCash"/> instead.
-    /// </summary>
-    public void Pay(DateTimeOffset at, PaymentMethod method)
-    {
-        EnsureItIs(OrderStatus.Cart);
-
-        Status = OrderStatus.Paid;
-        PaidAt = at;
-        Method = method;
-    }
-
-    /// <summary>
-    /// Confirmed, and waiting at the till for the money (§6, US-24). Unpaid and
-    /// out of the bar's sight; what is raised is for the till's list, since
-    /// nothing is to be made yet. The method is kept so the till knows what it
-    /// is collecting.
+    /// Confirmed, and waiting for the money (US-24): at the till in cash, or on
+    /// Mercado Pago's page. Unpaid and out of the bar's sight. Only cash raises
+    /// something, for the till's list; a digital payment is Mercado Pago's to
+    /// collect, not the till's. The method is kept so everyone knows which it is.
     /// </summary>
     public void AwaitPayment(PaymentMethod method)
     {
@@ -165,7 +161,33 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.AwaitingPayment;
         Method = method;
-        _domainEvents.Add(new OrderAwaitingPayment(VenueId));
+        if (method == PaymentMethod.Cash) _domainEvents.Add(new OrderAwaitingPayment(VenueId));
+    }
+
+    /// <summary>Where the gateway said it can be paid. Only while it waits for that payment.</summary>
+    public void OfferPaymentAt(string paymentUrl)
+    {
+        EnsureItIs(OrderStatus.AwaitingPayment);
+
+        PaymentUrl = paymentUrl;
+    }
+
+    /// <summary>
+    /// Paid. Straight from the cart when the money is settled on the spot, or
+    /// from <see cref="OrderStatus.AwaitingPayment"/> when a gateway approves it
+    /// — <paramref name="at"/> is then the moment it was approved. Cash goes
+    /// through <see cref="CollectCash"/> instead.
+    /// </summary>
+    public void Pay(DateTimeOffset at, PaymentMethod method)
+    {
+        // Cash only becomes money at the till, through CollectCash.
+        if (Status == OrderStatus.AwaitingPayment && Method == PaymentMethod.Cash) throw InvalidTransition();
+
+        EnsureItIs(OrderStatus.Cart, OrderStatus.AwaitingPayment);
+
+        Status = OrderStatus.Paid;
+        PaidAt = at;
+        Method = method;
     }
 
     /// <summary>
@@ -183,6 +205,25 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         CollectedBy = cashier;
         Enqueue();
         _domainEvents.Add(new OrderCollected(VenueId));
+    }
+
+    /// <summary>
+    /// The payment did not happen: rejected, abandoned on the gateway's page, or
+    /// never made in time. No money came in, so there is nothing to give back,
+    /// and it never reached the board, so the board hears nothing. Idempotent:
+    /// the customer's return and the gateway's notification can both say so.
+    /// </summary>
+    /// <remarks>
+    /// Not the bar's <c>Cancel(reason)</c>: nobody decided this, and there is
+    /// no reason anybody typed.
+    /// </remarks>
+    public void CancelUnpaid()
+    {
+        if (Status == OrderStatus.Canceled) return;
+
+        EnsureItIs(OrderStatus.AwaitingPayment);
+
+        Status = OrderStatus.Canceled;
     }
 
     /// <summary>Handed to the bar. Nothing takes it from here until the KDS exists.</summary>
@@ -309,6 +350,9 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// </summary>
     private void EnsureItIs(params ReadOnlySpan<OrderStatus> expected)
     {
-        if (!expected.Contains(Status)) throw new DomainException(ErrorCodes.InvalidTransition, "That cannot be done to this order any more.");
+        if (!expected.Contains(Status)) throw InvalidTransition();
     }
+
+    private static DomainException InvalidTransition() =>
+        new(ErrorCodes.InvalidTransition, "That cannot be done to this order any more.");
 }

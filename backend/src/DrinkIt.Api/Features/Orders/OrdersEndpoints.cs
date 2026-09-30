@@ -3,6 +3,7 @@ using DrinkIt.Api.Common;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Payments;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Orders;
@@ -38,7 +39,8 @@ public sealed record ConfirmedOrderResponse(
     string CustomerName,
     decimal Total,
     CustomerOrderStatus Status,
-    DateTimeOffset? PaidAt);
+    DateTimeOffset? PaidAt,
+    string? PaymentUrl);
 
 internal static class OrdersEndpoints
 {
@@ -56,7 +58,8 @@ internal static class OrdersEndpoints
             .Produces<ConfirmedOrderResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return endpoints;
     }
@@ -75,7 +78,8 @@ internal static class OrdersEndpoints
                 request.CustomerName,
                 request.Method.ToDomain(),
                 request.IdempotencyKey,
-                [.. (request.Lines ?? []).Select(line => new OrderLineRequest(line.ProductId, line.Quantity, line.Note))]),
+                [.. (request.Lines ?? []).Select(line => new OrderLineRequest(line.ProductId, line.Quantity, line.Note))],
+                venue.Identity.Slug),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -93,7 +97,8 @@ internal static class OrdersEndpoints
                 order.CustomerName,
                 order.Total,
                 order.Status.ToCustomerStatus(),
-                order.PaidAt));
+                order.PaidAt,
+                order.PaymentUrl));
     }
 
     /// <summary>
@@ -106,12 +111,16 @@ internal static class OrdersEndpoints
         [ConfirmOrderHandler.SoldOut.Code] = StatusCodes.Status409Conflict,
         [ConfirmOrderHandler.NotOnTheMenu.Code] = StatusCodes.Status409Conflict,
         [OrderErrors.StockMoved.Code] = StatusCodes.Status409Conflict,
+        // Mercado Pago did not open a checkout (US-24): nothing the phone sent
+        // was wrong, and trying again in a moment is the answer.
+        [PaymentErrors.GatewayUnavailable.Code] = StatusCodes.Status503ServiceUnavailable,
     };
 
     private static readonly Dictionary<int, string> TitleByStatus = new()
     {
         [StatusCodes.Status400BadRequest] = "Invalid request",
         [StatusCodes.Status409Conflict] = "Conflict",
+        [StatusCodes.Status503ServiceUnavailable] = "Service unavailable",
     };
 
     private static ProblemHttpResult Rejected(Error error)

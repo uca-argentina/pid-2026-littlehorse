@@ -121,6 +121,44 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/{venueSlug}/orders/{code}/{token}/payment': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** The customer is back from Mercado Pago's page: moves the order by what happened to its payment. */
+    post: operations['ReturnFromPayment'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/{venueSlug}/payments/notifications': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * 200 for everything that is not a forgery: Mercado Pago retries any other
+     *     answer for a day, and a payment of another venue or one that arrived too
+     *     late will not become right by being sent again.
+     */
+    post: operations['PaymentNotification'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/cashier/scan': {
     parameters: {
       query?: never;
@@ -606,6 +644,7 @@ export interface components {
       status: components['schemas']['CustomerOrderStatus'];
       /** Format: date-time */
       paidAt: null | string;
+      paymentUrl: null | string;
     };
     /** @description An order somebody is confirming from their phone. */
     ConfirmOrderRequest: {
@@ -716,6 +755,14 @@ export interface components {
      * @enum {string}
      */
     PaymentMethodName: 'Digital' | 'Cash' | 'VipBalance';
+    /** @description What the customer's screen sends back from Mercado Pago's page. */
+    PaymentReturnRequest: {
+      paymentId: null | string;
+    };
+    /** @description Where the order is after the customer came back from paying it. */
+    PaymentReturnResponse: {
+      status: components['schemas']['CustomerOrderStatus'];
+    };
     ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -931,6 +978,15 @@ export interface operations {
           'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
     };
   };
   FollowOrder: {
@@ -1019,6 +1075,84 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReturnFromPayment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PaymentReturnRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PaymentReturnResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  PaymentNotification: {
+    parameters: {
+      query?: {
+        'data.id'?: string;
+        type?: string;
+      };
+      header?: {
+        'x-signature'?: string;
+        'x-request-id'?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };

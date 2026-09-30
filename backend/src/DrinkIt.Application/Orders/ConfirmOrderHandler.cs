@@ -1,4 +1,5 @@
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Payments;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 
@@ -7,11 +8,18 @@ namespace DrinkIt.Application.Orders;
 /// <summary>One drink the customer is asking for. What it costs is not their business to say.</summary>
 public sealed record OrderLineRequest(Guid ProductId, int Quantity, string? Note);
 
+/// <summary>What the customer confirms from their phone.</summary>
+/// <remarks>
+/// <c>VenueSlug</c> is the venue's slug, from the address: a payment that
+/// finishes on a gateway's page sends the customer and its notifications back
+/// to this venue's routes (US-24).
+/// </remarks>
 public sealed record ConfirmOrderCommand(
     string? CustomerName,
     PaymentMethod Method,
     string? IdempotencyKey,
-    IReadOnlyCollection<OrderLineRequest> Lines);
+    IReadOnlyCollection<OrderLineRequest> Lines,
+    string VenueSlug);
 
 /// <summary>
 /// The order as the confirmation screen shows it.
@@ -21,6 +29,10 @@ public sealed record ConfirmOrderCommand(
 /// to the request that created the order: it is the only way the customer's
 /// phone can build the link that lets them watch it. Every later answer about
 /// this order leaves it out.
+///
+/// <c>PaidAt</c> is null while the order waits for a gateway to approve it,
+/// and <c>PaymentUrl</c> is where the customer pays it when that is somewhere
+/// else (US-24).
 /// </remarks>
 public sealed record ConfirmedOrder(
     Guid Id,
@@ -29,7 +41,8 @@ public sealed record ConfirmedOrder(
     string CustomerName,
     decimal Total,
     OrderStatus Status,
-    DateTimeOffset? PaidAt);
+    DateTimeOffset? PaidAt,
+    string? PaymentUrl);
 
 /// <summary>
 /// Turns what somebody put together on their phone into an order of this venue:
@@ -163,7 +176,40 @@ public sealed class ConfirmOrderHandler(
         // a retry of this very request wrote first.
         Result<Order> written = await orders.AddAsync(order, TheKeyOf(command), cancellationToken);
 
-        return written.IsSuccess ? Confirmation(written.Value) : written.Error!;
+        if (!written.IsSuccess) return written.Error!;
+
+        return await HandOff(written.Value, payment, command.VenueSlug, cancellationToken);
+    }
+
+    /// <summary>
+    /// A method that finishes somewhere else (US-24) sends the customer there
+    /// now that the order and its stock are written. Asked of the strategy and
+    /// not decided here: cash and the VIP balance never hand off, and this
+    /// handler must not grow a branch per way of paying.
+    /// </summary>
+    private async Task<Result<ConfirmedOrder>> HandOff(
+        Order order,
+        IPaymentStrategy payment,
+        string venueSlug,
+        CancellationToken cancellationToken)
+    {
+        if (payment is not IHandsOffPayment handsOff) return Confirmation(order);
+
+        Result<string?> handedOff = await handsOff.HandOffAsync(order, venueSlug, cancellationToken);
+
+        if (handedOff.IsSuccess)
+        {
+            await orders.SaveAsync(order, cancellationToken);
+
+            return Confirmation(order);
+        }
+
+        // Nobody can pay it, so it must not hold the drinks it took off the
+        // menu while it waits for nothing.
+        order.CancelUnpaid();
+        await orders.SaveReturningStockAsync(order, cancellationToken);
+
+        return handedOff.Error!;
     }
 
     /// <summary>
@@ -220,5 +266,6 @@ public sealed class ConfirmOrderHandler(
         order.CustomerName,
         order.Total,
         order.Status,
-        order.PaidAt);
+        order.PaidAt,
+        order.PaymentUrl);
 }

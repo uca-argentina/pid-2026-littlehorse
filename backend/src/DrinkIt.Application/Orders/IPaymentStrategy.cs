@@ -1,3 +1,5 @@
+using DrinkIt.Application.Common;
+using DrinkIt.Application.Payments;
 using DrinkIt.Domain.Orders;
 
 namespace DrinkIt.Application.Orders;
@@ -26,24 +28,37 @@ public interface IPaymentStrategy
 }
 
 /// <summary>
-/// Card or Mercado Pago. Simulated in Sprint 1, which the brief allows: there
-/// is no gateway to call, so confirming settles the money there and then.
+/// Card or Mercado Pago, through Checkout Pro (US-24). Confirming no longer
+/// pays: the order waits, and the customer is sent to Mercado Pago's page to
+/// pay it. The answer — approved, rejected, or never — moves it on from there.
 /// </summary>
-// Lives here, not in Infrastructure, because it has no external dependency
-// yet (just TimeProvider). Once a real gateway is wired in, move this class
-// to DrinkIt.Infrastructure so only its IPaymentStrategy port stays here.
-public sealed class DigitalPaymentStrategy(TimeProvider clock) : IPaymentStrategy
+// Still here and not in Infrastructure: it only talks to the gateway through
+// its port, IPaymentGateway, which is what lives on the other side.
+public sealed class DigitalPaymentStrategy(IPaymentGateway gateway, TimeProvider clock) : IPaymentStrategy, IHandsOffPayment
 {
+    /// <summary>
+    /// How long a customer has to pay (decided on 2026-09-30): nobody waits
+    /// longer for a drink they have not paid for, and the gateway refuses the
+    /// payment after it.
+    /// </summary>
+    public static readonly TimeSpan PaymentWindow = TimeSpan.FromMinutes(15);
+
     public PaymentMethod Method => PaymentMethod.Digital;
 
-    /// <summary>
-    /// The money is settled on the spot, so the drinks go straight to the bar:
-    /// there is nothing left for anybody to do before they are made.
-    /// </summary>
-    public void Settle(Order order)
+    /// <summary>Nothing is paid yet, so nothing goes to the bar.</summary>
+    public void Settle(Order order) => order.AwaitPayment(Method);
+
+    public async Task<Result<string?>> HandOffAsync(Order order, string venueSlug, CancellationToken cancellationToken)
     {
-        order.Pay(clock.GetUtcNow(), Method);
-        order.Enqueue();
+        Result<string> checkout = await gateway.StartCheckoutAsync(
+            new PaymentCheckoutRequest(order, venueSlug, clock.GetUtcNow() + PaymentWindow),
+            cancellationToken);
+
+        if (!checkout.IsSuccess) return checkout.Error!;
+
+        order.OfferPaymentAt(checkout.Value);
+
+        return checkout.Value;
     }
 }
 

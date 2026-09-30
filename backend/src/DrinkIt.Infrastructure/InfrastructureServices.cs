@@ -4,6 +4,7 @@ using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
 using DrinkIt.Application.Menu;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Payments;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
 using DrinkIt.Application.Venues;
@@ -12,6 +13,7 @@ using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Orders;
+using DrinkIt.Infrastructure.Payments;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Seeding;
 using DrinkIt.Infrastructure.Security;
@@ -43,6 +45,7 @@ public static class InfrastructureServices
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<BootstrapOptions>(configuration.GetSection(BootstrapOptions.SectionName));
         services.Configure<ImageStorageOptions>(configuration.GetSection(ImageStorageOptions.SectionName));
+        services.Configure<MercadoPagoOptions>(configuration.GetSection(MercadoPagoOptions.SectionName));
         services.AddScoped<BootstrapSeeder>();
 
         // Injected rather than calling DateTimeOffset.UtcNow, so token expiry
@@ -64,6 +67,7 @@ public static class InfrastructureServices
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICategoryQueries, CategoryQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
+        services.AddScoped<IVenueDirectory, VenueDirectory>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductsForOrdering, ProductsForOrdering>();
         services.AddScoped<IOrderCodeSequence, OrderCodeSequence>();
@@ -87,6 +91,11 @@ public static class InfrastructureServices
         // adding a class here and touching nothing else.
         services.AddScoped<IPaymentStrategy, DigitalPaymentStrategy>();
         services.AddScoped<IPaymentStrategy, CashPaymentStrategy>();
+
+        // US-24: Mercado Pago's Checkout Pro. Neither holds per-request state:
+        // the SDK clients are made per call, with the token passed along.
+        services.AddSingleton<IPaymentGateway, MercadoPagoGateway>();
+        services.AddSingleton<IPaymentNotificationVerifier, MercadoPagoNotificationVerifier>();
 
         return services;
     }

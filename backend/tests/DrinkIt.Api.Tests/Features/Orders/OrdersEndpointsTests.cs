@@ -194,11 +194,26 @@ public class OrdersEndpointsTests
         new Fake.Orders(),
         new Fake.Menu(_gin),
         new Fake.Sequence(),
-        [new DigitalPaymentStrategy(TimeProvider.System), new CashPaymentStrategy()],
+        [new Fake.SettlesOnTheSpot(), new CashPaymentStrategy()],
         new Fake.Venue());
 
     private static class Fake
     {
+        /// <summary>
+        /// Pays and queues on the spot: these tests are about how the endpoint
+        /// answers, and digital now waits for Mercado Pago (US-24).
+        /// </summary>
+        public sealed class SettlesOnTheSpot : IPaymentStrategy
+        {
+            public PaymentMethod Method => PaymentMethod.Digital;
+
+            public void Settle(Order order)
+            {
+                order.Pay(DateTimeOffset.UtcNow, Method);
+                order.Enqueue();
+            }
+        }
+
         public sealed class Venue : Application.Common.ICurrentVenue
         {
             public Guid Id => TheVenue;
@@ -226,6 +241,15 @@ public class OrdersEndpointsTests
 
             public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("Confirming never loads an existing order.");
+
+            public Task<Order?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming never loads an existing order.");
+
+            public Task<IReadOnlyList<Order>> GetAwaitingPaymentCreatedBeforeAsync(DateTimeOffset before, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming never looks for expired orders.");
+
+            public Task SaveReturningStockAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming with a method that settles on the spot never cancels.");
 
             public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("Confirming saves through AddAsync.");

@@ -4,6 +4,15 @@
     The composition root: the only project allowed to see Infrastructure, and
     only so that Program.cs can wire the implementations into the container.
   -->
+  <!--
+    Development secrets — the Mercado Pago test access token (US-24) — live in
+    "dotnet user-secrets", outside the repository folder, never in a file here.
+    The id is not a secret: it only names that store on each machine.
+  -->
+  <PropertyGroup>
+    <UserSecretsId>c7e74a75-97c6-4691-943b-6e502a0be25c</UserSecretsId>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- Same reasoning as Infrastructure: implementations stay internal. -->
     <InternalsVisibleTo Include="DrinkIt.Api.Tests" />

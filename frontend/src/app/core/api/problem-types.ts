@@ -46,4 +46,9 @@ export const ProblemTypes = {
 
   /** Nothing left to collect: paid at the till already, or from the phone. */
   cashierAlreadyPaid: 'urn:drinkit:problem:cashier:already-paid',
+
+  // US-24. Mercado Pago did not open a checkout; trying again is the answer.
+  paymentGatewayUnavailable: 'urn:drinkit:problem:payment:gateway-unavailable',
+  // A payment approved for an order already canceled: it has to be refunded.
+  paymentPaidAfterCancel: 'urn:drinkit:problem:payment:paid-after-cancel',
 } as const;

@@ -3,6 +3,7 @@ using DrinkIt.Api.Features.Cashier;
 using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Orders;
+using DrinkIt.Api.Features.Payments;
 using DrinkIt.Api.Features.Staff;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -25,6 +26,7 @@ public class HandlerRegistrationTests
         services.AddOrderHandlers();
         services.AddKdsHandlers();
         services.AddCashierHandlers();
+        services.AddPaymentHandlers();
 
         string[] missing =
         [

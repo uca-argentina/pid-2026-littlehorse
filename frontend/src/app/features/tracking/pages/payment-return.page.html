@@ -1,0 +1,40 @@
+<div class="frame">
+  <main class="body">
+    @switch (status()) {
+      @case ('checking') {
+        <p class="note" role="status">Confirmando tu pago con Mercado Pago…</p>
+      }
+      @case ('canceled') {
+        <p class="note note-bad" role="alert">
+          El pago no se completó y el pedido se canceló. No se cobró nada: tus tragos siguen
+          elegidos.
+        </p>
+
+        <a class="ghost" [routerLink]="checkoutLink()">Volver a intentar</a>
+        <a class="ghost" [routerLink]="menuLink()">Ver la carta</a>
+      }
+      @case ('paidTooLate') {
+        <p class="note note-bad" role="alert">
+          Tu pago llegó cuando el pedido ya se había cancelado. Acercate a la barra con este código:
+          te lo devolvemos.
+        </p>
+
+        <p class="code">{{ code() }}</p>
+      }
+      @case ('nowhere') {
+        <p class="note note-bad" role="alert">
+          Ese enlace no lleva a ningún pedido. Puede que esté incompleto.
+        </p>
+
+        <a class="ghost" [routerLink]="menuLink()">Ver la carta</a>
+      }
+      @case ('unreachable') {
+        <p class="note note-bad" role="alert">
+          Sin señal. No pudimos confirmar tu pago todavía; si pagaste, no se pierde.
+        </p>
+
+        <button class="ghost" type="button" (click)="report()">Reintentar</button>
+      }
+    }
+  </main>
+</div>

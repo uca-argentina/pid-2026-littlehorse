@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace DrinkIt.Api.IntegrationTests.Common;
@@ -10,7 +11,12 @@ namespace DrinkIt.Api.IntegrationTests.Common;
 /// starts listening — pointed at the Testcontainers instance the query tests
 /// already run against, instead of the connection string in appsettings.json.
 /// </summary>
-internal sealed class DrinkItApiFactory(string connectionString) : WebApplicationFactory<Program>
+/// <remarks>
+/// <paramref name="replace"/> swaps services the real app would reach outside
+/// the process with — Mercado Pago, above all — for doubles, so no test ever
+/// charges anything or depends on the network.
+/// </remarks>
+internal sealed class DrinkItApiFactory(string connectionString, Action<IServiceCollection>? replace = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -19,5 +25,7 @@ internal sealed class DrinkItApiFactory(string connectionString) : WebApplicatio
         [
             new KeyValuePair<string, string?>("ConnectionStrings:DrinkIt", connectionString),
         ]));
+
+        if (replace is not null) builder.ConfigureServices(replace);
     }
 }

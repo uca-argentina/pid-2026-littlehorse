@@ -14,7 +14,7 @@ public enum OrderStatus
     /// <summary>Being put together. On the phone, never here — the API only ever sees it in passing.</summary>
     Cart = 0,
 
-    /// <summary>Waiting to be paid in cash at the till (US-24). Unpaid, and not on the bar's board.</summary>
+    /// <summary>Waiting for the money: on Mercado Pago's page (US-24), or at the till in cash.</summary>
     AwaitingPayment = 1,
 
     Paid = 2,

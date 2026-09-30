@@ -215,6 +215,15 @@ public class KdsEndpointsTests
             public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
                 Task.FromResult(stored.SingleOrDefault(order => order.TrackingToken == token));
 
+            public Task<Order?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("The bar finds orders by code or by token.");
+
+            public Task<IReadOnlyList<Order>> GetAwaitingPaymentCreatedBeforeAsync(DateTimeOffset before, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("The bar never sees an unpaid order.");
+
+            public Task SaveReturningStockAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("The bar never cancels an unpaid order.");
+
             /// <summary>Another tablet saved first, the way two screens racing do.</summary>
             public bool LosesTheRace { get; init; }
 

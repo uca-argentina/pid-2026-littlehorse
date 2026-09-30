@@ -24,10 +24,20 @@ export const PROCESSING_PAUSE_MS = new InjectionToken<number>('PROCESSING_PAUSE_
 });
 
 /**
+ * How the page leaves the app for the payment gateway's page (US-24). A token
+ * so a test can see where it was sent without the browser actually going.
+ */
+export const LEAVE_FOR = new InjectionToken<(url: string) => void>('LEAVE_FOR', {
+  providedIn: 'root',
+  factory: () => (url: string) => window.location.assign(url),
+});
+
+/**
  * What the screen is doing. One value rather than a set of booleans, so
  * "paying" and "that drink ran out" cannot both be true at once.
  */
-export type CheckoutStatus = 'idle' | 'paying' | 'soldOut' | 'rejected' | 'unreachable';
+export type CheckoutStatus =
+  'idle' | 'paying' | 'soldOut' | 'rejected' | 'unreachable' | 'gatewayUnavailable';
 
 export const CHECKOUT_KEY_PREFIX = 'drinkit.checkout-key.';
 
@@ -44,6 +54,8 @@ export class CheckoutStore {
   private readonly pause = inject(PROCESSING_PAUSE_MS);
 
   private readonly store = inject(BrowserStore);
+
+  private readonly leaveFor = inject(LEAVE_FOR);
 
   private readonly state = signal<CheckoutStatus>('idle');
 
@@ -105,7 +117,10 @@ export class CheckoutStore {
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: ({ order }) => this.showTheConfirmation(venueSlug, order),
+        next: ({ order }) =>
+          order.paymentUrl
+            ? this.sendToPay(venueSlug, order.paymentUrl)
+            : this.showTheConfirmation(venueSlug, order),
         error: (error: unknown) => this.explain(error),
       });
   }
@@ -134,6 +149,17 @@ export class CheckoutStore {
       });
   }
 
+  /**
+   * Paid on Mercado Pago's page (US-24): the order exists and waits, so the key
+   * that named this attempt is let go of. The cart stays: if the payment does
+   * not go through, the order is canceled and the customer comes back to try
+   * again with the same drinks.
+   */
+  private sendToPay(venueSlug: string, paymentUrl: string): void {
+    this.store.write(CHECKOUT_KEY_PREFIX + venueSlug, '');
+    this.leaveFor(paymentUrl);
+  }
+
   private explain(error: unknown): void {
     // Status 0 is what a request that never got an answer looks like: the
     // venue's wifi, a phone that walked out of range. There is no document to
@@ -151,6 +177,14 @@ export class CheckoutStore {
     if (theMenuMoved(problem)) {
       this.refusal.set(refusalOf(error, problem));
       this.state.set('soldOut');
+
+      return;
+    }
+
+    // Mercado Pago did not open a checkout. The order was canceled and its
+    // drinks went back: trying again in a moment is the whole answer.
+    if (problem === ProblemTypes.paymentGatewayUnavailable) {
+      this.state.set('gatewayUnavailable');
 
       return;
     }

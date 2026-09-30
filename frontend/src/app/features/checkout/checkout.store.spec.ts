@@ -6,7 +6,7 @@ import { Cart } from '../../core/cart/cart';
 import { BrowserStore } from '../../core/storage/browser-store';
 import { StoreInMemory } from '../../core/storage/store-in-memory';
 import { ordersUrl } from './checkout.service';
-import { PROCESSING_PAUSE_MS, CheckoutStore } from './checkout.store';
+import { LEAVE_FOR, PROCESSING_PAUSE_MS, CheckoutStore } from './checkout.store';
 import type { ConfirmedOrder } from './checkout.service';
 
 const confirmed: ConfirmedOrder = {
@@ -17,7 +17,19 @@ const confirmed: ConfirmedOrder = {
   total: 9000,
   status: 'Queued',
   paidAt: '2026-09-17T02:30:00Z',
+  paymentUrl: null,
 };
+
+/** Paid through Mercado Pago (US-24): it waits, and says where to pay it. */
+const awaitingPayment: ConfirmedOrder = {
+  ...confirmed,
+  status: 'AwaitingPayment',
+  paidAt: null,
+  paymentUrl: 'https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123',
+};
+
+/** Where the store sent the browser, instead of leaving this page for real. */
+let leftFor: ReturnType<typeof vi.fn<(url: string) => void>>;
 
 let store: StoreInMemory;
 
@@ -50,6 +62,7 @@ function aStore(): { checkout: CheckoutStore; http: HttpTestingController; cart:
       // No pause at all: what the two seconds are for is somebody watching the
       // screen, and nobody is watching this.
       { provide: PROCESSING_PAUSE_MS, useValue: 0 },
+      { provide: LEAVE_FOR, useValue: (url: string) => leftFor(url) },
       CheckoutStore,
     ],
   });
@@ -69,6 +82,59 @@ function aStore(): { checkout: CheckoutStore; http: HttpTestingController; cart:
 describe('CheckoutStore', () => {
   beforeEach(() => {
     store = new StoreInMemory();
+    leftFor = vi.fn<(url: string) => void>();
+  });
+
+  // US-24: the payment happens on Mercado Pago's page, so that is where the
+  // customer goes — not to the order, which is not paid yet.
+  it('sends the customer to Mercado Pago when the order waits for its payment', async () => {
+    const { checkout, http } = aStore();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
+
+    checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+    http.expectOne(ordersUrl('bar-alfa')).flush(awaitingPayment);
+    await itAllSettles();
+
+    expect(leftFor).toHaveBeenCalledWith(awaitingPayment.paymentUrl);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  /**
+   * If the payment does not go through, the order is canceled and they come
+   * back to try again: the drinks they chose are still here for that. The key
+   * is let go of, because it names an order that is over either way.
+   */
+  it('keeps the cart and lets the key go while the customer pays on Mercado Pago', async () => {
+    const { checkout, http, cart } = aStore();
+
+    checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+    const used = http.expectOne(ordersUrl('bar-alfa'));
+    used.flush(awaitingPayment);
+    await itAllSettles();
+
+    expect(cart.lines()).toHaveLength(1);
+    const next = aStore();
+    next.checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+    expect(next.http.expectOne(ordersUrl('bar-alfa')).request.body.idempotencyKey).not.toBe(
+      used.request.body.idempotencyKey,
+    );
+  });
+
+  // Mercado Pago did not open a checkout: nothing the customer sent was wrong.
+  it('says the payment could not be started when the api answers 503', async () => {
+    const { checkout, http } = aStore();
+
+    checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+    http
+      .expectOne(ordersUrl('bar-alfa'))
+      .flush(
+        { type: 'urn:drinkit:problem:payment:gateway-unavailable' },
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+    await itAllSettles();
+
+    expect(checkout.status()).toBe('gatewayUnavailable');
+    expect(leftFor).not.toHaveBeenCalled();
   });
 
   it('sends what is in the order, and no prices', async () => {

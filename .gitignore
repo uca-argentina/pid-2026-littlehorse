@@ -44,6 +44,9 @@ playwright/.cache/
 appsettings.Development.json
 appsettings.*.Local.json
 *.pfx
+
+# Resume checkpoint the Mercado Pago integration wizard writes; never shared.
+.mp-integrate-progress.md
 *.p12
 *.key
 secrets.json

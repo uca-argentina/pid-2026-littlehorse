@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Payments;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 
@@ -28,6 +29,77 @@ public class ConfirmOrderHandlerTests
         Assert.Equal("María Quadro", _orders.Added.CustomerName);
         Assert.Equal(OrderStatus.Queued, _orders.Added.Status);
         Assert.Equal(Tonight, _orders.Added.PaidAt);
+    }
+
+    private const string CheckoutUrl = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123";
+
+    // US-24: paid through Mercado Pago, the order waits and the customer is
+    // told where to pay it — and that is kept with the order.
+    [Fact]
+    public async Task HandleAsync_WhenTheMethodHandsOff_AnswersWhereToPayAndKeepsIt()
+    {
+        HandsOffToAGateway payment = new(CheckoutUrl);
+
+        Result<ConfirmedOrder> result = await AHandlerPaidBy(payment).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(CheckoutUrl, result.Value.PaymentUrl);
+        Assert.Equal(OrderStatus.AwaitingPayment, result.Value.Status);
+        Assert.Null(result.Value.PaidAt);
+        Assert.Equal("bar-alfa", payment.VenueSlug);
+        Assert.Same(_orders.Added, _orders.Saved.Single());
+        Assert.Equal(CheckoutUrl, _orders.Added!.PaymentUrl);
+    }
+
+    // The gateway is down: nobody can pay, so the order must not hold the
+    // drinks it took off the menu while it waits for nothing.
+    [Fact]
+    public async Task HandleAsync_WhenTheHandOffFails_CancelsTheOrderAndGivesItsStockBack()
+    {
+        Result<ConfirmedOrder> result = await AHandlerPaidBy(new HandsOffToAGateway(fails: true))
+            .HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(PaymentErrors.GatewayUnavailable, result.Error);
+        Assert.Equal(OrderStatus.Canceled, _orders.Added!.Status);
+        Assert.Same(_orders.Added, _orders.StockReturned.Single());
+    }
+
+    // A retry over a bad signal: the same checkout, never a second one that
+    // could be paid as well.
+    [Fact]
+    public async Task HandleAsync_WhenTheSameAttemptArrivesAgain_AnswersTheSameCheckoutWithoutOpeningAnother()
+    {
+        HandsOffToAGateway payment = new(CheckoutUrl);
+        ConfirmOrderHandler handler = AHandlerPaidBy(payment);
+
+        await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
+        Result<ConfirmedOrder> again = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(CheckoutUrl, again.Value.PaymentUrl);
+        Assert.Equal(1, payment.HandOffs);
+    }
+
+    /// <summary>A method that waits for a gateway, standing in for the digital one.</summary>
+    private sealed class HandsOffToAGateway(string? url = null, bool fails = false) : IPaymentStrategy, IHandsOffPayment
+    {
+        public int HandOffs { get; private set; }
+
+        public string? VenueSlug { get; private set; }
+
+        public PaymentMethod Method => PaymentMethod.Digital;
+
+        public void Settle(Order order) => order.AwaitPayment(Method);
+
+        public Task<Result<string?>> HandOffAsync(Order order, string venueSlug, CancellationToken cancellationToken)
+        {
+            HandOffs += 1;
+            VenueSlug = venueSlug;
+
+            if (fails) return Task.FromResult<Result<string?>>(PaymentErrors.GatewayUnavailable);
+
+            order.OfferPaymentAt(url!);
+
+            return Task.FromResult<Result<string?>>(url);
+        }
     }
 
     /// <summary>
@@ -77,7 +149,7 @@ public class ConfirmOrderHandlerTests
     public async Task HandleAsync_WhenThereIsNothingInIt_FailsAsEmpty()
     {
         Result<ConfirmedOrder> result = await AHandler().HandleAsync(
-            new ConfirmOrderCommand("María Quadro", PaymentMethod.Digital, "abc-123", []),
+            new ConfirmOrderCommand("María Quadro", PaymentMethod.Digital, "abc-123", [], "bar-alfa"),
             CancellationToken.None);
 
         Assert.Equal(ConfirmOrderHandler.Empty.Code, result.Error!.Code);
@@ -309,10 +381,10 @@ public class ConfirmOrderHandlerTests
         string? key = "abc-123",
         PaymentMethod method = PaymentMethod.Digital,
         string? note = null) =>
-        new(name, method, key, [new OrderLineRequest(_menu.Gin.Id, 2, note)]);
+        new(name, method, key, [new OrderLineRequest(_menu.Gin.Id, 2, note)], "bar-alfa");
 
     private static ConfirmOrderCommand AnOrderOf(params OrderLineRequest[] lines) =>
-        new("María Quadro", PaymentMethod.Digital, "abc-123", lines);
+        new("María Quadro", PaymentMethod.Digital, "abc-123", lines, "bar-alfa");
 
     private ConfirmOrderHandler AHandler() => AHandlerOver(_menu);
 
@@ -327,8 +399,25 @@ public class ConfirmOrderHandlerTests
         new(_orders,
             menu,
             codes ?? new SequenceThatAnswers("K-4821"),
-            [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
+            [new SettlesOnTheSpot(Tonight), new CashPaymentStrategy()],
             new TheVenueIsFixed(TheVenue));
+
+    /// <summary>
+    /// A method that pays and sends the order to the bar the moment it is
+    /// confirmed — what digital did until it went through Mercado Pago (US-24).
+    /// These tests are about pricing, stock and retries, not about any one way
+    /// of paying, so they keep it.
+    /// </summary>
+    private sealed class SettlesOnTheSpot(DateTimeOffset now) : IPaymentStrategy
+    {
+        public PaymentMethod Method => PaymentMethod.Digital;
+
+        public void Settle(Order order)
+        {
+            order.Pay(now, Method);
+            order.Enqueue();
+        }
+    }
 
     /// <summary>
     /// A method that settles the money and stops, without sending the order
@@ -425,8 +514,27 @@ public class ConfirmOrderHandlerTests
         public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
             throw new NotSupportedException("Confirming never loads an existing order.");
 
-        public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
-            throw new NotSupportedException("Confirming saves through AddAsync.");
+        public List<Order> Saved { get; } = [];
+
+        public List<Order> StockReturned { get; } = [];
+
+        public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken)
+        {
+            Saved.Add(order);
+            return Task.FromResult<Result<Order>>(order);
+        }
+
+        public Task SaveReturningStockAsync(Order order, CancellationToken cancellationToken)
+        {
+            StockReturned.Add(order);
+            return Task.CompletedTask;
+        }
+
+        public Task<Order?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("Confirming never loads an existing order.");
+
+        public Task<IReadOnlyList<Order>> GetAwaitingPaymentCreatedBeforeAsync(DateTimeOffset before, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("Confirming never looks for expired orders.");
     }
 
     /// <summary>

@@ -678,4 +678,142 @@ public class OrderTests
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
     }
+
+    /// <summary>
+    /// Paid digitally through Mercado Pago: the order waits while the customer
+    /// is on the gateway's page, and the answer decides where it goes — paid
+    /// and to the bar, or canceled without ever reaching it.
+    /// </summary>
+    public class AwaitingADigitalPayment
+    {
+        private static readonly DateTimeOffset ApprovedAt = new(2026, 9, 30, 1, 30, 0, TimeSpan.Zero);
+
+        private static Order ACart() => Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+
+        private static Order AnOrderAwaitingPayment()
+        {
+            Order order = ACart();
+            order.AwaitPayment(PaymentMethod.Digital);
+
+            return order;
+        }
+
+        [Fact]
+        public void AwaitPayment_WhenItIsACart_WaitsForThePaymentWithoutMarkingItPaid()
+        {
+            Order order = ACart();
+
+            order.AwaitPayment(PaymentMethod.Digital);
+
+            Assert.Equal(OrderStatus.AwaitingPayment, order.Status);
+            Assert.Equal(PaymentMethod.Digital, order.Method);
+            Assert.Null(order.PaidAt);
+        }
+
+        // Nothing reaches the bar before the money does.
+        [Fact]
+        public void AwaitPayment_Always_RaisesNothingForTheBar()
+        {
+            Order order = ACart();
+
+            order.AwaitPayment(PaymentMethod.Digital);
+
+            Assert.Empty(order.DomainEvents);
+        }
+
+        [Fact]
+        public void AwaitPayment_WhenItIsNotACart_ThrowsInvalidTransition()
+        {
+            Order order = AnOrderAwaitingPayment();
+
+            DomainException error = Assert.Throws<DomainException>(() => order.AwaitPayment(PaymentMethod.Digital));
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+
+        // Approved: from here it is the same order as one paid on the spot.
+        [Fact]
+        public void Pay_WhenItAwaitsPayment_MarksItPaidAtTheMomentItWasApproved()
+        {
+            Order order = AnOrderAwaitingPayment();
+
+            order.Pay(ApprovedAt, PaymentMethod.Digital);
+            order.Enqueue();
+
+            Assert.Equal(OrderStatus.Queued, order.Status);
+            Assert.Equal(ApprovedAt, order.PaidAt);
+        }
+
+        // Rejected, abandoned on the gateway's page, or never paid in time.
+        [Fact]
+        public void CancelUnpaid_WhenItAwaitsPayment_CancelsItWithNothingToGiveBack()
+        {
+            Order order = AnOrderAwaitingPayment();
+
+            order.CancelUnpaid();
+
+            Assert.Equal(OrderStatus.Canceled, order.Status);
+            Assert.Null(order.PaidAt);
+        }
+
+        // It never reached the board, so there is nothing for the board to hear.
+        [Fact]
+        public void CancelUnpaid_Always_RaisesNothingForTheBar()
+        {
+            Order order = AnOrderAwaitingPayment();
+
+            order.CancelUnpaid();
+
+            Assert.Empty(order.DomainEvents);
+        }
+
+        // The return from the gateway and its notification can both say it
+        // failed: the second one changes nothing.
+        [Fact]
+        public void CancelUnpaid_WhenAlreadyCanceled_ChangesNothing()
+        {
+            Order order = AnOrderAwaitingPayment();
+            order.CancelUnpaid();
+
+            order.CancelUnpaid();
+
+            Assert.Equal(OrderStatus.Canceled, order.Status);
+        }
+
+        // Kept, so a retry of the same confirmation sends the customer to the
+        // same page: one checkout per order, never two that could both be paid.
+        [Fact]
+        public void OfferPaymentAt_WhenItAwaitsPayment_KeepsWhereToPay()
+        {
+            Order order = AnOrderAwaitingPayment();
+
+            order.OfferPaymentAt("https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123");
+
+            Assert.Equal("https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123", order.PaymentUrl);
+        }
+
+        [Fact]
+        public void OfferPaymentAt_WhenItIsNotAwaitingPayment_ThrowsInvalidTransition()
+        {
+            Order order = ACart();
+
+            DomainException error = Assert.Throws<DomainException>(() => order.OfferPaymentAt("https://example.com/pay"));
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+            Assert.Null(order.PaymentUrl);
+        }
+
+        // Money already came in: a late "rejected" must not cancel a paid order.
+        [Fact]
+        public void CancelUnpaid_WhenItWasPaid_ThrowsInvalidTransition()
+        {
+            Order order = AnOrderAwaitingPayment();
+            order.Pay(ApprovedAt, PaymentMethod.Digital);
+
+            DomainException error = Assert.Throws<DomainException>(order.CancelUnpaid);
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+            Assert.Equal(OrderStatus.Paid, order.Status);
+        }
+    }
 }
