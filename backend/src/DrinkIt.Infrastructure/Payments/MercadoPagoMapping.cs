@@ -15,6 +15,15 @@ internal static class MercadoPagoMapping
     /// <summary>Argentina (MLA): the venue charges in pesos.</summary>
     private const string Currency = "ARS";
 
+    /// <summary>What the customer reads on their card statement.</summary>
+    private const string StatementDescriptor = "DRINKIT";
+
+    /// <summary>
+    /// Paid hours later, at a Rapipago or an ATM: never within the fifteen
+    /// minutes an order waits, so not offered (/mp-review, 2026-09-30).
+    /// </summary>
+    private static readonly string[] SlowPaymentTypes = ["ticket", "atm"];
+
     public static PreferenceRequest PreferenceFor(PaymentCheckoutRequest request, MercadoPagoOptions options)
     {
         Order order = request.Order;
@@ -26,12 +35,27 @@ internal static class MercadoPagoMapping
             [
                 .. order.Items.Select(item => new PreferenceItemRequest
                 {
+                    Id = item.ProductId.ToString(),
                     Title = item.ProductName,
+                    Description = item.Note is null ? item.ProductName : $"{item.ProductName} ({item.Note})",
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
                     CurrencyId = Currency,
                 }),
             ],
+            // The checkout asks for a full name; Mercado Pago approves more
+            // payments when it knows who is paying.
+            Payer = PayerFor(order.CustomerName),
+            StatementDescriptor = StatementDescriptor,
+            // Approved or rejected, never pending: with fifteen minutes to pay,
+            // a payment left under review could not finish in time.
+            BinaryMode = true,
+            PaymentMethods = new PreferencePaymentMethodsRequest
+            {
+                ExcludedPaymentTypes = [.. SlowPaymentTypes.Select(type => new PreferencePaymentTypeRequest { Id = type })],
+                // One drink, one payment.
+                Installments = 1,
+            },
             // The reconciliation anchor: every payment comes back naming it.
             ExternalReference = order.Id.ToString(),
             // One return screen, whatever happened: it asks the API what did.
@@ -46,6 +70,14 @@ internal static class MercadoPagoMapping
             Expires = true,
             ExpirationDateTo = request.ExpiresAt.UtcDateTime,
         };
+    }
+
+    /// <summary>The first word is the name; the rest, however many words, the surname.</summary>
+    private static PreferencePayerRequest PayerFor(string customerName)
+    {
+        string[] words = customerName.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return new PreferencePayerRequest { Name = words[0], Surname = words.Length > 1 ? words[1] : null };
     }
 
     /// <summary>
@@ -75,7 +107,8 @@ internal static class MercadoPagoMapping
         _ => GatewayPaymentStatus.Pending,
     };
 
-    private static bool IsPublic(string url) =>
+    /// <summary>Https, and not this machine: what Mercado Pago accepts and can reach.</summary>
+    public static bool IsPublic(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out Uri? uri)
         && uri.Scheme == Uri.UriSchemeHttps
         && !uri.IsLoopback

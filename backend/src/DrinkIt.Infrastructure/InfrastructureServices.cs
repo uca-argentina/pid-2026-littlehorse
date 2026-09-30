@@ -22,6 +22,7 @@ using DrinkIt.Infrastructure.Venues;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace DrinkIt.Infrastructure;
 
@@ -45,7 +46,12 @@ public static class InfrastructureServices
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<BootstrapOptions>(configuration.GetSection(BootstrapOptions.SectionName));
         services.Configure<ImageStorageOptions>(configuration.GetSection(ImageStorageOptions.SectionName));
-        services.Configure<MercadoPagoOptions>(configuration.GetSection(MercadoPagoOptions.SectionName));
+        // Checked when the app starts, not at the first payment: outside
+        // Development, a Mercado Pago configured half-way refuses to run.
+        services.AddOptions<MercadoPagoOptions>()
+            .Bind(configuration.GetSection(MercadoPagoOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<MercadoPagoOptions>, MercadoPagoOptionsValidation>();
         services.AddScoped<BootstrapSeeder>();
 
         // Injected rather than calling DateTimeOffset.UtcNow, so token expiry

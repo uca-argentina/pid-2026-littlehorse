@@ -126,6 +126,83 @@ public class MercadoPagoMappingTests
         Assert.Null(PreferenceFor(AnOrderAwaitingPayment(), Local).NotificationUrl);
     }
 
+    /// <summary>
+    /// /mp-review, 2026-09-30: only "approved" or "rejected", never "pending".
+    /// With fifteen minutes to pay, a payment left under review cannot finish
+    /// in time — the order would be canceled while it waits.
+    /// </summary>
+    [Fact]
+    public void PreferenceFor_Always_AsksForAnAnswerOnTheSpot()
+    {
+        Assert.True(PreferenceFor(AnOrderAwaitingPayment(), Local).BinaryMode);
+    }
+
+    // Cash at a Rapipago or an ATM transfer is paid hours later: never in fifteen minutes.
+    [Fact]
+    public void PreferenceFor_Always_LeavesOutWaysOfPayingThatTakeHours()
+    {
+        PreferenceRequest preference = PreferenceFor(AnOrderAwaitingPayment(), Local);
+
+        Assert.Equal(["ticket", "atm"], preference.PaymentMethods.ExcludedPaymentTypes.Select(type => type.Id));
+    }
+
+    [Fact]
+    public void PreferenceFor_Always_ChargesADrinkInASingleInstallment()
+    {
+        Assert.Equal(1, PreferenceFor(AnOrderAwaitingPayment(), Local).PaymentMethods.Installments);
+    }
+
+    // The checkout asks for a full name, so Mercado Pago can have it split.
+    [Fact]
+    public void PreferenceFor_Always_NamesThePayer()
+    {
+        PreferenceRequest preference = PreferenceFor(AnOrderAwaitingPayment(), Local);
+
+        Assert.Equal("María", preference.Payer.Name);
+        Assert.Equal("Quadro", preference.Payer.Surname);
+    }
+
+    [Fact]
+    public void PreferenceFor_WhenTheSurnameHasMoreThanOneWord_KeepsItWhole()
+    {
+        Order order = Order.Place(
+            Guid.CreateVersion7(),
+            "Juan Martín del Potro",
+            OrderCode.Parse("K-4821"),
+            [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
+        order.AwaitPayment(PaymentMethod.Digital);
+
+        PreferenceRequest preference = PreferenceFor(order, Local);
+
+        Assert.Equal("Juan", preference.Payer.Name);
+        Assert.Equal("Martín del Potro", preference.Payer.Surname);
+    }
+
+    // What the customer reads on their card statement.
+    [Fact]
+    public void PreferenceFor_Always_SignsTheChargeAsDrinkIt()
+    {
+        Assert.Equal("DRINKIT", PreferenceFor(AnOrderAwaitingPayment(), Local).StatementDescriptor);
+    }
+
+    [Fact]
+    public void PreferenceFor_Always_IdentifiesAndDescribesEachProduct()
+    {
+        Order order = AnOrderAwaitingPayment();
+
+        PreferenceItemRequest gin = PreferenceFor(order, Local).Items[0];
+
+        Assert.Equal(order.Items[0].ProductId.ToString(), gin.Id);
+        Assert.Equal("Gin Tonic", gin.Description);
+    }
+
+    // The customer's note travels with the drink it belongs to.
+    [Fact]
+    public void PreferenceFor_WhenALineHasANote_DescribesItWithTheNote()
+    {
+        Assert.Equal("Fernet (sin hielo)", PreferenceFor(AnOrderAwaitingPayment(), Local).Items[1].Description);
+    }
+
     [Theory]
     [InlineData("approved", GatewayPaymentStatus.Approved)]
     [InlineData("pending", GatewayPaymentStatus.Pending)]

@@ -79,6 +79,25 @@ public sealed class MercadoPagoContractTests
         Assert.EndsWith($"/bar-alfa/orders/K-4821/{order.TrackingToken.Value}/payment", stored.BackUrls.Success, StringComparison.Ordinal);
     }
 
+    // /mp-review, 2026-09-30: Mercado Pago keeps what raises the approval rate
+    // and what keeps a payment within the fifteen minutes an order waits.
+    [MercadoPagoFact]
+    public async Task StartCheckoutAsync_WithTheTestToken_StoresWhatTheQualityReviewAskedFor()
+    {
+        Order order = AnOrderAwaitingPayment();
+
+        Result<string> checkout = await _gateway.StartCheckoutAsync(ACheckoutFor(order), CancellationToken.None);
+        Preference stored = await new PreferenceClient().GetAsync(PreferenceIdIn(checkout.Value), TestToken(), CancellationToken.None);
+
+        Assert.True(stored.BinaryMode);
+        Assert.Equal(["ticket", "atm"], stored.PaymentMethods.ExcludedPaymentTypes.Select(type => type.Id));
+        Assert.Equal(1, stored.PaymentMethods.Installments);
+        Assert.Equal("María", stored.Payer.Name);
+        Assert.Equal("Quadro", stored.Payer.Surname);
+        Assert.Equal("DRINKIT", stored.StatementDescriptor);
+        Assert.Equal(order.Items[0].ProductId.ToString(), stored.Items[0].Id);
+    }
+
     [MercadoPagoFact]
     public async Task FindPaymentAsync_WithAnIdMercadoPagoDoesNotKnow_FindsNothing()
     {

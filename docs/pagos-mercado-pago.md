@@ -23,7 +23,7 @@ la app y ver el pedido en el tablero de la barra.
    | --- | --- |
    | Aprobado | `Paid` → entra a la cola de la barra |
    | Rechazado o cancelado | `Canceled`, y los tragos vuelven al stock |
-   | Pendiente o en revisión | Sigue esperando |
+   | Pendiente o en revisión | Sigue esperando (con el modo binario casi no pasa) |
    | El cliente volvió sin pagar | `Canceled`, y los tragos vuelven al stock |
    | Pasaron 15 minutos sin pago | `Canceled`, y los tragos vuelven al stock |
 
@@ -160,7 +160,7 @@ La URL del panel es la de respaldo y la que genera la clave.
    | --- | --- |
    | `APRO` | Aprobado |
    | `OTHE` | Rechazado |
-   | `CONT` | Pendiente |
+   | `CONT` | Rechazado: el cobro pide **modo binario** (aprobado o rechazado, nunca pendiente) |
    | `FUND` | Rechazado por fondos insuficientes |
 
    | Tarjeta | Número | Vencimiento | CVV |
@@ -176,8 +176,19 @@ La URL del panel es la de respaldo y la que genera la clave.
 | --- | --- | --- |
 | `APRO` | Vuelve y va al seguimiento: "Ya está pago y esperando en la barra" | El pedido aparece en **Nuevos**, en vivo |
 | `OTHE` | "El pago no se completó y el pedido se canceló", con **Volver a intentar** (los tragos siguen en el carrito) | Nada; el stock vuelve a la carta |
-| `CONT` | El seguimiento dice "Esperando que Mercado Pago confirme el pago" | Nada todavía |
+| `CONT` | Igual que `OTHE`: con modo binario un pago no queda pendiente | Nada |
 | Volviste sin pagar | Igual que `OTHE` | Nada |
+
+## Qué ve el cliente en Mercado Pago
+
+El cobro va configurado así, por la revisión de calidad de Mercado Pago (`/mp-review`):
+
+- **Modo binario:** el pago se aprueba o se rechaza en el momento; nunca queda pendiente.
+- **Sin Rapipago, Pago Fácil ni transferencia por cajero** (`ticket` y `atm`): se pagan horas
+  después, y un pedido espera 15 minutos.
+- **En una sola cuota.**
+- Van el **nombre y apellido** del cliente, el **id y la descripción** de cada trago (con su
+  nota) y **DRINKIT** como texto del resumen de la tarjeta.
 
 ## Tests que usan Mercado Pago
 
