@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/angular';
-import { LOAD_QR_DETECTOR } from '../qr-reader';
-import type { QrDetector } from '../qr-reader';
-import { CAMERA_FRAME_MS, OPEN_CAMERA, KdsCamera } from './kds-camera';
+import { LOAD_QR_DETECTOR } from './qr-reader';
+import type { QrDetector } from './qr-reader';
+import { CAMERA_FRAME_MS, OPEN_CAMERA, QrCamera } from './qr-camera';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
 
@@ -24,7 +24,7 @@ async function openCamera(
 ) {
   const read = vi.fn();
 
-  const rendered = await render(KdsCamera, {
+  const rendered = await render(QrCamera, {
     on: { read },
     providers: [
       { provide: OPEN_CAMERA, useValue: open },
@@ -36,7 +36,7 @@ async function openCamera(
   return { rendered, read };
 }
 
-describe('KdsCamera', () => {
+describe('QrCamera', () => {
   beforeEach(() => {
     // jsdom has no media pipeline: playing is taken as done.
     vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);

@@ -18,4 +18,7 @@ internal static class Policies
 
     /// <summary>The bar's own tablet (US-15): only the station's own account reads its queue.</summary>
     public const string Kds = nameof(StaffRole.Kds);
+
+    /// <summary>The till (US-26): looks up what is waiting for cash and takes it.</summary>
+    public const string Cashier = nameof(StaffRole.Cashier);
 }

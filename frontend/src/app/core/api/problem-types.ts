@@ -37,4 +37,10 @@ export const ProblemTypes = {
   orderNameNeedsSurname: 'urn:drinkit:problem:order:name-needs-surname',
   orderNameOnlyLetters: 'urn:drinkit:problem:order:name-only-letters',
   orderNameTooLong: 'urn:drinkit:problem:order:name-too-long',
+
+  /** The till looked up a code this venue does not have. */
+  cashierOrderNotFound: 'urn:drinkit:problem:cashier:order-not-found',
+
+  /** Nothing left to collect: paid at the till already, or from the phone. */
+  cashierAlreadyPaid: 'urn:drinkit:problem:cashier:already-paid',
 } as const;

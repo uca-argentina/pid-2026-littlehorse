@@ -121,6 +121,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/cashier/scan': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** The order behind the QR on the customer's phone, whatever its state. */
+    post: operations['ScanAtTheTill'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/collections': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** What the signed-in cashier collected during the shift, the latest first. */
+    get: operations['GetMyCollections'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/users': {
     parameters: {
       query?: never;
@@ -447,6 +481,60 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/cashier/orders': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Every order waiting to be paid in cash, the one that has waited longest first. */
+    get: operations['GetOrdersAwaitingPayment'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/orders/{code}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The order behind a code, whatever its state, so the till can tell unpaid from already paid. */
+    get: operations['FindOrderAtTheTill'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/orders/{code}/collect': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Nothing to hand back on success: the screen goes back to the list, and
+     *     the bar hears about it through its hub like any other queued order.
+     */
+    post: operations['CollectCashPayment'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -471,6 +559,32 @@ export interface components {
       lastModifiedAt: null | string;
       lastModifiedBy: null | string;
     };
+    /** @description One drink of an order, as the till reads it back. */
+    CashierOrderItemResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+      /** Format: double */
+      unitPrice: number;
+    };
+    /** @description An order as the till shows it: who, what, and how much to charge. */
+    CashierOrderResponse: {
+      code: string;
+      customerName: string;
+      status: components['schemas']['CustomerOrderStatus'];
+      /** Format: double */
+      total: number;
+      /** Format: date-time */
+      placedAt: null | string;
+      /** Format: date-time */
+      paidAt: null | string;
+      items: components['schemas']['CashierOrderItemResponse'][];
+    };
+    /** @description What a reader or the camera read off the customer's phone. */
+    CashierScanRequest: {
+      read: null | string;
+    };
     CategoryResponse: {
       /** Format: uuid */
       id: string;
@@ -491,12 +605,12 @@ export interface components {
       total: number;
       status: components['schemas']['CustomerOrderStatus'];
       /** Format: date-time */
-      paidAt: string;
+      paidAt: null | string;
     };
     /** @description An order somebody is confirming from their phone. */
     ConfirmOrderRequest: {
       customerName: null | string;
-      method: null | string;
+      method: components['schemas']['PaymentMethodName'];
       idempotencyKey: null | string;
       lines: null | components['schemas']['OrderLineRequestBody'][];
     };
@@ -597,6 +711,11 @@ export interface components {
       quantity: number;
       note: null | string;
     };
+    /**
+     * @description How the customer is paying, as the checkout sends it.
+     * @enum {string}
+     */
+    PaymentMethodName: 'Digital' | 'Cash' | 'VipBalance';
     ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -649,7 +768,7 @@ export interface components {
      * @description A staff member's role, as the contract names it.
      * @enum {string}
      */
-    StaffRoleName: 'Administrator' | 'Kds' | 'Waiter';
+    StaffRoleName: 'Administrator' | 'Kds' | 'Waiter' | 'Cashier';
     StaffUserResponse: {
       /** Format: uuid */
       id: string;
@@ -896,6 +1015,59 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ScanAtTheTill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CashierScanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierOrderResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetMyCollections: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierOrderResponse'][];
         };
       };
     };
@@ -1736,6 +1908,95 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetOrdersAwaitingPayment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierOrderResponse'][];
+        };
+      };
+    };
+  };
+  FindOrderAtTheTill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierOrderResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  CollectCashPayment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

@@ -1,0 +1,296 @@
+// design/wireframes/CajeroBuscar.dc.html, redrawn on 2026-09-29: the till is
+// used from a desktop, so the work sits on the left and the two lists — what
+// is waiting for cash and what this cashier took — stay in view on the right.
+// Scanning is a field a USB reader types into plus a camera button, not the
+// wireframe's big target. Below 1024px everything stacks, work first.
+
+// Form controls do not inherit the page's font on their own.
+.field,
+.filter,
+.search,
+.camera,
+.ghost,
+.row-button {
+  font-family: inherit;
+}
+
+.till {
+  display: grid;
+  gap: var(--dk-space-5);
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--dk-space-4);
+}
+
+@media (width >= 1024px) {
+  .till {
+    // Three to two: the lists get room to breathe, and never less than 400px.
+    grid-template-columns: minmax(0, 3fr) minmax(400px, 2fr);
+    align-items: start;
+    padding: var(--dk-space-5) var(--dk-space-6);
+  }
+
+  // The lists stay put while the work area scrolls under a long order.
+  .side {
+    position: sticky;
+    top: var(--dk-space-5);
+  }
+}
+
+.work,
+.side,
+.scan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  min-width: 0;
+}
+
+.side {
+  gap: var(--dk-space-5);
+}
+
+.scan {
+  padding: var(--dk-space-5);
+  border: 2px solid var(--dk-accent);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(24px, 3vw, 32px);
+  letter-spacing: -0.02em;
+}
+
+.empty {
+  margin: 0;
+  color: var(--dk-text-muted);
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--dk-space-2);
+  font-weight: 700;
+}
+
+.entry-row {
+  display: flex;
+  gap: var(--dk-space-2);
+}
+
+.field {
+  flex-grow: 1;
+  min-width: 0;
+  min-height: 56px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface-raised);
+  color: var(--dk-text);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.filter {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-3);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font-size: 16px;
+}
+
+.search,
+.ghost {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border-radius: var(--dk-radius-md);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.search {
+  min-height: 56px;
+  border: 1px solid var(--dk-border);
+  background: var(--dk-surface-raised);
+  color: var(--dk-text);
+}
+
+// The scan is the button: the one that stands out on the whole screen.
+.camera {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dk-space-3);
+  min-height: 72px;
+  border: 0;
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.camera:hover {
+  background: var(--dk-accent-hover);
+}
+
+.search:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.ghost {
+  border: 1px solid var(--dk-border);
+  background: var(--dk-surface);
+  color: var(--dk-text);
+}
+
+drinkit-qr-camera {
+  display: block;
+  max-width: 520px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.note {
+  margin: 0;
+  padding: var(--dk-space-3) var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+}
+
+.note-good {
+  border-color: var(--dk-accent);
+}
+
+.note-warn {
+  border-color: var(--dk-age-warn);
+  color: var(--dk-age-warn);
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-danger-alert-text);
+}
+
+.list-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+}
+
+.list-title {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-2);
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.count {
+  padding: 0 var(--dk-space-2);
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-surface-raised);
+  color: var(--dk-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  list-style: none;
+}
+
+.list > li + li {
+  border-top: 1px solid var(--dk-border-subtle);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-3);
+  min-height: var(--dk-tap-min);
+  padding: var(--dk-space-3) var(--dk-space-4);
+  background: var(--dk-surface);
+  font-size: 16px;
+}
+
+.row-button {
+  width: 100%;
+  border: 0;
+  color: var(--dk-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-button:hover,
+.row-button:focus-visible {
+  background: var(--dk-surface-raised);
+}
+
+.row-code {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-who {
+  flex-grow: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-amount {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.row-time {
+  color: var(--dk-text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: var(--dk-space-3) var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+}
+
+.total-label {
+  color: var(--dk-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.total-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

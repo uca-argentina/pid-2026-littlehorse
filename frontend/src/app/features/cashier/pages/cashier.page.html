@@ -1,0 +1,197 @@
+<drinkit-staff-header [venueSlug]="venueSlug()" context="Caja" />
+
+<div class="till">
+  <main class="work">
+    @if (channel.state() === 'reconnecting') {
+      <p class="note note-warn" role="status">
+        Sin conexión con la caja — reintentando. "Por cobrar" puede estar desactualizado.
+      </p>
+    }
+
+    @switch (outcome()?.kind) {
+      @case ('collected') {
+        <p class="note note-good" role="status">
+          {{ outcomeCode() }} cobrado. Ya está en la cola de la barra.
+        </p>
+      }
+      @case ('notFound') {
+        <p class="note note-bad" role="alert">
+          No hay ningún pedido con el código {{ outcomeCode() }}. Pedile al cliente que te lo
+          muestre de nuevo.
+        </p>
+      }
+      @case ('unknownQr') {
+        <p class="note note-bad" role="alert">
+          Ese QR no es de ningún pedido de este local. Pedile el código que tiene arriba del QR.
+        </p>
+      }
+      @case ('alreadyPaid') {
+        <p class="note note-bad" role="alert">
+          El pedido {{ outcomeCode() }} ya está pago{{ paidSince() }}. No hay nada que cobrar.
+        </p>
+      }
+      @case ('searchFailed') {
+        <p class="note note-bad" role="alert">
+          No pudimos buscar el pedido. Revisá la conexión y probá de nuevo.
+        </p>
+      }
+      @case ('collectFailed') {
+        <p class="note note-bad" role="alert">
+          No pudimos confirmar el cobro. Revisá la conexión y probá de nuevo: no se cobra dos veces.
+        </p>
+      }
+    }
+
+    @if (selected(); as order) {
+      <drinkit-order-to-collect
+        [order]="order"
+        [collecting]="collecting()"
+        (collect)="collect()"
+        (backToScanning)="cancel()"
+      />
+    } @else {
+      <section class="scan" aria-labelledby="scan-title">
+        <div class="scan-head">
+          <h1 class="title" id="scan-title">Cobro en efectivo</h1>
+        </div>
+
+        <!--
+          A form, so Enter searches: a USB reader types the QR and presses Enter
+          on its own, and so does somebody typing the code by hand.
+        -->
+        <form class="entry" role="search" (submit)="search($event)">
+          <label class="label" for="till-entry">Escaneá o escribí el código</label>
+          <div class="entry-row">
+            <input
+              #entry
+              class="field"
+              id="till-entry"
+              type="text"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              placeholder="A-0042"
+              [value]="read()"
+              (input)="read.set(entry.value)"
+            />
+            <button class="search" type="submit" [disabled]="searching()">
+              {{ searching() ? 'Buscando…' : 'Buscar' }}
+            </button>
+          </div>
+        </form>
+
+        @if (cameraOpen()) {
+          <drinkit-qr-camera (read)="cameraRead($event)" />
+          <button class="ghost" type="button" (click)="closeCamera()">Cerrar cámara</button>
+        } @else {
+          <button class="camera" type="button" (click)="cameraOpen.set(true)">
+            <svg
+              aria-hidden="true"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"
+              />
+              <path d="M8 12h8" />
+            </svg>
+            <span>Escanear con la cámara</span>
+          </button>
+        }
+      </section>
+    }
+  </main>
+
+  <aside class="side">
+    <section class="list-block" aria-labelledby="pending-title">
+      <h2 class="list-title" id="pending-title">
+        Por cobrar
+        @if (pending.hasValue()) {
+          <span class="count">{{ pending.value().length }}</span>
+        }
+      </h2>
+
+      @if (pending.hasValue()) {
+        @if (pending.value().length === 0) {
+          <p class="empty">No hay pedidos esperando cobro.</p>
+        } @else {
+          <input
+            #filterField
+            class="filter"
+            type="search"
+            autocomplete="off"
+            placeholder="Filtrar por código o nombre"
+            aria-label="Filtrar por código o nombre"
+            [value]="filter()"
+            (input)="filter.set(filterField.value)"
+          />
+
+          @if (pendingShown().length === 0) {
+            <p class="empty">Ningún pedido coincide con “{{ filter().trim() }}”.</p>
+          } @else {
+            <ul class="list" aria-labelledby="pending-title">
+              @for (order of pendingShown(); track order.code) {
+                <li>
+                  <button
+                    class="row row-button"
+                    type="button"
+                    [attr.aria-label]="'Cobrar ' + order.code + ' de ' + order.customerName"
+                    (click)="open(order)"
+                  >
+                    <span class="row-code">{{ order.code }}</span>
+                    <span class="row-who">{{ order.customerName }}</span>
+                    <span class="row-amount">$ {{ price(order.total) }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        }
+      } @else if (pending.error()) {
+        <p class="note note-bad" role="alert">No pudimos traer los pedidos por cobrar.</p>
+        <button class="ghost" type="button" (click)="pending.reload()">Reintentar</button>
+      } @else {
+        <p class="empty">Cargando pedidos…</p>
+      }
+    </section>
+
+    <section class="list-block" aria-labelledby="collected-title">
+      <h2 class="list-title" id="collected-title">Cobros de tu turno</h2>
+
+      @if (collected.hasValue()) {
+        @if (collected.value().length === 0) {
+          <p class="empty">Todavía no cobraste nada en este turno.</p>
+        } @else {
+          <ul class="list" aria-labelledby="collected-title">
+            @for (order of collected.value(); track order.code) {
+              <li class="row">
+                <span class="row-code">{{ order.code }}</span>
+                <span class="row-who">{{ order.customerName }}</span>
+                <span class="row-amount">$ {{ price(order.total) }}</span>
+                <span class="row-time">{{ order.paidAt | date: 'HH:mm' }}</span>
+              </li>
+            }
+          </ul>
+        }
+
+        <p class="total">
+          <span class="total-label">Total cobrado</span>
+          <span class="total-value" data-testid="collected-total"
+            >$ {{ price(collectedTotal()) }}</span
+          >
+        </p>
+      } @else if (collected.error()) {
+        <p class="note note-bad" role="alert">No pudimos traer tus cobros.</p>
+        <button class="ghost" type="button" (click)="collected.reload()">Reintentar</button>
+      } @else {
+        <p class="empty">Cargando cobros…</p>
+      }
+    </section>
+  </aside>
+</div>

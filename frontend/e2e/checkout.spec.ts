@@ -153,7 +153,7 @@ test.describe('Checkout', () => {
     await page.getByRole('button', { name: /pagar/i }).click();
     await expect(page.getByTestId('order-code')).toBeVisible({ timeout: 15000 });
 
-    await expect(page.getByRole('listitem').first()).toContainText('Esperando en la barra');
+    await expect(page.getByRole('listitem').first()).toContainText('En cola');
     await expect(page).toHaveURL(/\/orders\/[A-Z]-\d{4}\/[0-9a-f]{32}$/);
   });
 });

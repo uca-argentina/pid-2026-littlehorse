@@ -1,3 +1,4 @@
+using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Kds;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Orders;
@@ -16,15 +17,25 @@ namespace DrinkIt.Application.Common;
 /// <see cref="DrinkIt.Application.Orders.DigitalPaymentStrategy"/> does: it has
 /// no external dependency of its own, only other Application ports.
 /// </remarks>
-public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard) : IDomainEventDispatcher
+public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotifier till) : IDomainEventDispatcher
 {
     public async Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken cancellationToken)
     {
         foreach (IDomainEvent domainEvent in events)
         {
             if (VenueWhoseBoardChanged(domainEvent) is Guid venueId) await kdsBoard.NotifyBoardChangedAsync(venueId, cancellationToken);
+
+            if (VenueWhoseTillChanged(domainEvent) is Guid tillVenueId) await till.NotifyTillChangedAsync(tillVenueId, cancellationToken);
         }
     }
+
+    /// <summary>The venue whose tills have to reload "Por cobrar", or null when nothing waits for cash differently.</summary>
+    private static Guid? VenueWhoseTillChanged(IDomainEvent domainEvent) => domainEvent switch
+    {
+        OrderAwaitingPayment waiting => waiting.VenueId,
+        OrderCollected collected => collected.VenueId,
+        _ => null,
+    };
 
     /// <summary>The venue whose KDS board has to redraw, or null when this event moves no card.</summary>
     private static Guid? VenueWhoseBoardChanged(IDomainEvent domainEvent) => domainEvent switch

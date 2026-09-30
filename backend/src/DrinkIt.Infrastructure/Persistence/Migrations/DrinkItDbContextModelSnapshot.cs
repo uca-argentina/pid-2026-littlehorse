@@ -131,6 +131,10 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasMaxLength(6)
                         .HasColumnType("nvarchar(6)");
 
+                    b.Property<string>("CollectedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<DateTimeOffset?>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -185,6 +189,8 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("VenueId", "TrackingToken")
                         .IsUnique();
+
+                    b.HasIndex("VenueId", "CollectedBy", "PaidAt");
 
                     b.ToTable("Orders", (string)null);
                 });

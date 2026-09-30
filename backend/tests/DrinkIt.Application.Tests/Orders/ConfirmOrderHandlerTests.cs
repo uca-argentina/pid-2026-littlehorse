@@ -251,17 +251,30 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(2, _orders.TimesAdded);
     }
 
-    // The brief only lets us build the digital one. The other two are drawn on
-    // the screen and switched off; anybody asking the API for them gets this.
-    [Theory]
-    [InlineData(PaymentMethod.Cash)]
-    [InlineData(PaymentMethod.VipBalance)]
-    public async Task HandleAsync_WhenThePaymentMethodIsNotBuiltYet_SaysSo(PaymentMethod method)
+    // The VIP tables are out of this sprint: drawn on the screen and switched
+    // off, and anybody asking the API for them gets this.
+    [Fact]
+    public async Task HandleAsync_WhenThePaymentMethodIsNotBuiltYet_SaysSo()
     {
         Result<ConfirmedOrder> result = await AHandler().HandleAsync(
-            ATwoGinOrder(method: method), CancellationToken.None);
+            ATwoGinOrder(method: PaymentMethod.VipBalance), CancellationToken.None);
 
         Assert.Equal(ConfirmOrderHandler.PaymentMethodUnavailable.Code, result.Error!.Code);
+    }
+
+    // US-24, criterion 3: cash leaves the order waiting at the till, unpaid,
+    // and nowhere near the bar until a cashier takes the money.
+    [Fact]
+    public async Task HandleAsync_WhenPaidInCash_LeavesTheOrderAwaitingPaymentAtTheTill()
+    {
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            ATwoGinOrder(method: PaymentMethod.Cash), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(OrderStatus.AwaitingPayment, result.Value.Status);
+        Assert.Null(result.Value.PaidAt);
+        Assert.Equal(PaymentMethod.Cash, _orders.Added!.Method);
+        Assert.IsType<OrderAwaitingPayment>(Assert.Single(_orders.Added.DomainEvents));
     }
 
     /// <summary>
@@ -314,12 +327,12 @@ public class ConfirmOrderHandlerTests
         new(_orders,
             menu,
             codes ?? new SequenceThatAnswers("K-4821"),
-            [new DigitalPaymentStrategy(new FixedClock(Tonight))],
+            [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
             new TheVenueIsFixed(TheVenue));
 
     /// <summary>
-    /// Stands in for the cash method until it exists: settles the money and
-    /// stops, without sending the order to the bar.
+    /// A method that settles the money and stops, without sending the order
+    /// to the bar: proves the handler never queues on its own.
     /// </summary>
     private sealed class SettlesWithoutQueueing(DateTimeOffset now) : IPaymentStrategy
     {

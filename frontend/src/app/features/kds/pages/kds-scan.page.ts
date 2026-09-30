@@ -17,7 +17,7 @@ import { Router, RouterLink } from '@angular/router';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
 import { VenueBrand } from '../../../shared/venue-brand/venue-brand';
-import { KdsCamera } from '../components/kds-camera';
+import { QrCamera } from '../../../shared/qr-camera/qr-camera';
 import { matchesSearch } from '../kds-board-view';
 import { KdsOrderActions } from '../kds-order-actions';
 import { KDS_QUEUE_URL } from '../kds-queue';
@@ -69,7 +69,7 @@ const STATUS_NAMES: Record<KdsOrderStatus, string> = {
  */
 @Component({
   selector: 'drinkit-kds-scan-page',
-  imports: [KdsCamera, RouterLink, VenueBrand],
+  imports: [QrCamera, RouterLink, VenueBrand],
   providers: [KdsScanStore, KdsOrderActions],
   styleUrl: './kds-scan.page.scss',
   templateUrl: './kds-scan.page.html',

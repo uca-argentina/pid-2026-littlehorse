@@ -59,7 +59,7 @@ test.describe('Tracking', () => {
 
     await expect(page.getByTestId('order-code')).toHaveText(/^[A-Z]-\d{4}$/);
     await expect(page.getByRole('listitem')).toHaveCount(4);
-    await expect(page.getByRole('listitem').first()).toContainText('Esperando en la barra');
+    await expect(page.getByRole('listitem').first()).toContainText('En cola');
     await expect(page.getByRole('listitem').first()).toHaveAttribute('data-reached', 'true');
     await expect(page.getByRole('listitem').last()).toHaveAttribute('data-reached', 'false');
   });

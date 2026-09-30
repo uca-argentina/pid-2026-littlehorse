@@ -103,14 +103,43 @@ describe('CheckoutPage', () => {
     expect(sent.request.body.method).toBe('Digital');
   });
 
-  // The only one that is built. The other two are drawn, so the screen is the
-  // one somebody will learn, and switched off with the reason showing.
-  it('offers only the way of paying that exists', async () => {
+  // US-24, criterion 1. The VIP tables are out of this sprint: drawn, so the
+  // screen is the one somebody will learn, and switched off.
+  it('offers paying from the phone or at the till, and not the table balance yet', async () => {
     await openScreenWith(anOrderOfTwoGins);
 
     expect(screen.getByLabelText<HTMLInputElement>(/pago digital/i).disabled).toBe(false);
-    expect(screen.getByLabelText<HTMLInputElement>(/efectivo/i).disabled).toBe(true);
+    expect(screen.getByLabelText<HTMLInputElement>(/efectivo/i).disabled).toBe(false);
     expect(screen.getByLabelText<HTMLInputElement>(/saldo de la mesa/i).disabled).toBe(true);
+  });
+
+  it('starts on paying from the phone', async () => {
+    await openScreenWith(anOrderOfTwoGins);
+
+    expect(screen.getByLabelText<HTMLInputElement>(/pago digital/i).checked).toBe(true);
+  });
+
+  // US-24, criterion 3: nothing is paid on the phone, so the button does not
+  // say "pagar" — it confirms the order and the money changes hands at the till.
+  it('confirms the order instead of paying when cash is chosen', async () => {
+    await openScreenWith(anOrderOfTwoGins);
+
+    fireEvent.click(screen.getByLabelText(/efectivo/i));
+
+    expect(screen.queryByRole('button', { name: /pagar/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /confirmar pedido/i })).not.toBeNull();
+  });
+
+  it('sends cash as the way of paying when it is chosen', async () => {
+    const { rendered, http } = await openScreenWith(anOrderOfTwoGins);
+
+    fireEvent.input(name(), { target: { value: 'María Quadro' } });
+    fireEvent.click(screen.getByLabelText(/efectivo/i));
+    await rendered.fixture.whenStable();
+    screen.getByRole<HTMLButtonElement>('button', { name: /confirmar pedido/i }).click();
+    await rendered.fixture.whenStable();
+
+    expect(http.expectOne(ordersUrl('bar-alfa')).request.body.method).toBe('Cash');
   });
 
   it('says it is working while the payment is going through', async () => {

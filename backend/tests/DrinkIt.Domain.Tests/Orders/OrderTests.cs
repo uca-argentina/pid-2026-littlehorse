@@ -276,6 +276,94 @@ public class OrderTests
 
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
+
+        // US-24, criterion 3: cash leaves the order waiting at the till,
+        // unpaid, and out of the bar's sight — so it raises nothing the board
+        // would react to.
+        [Fact]
+        public void AwaitPayment_WhenItIsACart_LeavesItWaitingAtTheTillUnpaid()
+        {
+            Order order = ACartOf();
+
+            order.AwaitPayment(PaymentMethod.Cash);
+
+            Assert.Equal(OrderStatus.AwaitingPayment, order.Status);
+            Assert.Equal(PaymentMethod.Cash, order.Method);
+            Assert.Null(order.PaidAt);
+            // The till hears about it, so its list updates on its own; the bar
+            // does not react to this one.
+            OrderAwaitingPayment raised = Assert.IsType<OrderAwaitingPayment>(Assert.Single(order.DomainEvents));
+            Assert.Equal(AVenue, raised.VenueId);
+        }
+
+        [Fact]
+        public void AwaitPayment_WhenItIsNotACart_ThrowsInvalidTransition()
+        {
+            Order order = ACartOf();
+            order.AwaitPayment(PaymentMethod.Cash);
+
+            DomainException error = Assert.Throws<DomainException>(() => order.AwaitPayment(PaymentMethod.Cash));
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+
+        // US-26: the cashier took the money. Paid now — the bar counts its age
+        // from here, not from when the customer confirmed on the phone — and
+        // straight into the queue, remembering which cashier took it for the
+        // till's own list of the shift.
+        [Fact]
+        public void CollectCash_WhenItAwaitsPayment_PaysQueuesAndRemembersWhoCollected()
+        {
+            Order order = ACartOf();
+            order.AwaitPayment(PaymentMethod.Cash);
+
+            order.CollectCash(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), "laura.caja");
+
+            Assert.Equal(OrderStatus.Queued, order.Status);
+            Assert.Equal(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), order.PaidAt);
+            Assert.Equal("laura.caja", order.CollectedBy);
+            // One for the bar, which gets a new order, and one for the till, which
+            // loses one from its list.
+            Assert.Collection(
+                order.DomainEvents.Where(raised => raised is not OrderAwaitingPayment),
+                raised => Assert.IsType<OrderQueued>(raised),
+                raised => Assert.Equal(AVenue, Assert.IsType<OrderCollected>(raised).VenueId));
+        }
+
+        [Fact]
+        public void CollectCash_WhenItIsNotWaitingForCash_ThrowsInvalidTransition()
+        {
+            Order order = ACartOf();
+
+            DomainException error = Assert.Throws<DomainException>(() => order.CollectCash(DateTimeOffset.UtcNow, "laura.caja"));
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void CollectCash_WhenNobodyCollectedIt_ThrowsCollectorRequired(string cashier)
+        {
+            Order order = ACartOf();
+            order.AwaitPayment(PaymentMethod.Cash);
+
+            DomainException error = Assert.Throws<DomainException>(() => order.CollectCash(DateTimeOffset.UtcNow, cashier));
+
+            Assert.Equal(Order.ErrorCodes.CollectorRequired, error.Code);
+        }
+
+        // Cash only becomes money at the till: nothing else may skip it.
+        [Fact]
+        public void Pay_WhenItAwaitsCash_ThrowsInvalidTransition()
+        {
+            Order order = ACartOf();
+            order.AwaitPayment(PaymentMethod.Cash);
+
+            DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Cash));
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
     }
 
     public class Preparing

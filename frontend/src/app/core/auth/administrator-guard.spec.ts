@@ -47,16 +47,11 @@ describe('administratorGuard', () => {
 
   // US-03, criterion 6. Written by exclusion so a role added later is locked
   // out until somebody decides otherwise, instead of being let in by omission.
-  // 'Cashier' is not a role the contract has yet: it stands for one a newer
-  // API could send before this screen knows about it.
-  it.each<StaffRole>(['Kds', 'Waiter', 'Cashier' as StaffRole])(
-    'turns a %s away from them',
-    (role) => {
-      sessions.remember(sessionFor(role));
+  it.each<StaffRole>(['Kds', 'Waiter', 'Cashier'])('turns a %s away from them', (role) => {
+    sessions.remember(sessionFor(role));
 
-      expect(run()).not.toBe(true);
-    },
-  );
+    expect(run()).not.toBe(true);
+  });
 
   /**
    * Back to their own home screen, not to the login screen: their token is

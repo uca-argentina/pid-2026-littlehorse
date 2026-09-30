@@ -1,4 +1,5 @@
 using DrinkIt.Api.Features.Authentication;
+using DrinkIt.Api.Features.Cashier;
 using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Orders;
@@ -23,6 +24,7 @@ public class HandlerRegistrationTests
         services.AddMenuHandlers();
         services.AddOrderHandlers();
         services.AddKdsHandlers();
+        services.AddCashierHandlers();
 
         string[] missing =
         [

@@ -17,4 +17,7 @@ public enum StaffRole
     Administrator = 1,
     Kds = 2,
     Waiter = 3,
+
+    /// <summary>Takes cash at the till and nothing else: it never puts an order together (§12).</summary>
+    Cashier = 4,
 }

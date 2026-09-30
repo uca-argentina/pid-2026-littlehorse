@@ -6,9 +6,9 @@ namespace DrinkIt.Domain.Orders;
 /// </summary>
 /// <remarks>
 /// All three are declared because they are the vocabulary of the design, and
-/// the numbers are stored. Only <see cref="Digital"/> has a strategy behind it
-/// in Sprint 1 — the brief leaves the till and the VIP tables out — and asking
-/// for either of the others is answered, not ignored.
+/// the numbers are stored. <see cref="VipBalance"/> has no strategy behind it
+/// yet — the VIP tables are out of this sprint — and asking for it is answered,
+/// not ignored.
 /// </remarks>
 public enum PaymentMethod
 {

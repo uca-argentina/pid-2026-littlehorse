@@ -29,7 +29,7 @@ erDiagram
         guid venue_id FK "NOT NULL - siempre pertenece a un local"
         nvarchar username UK "unico por venue"
         nvarchar password_hash
-        int role "Administrator | Kds | Waiter"
+        int role "Administrator | Kds | Waiter | Cashier"
         bit is_active "baja logica del ABM"
         datetimeoffset created_at "NULL en filas anteriores a US-30"
         nvarchar created_by "username del token; NULL si no habia nadie o es anterior"
