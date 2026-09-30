@@ -3,7 +3,7 @@
 Manejan un navegador de verdad contra la API y la base reales. No hay dobles de prueba ni
 respuestas simuladas: si la prueba pasa, el flujo funciona.
 
-Hoy cubren el ingreso del personal (US-01):
+Cubren, entre otras cosas, el ingreso del personal (US-01):
 
 | Prueba                                    | Qué verifica                                                                |
 | ----------------------------------------- | --------------------------------------------------------------------------- |
@@ -11,6 +11,16 @@ Hoy cubren el ingreso del personal (US-01):
 | `opens the staff area…`                   | El ingreso entra al área del personal y muestra el rol que sale del token.  |
 | `keeps the session open when reloaded`    | La sesión sobrevive a un refresco de la tablet.                             |
 | `closes the session and blocks the area…` | Cerrar la sesión vuelve a bloquear el área del personal.                    |
+
+Y el retiro en la barra (US-20), con el celular del cliente y la tablet en la misma prueba
+(`kds-scan.spec.ts`):
+
+| Prueba                                        | Qué verifica                                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `hands an order over when its qr is scanned…` | El recorrido entero: no listo, se prepara, entregado. El cliente lo ve y su QR desaparece; reescanear avisa. |
+| `warns when the same qr is held up twice…`    | En la misma pantalla, pasada la ventana de repetición, el mismo QR dice "Ya se entregó".                     |
+| `says it does not know a code…`               | Un código que no es de ningún pedido del local.                                                              |
+| `finds an order by hand, marks it ready…`     | La búsqueda manual: Listo, Entregado y Deshacer.                                                             |
 
 ## Requisitos
 
@@ -110,6 +120,11 @@ falta reproducir el fallo para entenderlo. Las dos carpetas están en el `.gitig
 - **Las afirmaciones son sobre lo que ve la persona en el boliche**, no sobre el estado
   interno de la aplicación.
 - **Nada de esperas por tiempo.** Las afirmaciones de Playwright ya reintentan solas.
+- **El lector de QR se simula tipeando** el código en su campo y apretando Enter: es lo que
+  hace un lector USB. La cámara no se prueba acá, porque un navegador sin ventana no tiene a
+  qué apuntar.
+- **Los datos de la barra se arman con `kds.ts`**: una cuenta KDS nueva por prueba y un pedido
+  pagado desde el menú, igual que lo haría un cliente.
 
 ## Todavía no
 
