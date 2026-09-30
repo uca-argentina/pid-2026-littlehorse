@@ -1,3 +1,4 @@
+using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
 using DrinkIt.Domain.Common;
@@ -16,7 +17,7 @@ public class DomainEventDispatcherTests
     {
         Guid venueId = Guid.CreateVersion7();
         SpyNotifier notifier = new();
-        DomainEventDispatcher dispatcher = new(notifier);
+        DomainEventDispatcher dispatcher = new(notifier, new SpyTill());
 
         await dispatcher.DispatchAsync([new OrderQueued(venueId)], CancellationToken.None);
 
@@ -30,7 +31,7 @@ public class DomainEventDispatcherTests
     {
         Guid venueId = Guid.CreateVersion7();
         SpyNotifier notifier = new();
-        DomainEventDispatcher dispatcher = new(notifier);
+        DomainEventDispatcher dispatcher = new(notifier, new SpyTill());
 
         await dispatcher.DispatchAsync([new OrderPreparationStarted(venueId)], CancellationToken.None);
 
@@ -42,7 +43,7 @@ public class DomainEventDispatcherTests
     {
         Guid venueId = Guid.CreateVersion7();
         SpyNotifier notifier = new();
-        DomainEventDispatcher dispatcher = new(notifier);
+        DomainEventDispatcher dispatcher = new(notifier, new SpyTill());
 
         await dispatcher.DispatchAsync([new OrderRequeued(venueId)], CancellationToken.None);
 
@@ -68,10 +69,39 @@ public class DomainEventDispatcherTests
         {
             SpyNotifier notifier = new();
 
-            await new DomainEventDispatcher(notifier).DispatchAsync([moved], CancellationToken.None);
+            await new DomainEventDispatcher(notifier, new SpyTill()).DispatchAsync([moved], CancellationToken.None);
 
             Assert.True(notifier.NotifiedVenues.SequenceEqual([venueId]), $"{moved.GetType().Name} did not reach the board.");
         }
+    }
+
+    // US-26: the till's "Por cobrar" updates on its own — a new order to
+    // collect, or one another till just collected.
+    [Theory]
+    [InlineData(nameof(OrderAwaitingPayment))]
+    [InlineData(nameof(OrderCollected))]
+    public async Task DispatchAsync_WhenTheCashWaitingChanges_NotifiesTheTillAndNotTheBoard(string what)
+    {
+        Guid venueId = Guid.CreateVersion7();
+        IDomainEvent changed = what == nameof(OrderCollected) ? new OrderCollected(venueId) : new OrderAwaitingPayment(venueId);
+        SpyNotifier board = new();
+        SpyTill till = new();
+
+        await new DomainEventDispatcher(board, till).DispatchAsync([changed], CancellationToken.None);
+
+        Assert.Equal(venueId, Assert.Single(till.NotifiedVenues));
+        Assert.Empty(board.NotifiedVenues);
+    }
+
+    [Fact]
+    public async Task DispatchAsync_WhenTheBarsBoardChanges_LeavesTheTillAlone()
+    {
+        SpyTill till = new();
+
+        await new DomainEventDispatcher(new SpyNotifier(), till)
+            .DispatchAsync([new OrderQueued(Guid.CreateVersion7())], CancellationToken.None);
+
+        Assert.Empty(till.NotifiedVenues);
     }
 
     // A future event this dispatcher does not yet know how to react to must
@@ -81,7 +111,7 @@ public class DomainEventDispatcherTests
     public async Task DispatchAsync_WhenTheEventIsNotOneItReactsTo_DoesNothing()
     {
         SpyNotifier notifier = new();
-        DomainEventDispatcher dispatcher = new(notifier);
+        DomainEventDispatcher dispatcher = new(notifier, new SpyTill());
 
         await dispatcher.DispatchAsync([new SomeOtherEvent()], CancellationToken.None);
 
@@ -95,6 +125,17 @@ public class DomainEventDispatcherTests
         public List<Guid> NotifiedVenues { get; } = [];
 
         public Task NotifyBoardChangedAsync(Guid venueId, CancellationToken cancellationToken)
+        {
+            NotifiedVenues.Add(venueId);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class SpyTill : ITillNotifier
+    {
+        public List<Guid> NotifiedVenues { get; } = [];
+
+        public Task NotifyTillChangedAsync(Guid venueId, CancellationToken cancellationToken)
         {
             NotifiedVenues.Add(venueId);
             return Task.CompletedTask;

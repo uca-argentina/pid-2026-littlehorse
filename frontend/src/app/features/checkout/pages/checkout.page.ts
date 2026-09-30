@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, effect, inject, input } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -85,16 +85,25 @@ export class CheckoutPage {
   protected readonly total = computed(() => formatPrice(this.cart.total()));
 
   /**
-   * The three of the wireframe. Only one is built — the brief leaves the till
-   * and the VIP tables out — and the other two are drawn switched off rather
-   * than hidden, so this is the screen somebody learns and nothing moves under
-   * them when they arrive.
+   * The three of the wireframe. The VIP tables are out of this sprint, so the
+   * table balance is drawn switched off rather than hidden: this is the screen
+   * somebody learns, and nothing moves under them when it arrives.
    */
   protected readonly waysOfPaying: readonly WayOfPaying[] = [
     { method: 'Digital', name: 'Pago digital', what: 'Tarjeta o Mercado Pago', isBuilt: true },
-    { method: 'Cash', name: 'Efectivo en caja', what: 'Próximamente', isBuilt: false },
+    {
+      method: 'Cash',
+      name: 'Efectivo en caja',
+      what: 'Te damos un código y pagás en la caja',
+      isBuilt: true,
+    },
     { method: 'VipBalance', name: 'Saldo de la mesa', what: 'Próximamente', isBuilt: false },
   ];
+
+  protected readonly method = signal<PaymentMethod>('Digital');
+
+  /** Cash is not paid here: the order is confirmed and the money changes hands at the till. */
+  protected readonly paysAtTheTill = computed(() => this.method() === 'Cash');
 
   constructor() {
     effect(() => this.cart.open(this.venueSlug()));
@@ -103,6 +112,6 @@ export class CheckoutPage {
   protected pay(): void {
     if (!this.canPay()) return;
 
-    this.store.pay(this.venueSlug(), this.typed().trim(), 'Digital');
+    this.store.pay(this.venueSlug(), this.typed().trim(), this.method());
   }
 }

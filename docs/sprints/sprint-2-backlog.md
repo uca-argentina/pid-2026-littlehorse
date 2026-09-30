@@ -607,6 +607,19 @@ con el brillo al mínimo contra la tablet de la barra.
 - **Borde:** qué pasa si el cliente abandona la pantalla de pago. Proponemos que el pedido
   siga siendo un carrito editable hasta que se confirme el pago.
 
+**Construida el 2026-09-28**, junto con US-25 y US-26 en la rama
+`feat/24-pago-en-efectivo-y-caja`:
+
+- `CashPaymentStrategy` deja el pedido en `AwaitingPayment` con el método guardado y sin
+  `PaidAt`. El handler de confirmar no cambió: es la clase nueva que prometía la nota.
+- El checkout ofrece digital y efectivo; el saldo VIP sigue dibujado y apagado. Con efectivo
+  el botón dice "Confirmar pedido", no "Pagar": en el celular no se paga nada.
+- **Deuda saldada:** el `method` del pedido viaja como enum del contrato (`PaymentMethodName`)
+  y es obligatorio. Un nombre desconocido o un campo que falta se rechazan con 400 al leer el
+  body, igual que el resto de los enums; desapareció `TryReadPaymentMethod`.
+- **El stock se descuenta al confirmar, no al cobrar.** Un pedido en efectivo que nadie paga
+  retiene su stock hasta que se lo cancele, y cancelar es US-23. Aceptado para este sprint.
+
 ### US-25 · Pagar en efectivo en la caja
 
 > **Como** cliente que paga en efectivo
@@ -631,6 +644,12 @@ con el brillo al mínimo contra la tablet de la barra.
   proponemos no vencerlo automáticamente todavía, pero que el cajero lo pueda cancelar.
 - **Diseño:** el código tiene que leerse de lejos y en penumbra; es lo mismo que resuelve el
   QR de US-20 y conviene que sea la misma pantalla.
+
+**Construida el 2026-09-28.** Es la misma pantalla de seguimiento: con `AwaitingPayment`
+manda a la caja con el código y dice que falta pagar, sin ningún paso del recorrido marcado.
+El criterio 3 sale de la consulta cada tres segundos que ya existía; cuando llegue US-22 lo
+hereda. Quedan afuera del wireframe `Efectivo`: el aviso push (US-21), el QR (US-20) y el
+botón "Cancelar pedido" del cliente, que ningún criterio pide.
 
 ### US-26 · Cobrar un pedido en la caja
 
@@ -657,6 +676,55 @@ con el brillo al mínimo contra la tablet de la barra.
   `design/wireframes/`. (`CajeroVip` es de la coordinación de mesas: no va en este sprint.)
 - **Borde:** el cajero **no arma pedidos** (§12). Si el cliente quiere agregar algo, vuelve a
   pedir desde el celular. Eso es una decisión del diseño, no una limitación a arreglar.
+
+**Construida el 2026-09-28.** Decidido ese día:
+
+- **Rol `Cashier`** (número 4) con su política, su guard y su pantalla en
+  `/:venueSlug/staff/cashier`. El administrador ya lo puede dar de alta.
+- **Sólo se busca por código.** El escaneo espera a US-20, que es la que dibuja el QR; la
+  búsqueda por nombre de `CajeroBuscar` queda como deuda. El buscador envía con Enter, así que
+  un lector USB funciona el día que se compre.
+- **"Mi lista de pendientes" es real:** debajo del buscador, los pedidos en `AwaitingPayment`
+  del local, el más viejo primero. Tocar uno lo abre para cobrar sin tipear.
+- **Cobrar dos veces se rechaza con 409** y la pantalla dice "ya está pago". Buscar un pedido
+  ya cobrado dice lo mismo, con la hora. Nunca se cobra dos veces.
+- ~~**La lista no se actualiza sola.**~~ Resuelto el 2026-09-30, ver abajo.
+
+**Rediseñada el 2026-09-29**, sobre los wireframes y después de traer US-20 (QR) de `dev`:
+
+- **Desktop primero y responsive.** A la izquierda el trabajo —escanear o cobrar—, a la derecha
+  las dos listas: **Por cobrar** y **Cobros de tu turno**, con el total cobrado. Debajo de
+  1024px todo se apila, el trabajo primero.
+- **El escaneo es un botón, no el bloque grande de `CajeroBuscar`.** Un solo campo recibe las
+  tres entradas: el lector USB escribe el QR y manda Enter, el cajero tipea el código, y el botón
+  "Escanear con la cámara" abre la misma cámara del KDS (ahora `shared/qr-camera`). Una lectura
+  de 32 hex es un token y va a `POST /cashier/scan` en el body; cualquier otra cosa es un código.
+- **El QR se muestra apenas se confirma en efectivo** (antes, US-20 lo mostraba sólo para
+  retirar). Es el mismo token, así que el cajero lo escanea igual que la barra.
+- **Cobrar es de dominio:** `Order.CollectCash` paga, guarda quién cobró (`CollectedBy`, con su
+  migración) y pasa a la cola. `Pay` quedó sólo para el pago desde el celular.
+- **El turno son las últimas 12 horas del cajero logueado**, no "hoy": una noche de boliche
+  cruza la medianoche. Si algún día hay cierre de caja, se vuelve una entidad `Shift`.
+- **Sin solapas.** "Entregas VIP" no es de este sprint.
+- **Header compartido:** `StaffHeader` (venue, contexto, cuenta con "Salir", tema y solapas
+  opcionales). La administración lo usa con sus dos solapas y la caja sin ninguna.
+- Sigue en deuda la búsqueda por nombre de `CajeroBuscar`.
+- **"Por cobrar" se actualiza sola** (2026-09-30), con el mismo mecanismo que el tablero de la
+  barra. Confirmar en efectivo levanta `OrderAwaitingPayment` y cobrar levanta `OrderCollected`
+  (además de `OrderQueued`, que es de la barra). El dispatcher los manda a `ITillNotifier`, que
+  avisa por un hub propio, `TillHub` en `/hubs/till`, sólo para `Cashier` y con un grupo por
+  local sacado del token. La pantalla recarga la lista con cada aviso y al volver de un corte, y
+  avisa si está desconectada. El front comparte la lógica de conexión con el KDS
+  (`core/realtime/hub-channel.ts`).
+- **Una carrera en los tests de los hubs:** el cliente de SignalR termina `StartAsync` antes de
+  que el hub meta la conexión en su grupo, y un aviso enviado en ese instante se pierde. Los
+  tests de aislamiento de los dos hubs ahora reenvían hasta escucharlo. En la app no se nota:
+  la pantalla carga su lista al abrir.
+- **El seguimiento dice "En cola", no "Esperando en la barra"** (decidido el 2026-09-30): la
+  frase vieja se leía como "tu trago ya te espera en la barra". El paso es **En cola**, y la frase
+  de un pedido pago pasa a ser "Ya está pago y en la cola. Te avisamos cuando lo empiecen a
+  preparar." El criterio 5 de US-11 decía lo anterior; queda como estaba en el backlog del
+  Sprint 1, que es historia.
 
 ## Qué proponemos comprometer
 
@@ -734,6 +802,7 @@ cualquier endpoint: ahora es 400.
 del pedido confirmado es un octavo enum que la cuenta de arriba no tenía. Sigue validado a
 mano con `TryReadPaymentMethod`; pasarlo a `PaymentMethodName` es el mismo trabajo, cuando
 llegue el carril del pago (US-24).
+**Resuelta el 2026-09-28, con US-24.**
 
 ## Dependencias nuevas
 

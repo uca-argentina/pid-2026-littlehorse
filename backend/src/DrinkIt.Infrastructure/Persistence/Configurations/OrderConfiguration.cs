@@ -27,6 +27,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(order => order.PaidAt);
         builder.Property(order => order.Method);
         builder.Property(order => order.DeliveredAt);
+        // Same length as a username: it is one (US-26).
+        builder.Property(order => order.CollectedBy).HasMaxLength(50);
 
         // Stored as the six characters the customer reads, not as two columns:
         // it is one thing, and every query looks it up whole.
@@ -52,6 +54,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(order => new { order.VenueId, order.Code }).IsUnique();
         builder.HasIndex(IdempotencyKey, nameof(Order.VenueId)).IsUnique();
         builder.HasIndex(order => new { order.VenueId, order.TrackingToken }).IsUnique();
+        // The till's "cobros de tu turno": one cashier's collections, by time.
+        builder.HasIndex(order => new { order.VenueId, order.CollectedBy, order.PaidAt });
 
         // Derived, never stored: both can only disagree with what they are
         // derived from.

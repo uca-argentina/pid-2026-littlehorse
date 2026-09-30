@@ -28,6 +28,7 @@ public class StaffRoleTests
     [InlineData(StaffRole.Administrator, 1)]
     [InlineData(StaffRole.Kds, 2)]
     [InlineData(StaffRole.Waiter, 3)]
+    [InlineData(StaffRole.Cashier, 4)]
     public void Role_WhenStored_KeepsItsNumber(StaffRole role, int stored) =>
         Assert.Equal(stored, (int)role);
 }

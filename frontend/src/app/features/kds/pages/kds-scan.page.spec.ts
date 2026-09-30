@@ -7,7 +7,7 @@ import { provideRouter } from '@angular/router';
 import { fireEvent, render, screen, within } from '@testing-library/angular';
 import { KdsBoardChannel } from '../../../core/kds/kds-board-channel';
 import type { KdsLinkState } from '../../../core/kds/kds-board-channel';
-import { KdsCamera, OPEN_CAMERA } from '../components/kds-camera';
+import { OPEN_CAMERA, QrCamera } from '../../../shared/qr-camera/qr-camera';
 import { SCAN_URL, deliverUrl, markReadyUrl, undoDeliveryUrl } from '../kds-orders.service';
 import type { ScannedOrder } from '../kds-orders.service';
 import { KDS_QUEUE_URL } from '../kds-queue';
@@ -89,7 +89,7 @@ async function openScreenWith(queue: KdsQueueOrder[] = []) {
 
 /** The camera, when it is open: what it reads is handed over as the component would. */
 function theCamera(rendered: Awaited<ReturnType<typeof openScreenWith>>['rendered']) {
-  return rendered.fixture.debugElement.query(By.directive(KdsCamera));
+  return rendered.fixture.debugElement.query(By.directive(QrCamera));
 }
 
 function theScanBlock(): HTMLElement {
@@ -276,7 +276,7 @@ describe('KdsScanPage', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Usar la cámara' }));
       await rendered.fixture.whenStable();
-      (theCamera(rendered).componentInstance as KdsCamera).read.emit(token);
+      (theCamera(rendered).componentInstance as QrCamera).read.emit(token);
       await rendered.fixture.whenStable();
 
       expect(http.expectOne(SCAN_URL).request.body).toEqual({ read: token });

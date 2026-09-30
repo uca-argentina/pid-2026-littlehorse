@@ -17,6 +17,7 @@ export const STAFF_ROLES = [
   'Administrator',
   'Kds',
   'Waiter',
+  'Cashier',
 ] as const satisfies readonly StaffRole[];
 
 export interface StaffRoleDescription {
@@ -47,6 +48,12 @@ export const STAFF_ROLE_DESCRIPTIONS: readonly StaffRoleDescription[] = [
     name: 'Mozo',
     plural: 'Mozos',
     does: 'Entrega pedidos en las mesas del sector VIP.',
+  },
+  {
+    role: 'Cashier',
+    name: 'Cajero',
+    plural: 'Cajeros',
+    does: 'Cobra en la caja los pedidos que se pagan en efectivo.',
   },
 ];
 

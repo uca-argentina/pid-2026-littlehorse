@@ -2,6 +2,7 @@ using System.Security.Claims;
 using DrinkIt.Api.Common;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -48,6 +49,7 @@ public class StaffAuthenticationTests
     [Theory]
     [InlineData(StaffRole.Kds)]
     [InlineData(StaffRole.Waiter)]
+    [InlineData(StaffRole.Cashier)]
     public async Task AdministratorPolicy_WhenTheTokenSaysAnythingElse_Refuses(StaffRole role)
     {
         AuthorizationResult result = await Authorize(role, Policies.Administrator);
@@ -67,9 +69,30 @@ public class StaffAuthenticationTests
     [Theory]
     [InlineData(StaffRole.Administrator)]
     [InlineData(StaffRole.Waiter)]
+    [InlineData(StaffRole.Cashier)]
     public async Task KdsPolicy_WhenTheTokenSaysAnythingElse_Refuses(StaffRole role)
     {
         AuthorizationResult result = await Authorize(role, Policies.Kds);
+
+        Assert.False(result.Succeeded);
+    }
+
+    // US-26: the till, and only the till.
+    [Fact]
+    public async Task CashierPolicy_WhenTheTokenSaysCashier_Allows()
+    {
+        AuthorizationResult result = await Authorize(StaffRole.Cashier, Policies.Cashier);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData(StaffRole.Administrator)]
+    [InlineData(StaffRole.Kds)]
+    [InlineData(StaffRole.Waiter)]
+    public async Task CashierPolicy_WhenTheTokenSaysAnythingElse_Refuses(StaffRole role)
+    {
+        AuthorizationResult result = await Authorize(role, Policies.Cashier);
 
         Assert.False(result.Succeeded);
     }
@@ -98,6 +121,24 @@ public class StaffAuthenticationTests
         await options.Events!.MessageReceived(messageReceived);
 
         Assert.Equal("a-hub-connection-token", messageReceived.Token);
+    }
+
+    // US-26: the till's own hub, reached by a browser the same way.
+    [Fact]
+    public async Task AddStaffAuthentication_WhenTheTillsHubConnectionCarriesTheTokenInTheQueryString_ReadsIt()
+    {
+        JwtBearerOptions options = ConfiguredBearerOptions();
+
+        DefaultHttpContext context = new();
+        context.Request.Path = TillHubRoute.Path;
+        context.Request.QueryString = new QueryString("?access_token=a-till-connection-token");
+
+        AuthenticationScheme scheme = new(JwtBearerDefaults.AuthenticationScheme, null, typeof(JwtBearerHandler));
+        MessageReceivedContext messageReceived = new(context, scheme, options);
+
+        await options.Events!.MessageReceived(messageReceived);
+
+        Assert.Equal("a-till-connection-token", messageReceived.Token);
     }
 
     private static async Task<AuthorizationResult> Authorize(StaffRole role, string policy)

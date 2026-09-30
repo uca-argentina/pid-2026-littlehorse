@@ -8,7 +8,7 @@ namespace DrinkIt.Application.Orders;
 /// <remarks>
 /// The three payment methods converge on the same flow after the money is
 /// settled, and the difference between them is exactly this step: digital
-/// leaves the order paid and in the bar's queue, cash will leave it waiting at
+/// leaves the order paid and in the bar's queue, cash leaves it waiting at
 /// the till until a cashier takes the money (§6 of the functional design), VIP
 /// will debit the table. Adding one is adding a class, never an if in the
 /// handler.
@@ -45,4 +45,16 @@ public sealed class DigitalPaymentStrategy(TimeProvider clock) : IPaymentStrateg
         order.Pay(clock.GetUtcNow(), Method);
         order.Enqueue();
     }
+}
+
+/// <summary>
+/// Cash at the till (§6, US-24). Nothing is settled here: the order waits
+/// with its code until a cashier takes the money (US-26), and only then does it
+/// reach the bar.
+/// </summary>
+public sealed class CashPaymentStrategy : IPaymentStrategy
+{
+    public PaymentMethod Method => PaymentMethod.Cash;
+
+    public void Settle(Order order) => order.AwaitPayment(Method);
 }

@@ -13,6 +13,7 @@ public enum StaffRoleName
     Administrator,
     Kds,
     Waiter,
+    Cashier,
 }
 
 /// <summary>Where an order is, as the customer's phone reads it.</summary>
@@ -26,6 +27,15 @@ public enum CustomerOrderStatus
     Ready,
     Delivered,
     Canceled,
+}
+
+/// <summary>How the customer is paying, as the checkout sends it.</summary>
+[JsonConverter(typeof(StrictStringEnumConverter<PaymentMethodName>))]
+public enum PaymentMethodName
+{
+    Digital,
+    Cash,
+    VipBalance,
 }
 
 /// <summary>Which column of the bar's board an order is in.</summary>
@@ -87,6 +97,7 @@ public static class ContractEnums
         StaffRole.Administrator => StaffRoleName.Administrator,
         StaffRole.Kds => StaffRoleName.Kds,
         StaffRole.Waiter => StaffRoleName.Waiter,
+        StaffRole.Cashier => StaffRoleName.Cashier,
         _ => throw new ArgumentOutOfRangeException(nameof(role), role, "A role the contract has no name for."),
     };
 
@@ -95,6 +106,7 @@ public static class ContractEnums
         StaffRoleName.Administrator => StaffRole.Administrator,
         StaffRoleName.Kds => StaffRole.Kds,
         StaffRoleName.Waiter => StaffRole.Waiter,
+        StaffRoleName.Cashier => StaffRole.Cashier,
         _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Not a role this venue hands out."),
     };
 
@@ -108,6 +120,14 @@ public static class ContractEnums
         OrderStatus.Delivered => CustomerOrderStatus.Delivered,
         OrderStatus.Canceled => CustomerOrderStatus.Canceled,
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "A cart never reaches the customer's answers."),
+    };
+
+    public static PaymentMethod ToDomain(this PaymentMethodName method) => method switch
+    {
+        PaymentMethodName.Digital => PaymentMethod.Digital,
+        PaymentMethodName.Cash => PaymentMethod.Cash,
+        PaymentMethodName.VipBalance => PaymentMethod.VipBalance,
+        _ => throw new ArgumentOutOfRangeException(nameof(method), method, "Not a way of paying this venue knows."),
     };
 
     public static KdsOrderStatus ToKdsStatus(this OrderStatus status) => status switch

@@ -8,17 +8,8 @@ export type ConfirmOrderRequest = components['schemas']['ConfirmOrderRequest'];
 
 export type ConfirmedOrder = components['schemas']['ConfirmedOrderResponse'];
 
-/**
- * The ways of paying, by the names the API answers to.
- *
- * Written here rather than taken from the contract because an OpenAPI enum of
- * a .NET enum is a bare string: the generated type cannot say which strings.
- * The same reason STAFF_ROLES exists. If one is ever renamed on the server,
- * the endpoint refuses the old name rather than doing something unexpected.
- */
-export const PAYMENT_METHODS = ['Digital', 'Cash', 'VipBalance'] as const;
-
-export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+/** The ways of paying, by the names the API answers to. */
+export type PaymentMethod = components['schemas']['PaymentMethodName'];
 
 /**
  * The venue is in the path because this is the customer's door and there is no

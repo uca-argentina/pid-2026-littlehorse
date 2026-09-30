@@ -1,0 +1,62 @@
+@let current = order();
+
+<section class="collect" [attr.aria-label]="'Pedido ' + current.code">
+  <div class="details">
+    <div class="who">
+      <p class="code">{{ current.code }}</p>
+      <p class="name">{{ current.customerName }}</p>
+      <p class="pending">Pendiente de pago</p>
+    </div>
+
+    <ul class="lines">
+      @for (item of current.items; track item.productName) {
+        <li class="line">
+          <span class="qty">{{ item.quantity }}×</span>
+          <span class="what">
+            <span class="drink">{{ item.productName }}</span>
+            @if (item.note) {
+              <span class="note">{{ item.note }}</span>
+            }
+          </span>
+          <span class="line-price">$ {{ price(item.quantity * item.unitPrice) }}</span>
+        </li>
+      }
+    </ul>
+
+    <div class="facts">
+      <span class="muted">Entrega</span>
+      <span class="chip">Retiro en barra</span>
+      @if (current.placedAt) {
+        <span class="muted placed">Pedido hecho {{ current.placedAt | date: 'HH:mm' }}</span>
+      }
+    </div>
+  </div>
+
+  <div class="pay">
+    <p class="amount" data-testid="charge">
+      <span class="amount-label">Cobrale</span>
+      <span class="amount-value">$ {{ price(current.total) }}</span>
+    </p>
+
+    <button class="cta" type="button" [disabled]="collecting()" (click)="collect.emit()">
+      <svg
+        aria-hidden="true"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M4 12.5l5.5 5.5L20 7" />
+      </svg>
+      <span>{{ collecting() ? 'Confirmando…' : 'Confirmar cobro' }}</span>
+    </button>
+
+    <button class="ghost" type="button" [disabled]="collecting()" (click)="backToScanning.emit()">
+      Cancelar y volver a escanear
+    </button>
+  </div>
+</section>

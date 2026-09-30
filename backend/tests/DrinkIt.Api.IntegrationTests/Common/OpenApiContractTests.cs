@@ -38,14 +38,16 @@ public sealed partial class OpenApiContractTests(SqlServerFixture sql) : IAsyncD
     // The PWA's client is generated from this: a field published as a plain
     // string leaves every comparison against it unchecked by the compiler.
     [Theory]
-    [InlineData("LoginResponse", "role", "Administrator,Kds,Waiter")]
-    [InlineData("StaffUserResponse", "role", "Administrator,Kds,Waiter")]
-    [InlineData("CreateStaffUserRequest", "role", "Administrator,Kds,Waiter")]
-    [InlineData("ChangeStaffUserRoleRequest", "role", "Administrator,Kds,Waiter")]
+    [InlineData("LoginResponse", "role", "Administrator,Kds,Waiter,Cashier")]
+    [InlineData("StaffUserResponse", "role", "Administrator,Kds,Waiter,Cashier")]
+    [InlineData("CreateStaffUserRequest", "role", "Administrator,Kds,Waiter,Cashier")]
+    [InlineData("ChangeStaffUserRoleRequest", "role", "Administrator,Kds,Waiter,Cashier")]
     [InlineData("ConfirmedOrderResponse", "status", "AwaitingPayment,Paid,Queued,InPreparation,Ready,Delivered,Canceled")]
     [InlineData("TrackedOrderResponse", "status", "AwaitingPayment,Paid,Queued,InPreparation,Ready,Delivered,Canceled")]
     [InlineData("KdsQueueOrderResponse", "status", "Queued,InPreparation,Ready")]
     [InlineData("ScannedOrderResponse", "outcome", "Delivered,NotReadyYet,AlreadyDelivered")]
+    [InlineData("ConfirmOrderRequest", "method", "Digital,Cash,VipBalance")]
+    [InlineData("CashierOrderResponse", "status", "AwaitingPayment,Paid,Queued,InPreparation,Ready,Delivered,Canceled")]
     public async Task OpenApi_Always_PublishesEachEnumByItsNames(string schema, string property, string names)
     {
         using HttpClient client = _factory.CreateClient();

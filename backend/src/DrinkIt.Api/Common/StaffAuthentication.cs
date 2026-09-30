@@ -1,5 +1,6 @@
 using System.Text;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Primitives;
@@ -45,7 +46,7 @@ internal static class StaffAuthentication
                 options.Events = new JwtBearerEvents
                 {
                     // A browser's WebSocket API cannot set an Authorization
-                    // header, so the KDS tablet's connection carries the token
+                    // header, so the KDS tablet's and the till's connections carry the token
                     // in the query string instead (US-15). Only for the hub's
                     // own path: every other request still authenticates the
                     // ordinary way, and a token sitting in a URL is exactly
@@ -54,7 +55,7 @@ internal static class StaffAuthentication
                     {
                         StringValues accessToken = context.Request.Query["access_token"];
 
-                        if (accessToken.Count > 0 && context.HttpContext.Request.Path.StartsWithSegments(KdsHubRoute.Path))
+                        if (accessToken.Count > 0 && IsAHub(context.HttpContext.Request.Path))
                         {
                             context.Token = accessToken;
                         }
@@ -69,8 +70,13 @@ internal static class StaffAuthentication
         {
             options.AddPolicy(Policies.Administrator, policy => policy.RequireRole(Policies.Administrator));
             options.AddPolicy(Policies.Kds, policy => policy.RequireRole(Policies.Kds));
+            options.AddPolicy(Policies.Cashier, policy => policy.RequireRole(Policies.Cashier));
         });
 
         return services;
     }
+
+    /// <summary>The two hubs a browser connects to: the bar's board and the till.</summary>
+    private static bool IsAHub(PathString path) =>
+        path.StartsWithSegments(KdsHubRoute.Path) || path.StartsWithSegments(TillHubRoute.Path);
 }

@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
+using DrinkIt.Api.Features.Cashier;
 using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Orders;
@@ -10,6 +11,7 @@ using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using Scalar.AspNetCore;
 
@@ -22,6 +24,7 @@ builder.Services.AddStaffHandlers();
 builder.Services.AddMenuHandlers();
 builder.Services.AddOrderHandlers();
 builder.Services.AddKdsHandlers();
+builder.Services.AddCashierHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
@@ -112,6 +115,8 @@ app.MapCategories();
 app.MapProducts();
 app.MapKds();
 app.MapHub<KdsHub>(KdsHubRoute.Path);
+app.MapHub<TillHub>(TillHubRoute.Path);
+app.MapCashier();
 
 await app.RunAsync();
 

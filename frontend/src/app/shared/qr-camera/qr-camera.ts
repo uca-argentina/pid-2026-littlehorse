@@ -9,8 +9,8 @@ import {
   viewChild,
 } from '@angular/core';
 import type { ElementRef } from '@angular/core';
-import { LOAD_QR_DETECTOR } from '../qr-reader';
-import type { QrDetector } from '../qr-reader';
+import { LOAD_QR_DETECTOR } from './qr-reader';
+import type { QrDetector } from './qr-reader';
 
 /** Opens the camera that faces away from whoever holds the tablet. */
 export const OPEN_CAMERA = new InjectionToken<() => Promise<MediaStream>>('OPEN_CAMERA', {
@@ -38,11 +38,11 @@ type CameraState = 'starting' | 'reading' | 'denied' | 'missing' | 'failed';
  * a code typed by a reader does.
  */
 @Component({
-  selector: 'drinkit-kds-camera',
-  styleUrl: './kds-camera.scss',
-  templateUrl: './kds-camera.html',
+  selector: 'drinkit-qr-camera',
+  styleUrl: './qr-camera.scss',
+  templateUrl: './qr-camera.html',
 })
-export class KdsCamera {
+export class QrCamera {
   /** Every code seen, as often as it is seen: telling a repeat apart is the store's job. */
   readonly read = output<string>();
 

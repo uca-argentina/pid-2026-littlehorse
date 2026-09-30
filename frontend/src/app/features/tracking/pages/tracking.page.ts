@@ -21,7 +21,8 @@ interface Step {
  */
 const JOURNEY: readonly { name: string; after: readonly CustomerOrderStatus[] }[] = [
   {
-    name: 'Esperando en la barra',
+    // Not "esperando en la barra": that read as the drink waiting at the bar.
+    name: 'En cola',
     after: ['Paid', 'Queued', 'InPreparation', 'Ready', 'Delivered'],
   },
   { name: 'En preparación', after: ['InPreparation', 'Ready', 'Delivered'] },
@@ -31,8 +32,9 @@ const JOURNEY: readonly { name: string; after: readonly CustomerOrderStatus[] }[
 
 /** What to say about each status, in the words somebody in a bar would use. */
 const WHAT_IS_HAPPENING: Partial<Record<CustomerOrderStatus, string>> = {
-  Paid: 'Ya está pago. Te avisamos cuando lo estén preparando.',
-  Queued: 'Ya está pago y esperando en la barra.',
+  AwaitingPayment: 'Falta pagar en la caja. Recién ahí lo empiezan a preparar.',
+  Paid: 'Ya está pago y en la cola. Te avisamos cuando lo empiecen a preparar.',
+  Queued: 'Ya está pago y en la cola. Te avisamos cuando lo empiecen a preparar.',
   InPreparation: 'Lo están preparando.',
   Ready: '¡Está listo! Acercate a la barra y mostrá tu QR.',
   Delivered: 'Entregado. ¡Que lo disfrutes!',
@@ -43,7 +45,13 @@ const WHAT_IS_HAPPENING: Partial<Record<CustomerOrderStatus, string>> = {
  * paid and not yet handed over. Before paying, the cashier needs the code, not
  * this; once handed over, it must not look like it still claims anything.
  */
-const CLAIMABLE: readonly CustomerOrderStatus[] = ['Paid', 'Queued', 'InPreparation', 'Ready'];
+const CLAIMABLE: readonly CustomerOrderStatus[] = [
+  'AwaitingPayment',
+  'Paid',
+  'Queued',
+  'InPreparation',
+  'Ready',
+];
 
 /**
  * Colours of the QR itself, which the library takes as values rather than
@@ -97,13 +105,19 @@ export class TrackingPage {
     this.store.status() === 'over' ? 'Delivered' : (this.store.order()?.status ?? null),
   );
 
+  /** Paying in cash: the code is for the cashier first, and the bar only after (US-25). */
+  protected readonly paysAtTheTill = computed(() => this.status() === 'AwaitingPayment');
+
   protected readonly whatIsHappening = computed(() => {
     const status = this.status();
 
     return status === null ? '' : (WHAT_IS_HAPPENING[status] ?? '');
   });
 
-  /** US-20: the pickup QR, only while there is something to pick up. */
+  /**
+   * US-20: the QR, while there is something to pay for at the till (the cashier
+   * scans it, decided on 2026-09-29) or to pick up at the bar.
+   */
   protected readonly showsQr = computed(() => {
     const status = this.status();
 

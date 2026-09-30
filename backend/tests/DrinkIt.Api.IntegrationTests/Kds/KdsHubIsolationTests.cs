@@ -43,9 +43,7 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         theirsConnection.On(KdsHub.BoardChanged, () => theirsNotified.TrySetResult());
 
         IKdsBoardNotifier notifier = _factory.Services.GetRequiredService<IKdsBoardNotifier>();
-        await notifier.NotifyBoardChangedAsync(mine, CancellationToken.None);
-
-        await mineNotified.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await UntilHeard(() => notifier.NotifyBoardChangedAsync(mine, CancellationToken.None), mineNotified.Task);
 
         // A generous window for the wrong message to arrive before declaring
         // the silence meaningful — the failure mode of a race is a flaky pass,
@@ -66,9 +64,7 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         connection.On(KdsHub.BoardChanged, () => notified.TrySetResult());
 
         IKdsBoardNotifier notifier = _factory.Services.GetRequiredService<IKdsBoardNotifier>();
-        await notifier.NotifyBoardChangedAsync(venueId, CancellationToken.None);
-
-        await notified.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await UntilHeard(() => notifier.NotifyBoardChangedAsync(venueId, CancellationToken.None), notified.Task);
     }
 
     [Fact]
@@ -142,5 +138,23 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         await connection.StartAsync();
 
         return connection;
+    }
+
+    /// <summary>
+    /// Sends until the message is heard, for at most ten seconds. StartAsync
+    /// returns once the handshake is done, and the hub puts the connection in
+    /// its group a moment later: a message sent in between is lost, and a test
+    /// that sends it once fails whenever it wins that race.
+    /// </summary>
+    private static async Task UntilHeard(Func<Task> send, Task heard)
+    {
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(10));
+
+        while (!heard.IsCompleted)
+        {
+            await send();
+            await Task.WhenAny(heard, Task.Delay(TimeSpan.FromMilliseconds(100), timeout.Token));
+            timeout.Token.ThrowIfCancellationRequested();
+        }
     }
 }

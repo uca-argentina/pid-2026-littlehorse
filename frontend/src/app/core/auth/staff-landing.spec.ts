@@ -35,6 +35,11 @@ describe('staffLandingFor', () => {
     expect(staffLandingFor('Kds', 'bar-alfa')).toEqual(['bar-alfa', 'staff', 'kds']);
   });
 
+  // US-26: the till has its own screen too.
+  it('sends a cashier straight to the till', () => {
+    expect(staffLandingFor('Cashier', 'bar-alfa')).toEqual(['bar-alfa', 'staff', 'cashier']);
+  });
+
   // US-01, criterion 2: a role with no screens yet is told so, instead of
   // being left on an empty page.
   it.each(['Waiter', undefined])(
@@ -75,6 +80,12 @@ describe('staffLandsOnItsOwnScreenGuard', () => {
     sessions.remember(sessionFor('Kds'));
 
     expect(router.serializeUrl(run() as UrlTree)).toBe('/bar-alfa/staff/kds');
+  });
+
+  it('redirects a cashier to the till', () => {
+    sessions.remember(sessionFor('Cashier'));
+
+    expect(router.serializeUrl(run() as UrlTree)).toBe('/bar-alfa/staff/cashier');
   });
 
   it.each<StaffRole>(['Waiter'])('lets a %s stay', (role) => {

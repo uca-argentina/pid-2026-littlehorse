@@ -59,12 +59,13 @@ function eye(): HTMLButtonElement {
 describe('NewStaffUserPage', () => {
   // Criterion 2. Not a free-text field: a role the API does not know would come
   // back rejected after a round trip the administrator waited for.
-  it('offers the three roles a venue hands out', async () => {
+  it('offers the four roles a venue hands out', async () => {
     await openScreen();
 
     expect(role(/administrador/i)).not.toBeNull();
     expect(role(/KDS/i)).not.toBeNull();
     expect(role(/mozo/i)).not.toBeNull();
+    expect(role(/cajero/i)).not.toBeNull();
   });
 
   // The least privileged one. Somebody who skips this field must not end up
@@ -78,6 +79,7 @@ describe('NewStaffUserPage', () => {
     expect(role(/administrador/i).checked).toBe(false);
     expect(role(/KDS/i).checked).toBe(false);
     expect(role(/mozo/i).checked).toBe(false);
+    expect(role(/cajero/i).checked).toBe(false);
   });
 
   it('refuses to save until a role is picked, and says so', async () => {

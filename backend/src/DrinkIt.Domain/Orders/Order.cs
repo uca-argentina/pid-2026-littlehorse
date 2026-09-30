@@ -30,6 +30,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         public const string DuplicateItem = "order.duplicate_item";
         public const string NoteLength = "order.note_length";
         public const string InvalidTransition = "order.invalid_transition";
+        public const string CollectorRequired = "order.collector_required";
         public const string UndoWindowPassed = "order.undo_window_passed";
     }
 
@@ -90,6 +91,12 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     public DateTimeOffset? DeliveredAt { get; private set; }
 
     /// <summary>
+    /// The cashier who took the money for it (US-26), or null when nobody did:
+    /// it was paid from the phone, or not yet. The till lists its own shift by it.
+    /// </summary>
+    public string? CollectedBy { get; private set; }
+
+    /// <summary>
     /// How long after a delivery it can still be undone. The screen offers it
     /// for a few seconds; this is the margin a slow request still fits in.
     /// Delivered is final after that.
@@ -134,9 +141,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     }
 
     /// <summary>
-    /// Paid. In this sprint that happens the moment the customer confirms — the
-    /// gateway is simulated, as the brief allows — so there is one step and not
-    /// a wait for anybody's callback.
+    /// Paid from the phone, straight from the cart — the gateway is simulated,
+    /// as the brief allows. Cash goes through <see cref="CollectCash"/> instead.
     /// </summary>
     public void Pay(DateTimeOffset at, PaymentMethod method)
     {
@@ -145,6 +151,38 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         Status = OrderStatus.Paid;
         PaidAt = at;
         Method = method;
+    }
+
+    /// <summary>
+    /// Confirmed, and waiting at the till for the money (§6, US-24). Unpaid and
+    /// out of the bar's sight; what is raised is for the till's list, since
+    /// nothing is to be made yet. The method is kept so the till knows what it
+    /// is collecting.
+    /// </summary>
+    public void AwaitPayment(PaymentMethod method)
+    {
+        EnsureItIs(OrderStatus.Cart);
+
+        Status = OrderStatus.AwaitingPayment;
+        Method = method;
+        _domainEvents.Add(new OrderAwaitingPayment(VenueId));
+    }
+
+    /// <summary>
+    /// The till took the money (US-26): paid now, remembering who took it, and
+    /// straight to the bar. The only way out of waiting for cash.
+    /// </summary>
+    public void CollectCash(DateTimeOffset at, string cashier)
+    {
+        if (string.IsNullOrWhiteSpace(cashier)) throw new DomainException(ErrorCodes.CollectorRequired, "Somebody has to have taken the money.");
+
+        EnsureItIs(OrderStatus.AwaitingPayment);
+
+        Status = OrderStatus.Paid;
+        PaidAt = at;
+        CollectedBy = cashier;
+        Enqueue();
+        _domainEvents.Add(new OrderCollected(VenueId));
     }
 
     /// <summary>Handed to the bar. Nothing takes it from here until the KDS exists.</summary>
@@ -269,8 +307,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// The message names no state on purpose: it reaches the customer (ADR-0009),
     /// and "expected Paid, was Queued" is our vocabulary, not theirs.
     /// </summary>
-    private void EnsureItIs(OrderStatus expected)
+    private void EnsureItIs(params ReadOnlySpan<OrderStatus> expected)
     {
-        if (Status != expected) throw new DomainException(ErrorCodes.InvalidTransition, "That cannot be done to this order any more.");
+        if (!expected.Contains(Status)) throw new DomainException(ErrorCodes.InvalidTransition, "That cannot be done to this order any more.");
     }
 }

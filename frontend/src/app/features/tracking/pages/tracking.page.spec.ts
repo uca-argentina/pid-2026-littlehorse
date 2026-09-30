@@ -70,7 +70,7 @@ describe('TrackingPage', () => {
     await openScreenShowing('Queued');
 
     expect(steps().map((step) => step.name)).toEqual([
-      'Esperando en la barra',
+      'En cola',
       'En preparación',
       'Listo',
       'Entregado',
@@ -91,10 +91,52 @@ describe('TrackingPage', () => {
     expect(screen.getByRole('status').textContent).toMatch(/listo/i);
   });
 
+  // Decided on 2026-09-30: "esperando en la barra" read as "your drink is
+  // waiting for you at the bar", the opposite of what is happening.
+  it.each<CustomerOrderStatus>(['Paid', 'Queued'])(
+    'says a %s order is in the queue, not waiting at the bar',
+    async (status) => {
+      await openScreenShowing(status);
+
+      expect(screen.getByRole('status').textContent?.trim()).toBe(
+        'Ya está pago y en la cola. Te avisamos cuando lo empiecen a preparar.',
+      );
+    },
+  );
+
   it('says it is waiting while nobody has taken it', async () => {
     await openScreenShowing('Queued');
 
     expect(screen.getByRole('status').textContent).toMatch(/pago/i);
+  });
+
+  // US-25, criterion 1: paying in cash, the code is what the cashier looks
+  // up, so the screen sends them to the till with it.
+  it('sends somebody paying in cash to the till with the code', async () => {
+    await openScreenShowing('AwaitingPayment');
+
+    expect(screen.getByTestId('order-code').textContent).toContain('K-4821');
+    expect(screen.getByText(/mostrale este código al cajero/i)).not.toBeNull();
+  });
+
+  // US-25, criterion 2: waiting for them to pay is not waiting for the bar.
+  it('says it is waiting for the money, not for the bar', async () => {
+    await openScreenShowing('AwaitingPayment');
+
+    expect(screen.getByRole('status').textContent).toMatch(/pagar en la caja/i);
+    expect(steps().map((step) => step.reached)).toEqual([false, false, false, false]);
+  });
+
+  // US-25, criterion 3: the cashier took the money, and nobody touched the phone.
+  it('moves on by itself once the till takes the money', async () => {
+    const { rendered, http, store } = await openScreenShowing('AwaitingPayment');
+
+    store.askAgain();
+    http.expectOne(url).flush(anOrder('Queued'));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('status').textContent).toMatch(/en la cola/i);
+    expect(screen.queryByText(/mostrale este código al cajero/i)).toBeNull();
   });
 
   /**
@@ -147,11 +189,18 @@ describe('TrackingPage', () => {
     expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).not.toBeNull();
   });
 
-  // Nothing to claim at the bar before paying: the cashier needs the code, not this.
-  it('does not show a qr while the order awaits payment', async () => {
+  // Decided on 2026-09-29: paying in cash, the till scans the same QR, so it
+  // shows from the moment the order is confirmed — named for paying, not for
+  // picking up.
+  it('shows the qr for the till while the order awaits payment', async () => {
     const { rendered } = await openScreenShowing('AwaitingPayment');
 
-    expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).toBeNull();
+    const qr = rendered.fixture.debugElement.query(By.directive(QRCodeComponent));
+
+    expect((qr.componentInstance as QRCodeComponent).qrdata).toBe(token);
+    expect(
+      screen.getByRole('img', { name: /qr para pagar en la caja el pedido K-4821/i }),
+    ).toBeTruthy();
   });
 
   // Criterion 3: handed over, so there is nothing left to claim with it.

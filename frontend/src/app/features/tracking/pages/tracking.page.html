@@ -28,22 +28,28 @@
         <p class="note" role="status">Buscando tu pedido…</p>
       }
     } @else {
-      <div class="tick" aria-hidden="true">
-        <svg
-          width="34"
-          height="34"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.4"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M4 12.5l5.5 5.5L20 7" />
-        </svg>
-      </div>
+      @if (!paysAtTheTill()) {
+        <div class="tick" aria-hidden="true">
+          <svg
+            width="34"
+            height="34"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 12.5l5.5 5.5L20 7" />
+          </svg>
+        </div>
+      }
 
-      <p class="what">Mostrá este código en la barra cuando te llamen.</p>
+      @if (paysAtTheTill()) {
+        <p class="what">Acercate a la caja y mostrale este código al cajero.</p>
+      } @else {
+        <p class="what">Mostrá este código en la barra cuando te llamen.</p>
+      }
 
       <p class="code" data-testid="order-code">{{ store.order()!.code }}</p>
 
@@ -61,7 +67,11 @@
         <figure
           class="paper"
           role="img"
-          [attr.aria-label]="'Código QR para retirar el pedido ' + store.order()!.code"
+          [attr.aria-label]="
+            (paysAtTheTill()
+              ? 'Código QR para pagar en la caja el pedido '
+              : 'Código QR para retirar el pedido ') + store.order()!.code
+          "
         >
           <qrcode
             [qrdata]="token()"
