@@ -227,7 +227,7 @@ public class OrdersEndpointsTests
             public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("Confirming never loads an existing order.");
 
-            public Task SaveAsync(Order order, CancellationToken cancellationToken) =>
+            public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("Confirming saves through AddAsync.");
         }
 

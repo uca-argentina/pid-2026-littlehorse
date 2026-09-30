@@ -62,6 +62,19 @@ public class CollectCashHandlerTests
         Assert.Equal(1, orders.Saves);
     }
 
+    // Two tills collected it in the same instant and the other one got there
+    // first: for this one it is already paid, and the screen says so.
+    [Fact]
+    public async Task HandleAsync_WhenAnotherTillCollectedItAtTheSameTime_RefusesAsAlreadyPaid()
+    {
+        KdsOrdersInMemory orders = new(AnOrderWaitingForCash());
+        orders.RefusesTheNextSave();
+
+        Result<OrderStatus> result = await AHandlerOver(orders).HandleAsync("K-4821", CancellationToken.None);
+
+        Assert.Equal(CashierErrors.AlreadyPaid, result.Error);
+    }
+
     // Another venue's order looks exactly like this too: the filter hides it.
     [Theory]
     [InlineData("K-9999")]

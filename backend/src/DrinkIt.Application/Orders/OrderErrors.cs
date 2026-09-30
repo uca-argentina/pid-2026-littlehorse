@@ -13,4 +13,11 @@ public static class OrderErrors
     /// </summary>
     public static readonly Error StockMoved =
         new("order.stock_moved", "Somebody ordered at the same time and the stock changed. Check your order.");
+
+    /// <summary>
+    /// Somebody else changed this order between it being loaded and saved
+    /// here — another till, another tablet. Nothing was saved: theirs stands.
+    /// </summary>
+    public static readonly Error ChangedMeanwhile =
+        new("order.changed_meanwhile", "Somebody else changed this order at the same time. Look at it again.");
 }

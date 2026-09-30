@@ -804,6 +804,14 @@ mano con `TryReadPaymentMethod`; pasarlo a `PaymentMethodName` es el mismo traba
 llegue el carril del pago (US-24).
 **Resuelta el 2026-09-28, con US-24.**
 
+**Nueva y resuelta el 2026-09-30: dos pantallas cambiando el mismo pedido a la vez.** `Order` no
+tenía token de concurrencia, así que dos cajas cobrando el mismo pedido en el mismo instante (o dos
+tablets moviéndolo) pasaban las dos y ganaba la última escritura: en la caja, las dos creían haber
+cobrado. Ahora `Orders` tiene una columna `Version` (`rowversion`, shadow property de EF) y el
+repositorio rechaza el segundo guardado con `order.changed_meanwhile`, sin escribir ni avisar a
+nadie. La caja que pierde ve "ya está pago"; la tablet, "Otra tablet movió el pedido al mismo
+tiempo". Uno después del otro ya estaba cubierto por el dominio.
+
 ## Dependencias nuevas
 
 Aprobadas el **2026-09-23**. Las tres son **MIT** y están vivas — se verificó contra el

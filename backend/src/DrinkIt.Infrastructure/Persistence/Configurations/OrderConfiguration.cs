@@ -14,6 +14,9 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     /// </summary>
     public const string IdempotencyKey = "IdempotencyKey";
 
+    /// <summary>The concurrency token: see its configuration below.</summary>
+    public const string Version = "Version";
+
     public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.ToTable("Orders");
@@ -29,6 +32,12 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(order => order.DeliveredAt);
         // Same length as a username: it is one (US-26).
         builder.Property(order => order.CollectedBy).HasMaxLength(50);
+
+        // SQL Server bumps it on every write, and EF puts it in the WHERE of
+        // every UPDATE: a save of an order somebody else saved meanwhile
+        // matches no row and is refused instead of overwriting theirs. A
+        // shadow property because the domain has no business knowing it.
+        builder.Property<byte[]>(Version).IsRowVersion();
 
         // Stored as the six characters the customer reads, not as two columns:
         // it is one thing, and every query looks it up whole.

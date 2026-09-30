@@ -147,7 +147,8 @@ public class CashierEndpointsTests
             public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
                 Task.FromResult(stored.SingleOrDefault(order => order.TrackingToken == token));
 
-            public Task SaveAsync(Order order, CancellationToken cancellationToken) => Task.CompletedTask;
+            public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
+                Task.FromResult<Result<Order>>(order);
 
             public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The till never places an order.");

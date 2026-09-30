@@ -38,6 +38,9 @@ export const ProblemTypes = {
   orderNameOnlyLetters: 'urn:drinkit:problem:order:name-only-letters',
   orderNameTooLong: 'urn:drinkit:problem:order:name-too-long',
 
+  /** Another screen changed the order in the same instant, and its change stands. */
+  orderChangedMeanwhile: 'urn:drinkit:problem:order:changed-meanwhile',
+
   /** The till looked up a code this venue does not have. */
   cashierOrderNotFound: 'urn:drinkit:problem:cashier:order-not-found',
 
