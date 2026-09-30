@@ -55,10 +55,10 @@ public sealed class MercadoPagoContractTests
     [MercadoPagoFact]
     public async Task StartCheckoutAsync_WithTheTestToken_OpensAMercadoPagoCheckout()
     {
-        Result<string> checkout = await _gateway.StartCheckoutAsync(ACheckoutFor(AnOrderAwaitingPayment()), CancellationToken.None);
+        Result<PaymentCheckout> checkout = await _gateway.StartCheckoutAsync(ACheckoutFor(AnOrderAwaitingPayment()), CancellationToken.None);
 
         Assert.True(checkout.IsSuccess, checkout.Error?.Message);
-        Assert.StartsWith("https://www.mercadopago.com.ar/checkout/", checkout.Value, StringComparison.Ordinal);
+        Assert.StartsWith("https://www.mercadopago.com.ar/checkout/", checkout.Value.Url, StringComparison.Ordinal);
     }
 
     // Read back from Mercado Pago: what it stored is what the order said.
@@ -68,8 +68,8 @@ public sealed class MercadoPagoContractTests
         Order order = AnOrderAwaitingPayment();
         DateTimeOffset expiresAt = DateTimeOffset.UtcNow.AddMinutes(15);
 
-        Result<string> checkout = await _gateway.StartCheckoutAsync(new PaymentCheckoutRequest(order, "bar-alfa", expiresAt), CancellationToken.None);
-        Preference stored = await new PreferenceClient().GetAsync(PreferenceIdIn(checkout.Value), TestToken(), CancellationToken.None);
+        Result<PaymentCheckout> checkout = await _gateway.StartCheckoutAsync(new PaymentCheckoutRequest(order, "bar-alfa", expiresAt), CancellationToken.None);
+        Preference stored = await new PreferenceClient().GetAsync(checkout.Value.Id, TestToken(), CancellationToken.None);
 
         Assert.Equal(order.Id.ToString(), stored.ExternalReference);
         Assert.Equal(["Gin Tonic", "Fernet"], stored.Items.Select(item => item.Title));
@@ -86,8 +86,8 @@ public sealed class MercadoPagoContractTests
     {
         Order order = AnOrderAwaitingPayment();
 
-        Result<string> checkout = await _gateway.StartCheckoutAsync(ACheckoutFor(order), CancellationToken.None);
-        Preference stored = await new PreferenceClient().GetAsync(PreferenceIdIn(checkout.Value), TestToken(), CancellationToken.None);
+        Result<PaymentCheckout> checkout = await _gateway.StartCheckoutAsync(ACheckoutFor(order), CancellationToken.None);
+        Preference stored = await new PreferenceClient().GetAsync(checkout.Value.Id, TestToken(), CancellationToken.None);
 
         Assert.True(stored.BinaryMode);
         Assert.Equal(["ticket", "atm"], stored.PaymentMethods.ExcludedPaymentTypes.Select(type => type.Id));
@@ -115,10 +115,10 @@ public sealed class MercadoPagoContractTests
     {
         PaymentCheckoutRequest request = ACheckoutFor(AnOrderAwaitingPayment());
 
-        Result<string> first = await _gateway.StartCheckoutAsync(request, CancellationToken.None);
-        Result<string> second = await _gateway.StartCheckoutAsync(request, CancellationToken.None);
+        Result<PaymentCheckout> first = await _gateway.StartCheckoutAsync(request, CancellationToken.None);
+        Result<PaymentCheckout> second = await _gateway.StartCheckoutAsync(request, CancellationToken.None);
 
-        Assert.NotEqual(first.Value, second.Value);
+        Assert.NotEqual(first.Value.Id, second.Value.Id);
     }
 
     /// <summary>
@@ -137,8 +137,8 @@ public sealed class MercadoPagoContractTests
             }),
             NullLogger<MercadoPagoGateway>.Instance);
 
-        Result<string> checkout = await local.StartCheckoutAsync(ACheckoutFor(AnOrderAwaitingPayment()), CancellationToken.None);
-        Preference stored = await new PreferenceClient().GetAsync(PreferenceIdIn(checkout.Value), TestToken(), CancellationToken.None);
+        Result<PaymentCheckout> checkout = await local.StartCheckoutAsync(ACheckoutFor(AnOrderAwaitingPayment()), CancellationToken.None);
+        Preference stored = await new PreferenceClient().GetAsync(checkout.Value.Id, TestToken(), CancellationToken.None);
 
         Assert.True(string.IsNullOrEmpty(stored.BackUrls.Success));
     }

@@ -62,6 +62,25 @@ public class CollectCashHandlerTests
         Assert.Equal(1, orders.Saves);
     }
 
+    // Paying with Mercado Pago from the phone: the till must not charge it too.
+    [Fact]
+    public async Task HandleAsync_WhenTheOrderAwaitsMercadoPago_RefusesWithoutSaving()
+    {
+        Order order = Order.Place(
+            TheVenue,
+            "María Quadro",
+            OrderCode.Parse("K-4821"),
+            [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
+        order.AwaitPayment(PaymentMethod.Digital);
+        KdsOrdersInMemory orders = new(order);
+
+        Result<OrderStatus> result = await AHandlerOver(orders).HandleAsync("K-4821", CancellationToken.None);
+
+        Assert.Equal(CashierErrors.AlreadyPaid, result.Error);
+        Assert.Equal(OrderStatus.AwaitingPayment, order.Status);
+        Assert.Equal(0, orders.Saves);
+    }
+
     // Two tills collected it in the same instant and the other one got there
     // first: for this one it is already paid, and the screen says so.
     [Fact]

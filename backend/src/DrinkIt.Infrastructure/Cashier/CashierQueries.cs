@@ -22,7 +22,8 @@ internal sealed class CashierQueries(DrinkItDbContext context) : ICashierQueries
     public async Task<IReadOnlyList<CashierOrder>> GetAwaitingPaymentAsync(CancellationToken cancellationToken) =>
         await context.Orders
             .AsNoTracking()
-            .Where(order => order.Status == OrderStatus.AwaitingPayment)
+            // Only cash: an order waiting for Mercado Pago is not the till's to collect.
+            .Where(order => order.Status == OrderStatus.AwaitingPayment && order.Method == PaymentMethod.Cash)
             .OrderBy(order => order.CreatedAt)
             .Select(AsTheTillSeesIt)
             .ToListAsync(cancellationToken);

@@ -16,5 +16,5 @@ namespace DrinkIt.Application.Payments;
 public interface IHandsOffPayment
 {
     /// <summary>Where the customer goes to pay the order, now that it is saved.</summary>
-    Task<Result<string?>> HandOffAsync(Order order, string venueSlug, CancellationToken cancellationToken);
+    Task<Result<PaymentCheckout?>> HandOffAsync(Order order, string venueSlug, CancellationToken cancellationToken);
 }

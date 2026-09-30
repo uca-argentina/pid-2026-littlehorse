@@ -12,6 +12,13 @@ public sealed class MercadoPagoOptions
     /// <summary>The application's access token, from the Prueba tab while testing. Secret.</summary>
     public string AccessToken { get; set; } = string.Empty;
 
+    /// <summary>
+    /// The application's public key, from the same tab as the token. Not a
+    /// secret: the checkout needs it to draw Mercado Pago's own button. Empty
+    /// means the checkout falls back to its own button.
+    /// </summary>
+    public string PublicKey { get; set; } = string.Empty;
+
     /// <summary>Webhooks → signature secret, to prove a notification came from Mercado Pago. Secret.</summary>
     public string WebhookSecret { get; set; } = string.Empty;
 

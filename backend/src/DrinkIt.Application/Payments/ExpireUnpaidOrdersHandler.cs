@@ -19,10 +19,14 @@ public sealed class ExpireUnpaidOrdersHandler(IOrderRepository orders, TimeProvi
     {
         DateTimeOffset before = clock.GetUtcNow() - DigitalPaymentStrategy.PaymentWindow;
 
-        IReadOnlyList<Order> expired = await orders.GetAwaitingPaymentCreatedBeforeAsync(before, cancellationToken);
+        IReadOnlyList<Order> waiting = await orders.GetAwaitingPaymentCreatedBeforeAsync(before, cancellationToken);
+
+        // The window is Mercado Pago's. Cash waits at the till for as long as
+        // the customer takes to walk there.
+        Order[] expired = [.. waiting.Where(order => order.Method == PaymentMethod.Digital)];
 
         foreach (Order order in expired) await UnpaidOrderMoves.CancelAsync(order, orders, cancellationToken);
 
-        return expired.Count;
+        return expired.Length;
     }
 }

@@ -14,6 +14,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     /// </summary>
     public const int PaymentUrlMaxLength = 500;
 
+    public const int PaymentCheckoutIdMaxLength = 100;
+
     public const string IdempotencyKey = "IdempotencyKey";
 
     /// <summary>The concurrency token: see its configuration below.</summary>
@@ -44,6 +46,10 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // Mercado Pago's checkout address (US-24). Room to spare over what it
         // sends today, so a longer URL is not a failed payment.
         builder.Property(order => order.PaymentUrl).HasMaxLength(OrderConfiguration.PaymentUrlMaxLength);
+
+        // The same checkout's id ("3727754810-9adb3539-…"), what Mercado Pago's
+        // own button opens.
+        builder.Property(order => order.PaymentCheckoutId).HasMaxLength(OrderConfiguration.PaymentCheckoutIdMaxLength);
 
         // Stored as the six characters the customer reads, not as two columns:
         // it is one thing, and every query looks it up whole.

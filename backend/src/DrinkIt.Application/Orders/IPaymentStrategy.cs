@@ -48,15 +48,15 @@ public sealed class DigitalPaymentStrategy(IPaymentGateway gateway, TimeProvider
     /// <summary>Nothing is paid yet, so nothing goes to the bar.</summary>
     public void Settle(Order order) => order.AwaitPayment(Method);
 
-    public async Task<Result<string?>> HandOffAsync(Order order, string venueSlug, CancellationToken cancellationToken)
+    public async Task<Result<PaymentCheckout?>> HandOffAsync(Order order, string venueSlug, CancellationToken cancellationToken)
     {
-        Result<string> checkout = await gateway.StartCheckoutAsync(
+        Result<PaymentCheckout> checkout = await gateway.StartCheckoutAsync(
             new PaymentCheckoutRequest(order, venueSlug, clock.GetUtcNow() + PaymentWindow),
             cancellationToken);
 
         if (!checkout.IsSuccess) return checkout.Error!;
 
-        order.OfferPaymentAt(checkout.Value);
+        order.OfferCheckout(checkout.Value);
 
         return checkout.Value;
     }

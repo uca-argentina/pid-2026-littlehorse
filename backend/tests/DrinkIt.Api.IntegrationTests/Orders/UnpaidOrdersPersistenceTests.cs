@@ -51,24 +51,26 @@ public sealed class UnpaidOrdersPersistenceTests(SqlServerFixture sql)
         Assert.Null(await Repository(context).GetForUpdateAsync(order.Id, CancellationToken.None));
     }
 
-    // A retry of the same confirmation must find the same checkout.
+    // A retry of the same confirmation must find the same checkout: the id
+    // Mercado Pago's button opens, and the link a redirect follows.
     [Fact]
-    public async Task SaveAsync_WhenAPaymentUrlWasOffered_KeepsIt()
+    public async Task SaveAsync_WhenACheckoutWasOffered_KeepsIt()
     {
         (Venue venue, Product gin) = await ASeededVenue();
         Order order = await AnOrderAwaitingPayment(venue, gin);
+        PaymentCheckout checkout = new("3727754810-123", "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=3727754810-123");
 
         await using (DrinkItDbContext context = sql.CreateContext(venue.Id))
         {
             OrderRepository orders = Repository(context);
             Order tracked = (await orders.GetForUpdateAsync(order.Id, CancellationToken.None))!;
-            tracked.OfferPaymentAt("https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123");
+            tracked.OfferCheckout(checkout);
             await orders.SaveAsync(tracked, CancellationToken.None);
         }
 
-        Assert.Equal(
-            "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123",
-            (await StoredAsync(venue, order)).PaymentUrl);
+        Order stored = await StoredAsync(venue, order);
+        Assert.Equal(checkout.Id, stored.PaymentCheckoutId);
+        Assert.Equal(checkout.Url, stored.PaymentUrl);
     }
 
     // Nobody paid, so nothing was sold: the two gin tonics go back on the menu,

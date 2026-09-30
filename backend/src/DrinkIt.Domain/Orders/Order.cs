@@ -96,6 +96,9 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// </summary>
     public string? PaymentUrl { get; private set; }
 
+    /// <summary>The same checkout's id, which the gateway's own button opens. Set with <see cref="PaymentUrl"/>.</summary>
+    public string? PaymentCheckoutId { get; private set; }
+
     /// <summary>When it was handed over, or null while nobody has picked it up.</summary>
     public DateTimeOffset? DeliveredAt { get; private set; }
 
@@ -165,11 +168,12 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     }
 
     /// <summary>Where the gateway said it can be paid. Only while it waits for that payment.</summary>
-    public void OfferPaymentAt(string paymentUrl)
+    public void OfferCheckout(PaymentCheckout checkout)
     {
         EnsureItIs(OrderStatus.AwaitingPayment);
 
-        PaymentUrl = paymentUrl;
+        PaymentCheckoutId = checkout.Id;
+        PaymentUrl = checkout.Url;
     }
 
     /// <summary>
@@ -199,6 +203,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         if (string.IsNullOrWhiteSpace(cashier)) throw new DomainException(ErrorCodes.CollectorRequired, "Somebody has to have taken the money.");
 
         EnsureItIs(OrderStatus.AwaitingPayment);
+        // Waiting for Mercado Pago, not for cash: its money is already on its way.
+        if (Method != PaymentMethod.Cash) throw InvalidTransition();
 
         Status = OrderStatus.Paid;
         PaidAt = at;

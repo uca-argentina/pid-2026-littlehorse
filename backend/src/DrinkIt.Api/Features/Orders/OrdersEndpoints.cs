@@ -40,7 +40,8 @@ public sealed record ConfirmedOrderResponse(
     decimal Total,
     CustomerOrderStatus Status,
     DateTimeOffset? PaidAt,
-    string? PaymentUrl);
+    string? PaymentUrl,
+    string? PaymentCheckoutId);
 
 internal static class OrdersEndpoints
 {
@@ -98,7 +99,8 @@ internal static class OrdersEndpoints
                 order.Total,
                 order.Status.ToCustomerStatus(),
                 order.PaidAt,
-                order.PaymentUrl));
+                order.PaymentUrl,
+                order.PaymentCheckoutId));
     }
 
     /// <summary>

@@ -36,7 +36,7 @@ public sealed record GatewayPayment(string Id, Guid OrderId, GatewayPaymentStatu
 public interface IPaymentGateway
 {
     /// <summary>Opens a checkout for the order and answers where the customer pays it.</summary>
-    Task<Result<string>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken);
+    Task<Result<PaymentCheckout>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken);
 
     /// <summary>The payment with that id, or null when the gateway knows none.</summary>
     Task<GatewayPayment?> FindPaymentAsync(string paymentId, CancellationToken cancellationToken);

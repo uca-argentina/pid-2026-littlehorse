@@ -12,6 +12,9 @@ namespace DrinkIt.Api.Features.Payments;
 /// <remarks><c>PaymentId</c> is empty when they came back without paying.</remarks>
 public sealed record PaymentReturnRequest(string? PaymentId);
 
+/// <summary>What the checkout needs to draw Mercado Pago's own button. Null: use the app's own.</summary>
+public sealed record PaymentConfigurationResponse(string? PublicKey);
+
 /// <summary>Where the order is after the customer came back from paying it.</summary>
 public sealed record PaymentReturnResponse(CustomerOrderStatus Status);
 
@@ -44,7 +47,24 @@ internal static partial class PaymentsEndpoints
             .Produces(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+        // Public by nature and the same for every venue. Never cached: a key
+        // rotated in Azure reaches the next phone that asks.
+        endpoints
+            .MapGet("/payments/configuration", Configuration)
+            .AllowAnonymous()
+            .WithName("PaymentConfiguration")
+            .WithTags("Payments")
+            .WithSummary("The public key the checkout draws Mercado Pago's button with, or null when there is none.")
+            .Produces<PaymentConfigurationResponse>();
+
         return endpoints;
+    }
+
+    internal static IResult Configuration(IPaymentClientConfiguration configuration, HttpContext http)
+    {
+        http.Response.Headers.CacheControl = "no-store, max-age=0";
+
+        return TypedResults.Ok(new PaymentConfigurationResponse(configuration.PublicKey));
     }
 
     internal static async Task<IResult> ReturnAsync(

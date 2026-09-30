@@ -32,6 +32,7 @@
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
     "@angular/service-worker": "^22.1.0",
+    "@mercadopago/sdk-js": "^0.0.3",
     "@microsoft/signalr": "^10.0.11",
     "angularx-qrcode": "^22.0.1",
     "barcode-detector": "^3.2.2",

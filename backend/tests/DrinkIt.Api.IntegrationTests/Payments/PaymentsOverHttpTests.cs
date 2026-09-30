@@ -24,7 +24,9 @@ namespace DrinkIt.Api.IntegrationTests.Payments;
 [Collection(nameof(SqlServerCollection))]
 public sealed class PaymentsOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
 {
-    private const string CheckoutUrl = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123";
+    private const string CheckoutId = "3727754810-123";
+
+    private const string CheckoutUrl = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=3727754810-123";
 
     private const int StockBefore = 20;
 
@@ -58,6 +60,8 @@ public sealed class PaymentsOverHttpTests(SqlServerFixture sql) : IAsyncDisposab
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal(CheckoutUrl, body.RootElement.GetProperty("paymentUrl").GetString());
+        // What Mercado Pago's own button opens (Wallet Brick).
+        Assert.Equal(CheckoutId, body.RootElement.GetProperty("paymentCheckoutId").GetString());
         Assert.Equal("AwaitingPayment", body.RootElement.GetProperty("status").GetString());
         Assert.Equal(JsonValueKind.Null, body.RootElement.GetProperty("paidAt").ValueKind);
     }
@@ -253,8 +257,8 @@ public sealed class PaymentsOverHttpTests(SqlServerFixture sql) : IAsyncDisposab
 
         public void Knows(GatewayPayment payment) => _payments[payment.Id] = payment;
 
-        public Task<Result<string>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken) =>
-            Task.FromResult<Result<string>>(Fails ? PaymentErrors.GatewayUnavailable : CheckoutUrl);
+        public Task<Result<PaymentCheckout>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult<Result<PaymentCheckout>>(Fails ? PaymentErrors.GatewayUnavailable : new PaymentCheckout(CheckoutId, CheckoutUrl));
 
         public Task<GatewayPayment?> FindPaymentAsync(string paymentId, CancellationToken cancellationToken) =>
             Task.FromResult(_payments.GetValueOrDefault(paymentId));

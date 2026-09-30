@@ -4,6 +4,7 @@ using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DrinkIt.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(DrinkItDbContext))]
-    partial class DrinkItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260930145359_AddOrderPaymentCheckoutId")]
+    partial class AddOrderPaymentCheckoutId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -131,10 +134,6 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasMaxLength(6)
                         .HasColumnType("nvarchar(6)");
 
-                    b.Property<string>("CollectedBy")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<DateTimeOffset?>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -187,11 +186,6 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("VenueId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<byte[]>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
                     b.HasKey("Id");
 
                     b.HasIndex("IdempotencyKey", "VenueId")
@@ -202,8 +196,6 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("VenueId", "TrackingToken")
                         .IsUnique();
-
-                    b.HasIndex("VenueId", "CollectedBy", "PaidAt");
 
                     b.ToTable("Orders", (string)null);
                 });

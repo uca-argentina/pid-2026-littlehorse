@@ -7,7 +7,9 @@ import { Cart } from '../../../core/cart/cart';
 import { BrowserStore } from '../../../core/storage/browser-store';
 import { StoreInMemory } from '../../../core/storage/store-in-memory';
 import { PROCESSING_PAUSE_MS } from '../checkout.store';
-import { ordersUrl } from '../checkout.service';
+import { ordersUrl, paymentConfigurationUrl } from '../checkout.service';
+import { RENDER_WALLET } from '../components/mercado-pago-wallet';
+import type { WalletSettings } from '../components/mercado-pago-wallet';
 import { CheckoutPage } from './checkout.page';
 
 let store: StoreInMemory;
@@ -32,9 +34,13 @@ async function openScreenWith(fill: (cart: Cart) => void) {
   const cart = TestBed.inject(Cart);
   cart.open('bar-alfa');
   fill(cart);
+  // No public key: these tests are about this screen's own button, which is
+  // what a venue without Mercado Pago's button configured sees.
+  const http = TestBed.inject(HttpTestingController);
+  http.expectOne(paymentConfigurationUrl).flush({ publicKey: null });
   await rendered.fixture.whenStable();
 
-  return { rendered, http: TestBed.inject(HttpTestingController) };
+  return { rendered, http };
 }
 
 function anOrderOfTwoGins(cart: Cart): void {
@@ -287,5 +293,130 @@ describe('CheckoutPage', () => {
 
     expect(screen.getByRole('status').textContent).toMatch(/no hay nada/i);
     expect(screen.queryByRole('button', { name: /pagar/i })).toBeNull();
+  });
+
+  // US-24, /mp-review practice 7: Mercado Pago's own button, with its logo.
+  describe('with mercado pagos own button', () => {
+    async function openScreenConfiguredWith(
+      publicKey: string | null,
+      drawing: 'draws' | 'fails' = 'draws',
+    ) {
+      const drawn: WalletSettings[] = [];
+      const rendered = await render(CheckoutPage, {
+        inputs: { venueSlug: 'bar-alfa' },
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: BrowserStore, useValue: store },
+          { provide: PROCESSING_PAUSE_MS, useValue: 0 },
+          {
+            provide: RENDER_WALLET,
+            useValue: (settings: WalletSettings) => {
+              drawn.push(settings);
+
+              return drawing === 'fails'
+                ? Promise.reject(new Error('blocked'))
+                : Promise.resolve({ unmount: () => undefined });
+            },
+          },
+        ],
+      });
+
+      const cart = TestBed.inject(Cart);
+      cart.open('bar-alfa');
+      anOrderOfTwoGins(cart);
+      TestBed.inject(HttpTestingController).expectOne(paymentConfigurationUrl).flush({ publicKey });
+      await rendered.fixture.whenStable();
+
+      return { rendered, drawn };
+    }
+
+    async function typeAFullName(
+      rendered: Awaited<ReturnType<typeof openScreenConfiguredWith>>['rendered'],
+    ) {
+      fireEvent.input(name(), { target: { value: 'María Quadro' } });
+      await rendered.fixture.whenStable();
+    }
+
+    it('shows mercado pagos button instead of its own once the name is complete', async () => {
+      const { rendered, drawn } = await openScreenConfiguredWith('APP_USR-public');
+
+      await typeAFullName(rendered);
+
+      expect(drawn).toHaveLength(1);
+      expect(drawn[0]!.publicKey).toBe('APP_USR-public');
+      expect(screen.queryByRole('button', { name: /pagar/i })).toBeNull();
+    });
+
+    // Nobody taps a button that would fail: its own stays, switched off.
+    it('keeps its own button, switched off, while the name is incomplete', async () => {
+      const { drawn } = await openScreenConfiguredWith('APP_USR-public');
+
+      expect(drawn).toHaveLength(0);
+      expect(payButton().disabled).toBe(true);
+    });
+
+    // Cash is paid at the till: Mercado Pago's button has nothing to do with it.
+    it('keeps its own button to confirm the order when cash is chosen', async () => {
+      const { rendered, drawn } = await openScreenConfiguredWith('APP_USR-public');
+      await typeAFullName(rendered);
+
+      fireEvent.click(screen.getByLabelText(/efectivo/i));
+      await rendered.fixture.whenStable();
+
+      expect(
+        rendered.fixture.nativeElement.querySelector('drinkit-mercado-pago-wallet'),
+      ).toBeNull();
+      expect(screen.getByRole('button', { name: /confirmar pedido/i })).not.toBeNull();
+      expect(drawn).toHaveLength(1);
+    });
+
+    // Development without Mercado Pago, or a deploy that has not configured it.
+    it('uses its own button when no public key is configured', async () => {
+      const { rendered, drawn } = await openScreenConfiguredWith(null);
+
+      await typeAFullName(rendered);
+
+      expect(drawn).toHaveLength(0);
+      expect(payButton().disabled).toBe(false);
+    });
+
+    // An ad blocker cuts sdk.mercadopago.com: nobody is left without a way to pay.
+    it('falls back to its own button when mercado pagos button cannot be drawn', async () => {
+      const { rendered } = await openScreenConfiguredWith('APP_USR-public', 'fails');
+
+      await typeAFullName(rendered);
+      await rendered.fixture.whenStable();
+
+      expect(payButton().disabled).toBe(false);
+    });
+
+    // Tapped: the order is confirmed with the name typed, as with its own button.
+    it('confirms the order with the name typed when mercado pagos button is tapped', async () => {
+      const { rendered, drawn } = await openScreenConfiguredWith('APP_USR-public');
+      await typeAFullName(rendered);
+
+      void drawn[0]!.onSubmit();
+
+      const sent = TestBed.inject(HttpTestingController).expectOne(ordersUrl('bar-alfa'));
+      expect(sent.request.body.customerName).toBe('María Quadro');
+      expect(sent.request.body.method).toBe('Digital');
+    });
+
+    // Tapped, then the name edited: taking the button away now would leave an
+    // order made and nothing to take them to pay it.
+    it('keeps mercado pagos button while the order it confirmed is on its way', async () => {
+      const { rendered, drawn } = await openScreenConfiguredWith('APP_USR-public');
+      await typeAFullName(rendered);
+      void drawn[0]!.onSubmit();
+
+      fireEvent.input(name(), { target: { value: 'María' } });
+      await rendered.fixture.whenStable();
+
+      expect(
+        rendered.fixture.nativeElement.querySelector('drinkit-mercado-pago-wallet'),
+      ).not.toBeNull();
+    });
   });
 });

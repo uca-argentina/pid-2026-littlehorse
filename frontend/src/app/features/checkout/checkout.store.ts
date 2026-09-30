@@ -104,16 +104,7 @@ export class CheckoutStore {
       // Both, so the wait is the longer of the two rather than one after the
       // other: a request that takes three seconds is not made to take five.
       shown: timer(this.pause),
-      order: this.checkout.confirm(venueSlug, {
-        customerName,
-        method,
-        idempotencyKey: this.keyFor(venueSlug),
-        lines: this.cart.lines().map((line) => ({
-          productId: line.productId,
-          quantity: line.quantity,
-          note: line.note,
-        })),
-      }),
+      order: this.checkout.confirm(venueSlug, this.orderFor(venueSlug, customerName, method)),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
@@ -147,6 +138,58 @@ export class CheckoutStore {
         this.cart.clear();
         this.store.write(CHECKOUT_KEY_PREFIX + venueSlug, '');
       });
+  }
+
+  /**
+   * Mercado Pago's own button (Wallet Brick, US-24) calls this when it is
+   * tapped: the order is confirmed and the button gets the checkout's id to
+   * open. It redirects by itself, so nothing here leaves the page. No pause
+   * either: the button shows its own "procesando".
+   *
+   * Rejected when the order is refused, so the button stops; what went wrong
+   * is on the screen, in Spanish, as with any other payment.
+   */
+  payWithWallet(venueSlug: string, customerName: string): Promise<string> {
+    this.state.set('paying');
+    this.refusal.set(null);
+
+    return new Promise<string>((resolve, reject) => {
+      this.checkout
+        .confirm(venueSlug, this.orderFor(venueSlug, customerName, 'Digital'))
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (order) => {
+            // Paid on the spot after all — nothing to open on Mercado Pago.
+            if (!order.paymentCheckoutId) {
+              this.showTheConfirmation(venueSlug, order);
+              reject(new Error('The order needs no checkout.'));
+
+              return;
+            }
+
+            this.store.write(CHECKOUT_KEY_PREFIX + venueSlug, '');
+            resolve(order.paymentCheckoutId);
+          },
+          error: (error: unknown) => {
+            this.explain(error);
+            reject(error);
+          },
+        });
+    });
+  }
+
+  /** The order as the API takes it: the drinks and how many, never what they cost. */
+  private orderFor(venueSlug: string, customerName: string, method: PaymentMethod) {
+    return {
+      customerName,
+      method,
+      idempotencyKey: this.keyFor(venueSlug),
+      lines: this.cart.lines().map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+        note: line.note,
+      })),
+    };
   }
 
   /**

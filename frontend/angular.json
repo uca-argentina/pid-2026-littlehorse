@@ -37,7 +37,7 @@
               }
             ],
             "styles": ["src/styles.scss"],
-            "allowedCommonJsDependencies": ["qrcode"]
+            "allowedCommonJsDependencies": ["qrcode", "@mercadopago/sdk-js"]
           },
           "configurations": {
             "production": {

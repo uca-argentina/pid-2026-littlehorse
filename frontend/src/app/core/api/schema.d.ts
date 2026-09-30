@@ -159,6 +159,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/payments/configuration': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The public key the checkout draws Mercado Pago's button with, or null when there is none. */
+    get: operations['PaymentConfiguration'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/cashier/scan': {
     parameters: {
       query?: never;
@@ -645,6 +662,7 @@ export interface components {
       /** Format: date-time */
       paidAt: null | string;
       paymentUrl: null | string;
+      paymentCheckoutId: null | string;
     };
     /** @description An order somebody is confirming from their phone. */
     ConfirmOrderRequest: {
@@ -749,6 +767,10 @@ export interface components {
       /** Format: int32 */
       quantity: number;
       note: null | string;
+    };
+    /** @description What the checkout needs to draw Mercado Pago's own button. Null: use the app's own. */
+    PaymentConfigurationResponse: {
+      publicKey: null | string;
     };
     /**
      * @description How the customer is paying, as the checkout sends it.
@@ -1158,6 +1180,26 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  PaymentConfiguration: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PaymentConfigurationResponse'];
         };
       };
     };

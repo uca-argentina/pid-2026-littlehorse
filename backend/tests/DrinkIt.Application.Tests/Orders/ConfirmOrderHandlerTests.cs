@@ -31,23 +31,25 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(Tonight, _orders.Added.PaidAt);
     }
 
-    private const string CheckoutUrl = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123";
+    private static readonly PaymentCheckout Checkout =
+        new("3727754810-123", "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=3727754810-123");
 
     // US-24: paid through Mercado Pago, the order waits and the customer is
     // told where to pay it — and that is kept with the order.
     [Fact]
     public async Task HandleAsync_WhenTheMethodHandsOff_AnswersWhereToPayAndKeepsIt()
     {
-        HandsOffToAGateway payment = new(CheckoutUrl);
+        HandsOffToAGateway payment = new(Checkout);
 
         Result<ConfirmedOrder> result = await AHandlerPaidBy(payment).HandleAsync(ATwoGinOrder(), CancellationToken.None);
 
-        Assert.Equal(CheckoutUrl, result.Value.PaymentUrl);
+        Assert.Equal(Checkout.Url, result.Value.PaymentUrl);
+        Assert.Equal(Checkout.Id, result.Value.PaymentCheckoutId);
         Assert.Equal(OrderStatus.AwaitingPayment, result.Value.Status);
         Assert.Null(result.Value.PaidAt);
         Assert.Equal("bar-alfa", payment.VenueSlug);
         Assert.Same(_orders.Added, _orders.Saved.Single());
-        Assert.Equal(CheckoutUrl, _orders.Added!.PaymentUrl);
+        Assert.Equal(Checkout.Url, _orders.Added!.PaymentUrl);
     }
 
     // The gateway is down: nobody can pay, so the order must not hold the
@@ -68,18 +70,18 @@ public class ConfirmOrderHandlerTests
     [Fact]
     public async Task HandleAsync_WhenTheSameAttemptArrivesAgain_AnswersTheSameCheckoutWithoutOpeningAnother()
     {
-        HandsOffToAGateway payment = new(CheckoutUrl);
+        HandsOffToAGateway payment = new(Checkout);
         ConfirmOrderHandler handler = AHandlerPaidBy(payment);
 
         await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
         Result<ConfirmedOrder> again = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
 
-        Assert.Equal(CheckoutUrl, again.Value.PaymentUrl);
+        Assert.Equal(Checkout.Id, again.Value.PaymentCheckoutId);
         Assert.Equal(1, payment.HandOffs);
     }
 
     /// <summary>A method that waits for a gateway, standing in for the digital one.</summary>
-    private sealed class HandsOffToAGateway(string? url = null, bool fails = false) : IPaymentStrategy, IHandsOffPayment
+    private sealed class HandsOffToAGateway(PaymentCheckout? checkout = null, bool fails = false) : IPaymentStrategy, IHandsOffPayment
     {
         public int HandOffs { get; private set; }
 
@@ -89,16 +91,16 @@ public class ConfirmOrderHandlerTests
 
         public void Settle(Order order) => order.AwaitPayment(Method);
 
-        public Task<Result<string?>> HandOffAsync(Order order, string venueSlug, CancellationToken cancellationToken)
+        public Task<Result<PaymentCheckout?>> HandOffAsync(Order order, string venueSlug, CancellationToken cancellationToken)
         {
             HandOffs += 1;
             VenueSlug = venueSlug;
 
-            if (fails) return Task.FromResult<Result<string?>>(PaymentErrors.GatewayUnavailable);
+            if (fails) return Task.FromResult<Result<PaymentCheckout?>>(PaymentErrors.GatewayUnavailable);
 
-            order.OfferPaymentAt(url!);
+            order.OfferCheckout(checkout!);
 
-            return Task.FromResult<Result<string?>>(url);
+            return Task.FromResult<Result<PaymentCheckout?>>(checkout);
         }
     }
 

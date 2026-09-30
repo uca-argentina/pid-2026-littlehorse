@@ -18,6 +18,7 @@ const confirmed: ConfirmedOrder = {
   status: 'Queued',
   paidAt: '2026-09-17T02:30:00Z',
   paymentUrl: null,
+  paymentCheckoutId: null,
 };
 
 /** Paid through Mercado Pago (US-24): it waits, and says where to pay it. */
@@ -25,7 +26,8 @@ const awaitingPayment: ConfirmedOrder = {
   ...confirmed,
   status: 'AwaitingPayment',
   paidAt: null,
-  paymentUrl: 'https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123',
+  paymentUrl: 'https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=3727754810-123',
+  paymentCheckoutId: '3727754810-123',
 };
 
 /** Where the store sent the browser, instead of leaving this page for real. */
@@ -118,6 +120,54 @@ describe('CheckoutStore', () => {
     expect(next.http.expectOne(ordersUrl('bar-alfa')).request.body.idempotencyKey).not.toBe(
       used.request.body.idempotencyKey,
     );
+  });
+
+  /**
+   * Mercado Pago's own button (Wallet Brick) creates the checkout when it is
+   * tapped: it asks for the checkout's id and redirects by itself, so the
+   * store answers the id and does not leave the page.
+   */
+  it('answers the checkout id for mercado pagos own button, without leaving', async () => {
+    const { checkout, http } = aStore();
+
+    const answered = checkout.payWithWallet('bar-alfa', 'María Quadro');
+    http.expectOne(ordersUrl('bar-alfa')).flush(awaitingPayment);
+
+    await expect(answered).resolves.toBe('3727754810-123');
+    expect(leftFor).not.toHaveBeenCalled();
+  });
+
+  // Same as the redirect: the key is over, the drinks stay for another go.
+  it('keeps the cart and lets the key go when mercado pagos button takes over', async () => {
+    const { checkout, http, cart } = aStore();
+
+    const answered = checkout.payWithWallet('bar-alfa', 'María Quadro');
+    const used = http.expectOne(ordersUrl('bar-alfa'));
+    used.flush(awaitingPayment);
+    await answered;
+
+    expect(cart.lines()).toHaveLength(1);
+    const next = aStore();
+    next.checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+    expect(next.http.expectOne(ordersUrl('bar-alfa')).request.body.idempotencyKey).not.toBe(
+      used.request.body.idempotencyKey,
+    );
+  });
+
+  // The button is told no, and the screen says why, in Spanish, like always.
+  it('turns mercado pagos button down and explains when the order is refused', async () => {
+    const { checkout, http } = aStore();
+
+    const answered = checkout.payWithWallet('bar-alfa', 'María Quadro');
+    http
+      .expectOne(ordersUrl('bar-alfa'))
+      .flush(
+        { type: 'urn:drinkit:problem:payment:gateway-unavailable' },
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+
+    await expect(answered).rejects.toBeDefined();
+    expect(checkout.status()).toBe('gatewayUnavailable');
   });
 
   // Mercado Pago did not open a checkout: nothing the customer sent was wrong.

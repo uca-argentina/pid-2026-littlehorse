@@ -340,6 +340,29 @@ public class OrderTests
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
 
+        // Its money is on its way from Mercado Pago: taking cash too would charge it twice.
+        [Fact]
+        public void CollectCash_WhenItAwaitsADigitalPayment_ThrowsInvalidTransition()
+        {
+            Order order = ACartOf();
+            order.AwaitPayment(PaymentMethod.Digital);
+
+            DomainException error = Assert.Throws<DomainException>(() => order.CollectCash(DateTimeOffset.UtcNow, "laura.caja"));
+
+            Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        }
+
+        // The till's list is fed by this: a digital payment is not the till's to collect.
+        [Fact]
+        public void AwaitPayment_WhenItIsDigital_RaisesNothingForTheTill()
+        {
+            Order order = ACartOf();
+
+            order.AwaitPayment(PaymentMethod.Digital);
+
+            Assert.Empty(order.DomainEvents);
+        }
+
         [Theory]
         [InlineData("")]
         [InlineData("   ")]
@@ -780,26 +803,32 @@ public class OrderTests
             Assert.Equal(OrderStatus.Canceled, order.Status);
         }
 
+        private static readonly PaymentCheckout ACheckout =
+            new("3727754810-9adb3539", "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=3727754810-9adb3539");
+
         // Kept, so a retry of the same confirmation sends the customer to the
-        // same page: one checkout per order, never two that could both be paid.
+        // same checkout: one per order, never two that could both be paid. The
+        // id is what Mercado Pago's button opens; the link, what a redirect does.
         [Fact]
-        public void OfferPaymentAt_WhenItAwaitsPayment_KeepsWhereToPay()
+        public void OfferCheckout_WhenItAwaitsPayment_KeepsWhereToPay()
         {
             Order order = AnOrderAwaitingPayment();
 
-            order.OfferPaymentAt("https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123");
+            order.OfferCheckout(ACheckout);
 
-            Assert.Equal("https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123", order.PaymentUrl);
+            Assert.Equal(ACheckout.Id, order.PaymentCheckoutId);
+            Assert.Equal(ACheckout.Url, order.PaymentUrl);
         }
 
         [Fact]
-        public void OfferPaymentAt_WhenItIsNotAwaitingPayment_ThrowsInvalidTransition()
+        public void OfferCheckout_WhenItIsNotAwaitingPayment_ThrowsInvalidTransition()
         {
             Order order = ACart();
 
-            DomainException error = Assert.Throws<DomainException>(() => order.OfferPaymentAt("https://example.com/pay"));
+            DomainException error = Assert.Throws<DomainException>(() => order.OfferCheckout(ACheckout));
 
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+            Assert.Null(order.PaymentCheckoutId);
             Assert.Null(order.PaymentUrl);
         }
 

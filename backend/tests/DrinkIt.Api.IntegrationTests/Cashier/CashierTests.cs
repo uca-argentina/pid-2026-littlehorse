@@ -57,6 +57,20 @@ public sealed class CashierTests(SqlServerFixture sql)
         Assert.Equal(9000m, only.Total);
     }
 
+    // Its money is on its way from Mercado Pago: the till would charge it twice.
+    [Fact]
+    public async Task GetAwaitingPaymentAsync_WhenAnOrderAwaitsMercadoPago_LeavesItOut()
+    {
+        Venue venue = await ASeededVenue();
+        Order cash = await AnOrderWaitingForCash(venue);
+        await AnOrderWaitingFor(venue, PaymentMethod.Digital);
+
+        await using DrinkItDbContext context = sql.CreateContext(venue.Id);
+        IReadOnlyList<CashierOrder> pending = await new CashierQueries(context).GetAwaitingPaymentAsync(CancellationToken.None);
+
+        Assert.Equal(cash.Code.Value, Assert.Single(pending).Code);
+    }
+
     // US-26, criterion 1: the drinks and what to charge.
     [Fact]
     public async Task FindAsync_WhenTheCodeIsThisVenues_ShowsTheDrinksAndTheTotal()
@@ -224,14 +238,16 @@ public sealed class CashierTests(SqlServerFixture sql)
         return venue;
     }
 
-    private async Task<Order> AnOrderWaitingForCash(Venue venue)
+    private Task<Order> AnOrderWaitingForCash(Venue venue) => AnOrderWaitingFor(venue, PaymentMethod.Cash);
+
+    private async Task<Order> AnOrderWaitingFor(Venue venue, PaymentMethod method)
     {
         Order order = Order.Place(
             venue.Id,
             "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Gin, "Gin Tonic", 4500m, 2, "sin hielo")]);
-        order.AwaitPayment(PaymentMethod.Cash);
+        order.AwaitPayment(method);
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Orders.Add(order);

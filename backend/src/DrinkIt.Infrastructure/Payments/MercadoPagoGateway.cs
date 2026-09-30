@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Payments;
+using DrinkIt.Domain.Orders;
 using MercadoPago.Client;
 using MercadoPago.Client.Payment;
 using MercadoPago.Client.Preference;
@@ -24,7 +25,7 @@ internal sealed partial class MercadoPagoGateway(
     IOptions<MercadoPagoOptions> options,
     ILogger<MercadoPagoGateway> logger) : IPaymentGateway
 {
-    public async Task<Result<string>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken)
+    public async Task<Result<PaymentCheckout>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -37,7 +38,7 @@ internal sealed partial class MercadoPagoGateway(
                 RequestOptionsFor(),
                 cancellationToken);
 
-            return preference.InitPoint;
+            return new PaymentCheckout(preference.Id, preference.InitPoint);
         }
         catch (MercadoPagoException exception)
         {

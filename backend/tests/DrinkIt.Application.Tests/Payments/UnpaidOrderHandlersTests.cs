@@ -258,6 +258,28 @@ public class UnpaidOrderHandlersTests
             Assert.Same(stale, orders.StockReturned.Single());
         }
 
+        // The fifteen minutes are Mercado Pago's: cash waits at the till for as
+        // long as the customer takes to walk there.
+        [Fact]
+        public async Task HandleAsync_WhenAnOrderAwaitsCash_LeavesIt()
+        {
+            Order cash = Order.Place(
+                Guid.CreateVersion7(),
+                "María Quadro",
+                OrderCode.Parse("K-4822"),
+                [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
+            cash.AwaitPayment(PaymentMethod.Cash);
+            UnpaidOrdersInMemory orders = new(cash);
+            orders.PlacedAt[cash.Id] = Now - DigitalPaymentWindow - TimeSpan.FromHours(1);
+
+            int canceled = await new ExpireUnpaidOrdersHandler(orders, new FixedClock(Now))
+                .HandleAsync(CancellationToken.None);
+
+            Assert.Equal(0, canceled);
+            Assert.Equal(OrderStatus.AwaitingPayment, cash.Status);
+            Assert.Empty(orders.StockReturned);
+        }
+
         private static TimeSpan DigitalPaymentWindow => DigitalPaymentStrategy.PaymentWindow;
     }
 
@@ -266,7 +288,7 @@ public class UnpaidOrderHandlersTests
         public Task<GatewayPayment?> FindPaymentAsync(string paymentId, CancellationToken cancellationToken) =>
             Task.FromResult(payment?.Id == paymentId ? payment : null);
 
-        public Task<Result<string>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken) =>
+        public Task<Result<PaymentCheckout>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken) =>
             throw new NotSupportedException("Applying a payment never opens a checkout.");
     }
 

@@ -1,4 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
+import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -7,8 +8,11 @@ import { ProblemTypes } from '../../../core/api/problem-types';
 import { Cart } from '../../../core/cart/cart';
 import { formatPrice } from '../../../shared/money/price';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
+import { anonymously } from '../../../core/auth/anonymous-request';
 import { CheckoutStore } from '../checkout.store';
-import type { PaymentMethod } from '../checkout.service';
+import { paymentConfigurationUrl } from '../checkout.service';
+import type { PaymentConfiguration, PaymentMethod } from '../checkout.service';
+import { MercadoPagoWallet } from '../components/mercado-pago-wallet';
 
 /** One line of what is being paid for. */
 interface PayingFor {
@@ -41,7 +45,7 @@ const FULL_NAME = /^\p{L}+(?:\s+\p{L}+)+$/u;
  */
 @Component({
   selector: 'drinkit-checkout-page',
-  imports: [NgTemplateOutlet, ReactiveFormsModule, RouterLink, GlassMark],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, RouterLink, GlassMark, MercadoPagoWallet],
   providers: [CheckoutStore],
   styleUrl: './checkout.page.scss',
   templateUrl: './checkout.page.html',
@@ -83,6 +87,37 @@ export class CheckoutPage {
   );
 
   protected readonly total = computed(() => formatPrice(this.cart.total()));
+
+  /** Whether Mercado Pago's own button can be drawn here: its public key, when configured. */
+  private readonly paymentConfiguration = httpResource<PaymentConfiguration>(() => ({
+    url: paymentConfigurationUrl,
+    context: anonymously(),
+  }));
+
+  /** The script could not draw it, or it broke: this screen's own button takes over. */
+  protected readonly walletFailed = signal(false);
+
+  /**
+   * The public key to draw Mercado Pago's own button with (US-24, /mp-review
+   * practice 7), or null to use this screen's own: none configured, not known
+   * yet, or the button failed. Only once the name is complete — the official
+   * button cannot be switched off, and nobody should tap one that will fail.
+   * Once tapped it stays, whatever the name becomes: it is what takes them to
+   * pay the order it has just confirmed.
+   */
+  protected readonly walletKey = computed(() => {
+    const publicKey = this.paymentConfiguration.hasValue()
+      ? this.paymentConfiguration.value().publicKey
+      : null;
+    // Cash is paid at the till, not on Mercado Pago's page.
+    const wanted = !this.paysAtTheTill() && (this.canPay() || this.store.isPaying());
+
+    return publicKey !== null && !this.walletFailed() && wanted ? publicKey : null;
+  });
+
+  /** What Mercado Pago's button does when tapped: confirm, and answer the checkout to open. */
+  protected readonly payWithWallet = (): Promise<string> =>
+    this.store.payWithWallet(this.venueSlug(), this.typed().trim());
 
   /**
    * The three of the wireframe. The VIP tables are out of this sprint, so the

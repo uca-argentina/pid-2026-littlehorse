@@ -23,6 +23,8 @@ public sealed class CollectCashHandler(IOrderRepository orders, TimeProvider clo
 
         if (order is null) return CashierErrors.OrderNotFound;
         if (order.Status != OrderStatus.AwaitingPayment) return CashierErrors.AlreadyPaid;
+        // Being paid with Mercado Pago from the phone: nothing for the till to take.
+        if (order.Method != PaymentMethod.Cash) return CashierErrors.AlreadyPaid;
 
         // The till's route demands a signed-in cashier, so there is always a
         // name here; the domain refuses the order rather than a blank one.

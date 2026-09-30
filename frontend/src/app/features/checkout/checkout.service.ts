@@ -8,6 +8,12 @@ export type ConfirmOrderRequest = components['schemas']['ConfirmOrderRequest'];
 
 export type ConfirmedOrder = components['schemas']['ConfirmedOrderResponse'];
 
+/** What the checkout needs to draw Mercado Pago's own button (US-24). */
+export type PaymentConfiguration = components['schemas']['PaymentConfigurationResponse'];
+
+/** The same for every venue, and never cached: a rotated key reaches the next phone. */
+export const paymentConfigurationUrl = '/api/payments/configuration';
+
 /** The ways of paying, by the names the API answers to. */
 export type PaymentMethod = components['schemas']['PaymentMethodName'];
 

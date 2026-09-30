@@ -32,7 +32,8 @@ public sealed record ConfirmOrderCommand(
 ///
 /// <c>PaidAt</c> is null while the order waits for a gateway to approve it,
 /// and <c>PaymentUrl</c> is where the customer pays it when that is somewhere
-/// else (US-24).
+/// else (US-24); <c>PaymentCheckoutId</c> is the same checkout, for the
+/// gateway's own button to open.
 /// </remarks>
 public sealed record ConfirmedOrder(
     Guid Id,
@@ -42,7 +43,8 @@ public sealed record ConfirmedOrder(
     decimal Total,
     OrderStatus Status,
     DateTimeOffset? PaidAt,
-    string? PaymentUrl);
+    string? PaymentUrl,
+    string? PaymentCheckoutId);
 
 /// <summary>
 /// Turns what somebody put together on their phone into an order of this venue:
@@ -195,7 +197,7 @@ public sealed class ConfirmOrderHandler(
     {
         if (payment is not IHandsOffPayment handsOff) return Confirmation(order);
 
-        Result<string?> handedOff = await handsOff.HandOffAsync(order, venueSlug, cancellationToken);
+        Result<PaymentCheckout?> handedOff = await handsOff.HandOffAsync(order, venueSlug, cancellationToken);
 
         if (handedOff.IsSuccess)
         {
@@ -267,5 +269,6 @@ public sealed class ConfirmOrderHandler(
         order.Total,
         order.Status,
         order.PaidAt,
-        order.PaymentUrl);
+        order.PaymentUrl,
+        order.PaymentCheckoutId);
 }

@@ -13,7 +13,8 @@ public class DigitalPaymentStrategyTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 30, 1, 0, 0, TimeSpan.Zero);
 
-    private const string CheckoutUrl = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123";
+    private static readonly PaymentCheckout Checkout =
+        new("3727754810-123", "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=3727754810-123");
 
     private static Order ACart() =>
         Order.Place(
@@ -34,17 +35,18 @@ public class DigitalPaymentStrategyTests
     }
 
     [Fact]
-    public async Task HandOffAsync_WhenTheGatewayOpensACheckout_KeepsItsUrlAndSendsTheCustomerThere()
+    public async Task HandOffAsync_WhenTheGatewayOpensACheckout_KeepsItAndSendsTheCustomerThere()
     {
         Order order = ACart();
-        GatewayDouble gateway = new() { Opens = CheckoutUrl };
+        GatewayDouble gateway = new() { Opens = Checkout };
         DigitalPaymentStrategy strategy = new(gateway, new FixedClock(Now));
         strategy.Settle(order);
 
-        Result<string?> result = await strategy.HandOffAsync(order, "bar-alfa", CancellationToken.None);
+        Result<PaymentCheckout?> result = await strategy.HandOffAsync(order, "bar-alfa", CancellationToken.None);
 
-        Assert.Equal(CheckoutUrl, result.Value);
-        Assert.Equal(CheckoutUrl, order.PaymentUrl);
+        Assert.Equal(Checkout, result.Value);
+        Assert.Equal(Checkout.Id, order.PaymentCheckoutId);
+        Assert.Equal(Checkout.Url, order.PaymentUrl);
         Assert.Same(order, gateway.Asked!.Order);
         Assert.Equal("bar-alfa", gateway.Asked.VenueSlug);
     }
@@ -55,7 +57,7 @@ public class DigitalPaymentStrategyTests
     public async Task HandOffAsync_Always_AsksForACheckoutThatExpiresInFifteenMinutes()
     {
         Order order = ACart();
-        GatewayDouble gateway = new() { Opens = CheckoutUrl };
+        GatewayDouble gateway = new() { Opens = Checkout };
         DigitalPaymentStrategy strategy = new(gateway, new FixedClock(Now));
         strategy.Settle(order);
 
@@ -72,7 +74,7 @@ public class DigitalPaymentStrategyTests
         DigitalPaymentStrategy strategy = new(new GatewayDouble { Fails = true }, new FixedClock(Now));
         strategy.Settle(order);
 
-        Result<string?> result = await strategy.HandOffAsync(order, "bar-alfa", CancellationToken.None);
+        Result<PaymentCheckout?> result = await strategy.HandOffAsync(order, "bar-alfa", CancellationToken.None);
 
         Assert.Equal(PaymentErrors.GatewayUnavailable, result.Error);
         Assert.Null(order.PaymentUrl);
@@ -80,17 +82,17 @@ public class DigitalPaymentStrategyTests
 
     private sealed class GatewayDouble : IPaymentGateway
     {
-        public string Opens { get; init; } = CheckoutUrl;
+        public PaymentCheckout Opens { get; init; } = Checkout;
 
         public bool Fails { get; init; }
 
         public PaymentCheckoutRequest? Asked { get; private set; }
 
-        public Task<Result<string>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken)
+        public Task<Result<PaymentCheckout>> StartCheckoutAsync(PaymentCheckoutRequest request, CancellationToken cancellationToken)
         {
             Asked = request;
 
-            return Task.FromResult<Result<string>>(Fails ? PaymentErrors.GatewayUnavailable : Opens);
+            return Task.FromResult<Result<PaymentCheckout>>(Fails ? PaymentErrors.GatewayUnavailable : Opens);
         }
 
         public Task<GatewayPayment?> FindPaymentAsync(string paymentId, CancellationToken cancellationToken) =>

@@ -130,22 +130,32 @@
     <footer class="foot">
       <!--
         US-24: cash is only confirmed here, and paid at the till showing the
-        code; digital confirms and leaves for Mercado Pago's page.
+        code. Digital goes through Mercado Pago's own button, with its official
+        logo, once it can be drawn; this screen's own otherwise — no public key,
+        the name still incomplete, or Mercado Pago's script blocked.
       -->
-      <button
-        class="cta"
-        type="button"
-        [attr.data-mp-checkout-cta]="paysAtTheTill() ? null : 'checkout-pro'"
-        [disabled]="!canPay() || store.isPaying()"
-        (click)="pay()"
-      >
-        @if (store.isPaying()) {
-          <span>Procesando…</span>
-        } @else {
-          <span>{{ paysAtTheTill() ? 'Confirmar pedido' : 'Pagar con Mercado Pago' }}</span>
-        }
-        <span class="num">$ {{ total() }}</span>
-      </button>
+      @if (walletKey(); as publicKey) {
+        <drinkit-mercado-pago-wallet
+          [publicKey]="publicKey"
+          [submit]="payWithWallet"
+          (failed)="walletFailed.set(true)"
+        />
+      } @else {
+        <button
+          class="cta"
+          type="button"
+          [attr.data-mp-checkout-cta]="paysAtTheTill() ? null : 'checkout-pro'"
+          [disabled]="!canPay() || store.isPaying()"
+          (click)="pay()"
+        >
+          @if (store.isPaying()) {
+            <span>Procesando…</span>
+          } @else {
+            <span>{{ paysAtTheTill() ? 'Confirmar pedido' : 'Pagar con Mercado Pago' }}</span>
+          }
+          <span class="num">$ {{ total() }}</span>
+        </button>
+      }
 
       @if (paysAtTheTill()) {
         <p class="safe">Pagás en la caja, mostrando el código que te damos.</p>

@@ -102,6 +102,7 @@ public static class InfrastructureServices
         // the SDK clients are made per call, with the token passed along.
         services.AddSingleton<IPaymentGateway, MercadoPagoGateway>();
         services.AddSingleton<IPaymentNotificationVerifier, MercadoPagoNotificationVerifier>();
+        services.AddSingleton<IPaymentClientConfiguration, MercadoPagoClientConfiguration>();
 
         return services;
     }
