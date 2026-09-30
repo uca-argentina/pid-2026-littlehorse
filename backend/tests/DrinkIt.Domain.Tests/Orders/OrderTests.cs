@@ -678,4 +678,55 @@ public class OrderTests
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
     }
+
+    // US-22: whoever holds the order's link hears of every move it makes, so
+    // every event an order raises names it by the one thing that link carries.
+    public class Following
+    {
+        private static readonly DateTimeOffset At = new(2026, 9, 30, 1, 0, 0, TimeSpan.Zero);
+
+        /// <summary>Every move an order can make, paid in cash and digitally, with who raised each one.</summary>
+        private static List<(Order Order, IDomainEvent Raised)> EveryMove()
+        {
+            Order cash = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            cash.AwaitPayment(PaymentMethod.Cash);
+            cash.CollectCash(At, "laura.caja");
+
+            Order digital = Order.Place(AVenue, "María Quadro", OrderCode.Parse("K-4822"), [AGinTonic()]);
+            digital.Pay(At, PaymentMethod.Digital);
+            digital.Enqueue();
+            digital.StartPreparing();
+            digital.ReturnToQueue();
+            digital.StartPreparing();
+            digital.MarkReady();
+            digital.ReturnToPreparation();
+            digital.MarkReady();
+            digital.Deliver(At);
+            digital.UndoDelivery(At);
+
+            return [.. cash.DomainEvents.Select(raised => (cash, raised)), .. digital.DomainEvents.Select(raised => (digital, raised))];
+        }
+
+        [Fact]
+        public void DomainEvents_ForEveryMove_NameTheOrderByItsTrackingToken()
+        {
+            Assert.All(
+                EveryMove(),
+                move => Assert.Equal(move.Order.TrackingToken, Assert.IsAssignableFrom<IOrderChanged>(move.Raised).TrackingToken));
+        }
+
+        // Not one kind of move left out of the walk above: a new one raised
+        // without the token is a customer's screen that misses that move.
+        [Fact]
+        public void DomainEvents_ForEveryMove_CoverEveryKindOfOrderEvent()
+        {
+            IEnumerable<string> everyKind = typeof(Order).Assembly.GetTypes()
+                .Where(type => type.Namespace == typeof(Order).Namespace && typeof(IDomainEvent).IsAssignableFrom(type) && !type.IsInterface)
+                .Select(type => type.Name);
+
+            Assert.Equal(
+                everyKind.Order(),
+                EveryMove().Select(move => move.Raised.GetType().Name).Distinct().Order());
+        }
+    }
 }

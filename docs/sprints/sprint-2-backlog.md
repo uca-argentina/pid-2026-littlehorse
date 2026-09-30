@@ -570,12 +570,24 @@ con el brillo al mínimo contra la tablet de la barra.
 **Notas**
 
 - **Depende de** US-12 y US-18.
-- Hoy esto funciona **consultando cada tres segundos** y estaba anotado como deuda desde el
-  Sprint 1. Esta story es reemplazarlo por tiempo real (§9.3).
-- El criterio 3 **ya está hecho** (`fix(tracking)`, 2026-09-19) y el aviso de falta de señal
-  del criterio 2 también. Lo que queda es el criterio 1.
-- **Borde de escala:** una tablet de barra y cien celulares mirando el mismo local. Vale la
-  pena medir antes de dar por buena la solución.
+- Hasta esta story funcionaba **consultando cada tres segundos**, deuda desde el Sprint 1.
+  Ahora es tiempo real (§9.3) con un hub de SignalR propio del cliente, `/hubs/tracking`.
+- **Cómo se une el cliente:** no tiene cuenta, así que el hub es anónimo y el celular invoca
+  `Follow(token)` con el token de seguimiento, la misma prueba que pide el enlace. El grupo
+  es un hash del token, no el token. El aviso (`OrderChanged`) no lleva datos: la pantalla
+  vuelve a pedir el estado al endpoint de siempre, que es donde se chequea el token y se filtra
+  por boliche. Unirse no consulta la base, así que cien celulares conectándose no le cuestan
+  nada.
+- **Cada evento de `Order` lleva el token** (`IOrderChanged`) y el dispatcher avisa una vez
+  por pedido. Un evento nuevo de pedido tiene que implementarlo: hay un test de dominio que
+  falla si alguno queda afuera.
+- **Criterio 2:** mientras el enlace está caído la pantalla muestra "sin señal"; al volver,
+  el canal se vuelve a unir al pedido y pregunta. También pregunta cuando la pantalla vuelve a
+  estar visible, porque un celular en el bolsillo puede perder el enlace sin enterarse.
+- **Criterio 3:** deja de seguir un pedido entregado (404) y también uno `Canceled`, que
+  sigue respondiendo para que la pantalla lo muestre.
+- El criterio 1 tiene su spec de Playwright: la barra toma el pedido y la pantalla del
+  cliente cambia sola en menos de dos segundos.
 
 ## El pago
 

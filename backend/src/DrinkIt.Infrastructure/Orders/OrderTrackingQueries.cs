@@ -20,8 +20,8 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
 
         // The venue filter scopes this, so the same code in another bar is
         // simply not here. Read-only and projected straight to the shape the
-        // screen draws: this runs every three seconds on every phone in a
-        // packed venue.
+        // screen draws: this runs on every phone following an order each time
+        // it moves, in a packed venue.
         var found = await context.Orders
             .AsNoTracking()
             .Where(order => order.Code == wanted)

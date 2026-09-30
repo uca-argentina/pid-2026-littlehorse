@@ -38,6 +38,7 @@ export interface HubConnectionLike {
   onclose(callback: (error?: Error) => void): void;
   start(): Promise<void>;
   stop(): Promise<void>;
+  invoke(method: string, ...args: unknown[]): Promise<unknown>;
 }
 
 /**
@@ -70,10 +71,11 @@ export const HUB_CONNECTION = new InjectionToken<
 });
 
 /**
- * The live half of a staff screen (US-15 for the bar, US-26 for the till). A
- * thin wrapper so a page never touches @microsoft/signalr directly —
- * everything it needs is "tell me when my list changed", and whether it can
- * still hear that. Each hub is a subclass that names its route and message.
+ * The live half of a screen (US-15 for the bar, US-26 for the till, US-22 for
+ * the customer following an order). A thin wrapper so a page never touches
+ * @microsoft/signalr directly — everything it needs is "tell me when my list
+ * changed", and whether it can still hear that. Each hub is a subclass that
+ * names its route and message.
  */
 export abstract class HubChannel {
   /** The hub's route under /hubs, as the backend maps it. */
@@ -107,9 +109,8 @@ export abstract class HubChannel {
   connect(onChanged: () => void): void {
     if (this.connection) return;
 
-    const connection = this.createConnection(
-      hubUrl(this.apiBaseUrl, this.hub),
-      () => this.sessions.session()?.token ?? '',
+    const connection = this.createConnection(hubUrl(this.apiBaseUrl, this.hub), () =>
+      this.accessToken(),
     );
 
     connection.on(this.message, onChanged);
@@ -117,6 +118,7 @@ export abstract class HubChannel {
     connection.onreconnected(() => {
       this.current.set('connected');
       onChanged();
+      this.joined?.(connection, onChanged);
     });
     // Only still ours when the automatic reconnect gave up or the server shut
     // it: disconnect() lets go of it before stopping.
@@ -166,7 +168,21 @@ export abstract class HubChannel {
 
     this.current.set('connected');
     if (afterAGap) onChanged();
+    this.joined?.(connection, onChanged);
   }
+
+  /** What the hub is asked to prove who is listening: the staff session, by default. */
+  protected accessToken(): string {
+    return this.sessions.session()?.token ?? '';
+  }
+
+  /**
+   * Runs every time the connection is (again) up. A staff hub needs nothing
+   * here — the token already told it which venue's group to join — but one
+   * that is joined by asking has to ask on every connection: the server
+   * forgets a dropped one's groups.
+   */
+  protected joined?(connection: HubConnectionLike, onChanged: () => void): void;
 
   /**
    * Drops the session the same way authenticationInterceptor does for an

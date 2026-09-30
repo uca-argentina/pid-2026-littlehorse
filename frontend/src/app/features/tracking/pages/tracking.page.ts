@@ -65,8 +65,8 @@ const QR_INK = '#12100e';
 /**
  * Where somebody's order is.
  *
- * The only screen of the app that changes without anybody touching it: it asks
- * the server every three seconds, which is what US-12 asks for and what lets
+ * The customer's screen that changes without anybody touching it: it hears the
+ * order move over a live link (US-22) and asks again, which is what lets
  * somebody stay at their table instead of standing at the bar.
  *
  * It is also the screen somebody lands on the moment they pay, so it opens with

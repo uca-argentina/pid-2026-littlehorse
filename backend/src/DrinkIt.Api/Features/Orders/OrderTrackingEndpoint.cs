@@ -13,8 +13,8 @@ public sealed record TrackedOrderItemResponse(string ProductName, int Quantity, 
 /// </summary>
 /// <remarks>
 /// The tracking token is not in here. The screen already holds it — it is in
-/// the address it asked with — and this answer is fetched every three seconds,
-/// travels to a phone and passes through caches and logs on the way.
+/// the address it asked with — and this answer is fetched every time the order
+/// moves, travels to a phone and passes through caches and logs on the way.
 /// </remarks>
 public sealed record TrackedOrderResponse(
     string Code,

@@ -1,11 +1,13 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { render, screen } from '@testing-library/angular';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { TRACKING_INTERVAL_MS, TrackingStore } from '../tracking.store';
+import { TrackingChannel } from '../tracking-channel';
+import { TrackingStore } from '../tracking.store';
 import { trackingUrl } from '../tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
 import { TrackingPage } from './tracking.page';
@@ -25,6 +27,15 @@ function anOrder(status: CustomerOrderStatus): TrackedOrder {
   };
 }
 
+/** A live link that is up and never hears anything. */
+function aQuietChannel(): Pick<TrackingChannel, 'state' | 'follow' | 'disconnect'> {
+  return {
+    state: signal('connected' as const).asReadonly(),
+    follow: () => undefined,
+    disconnect: () => undefined,
+  };
+}
+
 async function openScreenShowing(status: CustomerOrderStatus) {
   const rendered = await render(TrackingPage, {
     inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
@@ -32,9 +43,9 @@ async function openScreenShowing(status: CustomerOrderStatus) {
       provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
-      // Never fires on its own: what these tests are about is what each answer
-      // draws, so the answers are handed over by hand.
-      { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
+      // Never says the order moved: what these tests are about is what each
+      // answer draws, so the answers are handed over by hand.
+      { provide: TrackingChannel, useValue: aQuietChannel() },
     ],
   });
 
@@ -239,7 +250,7 @@ describe('TrackingPage', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
+        { provide: TrackingChannel, useValue: aQuietChannel() },
       ],
     });
 
@@ -262,9 +273,9 @@ describe('TrackingPage', () => {
    */
 
   /**
-   * The screen asks on its timer, and only on its timer. Reading what the
-   * server said must not be what makes it ask again: that turns one round of
-   * polling into a loop that feeds itself, with a timer left over each time.
+   * The screen asks when the order moves, and only then. Reading what the
+   * server said must not be what makes it ask again: that is a loop that
+   * feeds itself.
    */
   it('does not ask again just because an answer arrived', async () => {
     const { http } = await openScreenShowing('Queued');
@@ -276,7 +287,7 @@ describe('TrackingPage', () => {
    * The signal dropped before the very first answer arrived.
    *
    * This is the screen somebody lands on the instant they pay, so it is exactly
-   * where bad wifi finds them. The order is fine and the screen keeps asking on
+   * where bad wifi finds them. The order is fine and the screen keeps trying on
    * its own, but saying nothing leaves them staring at "Buscando tu pedido…"
    * with no idea whether it is working — the one state the four-state rule
    * exists to prevent.
@@ -288,7 +299,7 @@ describe('TrackingPage', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
+        { provide: TrackingChannel, useValue: aQuietChannel() },
       ],
     });
 

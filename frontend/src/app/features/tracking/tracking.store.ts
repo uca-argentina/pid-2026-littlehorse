@@ -1,20 +1,21 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TrackingChannel } from './tracking-channel';
 import { TrackingService } from './tracking.service';
 import type { TrackedOrder } from './tracking.service';
 
 /**
- * How often the screen asks where the order is.
+ * How long to wait before asking again when an answer did not arrive.
  *
- * Criterion 3 gives it five seconds to notice a change, and three leaves room
- * for a request to be slow on the wifi of a packed venue. It is asking rather
- * than being told because SignalR is a later sprint — the criterion is met
- * either way, and this costs an afternoon instead of a day.
+ * Only then: the screen does not ask on a timer any more (US-22), it asks when
+ * the live link says the order moved. But a move heard whose answer never came
+ * is announced by nobody again, so that one ask is retried until it gets
+ * through.
  */
-export const TRACKING_INTERVAL_MS = new InjectionToken<number>('TRACKING_INTERVAL_MS', {
+export const TRACKING_RETRY_MS = new InjectionToken<number>('TRACKING_RETRY_MS', {
   providedIn: 'root',
-  factory: () => 3000,
+  factory: () => 5_000,
 });
 
 /**
@@ -23,9 +24,10 @@ export const TRACKING_INTERVAL_MS = new InjectionToken<number>('TRACKING_INTERVA
  * Three of these come from the same 404 and are worth telling apart. 'nowhere'
  * is a link that leads to no order and never did, so asking again is pointless.
  * 'over' is the same answer arriving about an order that was on screen a moment
- * ago: the API stops showing an order once it is handed over or cancelled, so
- * this is the journey ending, not a broken link. 'unreachable' is the venue's
- * wifi dropping, where the order is fine and asking again is the whole answer.
+ * ago: the API stops showing an order once it is handed over, so this is the
+ * journey ending, not a broken link. 'unreachable' is the venue's wifi
+ * dropping — an answer that did not arrive, or the live link being down —
+ * where the order is fine and what is on screen may just be old.
  */
 export type TrackingStatus = 'starting' | 'following' | 'unreachable' | 'nowhere' | 'over';
 
@@ -33,9 +35,11 @@ export type TrackingStatus = 'starting' | 'following' | 'unreachable' | 'nowhere
 export class TrackingStore {
   private readonly tracking = inject(TrackingService);
 
+  private readonly channel = inject(TrackingChannel);
+
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly every = inject(TRACKING_INTERVAL_MS);
+  private readonly retryIn = inject(TRACKING_RETRY_MS);
 
   private readonly state = signal<TrackingStatus>('starting');
 
@@ -43,57 +47,77 @@ export class TrackingStore {
 
   private asking = false;
 
-  private timer: ReturnType<typeof setInterval> | null = null;
+  /** A move was heard while an answer was on its way, which may predate it. */
+  private askedMeanwhile = false;
+
+  private retry: ReturnType<typeof setTimeout> | null = null;
 
   private where: { venueSlug: string; code: string; token: string } | null = null;
 
-  readonly status = this.state.asReadonly();
+  /**
+   * Out of touch while the live link is down (US-22, criterion 2): nothing is
+   * being heard, so what is on screen may already be old. The link says when
+   * it is back, and asks again then.
+   */
+  readonly status = computed<TrackingStatus>(() => {
+    const state = this.state();
+
+    return state === 'following' && this.channel.state() === 'reconnecting' ? 'unreachable' : state;
+  });
 
   /** The last thing the server said. Kept through a dropped connection. */
   readonly order = this.known.asReadonly();
 
-  /** Whether there is anything left to ask about. Nobody outside needs this:
-   * the screen draws the status, and this is only what stops the timer. */
-  private readonly isOver = computed(() => this.state() === 'nowhere' || this.state() === 'over');
+  /**
+   * Whether there is anything left to hear about (US-22, criterion 3). A
+   * canceled order still answers, so the screen can say so, but it is not
+   * going anywhere any more.
+   */
+  private readonly isOver = computed(
+    () =>
+      this.state() === 'nowhere' || this.state() === 'over' || this.known()?.status === 'Canceled',
+  );
 
   constructor() {
-    // Registered once, here, rather than on every follow: there is one store per
-    // screen and one timer at a time, and hanging a callback off each call left
-    // the older ones pointing at a handle that stopping had already replaced.
     this.destroyRef.onDestroy(() => this.stop());
+
+    // A phone in a pocket can lose the live link without noticing for a while.
+    // The moment somebody looks again is the moment the screen has to be right.
+    const onLookedAtAgain = (): void => {
+      if (document.visibilityState === 'visible') this.askAgain();
+    };
+    document.addEventListener('visibilitychange', onLookedAtAgain);
+    this.destroyRef.onDestroy(() =>
+      document.removeEventListener('visibilitychange', onLookedAtAgain),
+    );
   }
 
   /** Starts watching one order, and keeps watching until there is no point. */
   follow(venueSlug: string, code: string, token: string): void {
     this.where = { venueSlug, code, token };
 
-    // The screen is left asking on a timer rather than on a stream of its own,
-    // so nothing accumulates: one interval, replaced if it is asked to follow
-    // again and cleared when the component dies. Two of them would drift apart
-    // and turn one round of asking into two.
     this.stop();
-    this.timer = setInterval(() => this.askAgain(), this.every);
-
-    // Last, so that an order already over stops the timer that was just set
-    // instead of leaving it running for a round.
+    this.channel.follow(token, () => this.askAgain());
     this.askAgain();
   }
 
   /**
-   * Asks once, if there is any point in asking.
-   *
-   * Three reasons there might not be: the order is over, the link leads
-   * nowhere, or the phone is in a pocket with the screen off — twenty requests
-   * a minute for something nobody is reading is battery somebody needs for the
-   * rest of the night. And never two at once, so a slow connection does not
-   * pile them up.
+   * Asks once, if there is any point in asking — never two at once, so a slow
+   * connection does not pile them up. Asked while an answer is on its way, it
+   * asks once more when that answer arrives: the answer may have been read
+   * before the move this is about.
    */
   askAgain(): void {
-    if (this.where === null || this.asking) return;
+    if (this.where === null) return;
     if (this.isOver()) return this.stop();
-    if (document.visibilityState === 'hidden') return;
+    if (this.asking) {
+      this.askedMeanwhile = true;
+      return;
+    }
 
     this.asking = true;
+    this.askedMeanwhile = false;
+    this.clearRetry();
 
     this.tracking
       .follow(this.where.venueSlug, this.where.code, this.where.token)
@@ -103,11 +127,18 @@ export class TrackingStore {
           this.asking = false;
           this.known.set(order);
           this.state.set('following');
+
+          if (this.isOver()) return this.stop();
+          if (this.askedMeanwhile) this.askAgain();
         },
         error: (error: unknown) => {
           this.asking = false;
 
-          if (!theLinkLeadsNowhere(error)) return this.state.set('unreachable');
+          if (!theLinkLeadsNowhere(error)) {
+            this.state.set('unreachable');
+            this.retry = setTimeout(() => this.askAgain(), this.retryIn);
+            return;
+          }
 
           // Having shown the order once is what tells the two apart: the same
           // 404 means the journey ended if it was on screen, and that the link
@@ -119,9 +150,14 @@ export class TrackingStore {
   }
 
   private stop(): void {
-    if (this.timer !== null) clearInterval(this.timer);
+    this.clearRetry();
+    this.channel.disconnect();
+  }
 
-    this.timer = null;
+  private clearRetry(): void {
+    if (this.retry !== null) clearTimeout(this.retry);
+
+    this.retry = null;
   }
 }
 

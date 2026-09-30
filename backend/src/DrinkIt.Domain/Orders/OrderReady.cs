@@ -1,5 +1,3 @@
-using DrinkIt.Domain.Common;
-
 namespace DrinkIt.Domain.Orders;
 
 /// <summary>
@@ -12,15 +10,18 @@ namespace DrinkIt.Domain.Orders;
 /// positional record generates init setters, and the architecture tests refuse
 /// a public setter anywhere in the domain.
 /// </remarks>
-public sealed record OrderReady : IDomainEvent
+public sealed record OrderReady : IOrderChanged
 {
-    public OrderReady(Guid venueId, Guid orderId)
+    public OrderReady(Guid venueId, Guid orderId, TrackingToken trackingToken)
     {
         VenueId = venueId;
         OrderId = orderId;
+        TrackingToken = trackingToken;
     }
 
     public Guid VenueId { get; }
 
     public Guid OrderId { get; }
+
+    public TrackingToken TrackingToken { get; }
 }
