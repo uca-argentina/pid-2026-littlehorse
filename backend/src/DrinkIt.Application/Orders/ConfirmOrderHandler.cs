@@ -29,7 +29,7 @@ public sealed record ConfirmedOrder(
     string CustomerName,
     decimal Total,
     OrderStatus Status,
-    DateTimeOffset PaidAt);
+    DateTimeOffset? PaidAt);
 
 /// <summary>
 /// Turns what somebody put together on their phone into an order of this venue:
@@ -154,7 +154,7 @@ public sealed class ConfirmOrderHandler(
         Order order = Order.Place(currentVenue.Id, customerName, code, items.Value);
 
         // How far this goes is the payment method's call, not this handler's:
-        // digital settles and queues, cash will stop at the till.
+        // digital settles and queues, cash stops at the till.
         payment.Settle(order);
 
         // The one write of the use case: the order and the stock it sold. It
@@ -205,10 +205,10 @@ public sealed class ConfirmOrderHandler(
     // nothing, which is also the honest answer.
     private static Error NotOnTheMenuFor(Product? product) => product is null
         ? NotOnTheMenu
-        : new Error(NotOnTheMenu.Code, $"{product.Name} is not on the menu any more.");
+        : new Error(NotOnTheMenu.Code, $"{product.Name} is not on the menu any more.", product.Name);
 
     private static Error OutOfStock(Product product) =>
-        new(SoldOut.Code, $"{product.Name} ran out while you were ordering.");
+        new(SoldOut.Code, $"{product.Name} ran out while you were ordering.", product.Name);
 
     private static string TheKeyOf(ConfirmOrderCommand command) =>
         (command.IdempotencyKey ?? string.Empty).Trim();
@@ -220,5 +220,5 @@ public sealed class ConfirmOrderHandler(
         order.CustomerName,
         order.Total,
         order.Status,
-        order.PaidAt!.Value);
+        order.PaidAt);
 }

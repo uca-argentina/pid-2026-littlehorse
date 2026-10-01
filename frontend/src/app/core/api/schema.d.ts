@@ -29,7 +29,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Both halves of the answer come from the one venue the middleware
+     * The menu a customer reads after scanning the venue's QR.
+     * @description Both halves of the answer come from the one venue the middleware
      *     resolved from the slug: the name from what it remembered, the products
      *     from the query filter it set. Looking the venue up again here is how a
      *     single response ends up naming one venue and listing another's drinks.
@@ -70,10 +71,99 @@ export interface paths {
     /**
      * Answers 404 to every way of not getting in: a wrong token, a code that
      *     belongs to nobody, another venue's order, and an order already handed
-     *     over. A 403 would confirm to somebody working through codes that this
-     *     one exists, which is the half of the answer worth hiding.
+     *     over.
+     * @description A 403 would confirm to somebody working through codes that this one
+     *     exists, which is the half of the answer worth hiding.
      */
     get: operations['FollowOrder'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/{venueSlug}/orders/{code}/{token}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancels an order still waiting to be paid at the till, for the customer holding its link. */
+    post: operations['CancelMyOrder'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/kds/queue': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The bar's queue: every paid order still on its way, oldest paid first. */
+    get: operations['GetKdsQueue'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/kds/scan': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * "Not ready yet" and "already delivered" are answers, not failures: the
+     *     screen still needs whose order it was to say so.
+     */
+    post: operations['ScanOrder'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/scan': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** The order behind the QR on the customer's phone, whatever its state. */
+    post: operations['ScanAtTheTill'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/collections': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** What the signed-in cashier collected during the shift, the latest first. */
+    get: operations['GetMyCollections'];
     put?: never;
     post?: never;
     delete?: never;
@@ -306,24 +396,194 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/kds/orders/{code}/start-preparing': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Takes a queued order into preparation. Taking it again changes nothing. */
+    post: operations['StartPreparingOrder'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/kds/orders/{code}/return-to-queue': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Hands an order in preparation back to the queue, keeping when it was paid. */
+    post: operations['ReturnOrderToQueue'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/kds/orders/{code}/mark-ready': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Marks an order in preparation ready. Marking it again changes nothing. */
+    post: operations['MarkOrderReady'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/kds/orders/{code}/return-to-preparation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Sends an order marked ready by mistake back to preparation. */
+    post: operations['ReturnOrderToPreparation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/kds/orders/{code}/deliver': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Hands a ready order over at the bar, when it cannot be scanned. Delivering it again changes nothing. */
+    post: operations['DeliverOrder'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/kds/orders/{code}/undo-delivery': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Undoes a delivery made moments ago; the order is ready again. Refused once the grace has passed. */
+    post: operations['UndoOrderDelivery'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/orders': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Every order waiting to be paid in cash, the one that has waited longest first. */
+    get: operations['GetOrdersAwaitingPayment'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/orders/{code}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The order behind a code, whatever its state, so the till can tell unpaid from already paid. */
+    get: operations['FindOrderAtTheTill'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/orders/{code}/collect': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Nothing to hand back on success: the screen goes back to the list, and
+     *     the bar hears about it through its hub like any other queued order.
+     */
+    post: operations['CollectCashPayment'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/cashier/orders/{code}/cancel': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Cancels an order still waiting to be paid in cash, and puts its drinks back on the shelf. */
+    post: operations['CancelAtTheTill'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     /**
      * @description How much the stock moves: positive when units arrived, negative when it was
-     *     loaded wrong. Never the new total: a change is what keeps a sale made while
-     *     the screen was open from being overwritten.
+     *     loaded wrong. A change, never the new total.
      */
     AdjustProductStockRequest: {
       /** Format: int32 */
       change: number;
     };
     /**
-     * @description Who made something and who last touched it, as the administration screens
-     *     read it (US-30). Every part travels as null when there is none: a row from
-     *     before the columns existed has no date, and the screen says "sin registro"
-     *     instead of showing one that was never recorded.
+     * @description Who made something and who last touched it, and when. Every part is null
+     *     when it was never recorded.
      */
     AuditResponse: {
       /** Format: date-time */
@@ -333,6 +593,32 @@ export interface components {
       lastModifiedAt: null | string;
       lastModifiedBy: null | string;
     };
+    /** @description One drink of an order, as the till reads it back. */
+    CashierOrderItemResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+      /** Format: double */
+      unitPrice: number;
+    };
+    /** @description An order as the till shows it: who, what, and how much to charge. */
+    CashierOrderResponse: {
+      code: string;
+      customerName: string;
+      status: components['schemas']['CustomerOrderStatus'];
+      /** Format: double */
+      total: number;
+      /** Format: date-time */
+      placedAt: null | string;
+      /** Format: date-time */
+      paidAt: null | string;
+      items: components['schemas']['CashierOrderItemResponse'][];
+    };
+    /** @description What a reader or the camera read off the customer's phone. */
+    CashierScanRequest: {
+      read: null | string;
+    };
     CategoryResponse: {
       /** Format: uuid */
       id: string;
@@ -340,7 +626,7 @@ export interface components {
     };
     /** @description What the administration screen sends to correct somebody's role. */
     ChangeStaffUserRoleRequest: {
-      role: string;
+      role: components['schemas']['StaffRoleName'];
     };
     /** @description The order as the confirmation screen shows it. */
     ConfirmedOrderResponse: {
@@ -351,14 +637,14 @@ export interface components {
       customerName: string;
       /** Format: double */
       total: number;
-      status: string;
+      status: components['schemas']['CustomerOrderStatus'];
       /** Format: date-time */
-      paidAt: string;
+      paidAt: null | string;
     };
     /** @description An order somebody is confirming from their phone. */
     ConfirmOrderRequest: {
       customerName: null | string;
-      method: null | string;
+      method: components['schemas']['PaymentMethodName'];
       idempotencyKey: null | string;
       lines: null | components['schemas']['OrderLineRequestBody'][];
     };
@@ -386,14 +672,41 @@ export interface components {
     CreateStaffUserRequest: {
       username: string;
       password: string;
-      role: string;
+      role: components['schemas']['StaffRoleName'];
     };
+    /**
+     * @description Where an order is, as the customer's phone reads it.
+     * @enum {string}
+     */
+    CustomerOrderStatus:
+      'AwaitingPayment' | 'Paid' | 'Queued' | 'InPreparation' | 'Ready' | 'Delivered' | 'Canceled';
     /** Format: binary */
     IFormFile: string;
     /**
-     * @description What the client posts. Kept apart from LoginCommand so the wire
-     *         contract can change without dragging the use case with it.
+     * @description Which column of the bar's board an order is in.
+     * @enum {string}
      */
+    KdsOrderStatus: 'Queued' | 'InPreparation' | 'Ready';
+    /** @description One drink on a card of the board, as the bar's tablet reads it. */
+    KdsQueueOrderItemResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+    };
+    /** @description One order on the bar's board: who asked, what for, since when, and where it is. */
+    KdsQueueOrderResponse: {
+      code: string;
+      customerName: string;
+      status: components['schemas']['KdsOrderStatus'];
+      /** Format: date-time */
+      paidAt: string;
+      /** Format: date-time */
+      lastModifiedAt: null | string;
+      isForTable: boolean;
+      orderItems: components['schemas']['KdsQueueOrderItemResponse'][];
+    };
+    /** @description The credentials a staff member signs in with. */
     LoginRequest: {
       username: string;
       password: string;
@@ -403,7 +716,7 @@ export interface components {
       /** Format: date-time */
       expiresAt: string;
       username: string;
-      role: string;
+      role: components['schemas']['StaffRoleName'];
     };
     /** @description One card of the menu, as the customer's phone receives it. */
     MenuItemResponse: {
@@ -418,18 +731,13 @@ export interface components {
       categoryId: string;
       isOrderable: boolean;
     };
-    /**
-     * @description The venue's menu. The name travels with it because the customer scanned a
-     *     QR and never typed where they are: the screen is what tells them. The
-     *     categories travel with it too, because they are the venue's own and the
-     *     screen has nowhere else to learn them from.
-     */
+    /** @description The venue's menu: its name, its categories and its products. */
     MenuResponse: {
       venueName: string;
       categories: components['schemas']['CategoryResponse'][];
       items: components['schemas']['MenuItemResponse'][];
     };
-    /** @description One drink, as the phone asks for it. What it costs is not in here on purpose. */
+    /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
       /** Format: uuid */
       productId: string;
@@ -437,6 +745,11 @@ export interface components {
       quantity: number;
       note: null | string;
     };
+    /**
+     * @description How the customer is paying, as the checkout sends it.
+     * @enum {string}
+     */
+    PaymentMethodName: 'Digital' | 'Cash' | 'VipBalance';
     ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -470,11 +783,31 @@ export interface components {
     ResetStaffUserPasswordRequest: {
       password: string;
     };
+    /** @description Whose order a scan found, and what it did with it. */
+    ScannedOrderResponse: {
+      code: string;
+      customerName: string;
+      outcome: components['schemas']['ScanOutcomeName'];
+    };
+    /**
+     * @description What a scan at the bar did, or why it did nothing.
+     * @enum {string}
+     */
+    ScanOutcomeName: 'Delivered' | 'NotReadyYet' | 'AlreadyDelivered';
+    /** @description What the bar's camera or reader read off the customer's phone. */
+    ScanRequest: {
+      read: null | string;
+    };
+    /**
+     * @description A staff member's role, as the contract names it.
+     * @enum {string}
+     */
+    StaffRoleName: 'Administrator' | 'Kds' | 'Waiter' | 'Cashier';
     StaffUserResponse: {
       /** Format: uuid */
       id: string;
       username: string;
-      role: string;
+      role: components['schemas']['StaffRoleName'];
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
     };
@@ -489,7 +822,7 @@ export interface components {
     TrackedOrderResponse: {
       code: string;
       customerName: string;
-      status: string;
+      status: components['schemas']['CustomerOrderStatus'];
       /** Format: double */
       total: number;
       /** Format: date-time */
@@ -497,9 +830,8 @@ export interface components {
       items: components['schemas']['TrackedOrderItemResponse'][];
     };
     /**
-     * @description US-08: what the correction form posts, plus US-14's category. No stock, no
-     *     picture, no switches — each of those has its own action, so a screen that
-     *     only touches one of them cannot accidentally overwrite the rest.
+     * @description A product's name, description, price and category. Stock, picture and
+     *     availability each have their own action.
      */
     UpdateProductRequest: {
       name: string;
@@ -664,6 +996,161 @@ export interface operations {
         };
         content: {
           'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  CancelMyOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        venueSlug: string;
+        code: string;
+        token: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetKdsQueue: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['KdsQueueOrderResponse'][];
+        };
+      };
+    };
+  };
+  ScanOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ScanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ScannedOrderResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ScanAtTheTill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CashierScanRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierOrderResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetMyCollections: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierOrderResponse'][];
         };
       };
     };
@@ -1276,6 +1763,415 @@ export interface operations {
       };
       /** @description Unsupported Media Type */
       415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  StartPreparingOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReturnOrderToQueue: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  MarkOrderReady: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReturnOrderToPreparation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  DeliverOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UndoOrderDelivery: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetOrdersAwaitingPayment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierOrderResponse'][];
+        };
+      };
+    };
+  };
+  FindOrderAtTheTill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierOrderResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  CollectCashPayment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  CancelAtTheTill: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

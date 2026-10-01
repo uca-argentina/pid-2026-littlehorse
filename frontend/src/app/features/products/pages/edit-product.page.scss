@@ -38,6 +38,34 @@
   color: var(--dk-text);
 }
 
+// The failure with a way out: the message, and under it the retry.
+div.note-bad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+}
+
+.note-what {
+  margin: 0;
+}
+
+.retry {
+  align-self: flex-start;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-5);
+  border: 0;
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.retry:hover {
+  background: var(--dk-accent-hover);
+}
+
 // Dashed and apart from the form: this is the only thing on the screen that
 // takes something away, even though it takes nothing away for good.
 .danger {
@@ -117,4 +145,69 @@
 
 .ghost:hover {
   background: var(--dk-surface-raised);
+}
+
+// The loading outline: the title and the form's two columns, fields on the
+// left and the photo on the right, stacked where the form stacks them.
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+}
+
+.skeleton-title {
+  width: 220px;
+  height: 30px;
+}
+
+.skeleton-columns {
+  display: flex;
+  gap: var(--dk-space-4);
+  align-items: flex-start;
+}
+
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: var(--dk-space-5);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+}
+
+.skeleton-grow {
+  flex: 1;
+  min-width: 280px;
+}
+
+.skeleton-side {
+  flex-shrink: 0;
+  width: 360px;
+}
+
+.skeleton-label {
+  width: 90px;
+  height: 14px;
+}
+
+.skeleton-input {
+  height: 48px;
+  margin-bottom: var(--dk-space-3);
+}
+
+.skeleton-photo {
+  aspect-ratio: 1;
+}
+
+@media (width <= 720px) {
+  .skeleton-columns {
+    flex-direction: column;
+  }
+
+  .skeleton-grow,
+  .skeleton-side {
+    width: 100%;
+    min-width: 0;
+  }
 }

@@ -3,10 +3,13 @@ import { Component, computed, effect, inject, input, signal } from '@angular/cor
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { ProblemTypes } from '../../../core/api/problem-types';
+import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { STAFF_ROLE_DESCRIPTIONS, staffRoleName } from '../../../core/staff/staff-roles';
 import type { StaffRole } from '../../../core/staff/staff-roles';
 import { AuditNote } from '../../../shared/audit-note/audit-note';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
+import { slowLoading } from '../../../shared/loading/slow-loading';
 import { PasswordEye } from '../../../shared/password-eye/password-eye';
 import { EditStaffUserStore } from '../edit-staff-user.store';
 import { STAFF_USERS_URL } from '../staff-users.service';
@@ -42,6 +45,29 @@ export class EditStaffUserPage {
    * same trade the search on the listing makes.
    */
   protected readonly staff = httpResource<StaffUser[]>(() => STAFF_USERS_URL);
+
+  protected readonly isSlow = slowLoading(() => this.staff.isLoading());
+
+  /** One outline per role on offer, the part of the screen that is tallest. */
+  protected readonly skeletonRoles = [1, 2, 3];
+
+  /**
+   * Same split as the listing: a dropped connection goes away on a retry, a
+   * role taken away never will, so only the first one offers it.
+   */
+  protected readonly failure = computed<'none' | 'forbidden' | 'unreachable'>(() => {
+    // A retry keeps the last error around while it is under way; the outline
+    // is what shows then, not a failure that may be about to go away.
+    const error = this.staff.isLoading() ? undefined : this.staff.error();
+
+    if (error === undefined) return 'none';
+
+    return problemTypeOf(error) === ProblemTypes.forbidden ? 'forbidden' : 'unreachable';
+  });
+
+  protected retry(): void {
+    this.staff.reload();
+  }
 
   /** What the API last said about them: the listing at first, then each answer. */
   protected readonly person = computed<StaffUser | undefined>(

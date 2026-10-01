@@ -83,11 +83,46 @@
       }
     </div>
   } @else {
-    <section class="below">
+    <section class="below" [attr.aria-busy]="products.isLoading()">
       <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'products']">Volver al listado</a>
 
       @if (products.isLoading()) {
-        <p class="note" role="status">Buscando este producto…</p>
+        <!-- Read aloud from the start, drawn only once it has something to add
+             to the outline below. -->
+        <p class="note" role="status" [class.dk-sr-only]="!isSlow()">
+          Buscando este producto…
+          @if (isSlow()) {
+            Está tardando más de lo normal, seguimos buscando.
+          }
+        </p>
+
+        <div class="skeleton" data-testid="product-skeleton" aria-hidden="true">
+          <div class="dk-skeleton skeleton-title"></div>
+          <div class="skeleton-columns">
+            <div class="skeleton-card skeleton-grow">
+              @for (field of skeletonFields; track field) {
+                <div class="dk-skeleton skeleton-label"></div>
+                <div class="dk-skeleton skeleton-input"></div>
+              }
+            </div>
+            <div class="skeleton-card skeleton-side">
+              <div class="dk-skeleton skeleton-label"></div>
+              <div class="dk-skeleton skeleton-photo"></div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (failure() === 'forbidden') {
+        <p class="note note-bad" role="alert">
+          Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que
+          te la vuelva a dar.
+        </p>
+      } @else if (failure() === 'unreachable') {
+        <div class="note note-bad" role="alert">
+          <p class="note-what">No pudimos traer este producto. Fijate la señal y probá de nuevo.</p>
+          <button class="retry" type="button" (click)="retry()">Reintentar</button>
+        </div>
       }
 
       @if (isMissing()) {

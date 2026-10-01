@@ -77,6 +77,18 @@ describe('StaffLoginStore', () => {
     expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'products']);
   });
 
+  // US-15: straight to the board, same reasoning as the administrator above.
+  it('takes a Kds account to its board when the credentials are valid', () => {
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+    const response = new Subject<StaffSession>();
+    logIn.mockReturnValue(response);
+
+    store.submit('bar-alfa', credentials);
+    response.next({ ...aSession, role: 'Kds' });
+
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'kds']);
+  });
+
   // US-01, criterion 2: a role without screens is told so, not left on the login.
   it('takes any other role to the screen that says there is nothing for them yet', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
@@ -84,7 +96,7 @@ describe('StaffLoginStore', () => {
     logIn.mockReturnValue(response);
 
     store.submit('bar-alfa', credentials);
-    response.next({ ...aSession, role: 'Kds' });
+    response.next({ ...aSession, role: 'Waiter' });
 
     expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff']);
   });

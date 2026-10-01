@@ -1,13 +1,13 @@
+using System.Text.Json.Serialization;
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
-using DrinkIt.Domain.Orders;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Orders;
 
-/// <summary>One drink, as the phone asks for it. What it costs is not in here on purpose.</summary>
+/// <summary>One drink, as the phone asks for it. No price: the venue's menu sets it.</summary>
 public sealed record OrderLineRequestBody(Guid ProductId, int Quantity, string? Note);
 
 /// <summary>
@@ -21,7 +21,7 @@ public sealed record OrderLineRequestBody(Guid ProductId, int Quantity, string? 
 /// </remarks>
 public sealed record ConfirmOrderRequest(
     string? CustomerName,
-    string? Method,
+    [property: JsonRequired] PaymentMethodName Method,
     string? IdempotencyKey,
     IReadOnlyList<OrderLineRequestBody>? Lines);
 
@@ -37,8 +37,8 @@ public sealed record ConfirmedOrderResponse(
     string TrackingToken,
     string CustomerName,
     decimal Total,
-    string Status,
-    DateTimeOffset PaidAt);
+    CustomerOrderStatus Status,
+    DateTimeOffset? PaidAt);
 
 internal static class OrdersEndpoints
 {
@@ -69,12 +69,11 @@ internal static class OrdersEndpoints
         CancellationToken cancellationToken)
     {
         if (venue.Identity is null) return NoSuchVenue(venueSlug);
-        if (!TryReadPaymentMethod(request.Method, out PaymentMethod method)) return NoSuchPaymentMethod(request.Method);
 
         Result<ConfirmedOrder> result = await handler.HandleAsync(
             new ConfirmOrderCommand(
                 request.CustomerName,
-                method,
+                request.Method.ToDomain(),
                 request.IdempotencyKey,
                 [.. (request.Lines ?? []).Select(line => new OrderLineRequest(line.ProductId, line.Quantity, line.Note))]),
             cancellationToken);
@@ -93,7 +92,7 @@ internal static class OrdersEndpoints
                 order.TrackingToken,
                 order.CustomerName,
                 order.Total,
-                order.Status.ToString(),
+                order.Status.ToCustomerStatus(),
                 order.PaidAt));
     }
 
@@ -123,30 +122,13 @@ internal static class OrdersEndpoints
             title: TitleByStatus.GetValueOrDefault(status, "Invalid request"),
             detail: error.Message,
             statusCode: status,
-            type: ProblemTypes.For(error.Code));
+            type: ProblemTypes.For(error.Code),
+            // The detail is English, for developers. The customer's screen
+            // names the drink itself, in Spanish, so it travels on its own.
+            extensions: error.Subject is null
+                ? null
+                : new Dictionary<string, object?> { ["productName"] = error.Subject });
     }
-
-    /// <summary>
-    /// The name of a way of paying, whatever its casing. A name we have never
-    /// heard of is told apart from one that exists and is not built yet: the
-    /// first is a mistake in the request, the second is an answer about us.
-    /// </summary>
-    private static bool TryReadPaymentMethod(string? name, out PaymentMethod method)
-    {
-        method = default;
-
-        if (name is null) return false;
-        if (!Enum.GetNames<PaymentMethod>().Contains(name, StringComparer.OrdinalIgnoreCase)) return false;
-
-        return Enum.TryParse(name, ignoreCase: true, out method);
-    }
-
-    private static ProblemHttpResult NoSuchPaymentMethod(string? name) =>
-        TypedResults.Problem(
-            title: "Invalid request",
-            detail: $"There is no way of paying called '{name}'.",
-            statusCode: StatusCodes.Status400BadRequest,
-            type: ProblemTypes.For("order.payment_method_unknown"));
 
     private static ProblemHttpResult NoSuchVenue(string slug) =>
         TypedResults.Problem(

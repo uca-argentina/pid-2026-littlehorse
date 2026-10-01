@@ -34,6 +34,16 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/categories/categories.routes').then((m) => m.categoriesRoutes),
   },
+  {
+    path: ':venueSlug/staff/kds',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/kds/kds.routes').then((m) => m.kdsRoutes),
+  },
+  {
+    path: ':venueSlug/staff/cashier',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/cashier/cashier.routes').then((m) => m.cashierRoutes),
+  },
   // The customer's door: what the venue's QR points at.
   {
     path: ':venueSlug/menu',

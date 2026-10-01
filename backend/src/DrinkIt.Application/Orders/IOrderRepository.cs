@@ -47,4 +47,42 @@ public interface IOrderRepository
     /// </list>
     /// </remarks>
     Task<Result<Order>> AddAsync(Order order, string idempotencyKey, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The whole order, lines included and tracked, so a use case can move it
+    /// along. Null when this venue has no order with that code — including
+    /// when another venue does, since the global query filter hides it.
+    /// </summary>
+    Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The same, found by the secret the customer's QR carries instead of by
+    /// the code said out loud (US-20). Another venue's order is null here too.
+    /// </summary>
+    Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Commits what the use case changed, and only then reacts to the events
+    /// the order raised — so the board never hears about a change that did not
+    /// make it to the database.
+    /// </summary>
+    /// <remarks>
+    /// Refused with <see cref="OrderErrors.ChangedMeanwhile"/> when somebody
+    /// else saved the same order after it was loaded here: two tills collecting
+    /// it, two tablets moving it. Nothing is written and nobody is notified;
+    /// the first one stands.
+    /// </remarks>
+    Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Commits a cancellation (US-23) and puts its drinks back on the shelf, in
+    /// one unit of work: the stock taken when the order was confirmed returns
+    /// with it, or not at all.
+    /// </summary>
+    /// <remarks>
+    /// Refused with <see cref="OrderErrors.ChangedMeanwhile"/> the same way as
+    /// <see cref="SaveAsync"/> — the till collected it in the same instant —
+    /// and then no stock moves either.
+    /// </remarks>
+    Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken);
 }

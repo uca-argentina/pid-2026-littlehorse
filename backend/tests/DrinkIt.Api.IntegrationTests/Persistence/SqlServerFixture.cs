@@ -28,6 +28,12 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public Task DisposeAsync() => _sqlServer.DisposeAsync().AsTask();
 
+    /// <summary>
+    /// For the one test that needs the whole app running against this same
+    /// container instead of a bare DbContext (US-15's KDS hub isolation test).
+    /// </summary>
+    public string ConnectionString => _sqlServer.GetConnectionString();
+
     /// <summary>A context scoped to one venue, as a real request would have.</summary>
     public DrinkItDbContext CreateContext(Guid venueId) => CreateContext(venueId, []);
 

@@ -1,3 +1,4 @@
+using DrinkIt.Api.Common;
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Api.Tests.Common;
@@ -89,6 +90,18 @@ public class OrdersEndpointsTests
         Assert.Contains("Gin Tonic", response.Text("detail"), StringComparison.Ordinal);
     }
 
+    // The detail is English, for developers; the screen talks to a customer in
+    // Spanish, so the drink travels on its own for it to name.
+    [Fact]
+    public async Task ConfirmAsync_WhenADrinkRanOut_NamesTheDrinkApartFromTheDetail()
+    {
+        _gin = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, 1, Guid.CreateVersion7());
+
+        HttpResponseSnapshot response = await Confirm(ARequestFor(2));
+
+        Assert.Equal("Gin Tonic", response.Text("productName"));
+    }
+
     [Fact]
     public async Task ConfirmAsync_WhenNoVenueHasThatSlug_RespondsWithNotFound()
     {
@@ -107,7 +120,7 @@ public class OrdersEndpointsTests
     public async Task ConfirmAsync_WhenTheBodyCarriesNoLines_RespondsWithBadRequest()
     {
         HttpResponseSnapshot response = await Confirm(
-            new ConfirmOrderRequest("María Quadro", "Digital", "abc-123", null));
+            new ConfirmOrderRequest("María Quadro", PaymentMethodName.Digital, "abc-123", null));
 
         Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
         Assert.Equal("urn:drinkit:problem:order:empty", response.Text("type"));
@@ -120,7 +133,7 @@ public class OrdersEndpointsTests
     {
         HttpResponseSnapshot response = await Confirm(new ConfirmOrderRequest(
             "María Quadro",
-            "Digital",
+            PaymentMethodName.Digital,
             "abc-123",
             [new OrderLineRequestBody(_gin.Id, 1, null), new OrderLineRequestBody(_gin.Id, 2, null)]));
 
@@ -128,26 +141,27 @@ public class OrdersEndpointsTests
         Assert.Equal("urn:drinkit:problem:order:duplicate-line", response.Text("type"));
     }
 
-    // The two the screen draws switched off. Asking the API for them directly
+    // US-24, criterion 3: confirmed, with a code to show at the till, and not
+    // paid yet — so there is no moment of payment to answer with.
+    [Fact]
+    public async Task ConfirmAsync_WhenPayingWithCash_RespondsWithAnOrderAwaitingPayment()
+    {
+        HttpResponseSnapshot response = await Confirm(ARequestFor(1) with { Method = PaymentMethodName.Cash });
+
+        Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
+        Assert.Equal("AwaitingPayment", response.Text("status"));
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, response.Body.GetProperty("paidAt").ValueKind);
+    }
+
+    // The VIP tables are drawn switched off. Asking the API for them directly
     // is answered rather than half-done.
     [Fact]
-    public async Task ConfirmAsync_WhenPayingWithCash_RespondsWithBadRequest()
+    public async Task ConfirmAsync_WhenPayingWithAVipBalance_RespondsWithBadRequest()
     {
-        HttpResponseSnapshot response = await Confirm(ARequestFor(1) with { Method = "Cash" });
+        HttpResponseSnapshot response = await Confirm(ARequestFor(1) with { Method = PaymentMethodName.VipBalance });
 
         Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
         Assert.Equal("urn:drinkit:problem:order:payment-method-unavailable", response.Text("type"));
-    }
-
-    // A way of paying that does not exist at all, as opposed to one that exists
-    // and is not built yet. They are different answers about different things.
-    [Fact]
-    public async Task ConfirmAsync_WhenTheWayOfPayingHasNoName_RespondsWithBadRequest()
-    {
-        HttpResponseSnapshot response = await Confirm(ARequestFor(1) with { Method = "Bitcoin" });
-
-        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
-        Assert.Equal("urn:drinkit:problem:order:payment-method-unknown", response.Text("type"));
     }
 
     // Nothing about how many are left leaves the building, here either.
@@ -161,7 +175,7 @@ public class OrdersEndpointsTests
 
     private ConfirmOrderRequest ARequestFor(int quantity) => new(
         "María Quadro",
-        "Digital",
+        PaymentMethodName.Digital,
         "abc-123",
         [new OrderLineRequestBody(_gin.Id, quantity, null)]);
 
@@ -180,7 +194,7 @@ public class OrdersEndpointsTests
         new Fake.Orders(),
         new Fake.Menu(_gin),
         new Fake.Sequence(),
-        [new DigitalPaymentStrategy(TimeProvider.System)],
+        [new DigitalPaymentStrategy(TimeProvider.System), new CashPaymentStrategy()],
         new Fake.Venue());
 
     private static class Fake
@@ -206,6 +220,18 @@ public class OrdersEndpointsTests
                 string idempotencyKey,
                 CancellationToken cancellationToken) =>
                 Task.FromResult<Result<Order>>(order);
+
+            public Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming never loads an existing order.");
+
+            public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming never loads an existing order.");
+
+            public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming saves through AddAsync.");
+
+            public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming saves through AddAsync.");
         }
 
         public sealed class Menu(params Product[] products) : IProductsForOrdering

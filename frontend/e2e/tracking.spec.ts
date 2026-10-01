@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 import { categoryIdNamed } from './categories';
+import { aKdsAccount, aNewPassword } from './kds';
 
 /**
  * US-12, end to end: somebody watches their order from their table instead of
@@ -34,6 +35,16 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
   expect(created.status()).toBe(201);
 }
 
+/** Signs a fresh bar station in through the API, the way its tablet would. */
+async function aKdsToken(request: APIRequestContext): Promise<string> {
+  const username = await aKdsAccount(request);
+  const login = await request.post(`/api/${seededVenueSlug}/auth/login`, {
+    data: { username, password: aNewPassword },
+  });
+
+  return ((await login.json()) as { token: string }).token;
+}
+
 /** Buys one drink and ends up on the order's own screen. */
 async function anOrderJustPaid(page: Page, request: APIRequestContext) {
   const name = aNewProduct();
@@ -59,7 +70,7 @@ test.describe('Tracking', () => {
 
     await expect(page.getByTestId('order-code')).toHaveText(/^[A-Z]-\d{4}$/);
     await expect(page.getByRole('listitem')).toHaveCount(4);
-    await expect(page.getByRole('listitem').first()).toContainText('Esperando en la barra');
+    await expect(page.getByRole('listitem').first()).toContainText('En cola');
     await expect(page.getByRole('listitem').first()).toHaveAttribute('data-reached', 'true');
     await expect(page.getByRole('listitem').last()).toHaveAttribute('data-reached', 'false');
   });
@@ -102,14 +113,36 @@ test.describe('Tracking', () => {
     await expect(page.getByRole('alert')).toContainText(/no lleva a ningún pedido/i);
   });
 
-  /*
-   * Criterion 3 — that the screen catches up on its own — is not tested here,
-   * and deliberately. The bar has no screens in this sprint, so nothing can
-   * move an order along: proving it end to end would mean either an endpoint
-   * that exists only to be tested or a test that reaches into the database.
-   * What the polling does is covered in tracking.store.spec.ts — that it asks
-   * again, notices the change, stops when the order is over and rests while
-   * nobody is looking — and the criterion is shown by hand in the demo, moving
-   * the status in the database, which is what the backlog says.
+  /**
+   * US-22, criterion 1: the bar takes the order and the customer's screen
+   * moves on its own, in under two seconds, without anybody reloading it.
+   * Nothing on a timer would make it: the screen only asks when the live link
+   * says the order moved.
    */
+  test('moves on its own when the bar takes the order', async ({ page, request }) => {
+    await anOrderJustPaid(page, request);
+    const code = await page.getByTestId('order-code').textContent();
+
+    const taken = await request.post(`/api/kds/orders/${code}/start-preparing`, {
+      headers: { Authorization: `Bearer ${await aKdsToken(request)}` },
+    });
+    expect(taken.ok()).toBe(true);
+
+    const preparing = page.getByRole('listitem').nth(1);
+    await expect(preparing).toContainText('En preparación');
+    await expect(preparing).toHaveAttribute('data-reached', 'true', { timeout: 2000 });
+  });
+
+  // US-34, criterion 1: leaving the tracking screen, on purpose or not, is not
+  // losing the order. The menu is where anybody ends up, and it leads back.
+  test('leads back to the order from the menu after leaving it', async ({ page, request }) => {
+    const link = await anOrderJustPaid(page, request);
+    const code = await page.getByTestId('order-code').textContent();
+
+    await page.goto(menuPath);
+    await page.getByRole('link', { name: new RegExp(`tu pedido ${code}`, 'i') }).click();
+
+    await expect(page).toHaveURL(link);
+    await expect(page.getByTestId('order-code')).toHaveText(code ?? '');
+  });
 });

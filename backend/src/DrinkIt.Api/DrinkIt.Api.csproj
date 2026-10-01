@@ -21,6 +21,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>

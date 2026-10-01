@@ -273,3 +273,64 @@
 .ghost:hover {
   background: var(--dk-surface-raised);
 }
+
+// The failure with a way out: the message, and under it the retry.
+div.note-bad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+}
+
+.note-what {
+  margin: 0;
+}
+
+.retry {
+  align-self: flex-start;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-5);
+  border: 0;
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.retry:hover {
+  background: var(--dk-accent-hover);
+}
+
+// The loading outline: the username, the line under it, and the role and
+// password cards.
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+}
+
+.skeleton-title {
+  width: 160px;
+  height: 30px;
+}
+
+.skeleton-now {
+  width: 130px;
+  height: 15px;
+  margin-top: calc(var(--dk-space-3) * -1);
+}
+
+.skeleton-card-title {
+  width: 80px;
+  height: 13px;
+}
+
+.skeleton-role {
+  height: 66px;
+  border-radius: var(--dk-radius-md);
+}
+
+.skeleton-input {
+  height: 54px;
+}

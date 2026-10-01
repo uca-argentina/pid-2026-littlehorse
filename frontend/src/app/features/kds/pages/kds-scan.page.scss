@@ -1,0 +1,318 @@
+// Traced from design/wireframes/KdsEscanear.dc.html.
+
+.scan {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  padding: var(--dk-space-3) var(--dk-space-4);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-4);
+  padding-bottom: var(--dk-space-3);
+  border-bottom: 1px solid var(--dk-border);
+}
+
+.back {
+  display: flex;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dk-border);
+  border-radius: 13px;
+  color: var(--dk-text);
+  font-size: 20px;
+  text-decoration: none;
+}
+
+.body {
+  display: flex;
+  width: 100%;
+  max-width: 840px;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  padding: var(--dk-space-4) 0;
+  margin: 0 auto;
+}
+
+.target {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  border: 2px solid var(--dk-accent);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+  text-align: center;
+}
+
+.tico {
+  color: var(--dk-accent);
+}
+
+// A code just went out: one quick flash, the same whatever it found — what
+// it found is said in words below.
+.target[data-flash='true'] {
+  animation: scan-flash 600ms ease-out;
+}
+
+@keyframes scan-flash {
+  from {
+    background: rgb(224 182 92 / 45%);
+  }
+
+  to {
+    background: var(--dk-surface);
+  }
+}
+
+// Nothing that moves for somebody who asked the system for less motion: the
+// border lights up instead, for as long as the flash would last.
+@media (prefers-reduced-motion: reduce) {
+  .target[data-flash='true'] {
+    animation: none;
+    box-shadow: 0 0 0 4px var(--dk-accent);
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border: 1px solid var(--dk-border);
+  border-radius: 12px;
+  margin: 2px 0 0;
+  background: var(--dk-ink);
+  font-size: 15.5px;
+}
+
+.tag {
+  padding: 4px 11px;
+  border-radius: var(--dk-radius-pill);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.tag-done {
+  background: var(--dk-done);
+  color: var(--dk-on-done);
+}
+
+.tag-warn {
+  background: var(--dk-age-warn);
+  color: var(--dk-ink);
+}
+
+.hint {
+  max-width: 600px;
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+drinkit-qr-camera {
+  width: 100%;
+  max-width: 520px;
+}
+
+// Where a reader types: dashed, like the wireframe's "Esperando lectura…".
+.reader {
+  width: 100%;
+  min-height: 50px;
+  border: 1px dashed var(--dk-icon-faint);
+  border-radius: 13px;
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font: inherit;
+  font-size: 15.5px;
+  text-align: center;
+}
+
+.reader:focus {
+  border-color: var(--dk-accent);
+  outline: none;
+}
+
+// What the last scan did, said big: the bartender reads it from arm's length
+// with the drink in the other hand.
+.last {
+  display: flex;
+  min-height: 1px;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dk-space-1);
+  text-align: center;
+}
+
+.last p {
+  margin: 0;
+}
+
+.last-tag {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.tone-done {
+  color: var(--dk-done);
+}
+
+.tone-warn {
+  color: var(--dk-age-warn);
+}
+
+.last-who {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.last-note {
+  color: var(--dk-text-muted);
+  font-size: 16px;
+}
+
+.lab {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.feed,
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  margin: 0;
+  list-style: none;
+}
+
+.row,
+.result {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-4);
+  padding: 13px 18px;
+  background: var(--dk-surface);
+  font-size: 17px;
+}
+
+.rid {
+  min-width: 170px;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.row .tag {
+  margin-left: auto;
+}
+
+.when {
+  color: var(--dk-text-faint);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fall {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: var(--dk-space-4);
+  border: 1px dashed var(--dk-drop-border);
+  border-radius: 16px;
+  background: var(--dk-danger-zone-surface);
+}
+
+.ft {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
+.fd {
+  margin: 0;
+  color: var(--dk-text-faint);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.search {
+  min-height: 56px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: 13px;
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.who {
+  flex-grow: 1;
+}
+
+.state {
+  color: var(--dk-text-muted);
+  font-size: 15px;
+}
+
+.act {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border: 1.5px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-surface-raised);
+  color: var(--dk-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.act.primary {
+  border-color: var(--dk-accent);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.act:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.undo,
+.failure {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-3);
+  margin: 0;
+  font-size: 16px;
+}
+
+.failure {
+  color: var(--dk-danger);
+}

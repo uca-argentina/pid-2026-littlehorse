@@ -103,14 +103,43 @@ describe('CheckoutPage', () => {
     expect(sent.request.body.method).toBe('Digital');
   });
 
-  // The only one that is built. The other two are drawn, so the screen is the
-  // one somebody will learn, and switched off with the reason showing.
-  it('offers only the way of paying that exists', async () => {
+  // US-24, criterion 1. The VIP tables are out of this sprint: drawn, so the
+  // screen is the one somebody will learn, and switched off.
+  it('offers paying from the phone or at the till, and not the table balance yet', async () => {
     await openScreenWith(anOrderOfTwoGins);
 
     expect(screen.getByLabelText<HTMLInputElement>(/pago digital/i).disabled).toBe(false);
-    expect(screen.getByLabelText<HTMLInputElement>(/efectivo/i).disabled).toBe(true);
+    expect(screen.getByLabelText<HTMLInputElement>(/efectivo/i).disabled).toBe(false);
     expect(screen.getByLabelText<HTMLInputElement>(/saldo de la mesa/i).disabled).toBe(true);
+  });
+
+  it('starts on paying from the phone', async () => {
+    await openScreenWith(anOrderOfTwoGins);
+
+    expect(screen.getByLabelText<HTMLInputElement>(/pago digital/i).checked).toBe(true);
+  });
+
+  // US-24, criterion 3: nothing is paid on the phone, so the button does not
+  // say "pagar" — it confirms the order and the money changes hands at the till.
+  it('confirms the order instead of paying when cash is chosen', async () => {
+    await openScreenWith(anOrderOfTwoGins);
+
+    fireEvent.click(screen.getByLabelText(/efectivo/i));
+
+    expect(screen.queryByRole('button', { name: /pagar/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /confirmar pedido/i })).not.toBeNull();
+  });
+
+  it('sends cash as the way of paying when it is chosen', async () => {
+    const { rendered, http } = await openScreenWith(anOrderOfTwoGins);
+
+    fireEvent.input(name(), { target: { value: 'María Quadro' } });
+    fireEvent.click(screen.getByLabelText(/efectivo/i));
+    await rendered.fixture.whenStable();
+    screen.getByRole<HTMLButtonElement>('button', { name: /confirmar pedido/i }).click();
+    await rendered.fixture.whenStable();
+
+    expect(http.expectOne(ordersUrl('bar-alfa')).request.body.method).toBe('Cash');
   });
 
   it('says it is working while the payment is going through', async () => {
@@ -138,18 +167,84 @@ describe('CheckoutPage', () => {
       {
         type: 'urn:drinkit:problem:order:sold-out',
         detail: 'Gin Tonic ran out while you were ordering.',
+        productName: 'Gin Tonic',
       },
       { status: 409, statusText: 'Conflict' },
     );
     await rendered.fixture.whenStable();
 
-    expect(screen.getByRole('alert').textContent).toContain('Gin Tonic');
+    expect(screen.getByRole('alert').textContent).toContain('Se acabó el Gin Tonic');
     expect(
       screen
         .getByText(/revisar el pedido/i)
         .closest('a')
         ?.getAttribute('href'),
     ).toBe('/bar-alfa/order');
+  });
+
+  // The API's detail is English, for developers: a customer in a boliche reads
+  // Spanish, whatever went wrong, and never the sentence meant for the logs.
+  describe('when the order is refused', () => {
+    async function refusedWith(problem: Record<string, string>, status = 400) {
+      const { rendered, http } = await openScreenWith(anOrderOfTwoGins);
+
+      fireEvent.input(name(), { target: { value: 'María Quadro' } });
+      await rendered.fixture.whenStable();
+      payButton().click();
+      await rendered.fixture.whenStable();
+
+      http
+        .expectOne(ordersUrl('bar-alfa'))
+        .flush(
+          { detail: 'An English sentence for the logs.', ...problem },
+          { status, statusText: '' },
+        );
+      await rendered.fixture.whenStable();
+
+      return screen.getByRole('alert').textContent ?? '';
+    }
+
+    it.each([
+      ['urn:drinkit:problem:order:sold-out', 'Se acabó el Gin Tonic mientras pedías.'],
+      ['urn:drinkit:problem:order:not-on-the-menu', 'El Gin Tonic ya no está en la carta.'],
+    ])('names the drink in Spanish (%s)', async (type, sentence) => {
+      const said = await refusedWith({ type, productName: 'Gin Tonic' }, 409);
+
+      expect(said).toContain(sentence);
+      expect(said).not.toContain('English');
+    });
+
+    // An old API, or a drink it could not name: still Spanish, just vaguer.
+    it('still says it in Spanish when the drink is not named', async () => {
+      const said = await refusedWith({ type: 'urn:drinkit:problem:order:sold-out' }, 409);
+
+      expect(said).toContain('Se acabó uno de los tragos mientras pedías.');
+    });
+
+    it('says in Spanish that somebody took the last one', async () => {
+      const said = await refusedWith({ type: 'urn:drinkit:problem:order:stock-moved' }, 409);
+
+      expect(said).toContain('Alguien pidió al mismo tiempo');
+    });
+
+    it.each([
+      ['urn:drinkit:problem:order:name-required', 'Necesitamos un nombre'],
+      ['urn:drinkit:problem:order:name-needs-surname', 'Poné tu nombre y tu apellido.'],
+      ['urn:drinkit:problem:order:name-only-letters', 'El nombre sólo puede tener letras.'],
+      ['urn:drinkit:problem:order:name-too-long', 'El nombre es demasiado largo.'],
+    ])('says what is wrong with the name in Spanish (%s)', async (type, sentence) => {
+      const said = await refusedWith({ type });
+
+      expect(said).toContain(sentence);
+      expect(said).not.toContain('English');
+    });
+
+    it('says something in Spanish for a refusal it has no sentence for', async () => {
+      const said = await refusedWith({ type: 'urn:drinkit:problem:order:something-new' });
+
+      expect(said).toContain('No pudimos confirmar tu pedido.');
+      expect(said).not.toContain('English');
+    });
   });
 
   // Nothing to pay for. Reached by typing the address, or by coming back to a

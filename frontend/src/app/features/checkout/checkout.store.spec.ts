@@ -195,19 +195,19 @@ describe('CheckoutStore', () => {
       'urn:drinkit:problem:order:sold-out',
       'urn:drinkit:problem:order:not-on-the-menu',
       'urn:drinkit:problem:order:stock-moved',
-    ])('says which drink when the menu moved (%s)', (type) => {
+    ])('keeps which rule and which drink when the menu moved (%s)', (type) => {
       const { checkout, http } = aStore();
 
       checkout.pay('bar-alfa', 'María Quadro', 'Digital');
       http
         .expectOne(ordersUrl('bar-alfa'))
         .flush(
-          { type, detail: 'Gin Tonic ran out while you were ordering.' },
+          { type, detail: 'Gin Tonic ran out while you were ordering.', productName: 'Gin Tonic' },
           { status: 409, statusText: 'Conflict' },
         );
 
       expect(checkout.status()).toBe('soldOut');
-      expect(checkout.whatWentWrong()).toContain('Gin Tonic');
+      expect(checkout.whatWentWrong()).toEqual({ type, productName: 'Gin Tonic' });
     });
 
     // The order stays on the phone: they are going to fix it and try again.
@@ -225,7 +225,8 @@ describe('CheckoutStore', () => {
       expect(cart.isEmpty()).toBe(false);
     });
 
-    it('repeats what the API said about the name', () => {
+    // The rule, not the API's English sentence: the screen says it in Spanish.
+    it('keeps which rule the name broke', () => {
       const { checkout, http } = aStore();
 
       checkout.pay('bar-alfa', 'Euge', 'Digital');
@@ -238,7 +239,10 @@ describe('CheckoutStore', () => {
       );
 
       expect(checkout.status()).toBe('rejected');
-      expect(checkout.whatWentWrong()).toContain('surname');
+      expect(checkout.whatWentWrong()).toEqual({
+        type: 'urn:drinkit:problem:order:name-needs-surname',
+        productName: null,
+      });
     });
 
     // No problem document at all: the venue's wifi, not our rules.

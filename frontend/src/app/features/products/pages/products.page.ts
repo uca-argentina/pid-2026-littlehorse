@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
+import { slowLoading } from '../../../shared/loading/slow-loading';
 import { PRODUCTS_URL, PRODUCT_PLACEHOLDER, ProductsService } from '../products.service';
 import type { Product } from '../products.service';
 
@@ -108,6 +109,11 @@ export class ProductsPage {
    * arrive as signals, which is exactly the three states this screen draws.
    */
   protected readonly products = httpResource<Product[]>(() => PRODUCTS_URL);
+
+  protected readonly isSlow = slowLoading(() => this.products.isLoading());
+
+  /** Enough outlines to fill the first screen, not the length of any real list. */
+  protected readonly skeletonRows = [1, 2, 3, 4];
 
   /**
    * What the administrator typed, and which state they narrowed to. Both are

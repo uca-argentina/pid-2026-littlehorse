@@ -1,5 +1,7 @@
-import { Component, computed, effect, inject, input, untracked } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { QRCodeComponent } from 'angularx-qrcode';
+import type { CustomerOrderStatus } from '../tracking.service';
 import { TrackingStore } from '../tracking.store';
 
 /** One step of the journey, as the screen draws it. */
@@ -17,9 +19,10 @@ interface Step {
  * the API stops showing an order once it is handed over — so the screen supplies
  * it itself when the link stops working on an order it was already showing.
  */
-const JOURNEY = [
+const JOURNEY: readonly { name: string; after: readonly CustomerOrderStatus[] }[] = [
   {
-    name: 'Esperando en la barra',
+    // Not "esperando en la barra": that read as the drink waiting at the bar.
+    name: 'En cola',
     after: ['Paid', 'Queued', 'InPreparation', 'Ready', 'Delivered'],
   },
   { name: 'En preparación', after: ['InPreparation', 'Ready', 'Delivered'] },
@@ -28,19 +31,42 @@ const JOURNEY = [
 ];
 
 /** What to say about each status, in the words somebody in a bar would use. */
-const WHAT_IS_HAPPENING: Record<string, string> = {
-  Paid: 'Ya está pago. Te avisamos cuando lo estén preparando.',
-  Queued: 'Ya está pago y esperando en la barra.',
+const WHAT_IS_HAPPENING: Partial<Record<CustomerOrderStatus, string>> = {
+  AwaitingPayment: 'Falta pagar en la caja. Recién ahí lo empiezan a preparar.',
+  Paid: 'Ya está pago y en la cola. Te avisamos cuando lo empiecen a preparar.',
+  Queued: 'Ya está pago y en la cola. Te avisamos cuando lo empiecen a preparar.',
   InPreparation: 'Lo están preparando.',
-  Ready: '¡Está listo! Acercate a la barra y decí tu código.',
+  Ready: '¡Está listo! Acercate a la barra y mostrá tu QR.',
   Delivered: 'Entregado. ¡Que lo disfrutes!',
 };
 
 /**
+ * The statuses in which there is something to pick up at the bar with the QR:
+ * paid and not yet handed over. Before paying, the cashier needs the code, not
+ * this; once handed over, it must not look like it still claims anything.
+ */
+const CLAIMABLE: readonly CustomerOrderStatus[] = [
+  'AwaitingPayment',
+  'Paid',
+  'Queued',
+  'InPreparation',
+  'Ready',
+];
+
+/**
+ * Colours of the QR itself, which the library takes as values rather than
+ * CSS: the same paper and ink as the block around it (--dk-paper and
+ * --dk-on-paper), so the quiet zone and the block read as one light surface.
+ */
+const QR_PAPER = '#f7f4ed';
+
+const QR_INK = '#12100e';
+
+/**
  * Where somebody's order is.
  *
- * The only screen of the app that changes without anybody touching it: it asks
- * the server every three seconds, which is what US-12 asks for and what lets
+ * The customer's screen that changes without anybody touching it: it hears the
+ * order move over a live link (US-22) and asks again, which is what lets
  * somebody stay at their table instead of standing at the bar.
  *
  * It is also the screen somebody lands on the moment they pay, so it opens with
@@ -49,7 +75,7 @@ const WHAT_IS_HAPPENING: Record<string, string> = {
  */
 @Component({
   selector: 'drinkit-tracking-page',
-  imports: [RouterLink],
+  imports: [RouterLink, QRCodeComponent],
   providers: [TrackingStore],
   styleUrl: './tracking.page.scss',
   templateUrl: './tracking.page.html',
@@ -75,14 +101,45 @@ export class TrackingPage {
    * been watching their order deserves to see it arrive, not an alert saying
    * their link is broken at the moment their drinks reached them.
    */
-  private readonly status = computed(() =>
-    this.store.status() === 'over' ? 'Delivered' : (this.store.order()?.status ?? ''),
+  private readonly status = computed<CustomerOrderStatus | null>(() =>
+    this.store.status() === 'over' ? 'Delivered' : (this.store.order()?.status ?? null),
   );
 
-  protected readonly whatIsHappening = computed(() => WHAT_IS_HAPPENING[this.status()] ?? '');
+  /** Paying in cash: the code is for the cashier first, and the bar only after (US-25). */
+  protected readonly paysAtTheTill = computed(() => this.status() === 'AwaitingPayment');
+
+  /** US-23: nothing to pick up and nothing left to wait for, so the journey is not drawn. */
+  protected readonly isCanceled = computed(() => this.status() === 'Canceled');
+
+  /** "Cancelar pedido" was tapped once: it asks before doing it. */
+  protected readonly confirmingCancel = signal(false);
+
+  protected readonly whatIsHappening = computed(() => {
+    const status = this.status();
+
+    return status === null ? '' : (WHAT_IS_HAPPENING[status] ?? '');
+  });
+
+  /**
+   * US-20: the QR, while there is something to pay for at the till (the cashier
+   * scans it, decided on 2026-09-29) or to pick up at the bar.
+   */
+  protected readonly showsQr = computed(() => {
+    const status = this.status();
+
+    return status !== null && CLAIMABLE.includes(status);
+  });
+
+  protected readonly qrPaper = QR_PAPER;
+
+  protected readonly qrInk = QR_INK;
 
   protected readonly steps = computed<Step[]>(() =>
-    JOURNEY.map((step) => ({ name: step.name, reached: step.after.includes(this.status()) })),
+    JOURNEY.map((step) => {
+      const status = this.status();
+
+      return { name: step.name, reached: status !== null && step.after.includes(status) };
+    }),
   );
 
   constructor() {
@@ -92,8 +149,8 @@ export class TrackingPage {
       const token = this.token();
 
       // Only the address is worth reacting to. Following reads the store's own
-      // signals on the way in, and tracking those would make every answer start
-      // the polling over again — a loop that feeds itself, one timer per round.
+      // signals on the way in, and tracking those would make every answer follow
+      // again — reconnect to the hub, ask again, answer, and round it goes.
       untracked(() => this.store.follow(venueSlug, code, token));
     });
   }

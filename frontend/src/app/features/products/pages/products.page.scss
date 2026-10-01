@@ -354,3 +354,27 @@
   background: var(--dk-danger-surface);
   color: var(--dk-text);
 }
+
+// The loading outline: the row's own thumb and box, and bars where the name,
+// the description, the price and the switch will be.
+.skeleton-name {
+  width: 55%;
+  height: 21px;
+}
+
+.skeleton-line {
+  width: 80%;
+  height: 15px;
+  margin-top: 8px;
+}
+
+.skeleton-price {
+  width: 70px;
+  height: 20px;
+}
+
+.skeleton-switch {
+  width: 52px;
+  height: 30px;
+  border-radius: var(--dk-radius-pill);
+}

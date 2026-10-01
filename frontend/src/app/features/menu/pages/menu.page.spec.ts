@@ -7,6 +7,9 @@ import { BrowserStore } from '../../../core/storage/browser-store';
 import { StoreInMemory } from '../../../core/storage/store-in-memory';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { MY_ORDERS_STORAGE_PREFIX } from '../../../core/orders/my-orders';
+import { trackingUrl } from '../../tracking/tracking.service';
+import { OrdersInProgressChannel } from '../components/orders-in-progress-channel';
 import { menuUrl } from '../menu.service';
 import type { Menu } from '../menu.service';
 import { MenuPage } from './menu.page';
@@ -53,6 +56,11 @@ async function openScreen() {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: BrowserStore, useValue: store },
+      // The live link has its own spec (OrdersInProgress); here it stays quiet.
+      {
+        provide: OrdersInProgressChannel,
+        useValue: { follow: () => undefined, disconnect: () => undefined },
+      },
     ],
   });
 
@@ -102,6 +110,31 @@ describe('MenuPage', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Bar Alfa');
   });
 
+  // US-34: the menu is where anybody who left the tracking screen ends up.
+  it('leads back to an order this phone followed', async () => {
+    const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
+    store.write(
+      `${MY_ORDERS_STORAGE_PREFIX}bar-alfa`,
+      JSON.stringify([{ code: 'K-4821', token, savedAt: Date.now() }]),
+    );
+    const { rendered, http } = await openScreen();
+
+    http.expectOne(menuUrl('bar-alfa')).flush(carta);
+    http.expectOne(trackingUrl('bar-alfa', 'K-4821', token)).flush({
+      code: 'K-4821',
+      customerName: 'María Quadro',
+      status: 'InPreparation',
+      total: 9000,
+      paidAt: null,
+      items: [],
+    });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('link', { name: /Tu pedido K-4821/ }).getAttribute('href')).toBe(
+      `/bar-alfa/orders/K-4821/${token}`,
+    );
+  });
+
   it('writes the price the way it is read here', async () => {
     await openScreenShowing(carta);
 
@@ -121,6 +154,40 @@ describe('MenuPage', () => {
     await openScreen();
 
     expect(screen.getByRole('status').textContent).toContain('Buscando');
+  });
+
+  // The shape of the cards before the cards themselves: a blank page on a slow
+  // connection reads as an app that broke.
+  it('draws the outline of the menu while it loads', async () => {
+    await openScreen();
+
+    expect(screen.getByTestId('menu-skeleton')).not.toBeNull();
+    expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('drops the outline once the menu arrives', async () => {
+    await openScreenShowing(carta);
+
+    expect(screen.queryByTestId('menu-skeleton')).toBeNull();
+    expect(screen.getByRole('main').getAttribute('aria-busy')).toBe('false');
+  });
+
+  // A cold start of the API and the database together takes most of a minute,
+  // and an outline that sits still that long looks frozen.
+  describe('when the menu takes long', () => {
+    beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+    afterEach(() => vi.useRealTimers());
+
+    it('says it is still on it after a few seconds', async () => {
+      const { rendered } = await openScreen();
+
+      expect(screen.getByRole('status').textContent).not.toContain('tardando');
+
+      vi.advanceTimersByTime(5000);
+      rendered.fixture.detectChanges();
+
+      expect(screen.getByRole('status').textContent).toContain('tardando');
+    });
   });
 
   // Criterion 4. A dropped connection is the case that a retry can fix.

@@ -43,6 +43,36 @@ describe('StaffUsersPage', () => {
     expect(screen.getByText('pablo.l')).not.toBeNull();
   });
 
+  it('draws the outline of the list while it loads', async () => {
+    await openScreen();
+
+    const skeleton = screen.getByTestId('staff-skeleton');
+    expect(skeleton.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.getByRole('status').textContent).toContain('Cargando');
+  });
+
+  it('drops the outline once the list arrives', async () => {
+    await openScreenShowing(theTeam);
+
+    expect(screen.queryByTestId('staff-skeleton')).toBeNull();
+  });
+
+  describe('when the list takes long', () => {
+    beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }));
+    afterEach(() => vi.useRealTimers());
+
+    it('says it is still on it after a few seconds', async () => {
+      const { rendered } = await openScreen();
+
+      expect(screen.getByRole('status').textContent).not.toContain('tardando');
+
+      vi.advanceTimersByTime(5000);
+      rendered.fixture.detectChanges();
+
+      expect(screen.getByRole('status').textContent).toContain('tardando');
+    });
+  });
+
   it('shows each role in the language of the venue', async () => {
     await openScreenShowing(theTeam);
 
@@ -179,7 +209,7 @@ describe('StaffUsersPage', () => {
     it('keeps whoever was deactivated inside their role', async () => {
       const rendered = await openScreenShowing(theTeam);
 
-      pill(/KDS/i).click();
+      pill(/^KDS · \d+$/i).click();
       await rendered.fixture.whenStable();
 
       expect(listed()).toEqual(['pablo.l']);

@@ -135,7 +135,11 @@ test.describe('Checkout', () => {
     await page.getByRole('textbox', { name: /nombre/i }).fill('María Quadro');
     await page.getByRole('button', { name: /pagar/i }).click();
 
-    await expect(page.getByRole('alert')).toContainText(name, { timeout: 15000 });
+    // In Spanish, with the drink named: never the API's English detail.
+    await expect(page.getByRole('alert')).toContainText(`Se acabó el ${name} mientras pedías.`, {
+      timeout: 15000,
+    });
+    await expect(page.getByRole('alert')).not.toContainText('ran out');
     await expect(page.getByRole('link', { name: /revisar el pedido/i })).toBeVisible();
   });
 
@@ -149,7 +153,7 @@ test.describe('Checkout', () => {
     await page.getByRole('button', { name: /pagar/i }).click();
     await expect(page.getByTestId('order-code')).toBeVisible({ timeout: 15000 });
 
-    await expect(page.getByRole('listitem').first()).toContainText('Esperando en la barra');
+    await expect(page.getByRole('listitem').first()).toContainText('En cola');
     await expect(page).toHaveURL(/\/orders\/[A-Z]-\d{4}\/[0-9a-f]{32}$/);
   });
 });

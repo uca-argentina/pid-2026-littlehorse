@@ -1,3 +1,4 @@
+using DrinkIt.Api.Common;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Common;
@@ -21,7 +22,7 @@ public class StaffUsersEndpointsTests
     [Fact]
     public async Task CreateAsync_WhenTheDataIsValid_RespondsWithTheCreatedUser()
     {
-        HttpResponseSnapshot response = await Create("Martin.P", LongEnoughPassword, "Waiter");
+        HttpResponseSnapshot response = await Create("Martin.P", LongEnoughPassword, StaffRoleName.Waiter);
 
         Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
         Assert.StartsWith("application/json", response.ContentType, StringComparison.Ordinal);
@@ -34,7 +35,7 @@ public class StaffUsersEndpointsTests
     [Fact]
     public async Task CreateAsync_WhenTheUsernameIsAlreadyUsedInThisVenue_RespondsWithConflict()
     {
-        HttpResponseSnapshot response = await Create("martin.p", LongEnoughPassword, "Waiter", taken: "martin.p");
+        HttpResponseSnapshot response = await Create("martin.p", LongEnoughPassword, StaffRoleName.Waiter, taken: "martin.p");
 
         Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
         Assert.StartsWith("application/problem+json", response.ContentType, StringComparison.Ordinal);
@@ -44,45 +45,10 @@ public class StaffUsersEndpointsTests
     [Fact]
     public async Task CreateAsync_WhenThePasswordIsTooShort_RespondsWithBadRequest()
     {
-        HttpResponseSnapshot response = await Create("martin.p", "short", "Waiter");
+        HttpResponseSnapshot response = await Create("martin.p", "short", StaffRoleName.Waiter);
 
         Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
         Assert.Equal("urn:drinkit:problem:staff:password-too-short", response.Text("type"));
-    }
-
-    /// <summary>
-    /// The wire carries the role as a name, so anything that is not one of ours
-    /// is malformed input and comes back as a 400 rather than as a crash.
-    /// </summary>
-    /// <remarks>
-    /// The comma case is the one that surprises: Enum.TryParse ORs a
-    /// comma-separated list even for an enum that is not [Flags], so
-    /// "Administrator,Kds" parses as 1|2 and lands on Waiter. A request nobody
-    /// would write by hand, and silently the wrong role if it ever arrives.
-    /// </remarks>
-    [Theory]
-    [InlineData("Cashier")]
-    [InlineData("")]
-    [InlineData("99")]
-    [InlineData("Administrator,Kds")]
-    [InlineData("Waiter, Administrator")]
-    public async Task CreateAsync_WhenTheRoleIsNotOneAVenueHandsOut_RespondsWithBadRequest(string role)
-    {
-        HttpResponseSnapshot response = await Create("martin.p", LongEnoughPassword, role);
-
-        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
-        Assert.Equal("urn:drinkit:problem:staff:role-invalid", response.Text("type"));
-    }
-
-    // Written lowercase by a phone keyboard that capitalises, or by hand. The
-    // role picker sends a fixed value, but nothing on the wire guarantees it.
-    [Fact]
-    public async Task CreateAsync_WhenTheRoleIsTypedWithOtherCasing_StillCreatesTheUser()
-    {
-        HttpResponseSnapshot response = await Create("martin.p", LongEnoughPassword, "kds");
-
-        Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
-        Assert.Equal("Kds", response.Text("role"));
     }
 
     [Fact]
@@ -132,7 +98,7 @@ public class StaffUsersEndpointsTests
     private static async Task<HttpResponseSnapshot> Create(
         string username,
         string password,
-        string role,
+        StaffRoleName role,
         string? taken = null)
     {
         Fake.Repository staff = taken is null
@@ -157,7 +123,7 @@ public class StaffUsersEndpointsTests
 
         IResult result = await StaffUsersEndpoints.ChangeRoleAsync(
             martin.Id,
-            new ChangeStaffUserRoleRequest("Kds"),
+            new ChangeStaffUserRoleRequest(StaffRoleName.Kds),
             new ChangeStaffUserRoleHandler(staff),
             CancellationToken.None);
 
@@ -168,23 +134,6 @@ public class StaffUsersEndpointsTests
         Assert.Equal("martin.p", response.Text("username"));
     }
 
-    [Fact]
-    public async Task ChangeRoleAsync_WhenTheRoleIsNotOneAVenueHandsOut_RespondsWithBadRequest()
-    {
-        StaffUser martin = AWaiter();
-
-        IResult result = await StaffUsersEndpoints.ChangeRoleAsync(
-            martin.Id,
-            new ChangeStaffUserRoleRequest("Cashier"),
-            new ChangeStaffUserRoleHandler(new Fake.Repository(martin)),
-            CancellationToken.None);
-
-        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Put);
-
-        Assert.Equal(StatusCodes.Status400BadRequest, response.StatusCode);
-        Assert.Equal("urn:drinkit:problem:staff:role-invalid", response.Text("type"));
-    }
-
     // Either nobody has that id or they belong to another venue, and the query
     // filter makes those the same answer on purpose.
     [Fact]
@@ -192,7 +141,7 @@ public class StaffUsersEndpointsTests
     {
         IResult result = await StaffUsersEndpoints.ChangeRoleAsync(
             Guid.CreateVersion7(),
-            new ChangeStaffUserRoleRequest("Kds"),
+            new ChangeStaffUserRoleRequest(StaffRoleName.Kds),
             new ChangeStaffUserRoleHandler(new Fake.Repository()),
             CancellationToken.None);
 

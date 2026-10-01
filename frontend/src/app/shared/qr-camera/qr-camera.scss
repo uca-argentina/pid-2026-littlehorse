@@ -1,0 +1,47 @@
+// The target of KdsEscanear: gold-bordered, because it is where the bar looks.
+.camera {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--dk-accent);
+  border-radius: 20px;
+  background: var(--dk-surface);
+  aspect-ratio: 4 / 3;
+}
+
+.feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Nothing to show yet, or ever: the note takes the frame instead.
+.camera-off .feed {
+  display: none;
+}
+
+.note {
+  max-width: 34ch;
+  padding: 0 20px;
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 16px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+// Over the live picture, so it needs its own backing to be read.
+.note-over {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  padding: 8px 14px;
+  border-radius: 99px;
+  background: rgb(18 16 14 / 75%);
+  color: var(--dk-text);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}

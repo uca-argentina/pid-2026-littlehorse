@@ -32,4 +32,21 @@ export const ProblemTypes = {
   orderSoldOut: 'urn:drinkit:problem:order:sold-out',
   orderNotOnTheMenu: 'urn:drinkit:problem:order:not-on-the-menu',
   orderStockMoved: 'urn:drinkit:problem:order:stock-moved',
+
+  orderNameRequired: 'urn:drinkit:problem:order:name-required',
+  orderNameNeedsSurname: 'urn:drinkit:problem:order:name-needs-surname',
+  orderNameOnlyLetters: 'urn:drinkit:problem:order:name-only-letters',
+  orderNameTooLong: 'urn:drinkit:problem:order:name-too-long',
+
+  /** Another screen changed the order in the same instant, and its change stands. */
+  orderChangedMeanwhile: 'urn:drinkit:problem:order:changed-meanwhile',
+
+  /** US-23: only an order waiting to be paid at the till can be canceled. */
+  orderNotCancelable: 'urn:drinkit:problem:order:not-cancelable',
+
+  /** The till looked up a code this venue does not have. */
+  cashierOrderNotFound: 'urn:drinkit:problem:cashier:order-not-found',
+
+  /** Nothing left to collect: paid at the till already, or from the phone. */
+  cashierAlreadyPaid: 'urn:drinkit:problem:cashier:already-paid',
 } as const;

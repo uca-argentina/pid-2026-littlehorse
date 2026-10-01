@@ -74,8 +74,9 @@
               name="payment-method"
               [id]="'pay-' + way.method"
               [value]="way.method"
-              [checked]="way.isBuilt"
+              [checked]="way.method === method()"
               [disabled]="!way.isBuilt"
+              (change)="method.set(way.method)"
               [attr.aria-label]="way.name"
             />
             <span class="way-what">
@@ -87,12 +88,14 @@
       </section>
 
       @if (store.status() === 'paying') {
-        <p class="note" role="status">Procesando el pago…</p>
+        <p class="note" role="status">
+          {{ paysAtTheTill() ? 'Confirmando tu pedido…' : 'Procesando el pago…' }}
+        </p>
       }
 
       @if (store.status() === 'soldOut') {
         <div class="note note-bad" role="alert">
-          <p class="note-what">{{ store.whatWentWrong() }}</p>
+          <p class="note-what"><ng-container [ngTemplateOutlet]="refusal" /></p>
           <!--
             "Revisar" and not "Volver": the arrow at the top already goes back,
             and two controls with the same name on one screen are the same
@@ -104,7 +107,7 @@
       }
 
       @if (store.status() === 'rejected') {
-        <p class="note note-bad" role="alert">{{ store.whatWentWrong() }}</p>
+        <p class="note note-bad" role="alert"><ng-container [ngTemplateOutlet]="refusal" /></p>
       }
 
       @if (store.status() === 'unreachable') {
@@ -119,11 +122,62 @@
   @if (!cart.isEmpty()) {
     <footer class="foot">
       <button class="cta" type="button" [disabled]="!canPay() || store.isPaying()" (click)="pay()">
-        <span>{{ store.isPaying() ? 'Procesando…' : 'Pagar' }}</span>
+        @if (store.isPaying()) {
+          <span>Procesando…</span>
+        } @else {
+          <span>{{ paysAtTheTill() ? 'Confirmar pedido' : 'Pagar' }}</span>
+        }
         <span class="num">$ {{ total() }}</span>
       </button>
 
-      <p class="safe">El pago está simulado: todavía no se cobra nada de verdad.</p>
+      @if (paysAtTheTill()) {
+        <p class="safe">Pagás en la caja, mostrando el código que te damos.</p>
+      } @else {
+        <p class="safe">El pago está simulado: todavía no se cobra nada de verdad.</p>
+      }
     </footer>
   }
 </div>
+
+<!--
+  Why the order was refused, always in Spanish. The API's own detail is English
+  and written for developers, so it is never shown: the type says which rule,
+  and the drink travels on its own when there is one to name.
+-->
+<ng-template #refusal>
+  @let drink = store.whatWentWrong()?.productName;
+  @switch (store.whatWentWrong()?.type) {
+    @case (problems.orderSoldOut) {
+      @if (drink) {
+        Se acabó el {{ drink }} mientras pedías.
+      } @else {
+        Se acabó uno de los tragos mientras pedías.
+      }
+    }
+    @case (problems.orderNotOnTheMenu) {
+      @if (drink) {
+        El {{ drink }} ya no está en la carta.
+      } @else {
+        Uno de los tragos ya no está en la carta.
+      }
+    }
+    @case (problems.orderStockMoved) {
+      Alguien pidió al mismo tiempo y cambió lo que queda. Revisá tu pedido.
+    }
+    @case (problems.orderNameRequired) {
+      Necesitamos un nombre para llamarte en la barra.
+    }
+    @case (problems.orderNameNeedsSurname) {
+      Poné tu nombre y tu apellido.
+    }
+    @case (problems.orderNameOnlyLetters) {
+      El nombre sólo puede tener letras.
+    }
+    @case (problems.orderNameTooLong) {
+      El nombre es demasiado largo.
+    }
+    @default {
+      No pudimos confirmar tu pedido. Revisalo y probá de nuevo.
+    }
+  }
+</ng-template>

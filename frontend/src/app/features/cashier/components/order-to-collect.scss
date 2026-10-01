@@ -1,0 +1,249 @@
+// design/wireframes/CajeroConfirmar.dc.html: the order on the left, what to
+// charge and the button on the right. Side by side only when the space it gets
+// is wide enough — a container query, because the page's own sidebar decides
+// how much that is, not the screen.
+
+:host {
+  display: block;
+  container-type: inline-size;
+}
+
+.collect {
+  display: grid;
+  gap: var(--dk-space-4);
+}
+
+@container (width >= 720px) {
+  .collect {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+}
+
+.details,
+.pay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+}
+
+// The total sizes itself to the column it gets, not to the screen: at 320px
+// beside the order it has to fit on one line just the same.
+.pay {
+  container-type: inline-size;
+}
+
+.who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dk-space-3);
+}
+
+.who p {
+  margin: 0;
+}
+
+.code {
+  padding: var(--dk-space-2) var(--dk-space-3);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  color: var(--dk-accent);
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.14em;
+}
+
+.name {
+  flex-grow: 1;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pending {
+  padding: var(--dk-space-1) var(--dk-space-3);
+  border: 1.5px solid var(--dk-age-warn);
+  border-radius: var(--dk-radius-pill);
+  color: var(--dk-age-warn);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  margin: 0;
+  padding: var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+  list-style: none;
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--dk-space-3);
+  font-size: 20px;
+}
+
+.qty {
+  min-width: 40px;
+  color: var(--dk-accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.what {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.note,
+.muted {
+  color: var(--dk-text-muted);
+  font-size: 15px;
+}
+
+.line-price {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dk-space-3);
+}
+
+.placed {
+  margin-left: auto;
+}
+
+.chip {
+  padding: var(--dk-space-1) var(--dk-space-3);
+  border: 1.5px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  color: var(--dk-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.amount {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dk-space-1);
+  margin: 0;
+  padding: var(--dk-space-5) var(--dk-space-4);
+  border: 2px solid var(--dk-accent);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+}
+
+.amount-label {
+  color: var(--dk-text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.amount-value {
+  font-size: clamp(28px, 12cqi, 56px);
+  white-space: nowrap;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.cta,
+.ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dk-space-2);
+  border-radius: var(--dk-radius-lg);
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cta {
+  min-height: 72px;
+  border: 0;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 20px;
+}
+
+.cta:disabled {
+  background: var(--dk-accent-disabled);
+  cursor: default;
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--dk-accent-hover);
+}
+
+.ghost {
+  min-height: 56px;
+  border: 1px solid var(--dk-border);
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font-size: 16px;
+}
+
+// US-23: the one thing on the card that takes the order away. Dashed and apart
+// from "Confirmar cobro", like the deactivate zone of a product.
+.confirm-cancel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-4);
+  border: 1px dashed var(--dk-danger-zone-border);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-danger-zone-surface);
+}
+
+.confirm-text {
+  margin: 0;
+  color: var(--dk-danger-zone-title);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.danger-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border: 1px solid var(--dk-danger-zone-border);
+  border-radius: var(--dk-radius-lg);
+  background: none;
+  color: var(--dk-danger-zone-action);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: var(--dk-danger-surface);
+}

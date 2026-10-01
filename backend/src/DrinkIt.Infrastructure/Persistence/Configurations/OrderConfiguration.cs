@@ -14,15 +14,30 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
     /// </summary>
     public const string IdempotencyKey = "IdempotencyKey";
 
+    /// <summary>The concurrency token: see its configuration below.</summary>
+    public const string Version = "Version";
+
     public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.ToTable("Orders");
-        builder.HasCreationTime();
+        // Full audit since 2026-09-28: the last change's moment is each board
+        // column's clock, and its author says which station moved the order.
+        builder.HasAuditColumns();
         builder.HasKey(order => order.Id);
 
         builder.Property(order => order.CustomerName).HasMaxLength(Order.CustomerNameMaxLength).IsRequired();
         builder.Property(order => order.Status).IsRequired();
         builder.Property(order => order.PaidAt);
+        builder.Property(order => order.Method);
+        builder.Property(order => order.DeliveredAt);
+        // Same length as a username: it is one (US-26).
+        builder.Property(order => order.CollectedBy).HasMaxLength(50);
+
+        // SQL Server bumps it on every write, and EF puts it in the WHERE of
+        // every UPDATE: a save of an order somebody else saved meanwhile
+        // matches no row and is refused instead of overwriting theirs. A
+        // shadow property because the domain has no business knowing it.
+        builder.Property<byte[]>(Version).IsRowVersion();
 
         // Stored as the six characters the customer reads, not as two columns:
         // it is one thing, and every query looks it up whole.
@@ -33,19 +48,23 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property<string>(IdempotencyKey).HasMaxLength(100).IsRequired();
 
-        // The secret half of the tracking link. Not indexed and never looked up
-        // on its own: the lookup is by code, within the venue, and this is
-        // compared afterwards — so an index on it would be an invitation to
-        // query by it that nothing needs.
+        // The secret half of the tracking link. The customer's screen still
+        // looks up by code and compares this afterwards; the bar's scan (US-20)
+        // is what looks up by it alone, since the QR carries nothing else.
         builder.Property(order => order.TrackingToken)
             .HasConversion(token => token.Value, value => TrackingToken.Parse(value))
             .HasMaxLength(TrackingToken.Length)
             .IsRequired();
 
-        // Both composite with VenueId: codes run per venue, and so do the keys.
-        // Two venues can hand out K-4821 the same night without meeting.
+        // All composite with VenueId: codes run per venue, and so do the keys.
+        // Two venues can hand out K-4821 the same night without meeting. The
+        // token's is unique so that a scan hands over one order and never has
+        // to pick between two.
         builder.HasIndex(order => new { order.VenueId, order.Code }).IsUnique();
         builder.HasIndex(IdempotencyKey, nameof(Order.VenueId)).IsUnique();
+        builder.HasIndex(order => new { order.VenueId, order.TrackingToken }).IsUnique();
+        // The till's "cobros de tu turno": one cashier's collections, by time.
+        builder.HasIndex(order => new { order.VenueId, order.CollectedBy, order.PaidAt });
 
         // Derived, never stored: both can only disagree with what they are
         // derived from.

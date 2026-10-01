@@ -2,37 +2,30 @@ using System.Text.Json.Serialization;
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Extensions;
 using DrinkIt.Api.Features.Authentication;
+using DrinkIt.Api.Features.Cashier;
+using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tenancy;
-using DrinkIt.Application.Authentication;
 using DrinkIt.Application.Common;
-using DrinkIt.Application.Menu;
-using DrinkIt.Application.Orders;
-using DrinkIt.Application.Staff;
 using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Cashier;
+using DrinkIt.Infrastructure.Kds;
+using DrinkIt.Infrastructure.Orders;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddScoped<LoginHandler>();
-builder.Services.AddScoped<CreateStaffUserHandler>();
-builder.Services.AddScoped<ChangeStaffUserRoleHandler>();
-builder.Services.AddScoped<ResetStaffUserPasswordHandler>();
-builder.Services.AddScoped<DeactivateStaffUserHandler>();
-builder.Services.AddScoped<ReactivateStaffUserHandler>();
-builder.Services.AddScoped<CreateCategoryHandler>();
-builder.Services.AddScoped<CreateProductHandler>();
-builder.Services.AddScoped<UpdateProductHandler>();
-builder.Services.AddScoped<DeactivateProductHandler>();
-builder.Services.AddScoped<AdjustProductStockHandler>();
-builder.Services.AddScoped<UploadProductImageHandler>();
-builder.Services.AddScoped<MarkProductUnavailableHandler>();
-builder.Services.AddScoped<MarkProductAvailableHandler>();
-builder.Services.AddScoped<ConfirmOrderHandler>();
+// One line per feature: each one lists its own handlers, next to its endpoints.
+builder.Services.AddLoginHandlers();
+builder.Services.AddStaffHandlers();
+builder.Services.AddMenuHandlers();
+builder.Services.AddOrderHandlers();
+builder.Services.AddKdsHandlers();
+builder.Services.AddCashierHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
@@ -51,6 +44,7 @@ if (!builder.Environment.IsDevelopment() && jwt.SigningKey.StartsWith("dev-", St
 
 builder.Services.AddStaffAuthentication(jwt);
 builder.Services.AddFrontendCors(builder.Configuration);
+builder.Services.AddTelemetry(builder.Configuration);
 
 builder.Services.AddProblemDetailsForEveryError();
 // Numbers are numbers on the wire. ASP.NET's default also reads them from
@@ -58,7 +52,7 @@ builder.Services.AddProblemDetailsForEveryError();
 // generated Angular client typed as "number | string".
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict);
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddSchemaTransformer<ContractEnumSchemaTransformer>());
 
 WebApplication app = builder.Build();
 
@@ -103,6 +97,12 @@ app.UseRouting();
 // Before authentication: the browser's preflight carries no token, and refusing
 // it with a 401 would block the real request behind it.
 app.UseCors();
+// Without this the WebSockets transport fails outright — "the connection ID
+// is not present on the server" — before KdsHub sees a single request: the
+// upgrade itself is refused below this middleware. SignalR falls back to
+// long polling, but the bar's tablet has no business paying for that latency
+// every night when the one line above fixes it (US-15).
+app.UseWebSockets();
 app.UseAuthentication();
 app.UseMiddleware<VenueResolutionMiddleware>();
 app.UseAuthorization();
@@ -114,5 +114,16 @@ app.MapOrderTracking();
 app.MapStaffUsers();
 app.MapCategories();
 app.MapProducts();
+app.MapKds();
+app.MapHub<KdsHub>(KdsHubRoute.Path);
+app.MapHub<TillHub>(TillHubRoute.Path);
+app.MapHub<TrackingHub>(TrackingHubRoute.Path);
+app.MapCashier();
 
 await app.RunAsync();
+
+// Top-level statements generate an internal Program by default. Public and
+// partial so WebApplicationFactory<Program> can find it from the test project
+// — needed once, for the KDS hub's own isolation test (US-15): nothing before
+// it in this codebase has spun up the whole app.
+public partial class Program;

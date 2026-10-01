@@ -128,6 +128,22 @@ Costo: el build del PWA espera al de la infraestructura, unos minutos más por d
 token viaja en `Authorization` y no en una cookie, así que no hace falta el modo con
 credenciales de CORS.
 
+## Adenda del 2026-09-27: la API manda telemetría a Application Insights
+
+El recurso `appi-drinkit` existía desde el primer deploy y el Bicep ya le pasaba su cadena de
+conexión al Container App, pero la API no tenía nada que la leyera: el recurso estaba vacío.
+Lo único visible eran los logs de consola que Container Apps manda a Log Analytics.
+
+Se suma `Azure.Monitor.OpenTelemetry.AspNetCore` (MIT), la distribución de OpenTelemetry que
+Microsoft recomienda en lugar del SDK clásico de Application Insights. Registra requests,
+excepciones, logs y las llamadas a SQL y a Blob Storage. Se activa sólo si está
+`ApplicationInsights:ConnectionString`: en desarrollo no hay recurso, y la distribución
+falla al arrancar sin cadena de conexión.
+
+Sigue dentro del tier gratuito: los primeros 5 GB de ingesta por mes no se cobran, y el
+tráfico de un boliche queda muy por debajo. Si algún día se acerca, se baja con el
+`SamplingRatio` de la distribución.
+
 ## Qué no pudimos verificar
 
 Los límites citados salen de la documentación oficial de Microsoft a la fecha de este ADR.

@@ -31,10 +31,22 @@
   --dk-accent-disabled: #8a7038;
   --dk-on-accent: #12100e; // text placed on top of the accent
 
+  // Paper: whatever another pair of eyes or a scanner has to read off the
+  // screen — the pickup QR — sits on this, light inside the dark app. A 2D
+  // reader needs the light background; it is not decoration. Kept the same
+  // in both palettes, like the accent.
+  --dk-paper: #f7f4ed;
+  --dk-on-paper: #12100e;
+
   // Feedback. Not in the wireframes, which only draw the happy path, so these
   // are chosen to sit inside the same palette.
   --dk-danger: #e07a5c;
   --dk-danger-surface: #2a1b16;
+
+  // Handed over: the "ENTREGADO" tag of KdsEscanear, the one feedback color
+  // the wireframes do draw.
+  --dk-done: #6e9e7f;
+  --dk-on-done: #12100e;
   --dk-danger-alert-text: #f2c9ba; // body copy on --dk-danger-surface
 
   // A handful of surfaces and borders that recur across screens with the same
@@ -50,6 +62,13 @@
   --dk-danger-zone-surface: #191612;
   --dk-danger-zone-title: #e0a79b;
   --dk-danger-zone-action: #c85a4a;
+
+  // How long an order has waited (US-15's KDS board): ámbar at 5 minutes, rojo
+  // at 10 — straight from KdsBoard.dc.html, not chosen to match the feedback
+  // colours above even where a hex happens to agree.
+  --dk-age-warn: #d98a3f;
+  --dk-age-urgent: #c85a4a;
+  --dk-age-urgent-surface: #231714;
 
   // Type. Instrument Serif carries venue and product names, Karla everything
   // else. The design system's third face, IBM Plex Mono, arrives with the
@@ -109,6 +128,9 @@
   --dk-danger-zone-surface: #fdf1ec;
   --dk-danger-zone-title: #963d26;
   --dk-danger-zone-action: #a8422c;
+  --dk-age-warn: #a8611f;
+  --dk-age-urgent: #a8422c;
+  --dk-age-urgent-surface: #fbe9e4;
 
   color-scheme: light;
 }
@@ -152,6 +174,41 @@ body {
   white-space: nowrap;
 }
 
+// A block standing in for content that has not arrived. Each screen sizes it
+// with its own class to the shape of what will replace it. Invisible for the
+// first 200ms: a fast answer never flashes an outline on its way in.
+.dk-skeleton {
+  border-radius: var(--dk-radius-sm);
+  background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--dk-text) 6%, transparent),
+      transparent
+    )
+    var(--dk-surface-raised);
+  background-size: 200% 100%;
+  opacity: 0;
+  animation:
+    dk-skeleton-in 0.2s 0.2s forwards,
+    dk-skeleton-shimmer 1.6s linear infinite;
+}
+
+@keyframes dk-skeleton-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dk-skeleton-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
 // One focus ring for the whole app. The venue is dark and the accent is the
 // only colour that survives it.
 :focus-visible {
@@ -167,5 +224,11 @@ body {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+
+  // Shortened to 0.01ms an infinite shimmer would flicker instead of stop.
+  .dk-skeleton {
+    opacity: 1;
+    animation: none !important;
   }
 }

@@ -1,10 +1,15 @@
 using DrinkIt.Application.Authentication;
+using DrinkIt.Application.Cashier;
+using DrinkIt.Application.Common;
+using DrinkIt.Application.Kds;
 using DrinkIt.Application.Menu;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
 using DrinkIt.Application.Venues;
 using DrinkIt.Infrastructure.Authentication;
+using DrinkIt.Infrastructure.Cashier;
+using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
@@ -63,11 +68,26 @@ public static class InfrastructureServices
         services.AddScoped<IProductsForOrdering, ProductsForOrdering>();
         services.AddScoped<IOrderCodeSequence, OrderCodeSequence>();
         services.AddScoped<IOrderTrackingQueries, OrderTrackingQueries>();
+        services.AddScoped<IKdsQueueQueries, KdsQueueQueries>();
+        services.AddScoped<ICashierQueries, CashierQueries>();
+
+        // Implemented in Application, not here — same reason as DigitalPaymentStrategy
+        // below — but registered from this composition root either way.
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+
+        // SignalR itself, and the one hub the bar's tablet connects to. The
+        // notifier only holds IHubContext, which is itself a singleton — no
+        // DbContext, no per-request state.
+        services.AddSignalR();
+        services.AddSingleton<IKdsBoardNotifier, KdsBoardNotifier>();
+        services.AddSingleton<ITillNotifier, TillNotifier>();
+        services.AddSingleton<IOrderFollowers, OrderFollowers>();
 
         // Registered as a collection on purpose: the handler picks the strategy
         // that matches the method asked for, so adding cash or VIP balance is
         // adding a class here and touching nothing else.
         services.AddScoped<IPaymentStrategy, DigitalPaymentStrategy>();
+        services.AddScoped<IPaymentStrategy, CashPaymentStrategy>();
 
         return services;
     }

@@ -1,0 +1,451 @@
+// Layout and colours straight from design/wireframes/KdsBoard.dc.html — a
+// tablet apaisada, three columns, big tabular numbers read from a metre away.
+
+.board {
+  display: flex;
+  flex-direction: column;
+
+  // Exactly the screen, never taller: the page itself does not scroll, each
+  // column does, so the header and the dock stay put whatever was scrolled.
+  height: 100dvh;
+  padding: var(--dk-space-3) var(--dk-space-4);
+}
+
+// Which venue, and which station's tablet: the wireframe's top bar, without
+// the scanner and the clock, which arrive with the stories that need them.
+.head {
+  display: flex;
+  align-items: center;
+  padding-bottom: var(--dk-space-3);
+  margin-bottom: var(--dk-space-3);
+  border-bottom: 1px solid var(--dk-border);
+}
+
+.status {
+  margin: var(--dk-space-6) auto;
+  color: var(--dk-text-muted);
+  font-size: 18px;
+}
+
+.status.empty {
+  color: var(--dk-text);
+}
+
+.offline {
+  margin: 0 0 var(--dk-space-3);
+  padding: var(--dk-space-2) var(--dk-space-3);
+  border-radius: var(--dk-radius-sm);
+  border: 1.5px solid var(--dk-age-warn);
+  background: var(--dk-surface);
+  color: var(--dk-age-warn);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cols {
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: var(--dk-space-3);
+  min-height: 0;
+}
+
+.col {
+  // What the "Volver arriba" button floats over.
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-2);
+  min-height: 0;
+}
+
+.colh {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-2);
+  margin: 0;
+}
+
+.colt {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--dk-text-muted);
+}
+
+.cnt {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dk-on-accent);
+  background: var(--dk-text-muted);
+  border-radius: var(--dk-radius-pill);
+  padding: 2px 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+
+  // Each column scrolls on its own: Nuevos grows all night while the others
+  // stay short, and scrolling one must not move the rest.
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  // No native bar: in Chrome on a desktop it takes width from the cards. The
+  // .scroll-thumb below shows the position instead, only while scrolling.
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.card {
+  // What the choose button's stretched area is measured against.
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-2);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+  border: 1.5px solid var(--dk-border);
+  padding: var(--dk-space-3) 14px;
+}
+
+.card.warn {
+  border-color: var(--dk-age-warn);
+}
+
+.card.urg {
+  border-color: var(--dk-age-urgent);
+  background: var(--dk-age-urgent-surface);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.grow {
+  flex-grow: 1;
+}
+
+.onum {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.who {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.age {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--dk-text-muted);
+}
+
+.age.warn {
+  color: var(--dk-age-warn);
+}
+
+.age.urg {
+  color: var(--dk-age-urgent);
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.it {
+  display: flex;
+  gap: 11px;
+  font-size: 18px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.q {
+  font-weight: 700;
+  color: var(--dk-accent);
+  min-width: 30px;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--dk-accent-hover);
+  background: var(--dk-note-surface);
+  border-radius: var(--dk-radius-sm);
+  padding: 2px 9px;
+}
+
+.chip {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--dk-radius-pill);
+  border: 1.5px solid var(--dk-pill-on-border);
+  color: var(--dk-text-muted);
+  white-space: nowrap;
+}
+
+.chip.mesa {
+  border-color: var(--dk-accent);
+  color: var(--dk-on-accent);
+  background: var(--dk-accent);
+}
+
+// US-16. The top of a card among the next ten is a button: tapping it chooses
+// the order, as KdsSeleccion.dc.html draws it. It keeps the row's look.
+.pick {
+  width: 100%;
+  min-height: var(--dk-tap-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  // The button covers the whole card: a tap on the drinks chooses it too, and
+  // there is still one interactive element, which a keyboard reaches.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+}
+
+.card.chosen {
+  border-color: var(--dk-accent);
+  box-shadow: inset 0 0 0 1px var(--dk-accent);
+}
+
+.acts {
+  // Above the choose button's stretched area, so Preparar is its own tap.
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  // The row spans the card, but only its buttons are its own: the empty part,
+  // left of Preparar and down to the border, lets the tap through to the
+  // choose button underneath, like the rest of the card.
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}
+
+.act {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border-radius: var(--dk-radius-sm);
+  border: 1.5px solid var(--dk-border);
+  background: var(--dk-surface-raised);
+  color: var(--dk-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.act.primary {
+  border-color: var(--dk-accent);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.act:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.picked-tag {
+  color: var(--dk-accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+// The bar under the board while something is chosen: how many, every drink
+// summed, and the two ways out.
+// What the bar has to see whatever card it tapped: a failed action, and the
+// chosen orders waiting to be prepared. Stuck to the bottom of the screen.
+.dock {
+  // The last row of the board: with the page no longer scrolling, it is
+  // always on screen without needing to stick.
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-2);
+  margin-top: var(--dk-space-3);
+
+  &:empty {
+    display: none;
+  }
+
+  .offline {
+    margin: 0;
+  }
+}
+
+.picked {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-3) var(--dk-space-4);
+  border-radius: var(--dk-radius-md);
+  border: 1.5px solid var(--dk-accent);
+  background: var(--dk-surface-raised);
+}
+
+.picked-text {
+  flex-grow: 1;
+  font-size: 17px;
+}
+
+// Floats at the bottom of its own column, over the cards, only once that
+// column is scrolled far down.
+.to-top {
+  position: absolute;
+  bottom: var(--dk-space-3);
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border-radius: var(--dk-radius-pill);
+  border: 1.5px solid var(--dk-accent);
+  background: var(--dk-surface-raised);
+  color: var(--dk-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+}
+
+// Safari's overlay scrollbar, drawn by hand so every browser has it: thin, on
+// the column's edge, over the cards, and only while the column moves.
+.scroll-thumb {
+  position: absolute;
+  right: 2px;
+  z-index: 2;
+  width: 4px;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-text-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+
+  &.showing {
+    opacity: 0.7;
+    transition-duration: 80ms;
+  }
+}
+
+// US-18: the board's search, at the end of the header.
+.to-scan {
+  display: flex;
+  min-height: var(--dk-tap-min);
+  align-items: center;
+  padding: 0 var(--dk-space-4);
+  border: 1.5px solid var(--dk-accent);
+  border-radius: var(--dk-radius-sm);
+  margin-left: auto;
+  color: var(--dk-accent);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+// The ready orders out of view, above the ones drawn.
+.more {
+  margin: 0;
+  padding: var(--dk-space-2) var(--dk-space-3);
+  border-radius: var(--dk-radius-sm);
+  border: 1.5px dashed var(--dk-border);
+  color: var(--dk-text-muted);
+  font-size: 14px;
+}
+
+.acts {
+  gap: var(--dk-space-2);
+}
+
+// "Entregado A-0066 · Deshacer", for a few seconds after a delivery.
+.done {
+  display: flex;
+  align-items: center;
+  gap: var(--dk-space-3);
+  margin: 0;
+  padding: var(--dk-space-2) var(--dk-space-4);
+  border-radius: var(--dk-radius-md);
+  border: 1.5px solid var(--dk-border);
+  background: var(--dk-surface-raised);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+// The first load: the board's own outline, each block the size of what will
+// replace it, so the cards land where the eye already is.
+.skeleton-count {
+  width: 28px;
+  height: 21px;
+  border-radius: var(--dk-radius-pill);
+}
+
+.skeleton-code {
+  width: 76px;
+  height: 22px;
+}
+
+.skeleton-name {
+  width: 110px;
+  height: 18px;
+}
+
+.skeleton-age {
+  width: 44px;
+  height: 15px;
+}
+
+.skeleton-item {
+  width: 70%;
+  height: 18px;
+
+  &.short {
+    width: 45%;
+  }
+}
+
+.skeleton-action {
+  width: 112px;
+  height: var(--dk-tap-min);
+}

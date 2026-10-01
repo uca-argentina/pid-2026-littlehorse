@@ -8,9 +8,32 @@
     <drinkit-theme-toggle />
   </header>
 
-  <main class="body">
+  <main class="body" [attr.aria-busy]="menu.isLoading()">
+    <!-- US-34: the way back to an order, for whoever left its tracking screen. -->
+    <drinkit-orders-in-progress [venueSlug]="venueSlug()" />
+
     @if (menu.isLoading()) {
-      <p class="note" role="status">Buscando la carta…</p>
+      <!-- Read aloud from the start, drawn only once it has something to add
+           to the outline below. -->
+      <p class="note" role="status" [class.dk-sr-only]="!isSlow()">
+        Buscando la carta…
+        @if (isSlow()) {
+          Está tardando más de lo normal, seguimos buscando.
+        }
+      </p>
+
+      <ul class="list" data-testid="menu-skeleton" aria-hidden="true">
+        @for (card of skeletonCards; track card) {
+          <li class="card">
+            <div class="thumb dk-skeleton"></div>
+            <div class="what">
+              <div class="dk-skeleton skeleton-name"></div>
+              <div class="dk-skeleton skeleton-line"></div>
+              <div class="dk-skeleton skeleton-price"></div>
+            </div>
+          </li>
+        }
+      </ul>
     } @else if (isWrongAddress()) {
       <p class="note note-bad" role="alert">
         Esta dirección no es de ningún boliche. Fijate de escanear el QR de la barra.

@@ -17,7 +17,7 @@ namespace DrinkIt.Domain.Orders;
 /// answer would carry a half-moved order forward, and that is the bug this
 /// design exists to make impossible.
 /// </remarks>
-public sealed class Order : CreationStamp, IBelongsToVenue
+public sealed class Order : AuditStamps, IBelongsToVenue
 {
     public static class ErrorCodes
     {
@@ -30,12 +30,16 @@ public sealed class Order : CreationStamp, IBelongsToVenue
         public const string DuplicateItem = "order.duplicate_item";
         public const string NoteLength = "order.note_length";
         public const string InvalidTransition = "order.invalid_transition";
+        public const string CollectorRequired = "order.collector_required";
+        public const string UndoWindowPassed = "order.undo_window_passed";
     }
 
     /// <summary>Room for a full name on a ticket, and no more.</summary>
     public const int CustomerNameMaxLength = 60;
 
     private readonly List<OrderItem> _items = [];
+
+    private readonly List<IDomainEvent> _domainEvents = [];
 
     /// <summary>
     /// The lines are filled in afterwards rather than taken here: EF Core reads
@@ -75,7 +79,38 @@ public sealed class Order : CreationStamp, IBelongsToVenue
     /// <summary>When it was paid, or null while nobody has. Stamped once.</summary>
     public DateTimeOffset? PaidAt { get; private set; }
 
+    /// <summary>
+    /// How it was paid, or null while nobody has. Stamped once, alongside
+    /// <see cref="PaidAt"/> — the KDS board reads it back to tell barra from
+    /// mesa (US-15), so it has to outlive the moment the payment strategy
+    /// spends settling the order.
+    /// </summary>
+    public PaymentMethod? Method { get; private set; }
+
+    /// <summary>When it was handed over, or null while nobody has picked it up.</summary>
+    public DateTimeOffset? DeliveredAt { get; private set; }
+
+    /// <summary>
+    /// The cashier who took the money for it (US-26), or null when nobody did:
+    /// it was paid from the phone, or not yet. The till lists its own shift by it.
+    /// </summary>
+    public string? CollectedBy { get; private set; }
+
+    /// <summary>
+    /// How long after a delivery it can still be undone. The screen offers it
+    /// for a few seconds; this is the margin a slow request still fits in.
+    /// Delivered is final after that.
+    /// </summary>
+    public static readonly TimeSpan DeliveryUndoWindow = TimeSpan.FromSeconds(30);
+
     public IReadOnlyList<OrderItem> Items => _items;
+
+    /// <summary>
+    /// Raised and not yet reacted to. Whoever saves this aggregate atomically
+    /// dispatches these and clears them — the domain itself never calls
+    /// anything outside its own boundary.
+    /// </summary>
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents;
 
     /// <summary>Derived, never stored: a total kept apart from the lines is one that can disagree with them.</summary>
     public decimal Total => _items.Sum(item => item.Total);
@@ -106,16 +141,48 @@ public sealed class Order : CreationStamp, IBelongsToVenue
     }
 
     /// <summary>
-    /// Paid. In this sprint that happens the moment the customer confirms — the
-    /// gateway is simulated, as the brief allows — so there is one step and not
-    /// a wait for anybody's callback.
+    /// Paid from the phone, straight from the cart — the gateway is simulated,
+    /// as the brief allows. Cash goes through <see cref="CollectCash"/> instead.
     /// </summary>
-    public void Pay(DateTimeOffset at)
+    public void Pay(DateTimeOffset at, PaymentMethod method)
     {
         EnsureItIs(OrderStatus.Cart);
 
         Status = OrderStatus.Paid;
         PaidAt = at;
+        Method = method;
+    }
+
+    /// <summary>
+    /// Confirmed, and waiting at the till for the money (§6, US-24). Unpaid and
+    /// out of the bar's sight; what is raised is for the till's list, since
+    /// nothing is to be made yet. The method is kept so the till knows what it
+    /// is collecting.
+    /// </summary>
+    public void AwaitPayment(PaymentMethod method)
+    {
+        EnsureItIs(OrderStatus.Cart);
+
+        Status = OrderStatus.AwaitingPayment;
+        Method = method;
+        _domainEvents.Add(new OrderAwaitingPayment(VenueId, TrackingToken));
+    }
+
+    /// <summary>
+    /// The till took the money (US-26): paid now, remembering who took it, and
+    /// straight to the bar. The only way out of waiting for cash.
+    /// </summary>
+    public void CollectCash(DateTimeOffset at, string cashier)
+    {
+        if (string.IsNullOrWhiteSpace(cashier)) throw new DomainException(ErrorCodes.CollectorRequired, "Somebody has to have taken the money.");
+
+        EnsureItIs(OrderStatus.AwaitingPayment);
+
+        Status = OrderStatus.Paid;
+        PaidAt = at;
+        CollectedBy = cashier;
+        Enqueue();
+        _domainEvents.Add(new OrderCollected(VenueId, TrackingToken));
     }
 
     /// <summary>Handed to the bar. Nothing takes it from here until the KDS exists.</summary>
@@ -124,7 +191,122 @@ public sealed class Order : CreationStamp, IBelongsToVenue
         EnsureItIs(OrderStatus.Paid);
 
         Status = OrderStatus.Queued;
+        _domainEvents.Add(new OrderQueued(VenueId, TrackingToken));
     }
+
+    /// <summary>
+    /// The bar took it (US-16) — "Preparar" on the board, even while no paper
+    /// comes out. Asking again for what already happened changes nothing: a
+    /// double tap, or a retry over a bad signal, is not a second order taken.
+    /// </summary>
+    public void StartPreparing()
+    {
+        if (Status == OrderStatus.InPreparation) return;
+
+        EnsureItIs(OrderStatus.Queued);
+
+        Status = OrderStatus.InPreparation;
+        _domainEvents.Add(new OrderPreparationStarted(VenueId, TrackingToken));
+    }
+
+    /// <summary>
+    /// Taken by mistake, handed back (US-16, criterion 4). <see cref="PaidAt"/>
+    /// stays as it was, and the board counts its age from there, so it goes
+    /// back exactly as old as it was. Idempotent for the same reason as
+    /// <see cref="StartPreparing"/>.
+    /// </summary>
+    public void ReturnToQueue()
+    {
+        if (Status == OrderStatus.Queued) return;
+
+        EnsureItIs(OrderStatus.InPreparation);
+
+        Status = OrderStatus.Queued;
+        _domainEvents.Add(new OrderRequeued(VenueId, TrackingToken));
+    }
+
+    /// <summary>
+    /// The drink is made (US-18, criterion 1). Only from preparation: a queued
+    /// order is prepared first. Asking again for what already happened changes
+    /// nothing, so nothing is saved and the board's clock — the audit stamp of
+    /// the last change — keeps counting from when it really became ready.
+    /// </summary>
+    public void MarkReady()
+    {
+        if (Status == OrderStatus.Ready) return;
+
+        EnsureItIs(OrderStatus.InPreparation);
+
+        Status = OrderStatus.Ready;
+        _domainEvents.Add(new OrderReady(VenueId, Id, TrackingToken));
+    }
+
+    /// <summary>Marked ready by mistake: back to the bar, as if it never was.</summary>
+    public void ReturnToPreparation()
+    {
+        if (Status == OrderStatus.InPreparation) return;
+
+        EnsureItIs(OrderStatus.Ready);
+
+        Status = OrderStatus.InPreparation;
+        _domainEvents.Add(new OrderReturnedToPreparation(VenueId, TrackingToken));
+    }
+
+    /// <summary>
+    /// Handed over. By hand for now (US-18), when there is no scan to verify
+    /// who is picking it up; the scan of US-19 ends here too.
+    /// </summary>
+    public void Deliver(DateTimeOffset at)
+    {
+        if (Status == OrderStatus.Delivered) return;
+
+        EnsureItIs(OrderStatus.Ready);
+
+        Status = OrderStatus.Delivered;
+        DeliveredAt = at;
+        _domainEvents.Add(new OrderDelivered(VenueId, TrackingToken));
+    }
+
+    /// <summary>
+    /// "Deshacer", right after a mistaken delivery. Only within
+    /// <see cref="DeliveryUndoWindow"/>: past it, a delivered order stays
+    /// delivered.
+    /// </summary>
+    public void UndoDelivery(DateTimeOffset now)
+    {
+        EnsureItIs(OrderStatus.Delivered);
+
+        // No moment recorded — delivered before the column existed — reads as
+        // too late: an undo that cannot be timed must not reopen anything.
+        if (DeliveredAt is null || now - DeliveredAt > DeliveryUndoWindow) throw new DomainException(ErrorCodes.UndoWindowPassed, "It is too late to undo that delivery.");
+
+        Status = OrderStatus.Ready;
+        DeliveredAt = null;
+        _domainEvents.Add(new OrderDeliveryUndone(VenueId, TrackingToken));
+    }
+
+    /// <summary>
+    /// Not going ahead (US-23): only while it waits to be paid at the till,
+    /// asked by the cashier or by the customer. Once paid, by any method, it is
+    /// the bar's, and paid orders are not given back (docs/modelo-de-datos.md).
+    /// Asking again for what already happened changes nothing: a double tap,
+    /// or the cashier and the customer at once, is not a second cancellation.
+    /// </summary>
+    public void Cancel()
+    {
+        if (Status == OrderStatus.Canceled) return;
+
+        EnsureItIs(OrderStatus.AwaitingPayment);
+
+        Status = OrderStatus.Canceled;
+        _domainEvents.Add(new OrderCanceled(VenueId, TrackingToken));
+    }
+
+    /// <summary>
+    /// Forgets what was raised, once whoever saved this aggregate has reacted
+    /// to it. Never called from inside the domain itself.
+    /// </summary>
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     private static OrderItem ToItem(NewOrderItem item)
     {
@@ -142,8 +324,8 @@ public sealed class Order : CreationStamp, IBelongsToVenue
     /// The message names no state on purpose: it reaches the customer (ADR-0009),
     /// and "expected Paid, was Queued" is our vocabulary, not theirs.
     /// </summary>
-    private void EnsureItIs(OrderStatus expected)
+    private void EnsureItIs(params ReadOnlySpan<OrderStatus> expected)
     {
-        if (Status != expected) throw new DomainException(ErrorCodes.InvalidTransition, "That cannot be done to this order any more.");
+        if (!expected.Contains(Status)) throw new DomainException(ErrorCodes.InvalidTransition, "That cannot be done to this order any more.");
     }
 }

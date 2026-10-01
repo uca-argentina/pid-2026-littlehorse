@@ -1,5 +1,4 @@
-// Traced from design/wireframes/EstadoPedido.dc.html, minus the pickup QR,
-// which belongs with the bar's screens and is out of Sprint 1.
+// Traced from design/wireframes/EstadoPedido.dc.html.
 
 .frame {
   display: flex;
@@ -60,6 +59,19 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.06em;
   line-height: 1.05;
+}
+
+// The pickup QR (US-20) on paper: light inside the dark app, because a 2D
+// reader needs it and a phone turned down to its lowest brightness gives it
+// little else to work with. Big for the same reason.
+.paper {
+  display: flex;
+  padding: 6px;
+  border-radius: 18px;
+  margin: 2px 0;
+  background: var(--dk-paper);
+  color: var(--dk-on-paper);
+  line-height: 0;
 }
 
 .journey {
@@ -146,4 +158,44 @@
   border-color: var(--dk-danger);
   background: var(--dk-danger-surface);
   color: var(--dk-danger-alert-text);
+}
+
+// US-23: the one thing on the screen that takes the order away, set apart
+// from the code and the QR the customer is here for.
+.confirm-cancel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 15px;
+  border: 1px dashed var(--dk-danger-zone-border);
+  border-radius: 14px;
+  background: var(--dk-danger-zone-surface);
+}
+
+.confirm-text {
+  margin: 0;
+  color: var(--dk-danger-zone-title);
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+.danger-button {
+  display: flex;
+  width: 100%;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dk-danger-zone-border);
+  border-radius: 14px;
+  background: none;
+  color: var(--dk-danger-zone-action);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
