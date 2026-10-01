@@ -23,11 +23,19 @@ public sealed class TrackingHub : Hub
     public const string OrderChanged = "OrderChanged";
 
     /// <summary>
-    /// The key in <see cref="HubCallerContext.Items"/> holding the group this
-    /// connection follows. There and not in a field: SignalR creates a new hub
-    /// instance for every call, and the items live as long as the connection.
+    /// How many orders one connection follows at once: the menu follows every
+    /// order of the night (US-34), and a night is a few rounds, not dozens.
+    /// The cap is what stops one connection from joining groups without end.
     /// </summary>
-    private const string FollowedGroup = "followed-group";
+    public const int MostFollowedPerConnection = 5;
+
+    /// <summary>
+    /// The key in <see cref="HubCallerContext.Items"/> holding the groups this
+    /// connection follows, oldest first. There and not in a field: SignalR
+    /// creates a new hub instance for every call, and the items live as long
+    /// as the connection.
+    /// </summary>
+    private const string FollowedGroups = "followed-groups";
 
     /// <summary>
     /// Joins the order this token belongs to. Checked against nothing, on
@@ -45,13 +53,24 @@ public sealed class TrackingHub : Hub
         // A link mangled while copying it is an answer, not a crash.
         if (!TrackingToken.TryParse(token, out TrackingToken? order)) return;
 
-        // One order per connection, like the screen: following another lets go
-        // of the last, so no connection piles up groups the server keeps.
-        if (Context.Items[FollowedGroup] is string previous) await Groups.RemoveFromGroupAsync(Context.ConnectionId, previous);
+        if (Context.Items[FollowedGroups] is not List<string> followed)
+        {
+            followed = [];
+            Context.Items[FollowedGroups] = followed;
+        }
 
-        string followed = GroupFor(order!);
-        Context.Items[FollowedGroup] = followed;
-        await Groups.AddToGroupAsync(Context.ConnectionId, followed);
+        string group = GroupFor(order!);
+        if (followed.Contains(group)) return;
+
+        // Full: the oldest makes room, so no connection piles up groups the server keeps.
+        if (followed.Count == MostFollowedPerConnection)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, followed[0]);
+            followed.RemoveAt(0);
+        }
+
+        followed.Add(group);
+        await Groups.AddToGroupAsync(Context.ConnectionId, group);
     }
 
     /// <summary>

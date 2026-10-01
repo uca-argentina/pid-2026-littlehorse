@@ -3,6 +3,7 @@ import { DestroyRef, Injectable, InjectionToken, computed, inject, signal } from
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { problemTypeOf } from '../../core/api/problem-type-of';
+import { MyOrders } from '../../core/orders/my-orders';
 import { TrackingChannel } from './tracking-channel';
 import { TrackingService } from './tracking.service';
 import type { TrackedOrder } from './tracking.service';
@@ -42,6 +43,8 @@ export type CancelProblem = 'alreadyPaid' | 'failed';
 @Injectable()
 export class TrackingStore {
   private readonly tracking = inject(TrackingService);
+
+  private readonly myOrders = inject(MyOrders);
 
   private readonly channel = inject(TrackingChannel);
 
@@ -114,7 +117,7 @@ export class TrackingStore {
     this.where = { venueSlug, code, token };
 
     this.stop();
-    this.channel.follow(token, () => this.askAgain());
+    this.channel.follow([token], () => this.askAgain());
     this.askAgain();
   }
 
@@ -136,14 +139,20 @@ export class TrackingStore {
     this.askedMeanwhile = false;
     this.clearRetry();
 
+    const { venueSlug, code, token } = this.where;
+
     this.tracking
-      .follow(this.where.venueSlug, this.where.code, this.where.token)
+      .follow(venueSlug, code, token)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (order) => {
           this.asking = false;
           this.known.set(order);
           this.state.set('following');
+
+          // US-34: remembered once it proved to be an order, so the menu can
+          // lead back here. Every answer keeps it for longer.
+          this.myOrders.remember(venueSlug, code, token);
 
           if (this.isOver()) return this.stop();
           if (this.askedMeanwhile) this.askAgain();
@@ -161,6 +170,7 @@ export class TrackingStore {
           // 404 means the journey ended if it was on screen, and that the link
           // never led anywhere if it was not.
           this.state.set(this.known() === null ? 'nowhere' : 'over');
+          this.myOrders.forget(venueSlug, code);
           this.stop();
         },
       });

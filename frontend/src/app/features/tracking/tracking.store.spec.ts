@@ -2,7 +2,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { MyOrders } from '../../core/orders/my-orders';
 import type { HubLinkState } from '../../core/realtime/hub-channel';
+import { BrowserStore } from '../../core/storage/browser-store';
+import { StoreInMemory } from '../../core/storage/store-in-memory';
 import { TrackingChannel } from './tracking-channel';
 import { TRACKING_RETRY_MS, TrackingStore } from './tracking.store';
 import { trackingUrl } from './tracking.service';
@@ -36,12 +39,12 @@ class FakeTrackingChannel {
 
   readonly state = this.link.asReadonly();
 
-  following: string | null = null;
+  following: readonly string[] | null = null;
 
   private changed: (() => void) | null = null;
 
-  follow(token: string, onChanged: () => void): void {
-    this.following = token;
+  follow(tokens: readonly string[], onChanged: () => void): void {
+    this.following = tokens;
     this.changed = onChanged;
   }
 
@@ -69,6 +72,7 @@ function aStore(): {
       provideHttpClientTesting(),
       { provide: TrackingChannel, useValue: channel },
       { provide: TRACKING_RETRY_MS, useValue: retryMs },
+      { provide: BrowserStore, useValue: new StoreInMemory() },
       TrackingStore,
     ],
   });
@@ -106,7 +110,7 @@ describe('TrackingStore', () => {
 
     tracking.follow('bar-alfa', 'K-4821', token);
 
-    expect(channel.following).toBe(token);
+    expect(channel.following).toEqual([token]);
   });
 
   // US-22, criterion 1: the bar moved it, and the screen catches up on its own.
@@ -269,6 +273,52 @@ describe('TrackingStore', () => {
 
     tracking.askAgain();
     http.expectNone(url);
+  });
+
+  // US-34: so the menu can lead back here after the customer leaves this screen.
+  it('remembers the order on this phone once it answers', () => {
+    const { tracking, http } = aStore();
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toEqual([]);
+
+    http.expectOne(url).flush(anOrder('Queued'));
+
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toEqual([{ code: 'K-4821', token }]);
+  });
+
+  it('forgets the order once it is handed over', () => {
+    const { tracking, http, channel } = aStore();
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    http.expectOne(url).flush(anOrder('Ready'));
+    channel.orderMoves();
+    http.expectOne(url).flush(...notFound);
+
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toEqual([]);
+  });
+
+  // A link that never led anywhere may still be remembered from before: a
+  // stale token, an order the API no longer shows.
+  it('forgets a remembered order whose link leads nowhere', () => {
+    const { tracking, http } = aStore();
+    TestBed.inject(MyOrders).remember('bar-alfa', 'K-4821', token);
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    http.expectOne(url).flush(...notFound);
+
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toEqual([]);
+  });
+
+  // The wifi, not the order: the way back has to survive a bad connection.
+  it('keeps the order remembered when a request fails', () => {
+    const { tracking, http } = aStore();
+    TestBed.inject(MyOrders).remember('bar-alfa', 'K-4821', token);
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    http.expectOne(url).error(new ProgressEvent('error'));
+
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toHaveLength(1);
   });
 
   // A phone in a pocket may have lost the live link without noticing yet. The

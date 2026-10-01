@@ -132,4 +132,17 @@ test.describe('Tracking', () => {
     await expect(preparing).toContainText('En preparación');
     await expect(preparing).toHaveAttribute('data-reached', 'true', { timeout: 2000 });
   });
+
+  // US-34, criterion 1: leaving the tracking screen, on purpose or not, is not
+  // losing the order. The menu is where anybody ends up, and it leads back.
+  test('leads back to the order from the menu after leaving it', async ({ page, request }) => {
+    const link = await anOrderJustPaid(page, request);
+    const code = await page.getByTestId('order-code').textContent();
+
+    await page.goto(menuPath);
+    await page.getByRole('link', { name: new RegExp(`tu pedido ${code}`, 'i') }).click();
+
+    await expect(page).toHaveURL(link);
+    await expect(page.getByTestId('order-code')).toHaveText(code ?? '');
+  });
 });

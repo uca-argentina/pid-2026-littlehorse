@@ -91,7 +91,7 @@ describe('TrackingChannel', () => {
   });
 
   it('listens to the tracking hub for its one message', () => {
-    channel.follow(token, askAgain);
+    channel.follow([token], askAgain);
 
     expect(url).toBe('/api/hubs/tracking');
     expect(connection.listening).toEqual(['OrderChanged']);
@@ -107,22 +107,36 @@ describe('TrackingChannel', () => {
       role: 'Kds',
     });
 
-    channel.follow(token, askAgain);
+    channel.follow([token], askAgain);
 
     expect(accessToken()).toBe('');
   });
 
   it('follows the order by its token once connected', async () => {
-    channel.follow(token, askAgain);
+    channel.follow([token], askAgain);
     await vi.advanceTimersByTimeAsync(0);
 
     expect(connection.invoked).toEqual([['Follow', token]]);
   });
 
+  // US-34: the menu follows every order of the night on one connection.
+  it('follows every order it is given, then asks once', async () => {
+    const other = '0a1b2c3d4e5f60718293a4b5c6d7e8f9';
+
+    channel.follow([token, other], askAgain);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(connection.invoked).toEqual([
+      ['Follow', token],
+      ['Follow', other],
+    ]);
+    expect(asks).toBe(1);
+  });
+
   // Whatever moved between the first answer and joining would otherwise
   // never be heard: nothing is sent for it again.
   it('asks again once it follows the order', async () => {
-    channel.follow(token, askAgain);
+    channel.follow([token], askAgain);
     await vi.advanceTimersByTimeAsync(0);
 
     expect(asks).toBe(1);
@@ -131,7 +145,7 @@ describe('TrackingChannel', () => {
   // A connection that comes back is a new one on the server, and belongs to
   // no order until it follows it again.
   it('follows the order again when the link comes back', async () => {
-    channel.follow(token, askAgain);
+    channel.follow([token], askAgain);
     await vi.advanceTimersByTimeAsync(0);
 
     connection.getsItBack();
@@ -147,7 +161,7 @@ describe('TrackingChannel', () => {
   // Asking before that as well would make every phone in the venue ask twice
   // each time the wifi drops for a moment.
   it('asks once, not twice, when the link comes back', async () => {
-    channel.follow(token, askAgain);
+    channel.follow([token], askAgain);
     await vi.advanceTimersByTimeAsync(0);
     asks = 0;
 

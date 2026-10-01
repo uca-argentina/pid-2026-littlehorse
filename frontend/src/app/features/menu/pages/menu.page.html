@@ -9,6 +9,9 @@
   </header>
 
   <main class="body" [attr.aria-busy]="menu.isLoading()">
+    <!-- US-34: the way back to an order, for whoever left its tracking screen. -->
+    <drinkit-orders-in-progress [venueSlug]="venueSlug()" />
+
     @if (menu.isLoading()) {
       <!-- Read aloud from the start, drawn only once it has something to add
            to the outline below. -->
