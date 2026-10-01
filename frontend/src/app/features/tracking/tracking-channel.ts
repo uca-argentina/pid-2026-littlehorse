@@ -10,9 +10,13 @@ const FOLLOW = 'Follow';
 
 /**
  * US-22: the live half of the tracking screen — your order moved, ask again.
+ * US-34: the menu's too, following every order of the night at once.
  *
  * Joined by the order's token rather than by a session: the customer has no
  * account, and the token is the same proof the tracking link asks for.
+ *
+ * The menu has its own instance (OrdersInProgressChannel), so leaving one
+ * screen for the other never drops the connection the new one just opened.
  */
 @Injectable({ providedIn: 'root' })
 export class TrackingChannel extends HubChannel {
@@ -20,12 +24,16 @@ export class TrackingChannel extends HubChannel {
 
   protected readonly message = ORDER_CHANGED_MESSAGE;
 
-  private token = '';
+  private tokens: readonly string[] = [];
 
-  /** Following another order drops the last one: one screen, one order. */
-  follow(token: string, onChanged: () => void): void {
+  /**
+   * Following other orders drops the last ones. The hub follows a few per
+   * connection (TrackingHub.MostFollowedPerConnection) and lets go of the
+   * oldest beyond that.
+   */
+  follow(tokens: readonly string[], onChanged: () => void): void {
     this.disconnect();
-    this.token = token;
+    this.tokens = tokens;
     this.connect(onChanged);
   }
 
@@ -41,6 +49,9 @@ export class TrackingChannel extends HubChannel {
    */
   protected override joined(connection: HubConnectionLike, onChanged: () => void): void {
     // A failed invoke means the link dropped, and the reconnect comes back here.
-    connection.invoke(FOLLOW, this.token).then(onChanged, () => undefined);
+    Promise.all(this.tokens.map((token) => connection.invoke(FOLLOW, token))).then(
+      onChanged,
+      () => undefined,
+    );
   }
 }

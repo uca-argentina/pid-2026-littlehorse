@@ -1,0 +1,74 @@
+@if (orders().length === 1) {
+  <a class="banner" [class.ready]="first()!.isReady" [routerLink]="first()!.link">
+    <span class="mark" aria-hidden="true">
+      @if (first()!.isReady) {
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M5 12l5 5L20 7" />
+        </svg>
+      } @else {
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 2" />
+        </svg>
+      }
+    </span>
+    <span class="what">
+      <span class="code">Tu pedido {{ first()!.code }}</span>
+      <span class="says">{{ first()!.says }}</span>
+    </span>
+    <span class="go">Ver</span>
+  </a>
+} @else if (orders().length > 1) {
+  <section class="list">
+    <h2 class="heading">
+      <button
+        class="toggle"
+        type="button"
+        [attr.aria-expanded]="expanded()"
+        aria-controls="orders-in-progress"
+        (click)="toggle()"
+      >
+        <span class="dot" [class.ready]="first()!.isReady" aria-hidden="true"></span>
+        <span class="what">
+          <span class="code">Tus pedidos de esta noche · {{ orders().length }}</span>
+          <span class="says">{{ first()!.code }} · {{ first()!.says }}</span>
+        </span>
+        <span class="go">{{ expanded() ? 'Ocultar' : 'Ver' }}</span>
+      </button>
+    </h2>
+
+    @if (expanded()) {
+      <ul id="orders-in-progress" class="orders">
+        @for (order of orders(); track order.code) {
+          <li>
+            <a class="order" [routerLink]="order.link">
+              <span class="dot" [class.ready]="order.isReady" aria-hidden="true"></span>
+              <span class="what">
+                <span class="code">{{ order.code }}</span>
+                <span class="says" [class.ready]="order.isReady">{{ order.says }}</span>
+              </span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}

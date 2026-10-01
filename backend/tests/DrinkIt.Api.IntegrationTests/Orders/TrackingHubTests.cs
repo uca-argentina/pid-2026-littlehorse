@@ -63,10 +63,9 @@ public sealed class TrackingHubTests(SqlServerFixture sql) : IAsyncDisposable
         Assert.False(theirsNotified.Task.IsCompleted);
     }
 
-    // One connection, one order, like the screen it serves. Otherwise a single
-    // connection could join groups without end and keep them all in memory.
+    // US-34: the menu follows every order of the night on one connection.
     [Fact]
-    public async Task Follow_WhenAnotherOrderIsFollowedLater_StopsHearingTheFirst()
+    public async Task Follow_WhenSeveralOrdersAreFollowed_HearsEachOfThem()
     {
         TrackingToken first = TrackingToken.New();
         TrackingToken second = TrackingToken.New();
@@ -74,15 +73,56 @@ public sealed class TrackingHubTests(SqlServerFixture sql) : IAsyncDisposable
         await using HubConnection connection = await Following(first.Value);
         await connection.InvokeAsync(nameof(TrackingHub.Follow), second.Value);
 
+        int heard = 0;
+        TaskCompletionSource heardBoth = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        connection.On(TrackingHub.OrderChanged, () =>
+        {
+            if (Interlocked.Increment(ref heard) == 2) heardBoth.TrySetResult();
+        });
+
+        await Followers().NotifyOrderChangedAsync(first, CancellationToken.None);
+        await Followers().NotifyOrderChangedAsync(second, CancellationToken.None);
+
+        await heardBoth.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    // A few orders, not without end: otherwise a single connection could join
+    // groups for invented tokens and keep them all in the server's memory.
+    [Fact]
+    public async Task Follow_WhenMoreOrdersThanTheCapAreFollowed_LetsGoOfTheOldest()
+    {
+        TrackingToken[] tokens = [.. Enumerable.Range(0, TrackingHub.MostFollowedPerConnection + 1).Select(_ => TrackingToken.New())];
+
+        await using HubConnection connection = await Following(tokens[0].Value);
+        foreach (TrackingToken token in tokens.Skip(1)) await connection.InvokeAsync(nameof(TrackingHub.Follow), token.Value);
+
+        TaskCompletionSource heard = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        connection.On(TrackingHub.OrderChanged, () => heard.TrySetResult());
+
+        await Followers().NotifyOrderChangedAsync(tokens[0], CancellationToken.None);
+        await Task.WhenAny(heard.Task, Task.Delay(TimeSpan.FromSeconds(1)));
+        Assert.False(heard.Task.IsCompleted);
+
+        // The newest is still followed: making room is not letting go of everything.
+        await Followers().NotifyOrderChangedAsync(tokens[^1], CancellationToken.None);
+        await heard.Task.WaitAsync(TimeSpan.FromSeconds(10));
+    }
+
+    // The tracking screen follows the same order again on every reconnect and
+    // every answer: that is one order, not one more each time.
+    [Fact]
+    public async Task Follow_WhenTheSameOrderIsFollowedAgain_TakesNoMoreRoom()
+    {
+        TrackingToken first = TrackingToken.New();
+        TrackingToken again = TrackingToken.New();
+
+        await using HubConnection connection = await Following(first.Value);
+        for (int i = 0; i < TrackingHub.MostFollowedPerConnection; i++) await connection.InvokeAsync(nameof(TrackingHub.Follow), again.Value);
+
         TaskCompletionSource heard = new(TaskCreationOptions.RunContinuationsAsynchronously);
         connection.On(TrackingHub.OrderChanged, () => heard.TrySetResult());
 
         await Followers().NotifyOrderChangedAsync(first, CancellationToken.None);
-        await Task.WhenAny(heard.Task, Task.Delay(TimeSpan.FromSeconds(1)));
-        Assert.False(heard.Task.IsCompleted);
-
-        // Still following the second: letting go of the first is not letting go of everything.
-        await Followers().NotifyOrderChangedAsync(second, CancellationToken.None);
         await heard.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 

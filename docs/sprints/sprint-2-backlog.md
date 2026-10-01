@@ -68,6 +68,7 @@ se marca agotado, se da de baja y nada se borra.
 | US-21 | Que me avise el celular              | US-18        |
 | US-22 | Que el estado se actualice solo      | US-12, US-18 |
 | US-23 | Cancelar un pedido                   | US-15        |
+| US-34 | Volver a mi pedido desde la carta    | US-12, US-22 |
 
 **Deuda del tablero** — salió de auditar US-15 ya mergeada. Ninguna rompe un criterio, pero
 las dos dejan a la barra sin ver algo sin que nadie se entere.
@@ -599,6 +600,51 @@ con el brillo al mínimo contra la tablet de la barra.
   sigue respondiendo para que la pantalla lo muestre.
 - El criterio 1 tiene su spec de Playwright: la barra toma el pedido y la pantalla del
   cliente cambia sola en menos de dos segundos.
+
+### US-34 · Volver a mi pedido desde la carta
+
+> **Como** cliente que salió de la pantalla de seguimiento, aunque haya sido sin querer,
+> **quiero** volver a mi pedido desde la carta
+> **para** no perderlo de vista ni tener que pedirle el código a la barra.
+
+**Criterios de aceptación**
+
+1. **Dado** que abrí el seguimiento de un pedido, **cuando** vuelvo a la carta del mismo
+   boliche, **entonces** veo arriba un aviso con su código y su estado, y tocándolo vuelvo al
+   seguimiento.
+2. **Dado** que mi pedido está listo, **cuando** abro la carta, **entonces** el aviso lo
+   destaca y me lleva al QR de retiro.
+3. **Dado** que tengo más de un pedido en curso, **cuando** abro la carta, **entonces** veo
+   "Tus pedidos de esta noche" como un área que se abre y se cierra: cerrada muestra cuántos
+   son y el más urgente; abierta, cada pedido con su estado y su link.
+4. **Dado** que mi pedido se entregó, se canceló o el link ya no lleva a nada, **cuando** abro
+   la carta, **entonces** deja de aparecer.
+5. **Dado** que tengo un pedido en otro boliche, **cuando** abro esta carta, **entonces** no
+   aparece.
+6. **Dado** que tengo la carta abierta, **cuando** la barra o la caja mueven mi pedido,
+   **entonces** el aviso cambia solo, sin recargar.
+
+**Notas**
+
+- **Depende de** US-12 y US-22. Salió de probar el flujo del cliente: quien salía del
+  seguimiento no tenía forma de volver.
+- **Casi todo frontend** (el hub, ver criterio 6). El seguimiento recuerda el pedido en el celular (`MyOrders`, en
+  `localStorage` con `BrowserStore`) cada vez que la API contesta, no al pagar: así también
+  cubre el link de un push (US-21) o uno compartido. Lo olvida cuando la API deja de mostrarlo.
+- **Se guarda código y token, nunca el estado:** el estado sale del endpoint de seguimiento,
+  y uno guardado ya estaría viejo. Todo vence a las 12 horas.
+- **Un cancelado desaparece igual que uno entregado**, lo haya cancelado el cliente o la caja
+  (decidido el 2026-09-30). No hay nada que retirar ni que pagar, y el seguimiento sigue
+  diciendo que se canceló a quien abra su link. Mostrarlo "una vez" se descartó: una recarga
+  o una pestaña cerrada no corre el cierre de la carta, y el aviso reaparecía durante 12 horas.
+- Si no se puede preguntar el estado, el link queda igual con "Tocá para ver cómo va": la
+  vuelta al pedido no depende del wifi.
+- **Criterio 6:** la carta abre su propia conexión al `TrackingHub` (`OrdersInProgressChannel`)
+  y hace `Follow` por cada pedido que muestra; con `OrderChanged` vuelve a preguntar los
+  estados. Por eso el hub pasó de seguir un pedido por conexión a seguir hasta cinco
+  (`MostFollowedPerConnection`): un sexto suelta el más viejo, así una conexión sigue sin poder
+  acumular grupos.
+- Diseño: lienzo "Volver al seguimiento" en claude.ai, con las cuatro pantallas.
 
 ## El pago
 

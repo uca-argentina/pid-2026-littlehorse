@@ -149,8 +149,8 @@ export class TrackingPage {
       const token = this.token();
 
       // Only the address is worth reacting to. Following reads the store's own
-      // signals on the way in, and tracking those would make every answer start
-      // the polling over again — a loop that feeds itself, one timer per round.
+      // signals on the way in, and tracking those would make every answer follow
+      // again — reconnect to the hub, ask again, answer, and round it goes.
       untracked(() => this.store.follow(venueSlug, code, token));
     });
   }

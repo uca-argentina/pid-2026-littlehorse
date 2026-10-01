@@ -10,6 +10,7 @@ import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-place
 import { formatPrice } from '../../../shared/money/price';
 import { slowLoading } from '../../../shared/loading/slow-loading';
 import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
+import { OrdersInProgress } from '../components/orders-in-progress';
 import { menuUrl } from '../menu.service';
 import type { Menu, MenuItem } from '../menu.service';
 
@@ -39,7 +40,7 @@ interface CategoryTab {
  */
 @Component({
   selector: 'drinkit-menu-page',
-  imports: [GlassMark, RouterLink, ThemeToggle],
+  imports: [GlassMark, OrdersInProgress, RouterLink, ThemeToggle],
   styleUrl: './menu.page.scss',
   templateUrl: './menu.page.html',
 })
