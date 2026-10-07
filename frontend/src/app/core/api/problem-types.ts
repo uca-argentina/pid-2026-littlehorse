@@ -46,4 +46,10 @@ export const ProblemTypes = {
 
   /** Nothing left to collect: paid at the till already, or from the phone. */
   cashierAlreadyPaid: 'urn:drinkit:problem:cashier:already-paid',
+
+  /** Those hours share a moment with another night of the venue. */
+  nightOverlaps: 'urn:drinkit:problem:night:overlaps',
+
+  /** One of the chosen accounts is not the venue's any more. */
+  nightCrewMemberNotFound: 'urn:drinkit:problem:night:crew-member-not-found',
 } as const;

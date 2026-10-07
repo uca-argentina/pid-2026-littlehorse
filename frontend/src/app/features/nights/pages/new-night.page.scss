@@ -1,0 +1,205 @@
+// Same skin as the new staff user form (new-staff-user.page.scss), so it reads
+// as a step inside the administration and not as a different place.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 560px;
+  padding: var(--dk-space-5);
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+// Start and end side by side while there is room, stacked on a phone.
+.hours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+}
+
+.hours .field {
+  min-width: 220px;
+}
+
+.label {
+  padding: 0;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.input {
+  min-height: 54px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // Above the 16px that keeps iOS Safari from zooming into the field on focus.
+  font-size: 17px;
+}
+
+.input::placeholder {
+  color: var(--dk-text-faint);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.input-bad {
+  border-color: var(--dk-danger);
+}
+
+.crew {
+  gap: 9px;
+}
+
+.member {
+  display: flex;
+  gap: var(--dk-space-3);
+  align-items: center;
+  min-height: 54px;
+  padding: 10px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-ink);
+}
+
+.member-on {
+  border-color: var(--dk-accent);
+  background: var(--dk-role-on-surface);
+}
+
+// The native control, only resized: it keeps the keyboard and the screen
+// reader working as they should.
+.check {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  accent-color: var(--dk-accent);
+}
+
+.username {
+  font-family: ui-monospace, 'SF Mono', menlo, monospace;
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.help {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.bad {
+  margin: 0;
+  color: var(--dk-danger);
+  font-size: 14px;
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.failed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.retry {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border: 0;
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-family: inherit;
+  font-size: 16.5px;
+  font-weight: 700;
+}
+
+.cta:disabled {
+  opacity: 0.6;
+}
+
+.cta:hover:not(:disabled) {
+  background: var(--dk-accent-hover);
+}
+
+.ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  color: var(--dk-text-muted);
+  font-size: 15.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ghost:hover {
+  color: var(--dk-text);
+}

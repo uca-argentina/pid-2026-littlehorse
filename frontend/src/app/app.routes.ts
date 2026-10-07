@@ -24,6 +24,11 @@ export const routes: Routes = [
       import('./features/staff-users/staff-users.routes').then((m) => m.staffUsersRoutes),
   },
   {
+    path: ':venueSlug/staff/nights',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/nights/nights.routes').then((m) => m.nightsRoutes),
+  },
+  {
     path: ':venueSlug/staff/products',
     canActivate: [rememberVenueGuard],
     loadChildren: () => import('./features/products/products.routes').then((m) => m.productsRoutes),

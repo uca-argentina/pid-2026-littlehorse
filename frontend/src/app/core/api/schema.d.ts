@@ -241,6 +241,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/nights': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists every night of the venue, the latest first. */
+    get: operations['ListNights'];
+    put?: never;
+    /** Sets up a night of the venue with its hours and the staff working it. */
+    post: operations['CreateNight'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/categories': {
     parameters: {
       query?: never;
@@ -618,6 +636,15 @@ export interface components {
     CreateCategoryRequest: {
       name: string;
     };
+    /** @description What the administration screen posts to set up a night. */
+    CreateNightRequest: {
+      name: string;
+      /** Format: date-time */
+      startsAt: string;
+      /** Format: date-time */
+      endsAt: string;
+      crewIds: string[];
+    };
     /**
      * @description What the administration screen posts. The image address is whatever the
      *     upload returned, or null while there is none. The category is one of the
@@ -702,6 +729,17 @@ export interface components {
       venueName: string;
       categories: components['schemas']['CategoryResponse'][];
       items: components['schemas']['MenuItemResponse'][];
+    };
+    NightResponse: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      /** Format: date-time */
+      startsAt: string;
+      /** Format: date-time */
+      endsAt: string;
+      crewIds: string[];
+      audit: components['schemas']['AuditResponse'];
     };
     /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
@@ -1302,6 +1340,68 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListNights: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightResponse'][];
+        };
+      };
+    };
+  };
+  CreateNight: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateNightRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
