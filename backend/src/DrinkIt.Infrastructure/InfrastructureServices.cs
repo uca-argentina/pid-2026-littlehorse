@@ -75,6 +75,7 @@ public static class InfrastructureServices
         services.AddScoped<INightRepository, NightRepository>();
         services.AddScoped<INightQueries, NightQueries>();
         services.AddScoped<IUnderwayNightLookup, UnderwayNightLookup>();
+        services.AddScoped<ITonightsCrew, TonightsCrew>();
 
         // Implemented in Application, not here — same reason as DigitalPaymentStrategy
         // below — but registered from this composition root either way.

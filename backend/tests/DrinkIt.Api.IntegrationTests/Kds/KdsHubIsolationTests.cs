@@ -31,11 +31,11 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
     [Fact]
     public async Task BoardChanged_WhenAnotherVenuesQueueChanges_IsNeverReceived()
     {
-        Guid mine = Guid.CreateVersion7();
-        Guid theirs = Guid.CreateVersion7();
+        (Guid mine, Guid mineAccount) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
+        (Guid theirs, Guid theirsAccount) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
 
-        await using HubConnection mineConnection = await ConnectedAsKds(mine);
-        await using HubConnection theirsConnection = await ConnectedAsKds(theirs);
+        await using HubConnection mineConnection = await ConnectedAsKds(mine, mineAccount);
+        await using HubConnection theirsConnection = await ConnectedAsKds(theirs, theirsAccount);
 
         TaskCompletionSource mineNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource theirsNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -56,9 +56,9 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
     [Fact]
     public async Task BoardChanged_WhenItsOwnVenuesQueueChanges_IsReceived()
     {
-        Guid venueId = Guid.CreateVersion7();
+        (Guid venueId, Guid account) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
 
-        await using HubConnection connection = await ConnectedAsKds(venueId);
+        await using HubConnection connection = await ConnectedAsKds(venueId, account);
 
         TaskCompletionSource notified = new(TaskCreationOptions.RunContinuationsAsynchronously);
         connection.On(KdsHub.BoardChanged, () => notified.TrySetResult());
@@ -67,28 +67,28 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         await UntilHeard(() => notifier.NotifyBoardChangedAsync(venueId, CancellationToken.None), notified.Task);
     }
 
+    // Refused at the door since US-35: no venue means no night, and so no crew
+    // to be in. The hub's own check in OnConnectedAsync stays behind it.
     [Fact]
-    public async Task OnConnectedAsync_WhenTheTokenCarriesNoVenue_ClosesTheConnection()
+    public async Task StartAsync_WhenTheTokenCarriesNoVenue_IsRefused()
     {
-        await using HubConnection connection = await ConnectedWith(SignedKdsTokenWithoutVenue());
-
-        TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        connection.Closed += _ =>
-        {
-            closed.TrySetResult();
-            return Task.CompletedTask;
-        };
-
-        // Already closed by the time the handler was attached counts too.
-        if (connection.State == HubConnectionState.Disconnected) closed.TrySetResult();
-
-        await closed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await Assert.ThrowsAnyAsync<Exception>(() => ConnectedWith(SignedKdsTokenWithoutVenue()));
     }
 
-    private async Task<HubConnection> ConnectedAsKds(Guid venueId)
+    // US-35, criterion 4: right role, right venue, not in tonight's crew.
+    [Fact]
+    public async Task StartAsync_WhenTheAccountIsNotInTonightsCrew_IsRefused()
+    {
+        (Guid venueId, _) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
+        Guid outsider = await SeedTonight.AnAccountOffTonight(sql, venueId, StaffRole.Kds);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => ConnectedAsKds(venueId, outsider));
+    }
+
+    private async Task<HubConnection> ConnectedAsKds(Guid venueId, Guid account)
     {
         ITokenIssuer tokenIssuer = _factory.Services.GetRequiredService<ITokenIssuer>();
-        AccessToken token = tokenIssuer.Issue(Guid.CreateVersion7(), venueId, "kds", StaffRole.Kds);
+        AccessToken token = tokenIssuer.Issue(account, venueId, "kds", StaffRole.Kds);
 
         return await ConnectedWith(token.Value);
     }

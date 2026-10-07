@@ -134,10 +134,14 @@ una KDS.
   En la ficha pueden ser selectores separados por rol.
 - **El mozo no es obligatorio acá.** Hace falta cuando la noche ofrece mesas VIP; esa regla
   entra con las stories del sector VIP (US-40), no con esta.
-- **Criterio 4: entrar no se bloquea, se vacía.** El login funciona igual que hoy; lo que filtra
-  es cada pantalla (cola del KDS, caja, mozo), que no devuelve pedidos a una cuenta que no está
-  en la noche en curso. Así una cuenta que se suma a la noche a mitad de camino no tiene que
-  volver a entrar.
+- **Criterio 4: entrar no se bloquea, se vacía.** El login funciona igual que hoy. Lo que filtra
+  es la política de cada rol de estación (`Kds`, `Cashier`, y la del mozo cuando exista), que
+  además del rol exige estar en la noche: los endpoints y los hubs responden 403 con su propio
+  tipo, y la pantalla dice "no está en la noche de hoy". Una cuenta que se suma a mitad de
+  camino no tiene que volver a entrar: el tablero de la KDS se completa solo al reintentar.
+- **La noche que cuenta es la última que empezó**, no sólo la que está en curso (decidido el
+  2026-10-07): los pedidos pagos se siguen preparando después del cierre, así que el personal
+  del sábado conserva sus pantallas pasadas las 06:00, hasta que empieza la noche siguiente.
 - **El administrador no se limita** por el criterio 4: ve todo para armar la noche siguiente o
   arreglar la de hoy.
 - **Borde: la noche se extiende.** El administrador puede correr la hora de fin de una noche en

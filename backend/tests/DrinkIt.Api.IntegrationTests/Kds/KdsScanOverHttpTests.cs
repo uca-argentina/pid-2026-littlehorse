@@ -24,6 +24,9 @@ public sealed class KdsScanOverHttpTests(SqlServerFixture sql) : IAsyncDisposabl
 {
     private readonly DrinkItApiFactory _factory = new(sql.ConnectionString);
 
+    /// <summary>Each venue's bar, in tonight's crew: the only account that may scan there.</summary>
+    private readonly Dictionary<Guid, Guid> _barOf = [];
+
     public async ValueTask DisposeAsync() => await _factory.DisposeAsync();
 
     [Fact]
@@ -99,8 +102,9 @@ public sealed class KdsScanOverHttpTests(SqlServerFixture sql) : IAsyncDisposabl
 
     private async Task<HttpResponseMessage> ScanAs(Venue venue, StaffRole role, string body)
     {
+        Guid account = role == StaffRole.Kds ? _barOf[venue.Id] : Guid.CreateVersion7();
         AccessToken token = _factory.Services.GetRequiredService<ITokenIssuer>()
-            .Issue(Guid.CreateVersion7(), venue.Id, "barra.demo", role);
+            .Issue(account, venue.Id, "barra.demo", role);
 
         using HttpClient client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Value);
@@ -124,6 +128,8 @@ public sealed class KdsScanOverHttpTests(SqlServerFixture sql) : IAsyncDisposabl
         seed.Venues.Add(venue);
         seed.Categories.Add(category);
         await seed.SaveChangesAsync();
+
+        _barOf[venue.Id] = await SeedTonight.AnAccountWorkingTonight(sql, venue.Id, StaffRole.Kds);
 
         return venue;
     }

@@ -57,7 +57,10 @@ class FakeTillChannel {
 
 let channel: FakeTillChannel;
 
-async function openTheTill(pending: CashierOrder[] | 'fails' = [], collected: CashierOrder[] = []) {
+async function openTheTill(
+  pending: CashierOrder[] | 'fails' | 'notTonight' = [],
+  collected: CashierOrder[] = [],
+) {
   const rendered = await render(CashierPage, {
     inputs: { venueSlug: 'bar-alfa' },
     providers: [
@@ -73,6 +76,10 @@ async function openTheTill(pending: CashierOrder[] | 'fails' = [], collected: Ca
   const http = TestBed.inject(HttpTestingController);
 
   if (pending === 'fails') http.expectOne(CASHIER_ORDERS_URL).error(new ProgressEvent('error'));
+  else if (pending === 'notTonight')
+    http
+      .expectOne(CASHIER_ORDERS_URL)
+      .flush({ type: ProblemTypes.notInTonightsCrew }, { status: 403, statusText: 'Forbidden' });
   else http.expectOne(CASHIER_ORDERS_URL).flush(pending);
 
   http.expectOne(MY_COLLECTIONS_URL).flush(collected);
@@ -134,6 +141,17 @@ describe('CashierPage', () => {
 
     expect(screen.getByRole('alert').textContent).toMatch(/no pudimos traer los pedidos/i);
     expect(screen.getByRole('button', { name: /reintentar/i })).not.toBeNull();
+  });
+
+  // US-35, criterion 4: the till signs in, and its list says why it is empty.
+  it('says the account is not in tonight’s crew, and not that the connection dropped', async () => {
+    const { rendered } = await openTheTill('notTonight');
+
+    channel.state.set('reconnecting');
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toContain('no está en la noche de hoy');
+    expect(screen.queryByText(/sin conexión|no pudimos traer los pedidos/i)).toBeNull();
   });
 
   // The wireframe's "Cobros de tu turno", with what the drawer should hold.

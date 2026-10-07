@@ -2,7 +2,7 @@
 
 <div class="till">
   <main class="work">
-    @if (channel.state() === 'reconnecting') {
+    @if (channel.state() === 'reconnecting' && !notTonight()) {
       <p class="note note-warn" role="status">
         Sin conexión con la caja — reintentando. "Por cobrar" puede estar desactualizado.
       </p>
@@ -153,6 +153,12 @@
             </ul>
           }
         }
+      } @else if (notTonight()) {
+        <p class="note note-bad" role="alert">
+          Esta cuenta no está en la noche de hoy. Pedile al administrador que la sume y tocá
+          Reintentar.
+        </p>
+        <button class="ghost" type="button" (click)="pending.reload()">Reintentar</button>
       } @else if (pending.error()) {
         <p class="note note-bad" role="alert">No pudimos traer los pedidos por cobrar.</p>
         <button class="ghost" type="button" (click)="pending.reload()">Reintentar</button>

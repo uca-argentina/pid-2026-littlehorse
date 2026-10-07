@@ -117,8 +117,10 @@ app.MapNights();
 app.MapCategories();
 app.MapProducts();
 app.MapKds();
-app.MapHub<KdsHub>(KdsHubRoute.Path);
-app.MapHub<TillHub>(TillHubRoute.Path);
+// The hubs carry their role in [Authorize]; the policy adds the night's crew
+// (US-35), so a tablet outside it hears nothing either.
+app.MapHub<KdsHub>(KdsHubRoute.Path).RequireAuthorization(Policies.Kds);
+app.MapHub<TillHub>(TillHubRoute.Path).RequireAuthorization(Policies.Cashier);
 app.MapCashier();
 
 await app.RunAsync();

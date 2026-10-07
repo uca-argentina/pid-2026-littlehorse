@@ -11,6 +11,9 @@ export const ProblemTypes = {
   /** The token is good; the role is not the one that screen needs. */
   forbidden: 'urn:drinkit:problem:auth:forbidden',
 
+  /** Right role, but not in the crew of the venue's night (US-35): the administrator adds them. */
+  notInTonightsCrew: 'urn:drinkit:problem:auth:not-in-tonights-crew',
+
   usernameTaken: 'urn:drinkit:problem:staff:username-taken',
   passwordTooShort: 'urn:drinkit:problem:staff:password-too-short',
 

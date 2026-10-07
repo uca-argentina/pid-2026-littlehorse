@@ -11,6 +11,8 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { problemTypeOf } from '../../../core/api/problem-type-of';
+import { ProblemTypes } from '../../../core/api/problem-types';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
 import { slowLoading } from '../../../shared/loading/slow-loading';
@@ -112,6 +114,15 @@ export class KdsBoardPage {
    * the warning does not blink off and on every few seconds while it keeps
    * failing.
    */
+  /**
+   * US-35, criterion 4: signed in as the station, but not in tonight's crew.
+   * Not a failure to retry by hand: the board keeps asking on its own, and
+   * shows the queue as soon as the administrator adds the station.
+   */
+  protected readonly notTonight = computed(
+    () => problemTypeOf(this.queue.error()) === ProblemTypes.notInTonightsCrew,
+  );
+
   protected readonly failed = linkedSignal<string, boolean>({
     source: () => this.queue.status(),
     computation: (status, previous) => {

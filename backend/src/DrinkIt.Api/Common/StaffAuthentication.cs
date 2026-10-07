@@ -3,6 +3,7 @@ using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 
@@ -69,9 +70,15 @@ internal static class StaffAuthentication
         services.AddAuthorization(options =>
         {
             options.AddPolicy(Policies.Administrator, policy => policy.RequireRole(Policies.Administrator));
-            options.AddPolicy(Policies.Kds, policy => policy.RequireRole(Policies.Kds));
-            options.AddPolicy(Policies.Cashier, policy => policy.RequireRole(Policies.Cashier));
+            // The role first: its handler runs before the crew's, which skips
+            // the query when the role already failed (US-35, criterion 4).
+            options.AddPolicy(Policies.Kds, policy => policy.RequireRole(Policies.Kds).AddRequirements(new TonightsCrewRequirement()));
+            options.AddPolicy(Policies.Cashier, policy => policy.RequireRole(Policies.Cashier).AddRequirements(new TonightsCrewRequirement()));
         });
+
+        // Scoped: it asks the night through the request's DbContext.
+        services.AddScoped<IAuthorizationHandler, TonightsCrewHandler>();
+        services.AddHttpContextAccessor();
 
         return services;
     }

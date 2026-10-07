@@ -9,7 +9,7 @@
     <a class="to-scan" [routerLink]="scanLink()">Escanear o buscar</a>
   </header>
 
-  @if (channel.state() === 'reconnecting') {
+  @if (channel.state() === 'reconnecting' && !notTonight()) {
     <p class="offline" role="status">
       Sin conexión con la barra — reintentando. Lo que ves puede estar desactualizado.
     </p>
@@ -17,7 +17,12 @@
 
   <!-- Once a queue has arrived it stays on screen: a failed reload only adds a warning over it. -->
   @if (orders() === null) {
-    @if (failed()) {
+    @if (notTonight()) {
+      <p class="status" role="alert">
+        Esta cuenta no está en la noche de hoy. Pedile al administrador que la sume: la cola aparece
+        sola en cuanto lo haga.
+      </p>
+    } @else if (failed()) {
       <p class="status" role="alert">No pudimos cargar la cola de la barra — reintentando.</p>
     } @else {
       <!-- Read aloud from the start, drawn only once it has something to add to the outline. -->
