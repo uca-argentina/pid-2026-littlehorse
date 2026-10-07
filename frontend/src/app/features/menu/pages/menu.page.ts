@@ -108,6 +108,11 @@ export class MenuPage {
         ];
   });
 
+  /** Whether a night is on. While the menu loads there is nothing to add anyway. */
+  protected readonly isTakingOrders = computed(
+    () => !this.menu.hasValue() || this.menu.value().isTakingOrders,
+  );
+
   protected readonly cards = computed<MenuCard[]>(() => {
     const term = this.search().trim().toLowerCase();
     const category = this.activeCategory();
@@ -125,7 +130,9 @@ export class MenuPage {
           image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
           amount: item.price,
           price: formatPrice(item.price),
-          isOrderable: item.isOrderable,
+          // With no night on, every drink reads like one that ran out: on
+          // the menu, with no way to add it (US-35, criterion 3).
+          isOrderable: item.isOrderable && this.isTakingOrders(),
         }))
     );
   });

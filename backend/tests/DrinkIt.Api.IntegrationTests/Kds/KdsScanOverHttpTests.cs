@@ -132,6 +132,7 @@ public sealed class KdsScanOverHttpTests(SqlServerFixture sql) : IAsyncDisposabl
     {
         Order order = Order.Place(
             venue.Id,
+            Guid.CreateVersion7(),
             "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);

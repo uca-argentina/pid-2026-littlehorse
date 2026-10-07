@@ -330,6 +330,7 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
     {
         Order order = Order.Place(
             venue.Id,
+            Guid.CreateVersion7(),
             "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Gin, "Gin Tonic", 4500m, 1, null)]);

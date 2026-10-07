@@ -17,6 +17,7 @@ public class StartPreparingHandlerTests
     {
         Order order = Order.Place(
             TheVenue,
+            Guid.CreateVersion7(),
             "María Quadro",
             OrderCode.Parse(code),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);

@@ -38,6 +38,9 @@ export const ProblemTypes = {
   orderNameOnlyLetters: 'urn:drinkit:problem:order:name-only-letters',
   orderNameTooLong: 'urn:drinkit:problem:order:name-too-long',
 
+  /** No night of the venue is on: the menu reads, confirming is closed (US-35). */
+  orderNotTakingOrders: 'urn:drinkit:problem:order:not-taking-orders',
+
   /** Another screen changed the order in the same instant, and its change stands. */
   orderChangedMeanwhile: 'urn:drinkit:problem:order:changed-meanwhile',
 

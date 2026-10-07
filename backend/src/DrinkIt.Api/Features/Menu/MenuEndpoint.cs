@@ -1,6 +1,7 @@
 using DrinkIt.Api.Common;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Nights;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Menu;
@@ -21,9 +22,14 @@ public sealed record MenuItemResponse(
 /// where they are: the screen is what tells them. The categories travel with
 /// it too, because they are the venue's own and the screen has nowhere else to
 /// learn them from.
+///
+/// <c>IsTakingOrders</c> is false while no night of the venue is on: the menu
+/// still reads, and the phone says it cannot order yet instead of letting
+/// somebody fill a cart that confirming will refuse.
 /// </remarks>
 public sealed record MenuResponse(
     string VenueName,
+    bool IsTakingOrders,
     IReadOnlyList<CategoryResponse> Categories,
     IReadOnlyList<MenuItemResponse> Items);
 
@@ -58,6 +64,8 @@ internal static class MenuEndpoint
         CurrentVenue venue,
         IProductQueries products,
         ICategoryQueries categories,
+        IUnderwayNightLookup nights,
+        TimeProvider clock,
         CancellationToken cancellationToken)
     {
         // Told apart from a venue that exists and has nothing loaded on
@@ -67,9 +75,11 @@ internal static class MenuEndpoint
 
         IReadOnlyList<MenuItem> menu = await products.ListForMenuAsync(cancellationToken);
         IReadOnlyList<CategoryListItem> tabs = await categories.ListAsync(cancellationToken);
+        Guid? tonight = await nights.FindIdAsync(clock.GetUtcNow(), cancellationToken);
 
         return TypedResults.Ok(new MenuResponse(
             venue.Identity.Name,
+            tonight is not null,
             [.. tabs.Select(category => new CategoryResponse(category.Id, category.Name))],
             [.. menu.Select(item => new MenuItemResponse(
                 item.Id,

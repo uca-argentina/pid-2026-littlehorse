@@ -161,6 +161,7 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
 
         Order order = Order.Place(
             venue.Id,
+            Guid.CreateVersion7(),
             customer,
             OrderCode.First,
             [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 2, "sin hielo")]);

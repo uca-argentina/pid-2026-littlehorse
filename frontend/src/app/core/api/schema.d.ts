@@ -745,6 +745,7 @@ export interface components {
     /** @description The venue's menu: its name, its categories and its products. */
     MenuResponse: {
       venueName: string;
+      isTakingOrders: boolean;
       categories: components['schemas']['CategoryResponse'][];
       items: components['schemas']['MenuItemResponse'][];
     };

@@ -227,6 +227,13 @@ describe('CheckoutPage', () => {
       expect(said).toContain('Alguien pidió al mismo tiempo');
     });
 
+    // US-35, criterion 3: a cart put together before closing and paid after.
+    it('says in Spanish that the venue stopped taking orders', async () => {
+      const said = await refusedWith({ type: 'urn:drinkit:problem:order:not-taking-orders' }, 409);
+
+      expect(said).toContain('El boliche no está tomando pedidos en este momento.');
+    });
+
     it.each([
       ['urn:drinkit:problem:order:name-required', 'Necesitamos un nombre'],
       ['urn:drinkit:problem:order:name-needs-surname', 'Poné tu nombre y tu apellido.'],

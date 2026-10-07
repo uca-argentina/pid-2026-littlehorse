@@ -129,6 +129,7 @@ public class CashierEndpointsTests
     {
         Order order = Order.Place(
             Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
             "María Quadro",
             OrderCode.Parse("K-4821"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);

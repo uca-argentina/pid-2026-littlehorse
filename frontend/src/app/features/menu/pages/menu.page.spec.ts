@@ -13,6 +13,7 @@ import { MenuPage } from './menu.page';
 
 const carta: Menu = {
   venueName: 'Bar Alfa',
+  isTakingOrders: true,
   categories: [{ id: 'category-drinks', name: 'Tragos' }],
   items: [
     {
@@ -205,7 +206,12 @@ describe('MenuPage', () => {
 
   // Criterion 5: an empty list with no explanation reads as a broken app.
   it('says the venue has not loaded anything yet', async () => {
-    await openScreenShowing({ venueName: 'Bar Alfa', categories: [], items: [] });
+    await openScreenShowing({
+      venueName: 'Bar Alfa',
+      isTakingOrders: true,
+      categories: [],
+      items: [],
+    });
 
     expect(screen.getByRole('status').textContent).toContain('todavía no cargó');
   });
@@ -273,6 +279,7 @@ describe('MenuPage', () => {
   describe('categories', () => {
     const mixedMenu: Menu = {
       venueName: 'Bar Alfa',
+      isTakingOrders: true,
       categories: [
         { id: 'category-drinks', name: 'Tragos' },
         { id: 'category-beer', name: 'Cervezas' },
@@ -430,6 +437,22 @@ describe('MenuPage', () => {
 
       expect(TestBed.inject(Cart).count()).toBe(2);
       expect(TestBed.inject(Cart).lines()).toHaveLength(1);
+    });
+
+    // US-35, criterion 3: no night on, the menu reads but nothing goes in the
+    // order, and the screen says why instead of looking broken.
+    it('says the venue is not taking orders, and offers no way to add', async () => {
+      await openScreenShowing({ ...carta, isTakingOrders: false });
+
+      expect(screen.getByRole('status').textContent).toContain('no está tomando pedidos');
+      expect(screen.getByText('Gin Tonic')).not.toBeNull();
+      expect(screen.queryByRole('button', { name: /agregar Gin Tonic/i })).toBeNull();
+    });
+
+    it('says nothing about taking orders while it is', async () => {
+      await openScreenShowing(carta);
+
+      expect(screen.queryByText(/no está tomando pedidos/i)).toBeNull();
     });
 
     // Nothing that cannot be served can be ordered, which is the other half of

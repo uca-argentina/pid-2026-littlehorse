@@ -46,9 +46,16 @@ export default defineConfig({
 
   projects: [
     {
+      // Runs once, after both servers are up and before every spec: without a
+      // night on, nothing can be ordered (US-35). See night.setup.ts.
+      name: 'night',
+      testMatch: /night\.setup\.ts/,
+    },
+    {
       // Staff screens are used on the tablet behind the bar, not on a phone.
       name: 'tablet',
       use: { ...devices['Desktop Chrome'], viewport: { width: 820, height: 1180 } },
+      dependencies: ['night'],
     },
   ],
 

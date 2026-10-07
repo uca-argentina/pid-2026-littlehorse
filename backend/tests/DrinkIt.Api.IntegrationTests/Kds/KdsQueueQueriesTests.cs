@@ -178,6 +178,7 @@ public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
     {
         Order order = Order.Place(
             venue.Id,
+            Guid.CreateVersion7(),
             customer,
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Gin, "Gin Tonic", 4500m, quantity, note)]);
