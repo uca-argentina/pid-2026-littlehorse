@@ -32,6 +32,12 @@ internal static class NightsEndpoints
             .WithTags("Nights");
 
         group
+            .MapGet("/", ListAsync)
+            .WithName("ListNights")
+            .WithSummary("Lists every night of the venue, the latest first.")
+            .Produces<IReadOnlyList<NightResponse>>();
+
+        group
             .MapPost("/", CreateAsync)
             .WithName("CreateNight")
             .WithSummary("Sets up a night of the venue with its hours and the staff working it.")
@@ -40,6 +46,13 @@ internal static class NightsEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         return endpoints;
+    }
+
+    internal static async Task<IResult> ListAsync(INightQueries nights, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<NightSummary> listed = await nights.ListAsync(cancellationToken);
+
+        return TypedResults.Ok(listed.Select(NightResponse.Of).ToArray());
     }
 
     internal static async Task<IResult> CreateAsync(

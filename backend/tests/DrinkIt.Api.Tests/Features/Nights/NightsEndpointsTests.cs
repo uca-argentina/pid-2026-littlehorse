@@ -57,6 +57,24 @@ public class NightsEndpointsTests
         Assert.Equal("urn:drinkit:problem:night:crew-member-not-found", response.Text("type"));
     }
 
+    [Fact]
+    public async Task ListAsync_WhenTheVenueHasNights_RespondsWithThemInTheOrderGiven()
+    {
+        NightSummary[] stored =
+        [
+            new(Guid.CreateVersion7(), "Saturday 10/10", Opening, Closing, [MainBar.Id, Till.Id], new AuditInfo(null, null, null, null)),
+            new(Guid.CreateVersion7(), "Friday 9/10", Opening.AddDays(-1), Closing.AddDays(-1), [MainBar.Id, Till.Id], new AuditInfo(null, null, null, null)),
+        ];
+
+        IResult result = await NightsEndpoints.ListAsync(new Fake.Queries(stored), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Get);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Equal(2, response.Body.GetArrayLength());
+        Assert.Equal("Saturday 10/10", response.Body[0].GetProperty("name").GetString());
+        Assert.Equal(2, response.Body[0].GetProperty("crewIds").GetArrayLength());
+    }
+
     private static async Task<HttpResponseSnapshot> Create(CreateNightRequest request, bool overlaps = false)
     {
         CreateNightHandler handler = new(new Fake.Nights(overlaps), new Fake.Staff(MainBar, Till), new Fake.CurrentVenue());
@@ -79,6 +97,12 @@ public class NightsEndpointsTests
                 Task.FromResult(overlaps);
 
             public Task AddAsync(Night night, CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
+        public sealed class Queries(NightSummary[] stored) : INightQueries
+        {
+            public Task<IReadOnlyList<NightSummary>> ListAsync(CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<NightSummary>>(stored);
         }
 
         /// <summary>Only what creating a night reads; the rest is never reached here.</summary>
