@@ -1,0 +1,95 @@
+<form class="form" (submit)="$event.preventDefault(); submit()">
+  <div class="field">
+    <label class="label" for="night-name">Nombre</label>
+    <input
+      id="night-name"
+      class="input"
+      type="text"
+      autocomplete="off"
+      placeholder="Sábado 10/10"
+      maxlength="60"
+      [value]="name()"
+      [disabled]="sending()"
+      [class.input-bad]="nameError() !== null"
+      [attr.aria-invalid]="nameError() !== null ? 'true' : null"
+      [attr.aria-describedby]="nameError() !== null ? 'night-name-error' : null"
+      (input)="typed('name', $event)"
+    />
+    @if (nameError() !== null) {
+      <p id="night-name-error" class="bad">{{ nameError() }}</p>
+    }
+  </div>
+
+  <div class="hours">
+    <div class="field">
+      <label class="label" for="night-starts-at">Empieza</label>
+      <input
+        id="night-starts-at"
+        class="input"
+        type="datetime-local"
+        [value]="startsAt()"
+        [disabled]="sending() || startLocked()"
+        [class.input-bad]="hoursError() !== null"
+        [attr.aria-describedby]="startLocked() ? 'night-start-locked' : null"
+        (input)="typed('startsAt', $event)"
+      />
+      @if (startLocked()) {
+        <p id="night-start-locked" class="help">
+          Ya empezó: el inicio no se cambia porque hay pedidos de esta noche.
+        </p>
+      }
+    </div>
+    <div class="field">
+      <label class="label" for="night-ends-at">Termina</label>
+      <input
+        id="night-ends-at"
+        class="input"
+        type="datetime-local"
+        [value]="endsAt()"
+        [disabled]="sending()"
+        [class.input-bad]="hoursError() !== null"
+        [attr.aria-describedby]="
+          hoursError() !== null ? 'night-hours-error' : startLocked() ? 'night-end-help' : null
+        "
+        (input)="typed('endsAt', $event)"
+      />
+      @if (startLocked()) {
+        <p id="night-end-help" class="help">
+          Podés extenderla. Si ponés una hora que ya pasó, la noche se cierra ahora.
+        </p>
+      }
+    </div>
+  </div>
+  @if (hoursError() !== null) {
+    <p id="night-hours-error" class="bad">{{ hoursError() }}</p>
+  }
+
+  @for (group of groups(); track group.role) {
+    <drinkit-crew-picker
+      [title]="group.title"
+      [accounts]="group.accounts"
+      [chosen]="crew()"
+      [whenNone]="group.whenNone"
+      [disabled]="sending()"
+      [error]="errorFor(group.role)"
+      (toggled)="toggle($event)"
+    />
+  }
+
+  <!-- Right above the button and not under the title: after tapping it on a
+       phone, the top of the form is a long scroll away and a refusal would look
+       like a button that did nothing. -->
+  @if (refusal() !== null) {
+    <p class="note note-bad" role="alert">{{ refusal() }}</p>
+  } @else if (formError() !== null) {
+    <p class="note note-bad" role="alert">{{ formError() }}</p>
+  }
+
+  <button class="cta" type="submit" [disabled]="sending()">
+    @if (sending()) {
+      Guardando
+    } @else {
+      {{ submitLabel() }}
+    }
+  </button>
+</form>

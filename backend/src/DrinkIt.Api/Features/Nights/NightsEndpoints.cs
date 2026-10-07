@@ -9,6 +9,9 @@ namespace DrinkIt.Api.Features.Nights;
 /// <remarks>US-35.</remarks>
 public sealed record CreateNightRequest(string Name, DateTimeOffset StartsAt, DateTimeOffset EndsAt, IReadOnlyList<Guid> CrewIds);
 
+/// <summary>What the night's own screen saves: the whole form, as on creation.</summary>
+public sealed record UpdateNightRequest(string Name, DateTimeOffset StartsAt, DateTimeOffset EndsAt, IReadOnlyList<Guid> CrewIds);
+
 public sealed record NightResponse(
     Guid Id,
     string Name,
@@ -38,6 +41,22 @@ internal static class NightsEndpoints
             .Produces<IReadOnlyList<NightResponse>>();
 
         group
+            .MapGet("/{id:guid}", GetAsync)
+            .WithName("GetNight")
+            .WithSummary("One night of the venue, with its hours and its crew.")
+            .Produces<NightResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapPut("/{id:guid}", UpdateAsync)
+            .WithName("UpdateNight")
+            .WithSummary("Changes a night that has not ended. Once it started, its start stays; an end already past closes it now.")
+            .Produces<NightResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
             .MapPost("/", CreateAsync)
             .WithName("CreateNight")
             .WithSummary("Sets up a night of the venue with its hours and the staff working it.")
@@ -53,6 +72,26 @@ internal static class NightsEndpoints
         IReadOnlyList<NightSummary> listed = await nights.ListAsync(cancellationToken);
 
         return TypedResults.Ok(listed.Select(NightResponse.Of).ToArray());
+    }
+
+    internal static async Task<IResult> GetAsync(Guid id, INightQueries nights, CancellationToken cancellationToken)
+    {
+        NightSummary? night = await nights.GetAsync(id, cancellationToken);
+
+        return night is null ? Rejected(NightErrors.NotFound) : TypedResults.Ok(NightResponse.Of(night));
+    }
+
+    internal static async Task<IResult> UpdateAsync(
+        Guid id,
+        UpdateNightRequest request,
+        UpdateNightHandler handler,
+        CancellationToken cancellationToken)
+    {
+        Result<NightSummary> result = await handler.HandleAsync(
+            new UpdateNightCommand(id, request.Name, request.StartsAt, request.EndsAt, request.CrewIds ?? []),
+            cancellationToken);
+
+        return result.IsSuccess ? TypedResults.Ok(NightResponse.Of(result.Value)) : Rejected(result.Error!);
     }
 
     internal static async Task<IResult> CreateAsync(
@@ -73,16 +112,28 @@ internal static class NightsEndpoints
 
     /// <summary>
     /// Overlapping argues with the venue's other nights, so it is a conflict;
-    /// anything else expected is malformed input.
+    /// anything the table does not name is malformed input.
     /// </summary>
+    private static readonly Dictionary<string, int> StatusByErrorCode = new(StringComparer.Ordinal)
+    {
+        [NightErrors.NotFound.Code] = StatusCodes.Status404NotFound,
+        [NightErrors.Overlaps.Code] = StatusCodes.Status409Conflict,
+    };
+
+    private static readonly Dictionary<int, string> TitleByStatus = new()
+    {
+        [StatusCodes.Status404NotFound] = "Not found",
+        [StatusCodes.Status409Conflict] = "Conflict with the current state",
+    };
+
     private static ProblemHttpResult Rejected(Error error)
     {
-        bool conflict = error.Code == NightErrors.Overlaps.Code;
+        int status = StatusByErrorCode.GetValueOrDefault(error.Code, StatusCodes.Status400BadRequest);
 
         return TypedResults.Problem(
-            title: conflict ? "Conflict with the current state" : "Invalid request",
+            title: TitleByStatus.GetValueOrDefault(status, "Invalid request"),
             detail: error.Message,
-            statusCode: conflict ? StatusCodes.Status409Conflict : StatusCodes.Status400BadRequest,
+            statusCode: status,
             type: ProblemTypes.For(error.Code));
     }
 }

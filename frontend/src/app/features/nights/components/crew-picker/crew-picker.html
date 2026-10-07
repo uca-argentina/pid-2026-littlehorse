@@ -1,0 +1,63 @@
+<div class="picker">
+  <span class="label" [id]="labelId">{{ title() }}</span>
+
+  <button
+    class="toggle"
+    type="button"
+    [class.toggle-bad]="error() !== null"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="panelId"
+    [attr.aria-labelledby]="labelId + ' ' + summaryId"
+    [attr.aria-describedby]="error() !== null ? errorId : null"
+    [disabled]="disabled()"
+    (click)="flip()"
+  >
+    <span class="summary" [id]="summaryId">{{ summary() }}</span>
+    <span class="caret" [class.caret-up]="isOpen()" aria-hidden="true">▾</span>
+  </button>
+
+  @if (isOpen()) {
+    <div class="panel" role="group" [id]="panelId" [attr.aria-labelledby]="labelId">
+      @if (showsSearch()) {
+        <label class="dk-sr-only" [for]="searchId">Buscar en {{ title() }}</label>
+        <input
+          class="search"
+          type="search"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          placeholder="Buscar"
+          [id]="searchId"
+          [value]="search()"
+          (input)="searchFor($event)"
+        />
+      }
+
+      @for (account of visible(); track account.id) {
+        <label class="member" [class.member-on]="chosen().has(account.id)">
+          <input
+            class="check"
+            type="checkbox"
+            [value]="account.id"
+            [checked]="chosen().has(account.id)"
+            [disabled]="disabled()"
+            (change)="toggled.emit(account.id)"
+          />
+          <span class="username">{{ account.username }}</span>
+        </label>
+      } @empty {
+        <p class="help">
+          {{
+            accounts().length === 0 ? whenNone() : 'Ninguna cuenta coincide con lo que buscaste.'
+          }}
+        </p>
+      }
+
+      <button class="done" type="button" (click)="close()">Listo</button>
+    </div>
+  }
+
+  @if (error() !== null) {
+    <p class="bad" [id]="errorId">{{ error() }}</p>
+  }
+</div>

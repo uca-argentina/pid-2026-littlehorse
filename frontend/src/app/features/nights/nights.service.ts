@@ -18,4 +18,9 @@ export class NightsService {
   create(night: NewNight): Observable<Night> {
     return this.http.post<Night>(NIGHTS_URL, night);
   }
+
+  /** The whole form, as on creation. The API decides what a night still allows. */
+  update(id: string, night: NewNight): Observable<Night> {
+    return this.http.put<Night>(`${NIGHTS_URL}/${id}`, night);
+  }
 }

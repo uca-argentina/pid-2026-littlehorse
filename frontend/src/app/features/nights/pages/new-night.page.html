@@ -1,129 +1,26 @@
 <div class="frame">
   <drinkit-admin-header [venueSlug]="venueSlug()" />
 
-  <form class="body" (submit)="$event.preventDefault(); submit()">
+  <section class="body">
     <h1 class="title">Nueva noche</h1>
 
-    <div class="field">
-      <label class="label" for="name">Nombre</label>
-      <input
-        id="name"
-        class="input"
-        type="text"
-        autocomplete="off"
-        placeholder="Sábado 10/10"
-        maxlength="60"
-        [value]="name()"
-        [disabled]="store.isSending()"
-        [class.input-bad]="nameError() !== null"
-        [attr.aria-invalid]="nameError() !== null ? 'true' : null"
-        [attr.aria-describedby]="nameError() !== null ? 'name-error' : null"
-        (input)="typed('name', $event)"
-      />
-      @if (nameError() !== null) {
-        <p id="name-error" class="bad">{{ nameError() }}</p>
-      }
-    </div>
-
-    <div class="hours">
-      <div class="field">
-        <label class="label" for="starts-at">Empieza</label>
-        <input
-          id="starts-at"
-          class="input"
-          type="datetime-local"
-          [value]="startsAt()"
-          [disabled]="store.isSending()"
-          [class.input-bad]="hoursError() !== null"
-          (input)="typed('startsAt', $event)"
-        />
-      </div>
-      <div class="field">
-        <label class="label" for="ends-at">Termina</label>
-        <input
-          id="ends-at"
-          class="input"
-          type="datetime-local"
-          [value]="endsAt()"
-          [disabled]="store.isSending()"
-          [class.input-bad]="hoursError() !== null"
-          [attr.aria-describedby]="hoursError() !== null ? 'hours-error' : null"
-          (input)="typed('endsAt', $event)"
-        />
-      </div>
-    </div>
-    @if (hoursError() !== null) {
-      <p id="hours-error" class="bad">{{ hoursError() }}</p>
-    }
-
-    @if (teamFailed()) {
+    @if (team.error() !== undefined) {
       <div class="note note-bad failed" role="alert">
         <span>No pudimos traer al equipo. Fijate la señal y probá de nuevo.</span>
-        <button class="retry" type="button" (click)="retry()">Reintentar</button>
+        <button class="retry" type="button" (click)="team.reload()">Reintentar</button>
       </div>
-    } @else if (team.isLoading()) {
-      <p class="note" role="status">Cargando el equipo…</p>
+    } @else if (team.hasValue()) {
+      <drinkit-night-form
+        [team]="team.value()"
+        [sending]="store.isSending()"
+        [refusal]="refusal()"
+        submitLabel="Crear noche"
+        (saved)="save($event)"
+      />
     } @else {
-      @for (group of groups(); track group.role) {
-        <fieldset class="field crew">
-          <legend class="label">{{ group.title }}</legend>
-          @for (account of group.accounts; track account.id) {
-            <label class="member" [class.member-on]="crew().has(account.id)">
-              <input
-                class="check"
-                type="checkbox"
-                [checked]="crew().has(account.id)"
-                [disabled]="store.isSending()"
-                (change)="toggle(account.id)"
-              />
-              <span class="username">{{ account.username }}</span>
-            </label>
-          } @empty {
-            <p class="help">{{ group.whenNone }}</p>
-          }
-          @if (group.role === 'Kds' && kdsError() !== null) {
-            <p class="bad">{{ kdsError() }}</p>
-          }
-          @if (group.role === 'Cashier' && cashierError() !== null) {
-            <p class="bad">{{ cashierError() }}</p>
-          }
-        </fieldset>
-      }
+      <p class="note" role="status">Cargando el equipo…</p>
     }
-
-    <!-- Right above the button and not under the title: after tapping it on a
-         phone, the top of the form is a long scroll away and the refusal
-         would look like a button that did nothing. -->
-    @if (store.status() === 'overlaps') {
-      <p class="note note-bad" role="alert">
-        Ese horario se superpone con otra noche del boliche. Corré el inicio o el fin.
-      </p>
-    }
-
-    @if (store.status() === 'crewChanged') {
-      <p class="note note-bad" role="alert">
-        Una de las cuentas elegidas ya no está en el boliche. Recargá la pantalla y elegí de nuevo.
-      </p>
-    }
-
-    @if (store.status() === 'unreachable') {
-      <p class="note note-bad" role="alert">
-        No pudimos guardarla. Fijate la señal y probá de nuevo.
-      </p>
-    }
-
-    @if (formError() !== null) {
-      <p class="note note-bad" role="alert">{{ formError() }}</p>
-    }
-
-    <button class="cta" type="submit" [disabled]="store.isSending()">
-      @if (store.isSending()) {
-        Creando
-      } @else {
-        Crear noche
-      }
-    </button>
 
     <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'nights']">Cancelar</a>
-  </form>
+  </section>
 </div>

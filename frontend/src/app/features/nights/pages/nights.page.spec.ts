@@ -67,17 +67,26 @@ describe('NightsPage', () => {
   it('says which night is on, which is next and which are over', async () => {
     await openScreenShowing(theNights);
 
-    expect(screen.getByText('Saturday').closest('li')?.textContent).toContain('Próxima');
-    expect(screen.getByText('Friday').closest('li')?.textContent).toContain('En curso');
-    expect(screen.getByText('Thursday').closest('li')?.textContent).toContain('Terminada');
+    expect(screen.getByRole('link', { name: /saturday/i }).textContent).toContain('Próxima');
+    expect(screen.getByRole('link', { name: /friday/i }).textContent).toContain('En curso');
+    expect(screen.getByRole('link', { name: /thursday/i }).textContent).toContain('Terminada');
   });
 
   it('shows the hours and how many people work each night', async () => {
     await openScreenShowing(theNights);
 
-    const friday = screen.getByText('Friday').closest('li')?.textContent ?? '';
+    const friday = screen.getByRole('link', { name: /friday/i }).textContent ?? '';
     expect(friday).toContain('vie 09/10 · 23:00 a 06:00');
     expect(friday).toContain('3 personas');
+  });
+
+  // Opened to see it, or to change it while it has not ended.
+  it('leads from each night to its own screen', async () => {
+    await openScreenShowing(theNights);
+
+    expect(screen.getByRole('link', { name: /friday/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/nights/id-Friday',
+    );
   });
 
   it('draws the outline of the list while it loads', async () => {

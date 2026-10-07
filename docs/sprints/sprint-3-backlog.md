@@ -142,6 +142,12 @@ una KDS.
   arreglar la de hoy.
 - **Borde: la noche se extiende.** El administrador puede correr la hora de fin de una noche en
   curso. Acortarla a una hora que ya pasó es cerrarla.
+- **Editar una noche** (decidido el 2026-10-07): desde el listado se entra a la ficha de cada
+  noche. Una **próxima** se edita entera. Una **en curso** cambia nombre, fin y personal, pero
+  **no el inicio**: sus pedidos ya son de ella. Una **terminada** sólo se mira, porque sus
+  métricas se leen contra esos horarios.
+- **El personal se elige con un desplegable por rol** (KDS, cajeros, mozos), con buscador
+  cuando el rol tiene muchas cuentas.
 - **Borde: termina la noche con pedidos pagos sin entregar.** Se siguen preparando y entregando:
   lo que se cierra es confirmar pedidos nuevos, no la barra. Un carrito armado a las 05:58 que se
   confirma a las 06:01 se rechaza con el mismo mensaje del criterio 3.

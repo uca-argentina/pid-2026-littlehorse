@@ -39,6 +39,49 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
         Assert.Equal(crew.Select(member => member.Id).Order(), stored.CrewIds.Order());
     }
 
+    // The crew lives in a JSON column: changing the list in place has to reach
+    // the database, not only the tracked object.
+    [Fact]
+    public async Task SaveChangesAsync_AfterAnEdit_KeepsTheNewNameHoursAndCrew()
+    {
+        (Venue mine, StaffUser[] crew, _) = await SeedTwoVenues();
+        StaffUser waiter = StaffUser.Create(mine.Id, "martin", "hash", StaffRole.Waiter);
+        Night night = Night.Create(mine.Id, "Saturday", Opening, Closing, crew);
+
+        await using (DrinkItDbContext seed = sql.CreateContext(mine.Id))
+        {
+            seed.StaffUsers.Add(waiter);
+            await new NightRepository(seed).AddAsync(night, CancellationToken.None);
+        }
+
+        await using (DrinkItDbContext edit = sql.CreateContext(mine.Id))
+        {
+            NightRepository repository = new(edit);
+            Night tracked = (await repository.GetForUpdateAsync(night.Id, CancellationToken.None))!;
+            tracked.Update("Saturday, late", Opening, Closing.AddHours(1), [.. crew, waiter], Opening.AddHours(-1));
+            await repository.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using DrinkItDbContext read = sql.CreateContext(mine.Id);
+        Night stored = await read.Nights.SingleAsync(n => n.Id == night.Id);
+
+        Assert.Equal("Saturday, late", stored.Name);
+        Assert.Equal(Closing.AddHours(1), stored.EndsAt);
+        Assert.Contains(waiter.Id, stored.CrewIds);
+    }
+
+    [Fact]
+    public async Task OverlapsAsync_WhenTheOnlyNightInTheWayIsTheOneExcluded_IsFalse()
+    {
+        (Venue mine, StaffUser[] crew, _) = await SeedTwoVenues();
+        Night night = Night.Create(mine.Id, "Saturday", Opening, Closing, crew);
+        await using DrinkItDbContext context = sql.CreateContext(mine.Id);
+        NightRepository repository = new(context);
+        await repository.AddAsync(night, CancellationToken.None);
+
+        Assert.False(await repository.OverlapsAsync(Opening, Closing.AddHours(1), night.Id, CancellationToken.None));
+    }
+
     [Theory]
     [InlineData(-2, 1, true)] // starts before, ends inside
     [InlineData(6, 9, true)] // starts inside, ends after
@@ -53,7 +96,7 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
         NightRepository repository = new(context);
         await repository.AddAsync(Night.Create(mine.Id, "Saturday", Opening, Closing, crew), CancellationToken.None);
 
-        bool overlaps = await repository.OverlapsAsync(Opening.AddHours(fromHour), Opening.AddHours(toHour), CancellationToken.None);
+        bool overlaps = await repository.OverlapsAsync(Opening.AddHours(fromHour), Opening.AddHours(toHour), excluding: null, CancellationToken.None);
 
         Assert.Equal(expected, overlaps);
     }
@@ -71,7 +114,7 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
 
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
 
-        Assert.False(await new NightRepository(asMine).OverlapsAsync(Opening, Closing, CancellationToken.None));
+        Assert.False(await new NightRepository(asMine).OverlapsAsync(Opening, Closing, excluding: null, CancellationToken.None));
     }
 
     [Fact]

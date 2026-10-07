@@ -16,6 +16,11 @@ export const nightsRoutes: Routes = [
         path: 'new',
         loadComponent: () => import('./pages/new-night.page').then((m) => m.NewNightPage),
       },
+      // After 'new', which would otherwise be read as a night's id.
+      {
+        path: ':id',
+        loadComponent: () => import('./pages/night.page').then((m) => m.NightPage),
+      },
     ],
   },
 ];

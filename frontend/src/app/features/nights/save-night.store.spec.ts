@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { ProblemTypes } from '../../core/api/problem-types';
-import { NewNightStore } from './new-night.store';
+import { SaveNightStore } from './save-night.store';
 import { NightsService } from './nights.service';
 import type { NewNight, Night } from './nights.service';
 
@@ -22,31 +22,33 @@ const aNewNight: NewNight = {
 
 const created: Night = { id: 'night-1', ...aNewNight, audit: noAudit };
 
-describe('NewNightStore', () => {
-  let store: NewNightStore;
+describe('SaveNightStore', () => {
+  let store: SaveNightStore;
   let create: ReturnType<typeof vi.fn>;
+  let update: ReturnType<typeof vi.fn>;
   let router: Router;
 
   beforeEach(() => {
     create = vi.fn();
+    update = vi.fn();
 
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        NewNightStore,
-        { provide: NightsService, useValue: { create } },
+        SaveNightStore,
+        { provide: NightsService, useValue: { create, update } },
       ],
     });
 
-    store = TestBed.inject(NewNightStore);
+    store = TestBed.inject(SaveNightStore);
     router = TestBed.inject(Router);
   });
 
   it('does not send twice while a request is in flight', () => {
     create.mockReturnValue(new Subject<Night>());
 
-    store.submit('bar-alfa', aNewNight);
-    store.submit('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
 
     expect(create).toHaveBeenCalledTimes(1);
   });
@@ -56,7 +58,7 @@ describe('NewNightStore', () => {
     create.mockReturnValue(of(created));
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    store.submit('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
 
     expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'nights']);
     expect(store.status()).toBe('idle');
@@ -66,7 +68,7 @@ describe('NewNightStore', () => {
   it('says the hours overlap another night when the API refuses them', () => {
     create.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.nightOverlaps)));
 
-    store.submit('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
 
     expect(store.status()).toBe('overlaps');
   });
@@ -77,7 +79,7 @@ describe('NewNightStore', () => {
       throwError(() => rejectedWith(400, ProblemTypes.nightCrewMemberNotFound)),
     );
 
-    store.submit('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
 
     expect(store.status()).toBe('crewChanged');
   });
@@ -85,18 +87,47 @@ describe('NewNightStore', () => {
   it('falls back to a single failure for anything else', () => {
     create.mockReturnValue(throwError(() => rejectedWith(500, 'about:blank')));
 
-    store.submit('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
 
     expect(store.status()).toBe('unreachable');
   });
 
   it('clears a previous failure when the next attempt starts', () => {
     create.mockReturnValueOnce(throwError(() => rejectedWith(409, ProblemTypes.nightOverlaps)));
-    store.submit('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
 
     create.mockReturnValueOnce(new Subject<Night>());
-    store.submit('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
 
     expect(store.status()).toBe('sending');
+  });
+
+  // The night's own screen: same answers, through PUT instead of POST.
+  it('saves an edit and goes back to the listing', () => {
+    update.mockReturnValue(of(created));
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(update).toHaveBeenCalledWith('night-1', aNewNight);
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'nights']);
+  });
+
+  // The screen was opened while the night was on, and it ended meanwhile.
+  it('says the night is over when the API refuses the edit for that', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.nightOver)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('over');
+  });
+
+  // Opened before it began, saved after: the start moved under a night on.
+  it('says the night already started when the API refuses to move its start', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.nightStartLocked)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('startLocked');
   });
 });

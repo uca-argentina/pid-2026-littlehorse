@@ -48,6 +48,41 @@ public sealed class NightQueriesTests(SqlServerFixture sql)
         Assert.Empty(await new NightQueries(asMine).ListAsync(CancellationToken.None));
     }
 
+    // The night's own screen, reached from the listing.
+    [Fact]
+    public async Task GetAsync_WhenTheNightIsThisVenues_ReturnsItWithItsCrew()
+    {
+        (Venue mine, StaffUser[] crew) = await SeedVenue();
+        await using DrinkItDbContext context = sql.CreateContext(mine.Id);
+        Night friday = Night.Create(mine.Id, "Friday", Friday, Friday.AddHours(7), crew);
+        context.Nights.Add(friday);
+        await context.SaveChangesAsync();
+
+        NightSummary? found = await new NightQueries(context).GetAsync(friday.Id, CancellationToken.None);
+
+        Assert.Equal("Friday", found?.Name);
+        Assert.Equal(crew.Select(member => member.Id).Order(), found?.CrewIds.Order());
+    }
+
+    // Changing the id in the address must not open another venue's night.
+    [Fact]
+    public async Task GetAsync_WhenTheNightIsAnotherVenues_FindsNothing()
+    {
+        (Venue mine, _) = await SeedVenue();
+        (Venue theirs, StaffUser[] theirCrew) = await SeedVenue();
+        Night theirFriday = Night.Create(theirs.Id, "Friday", Friday, Friday.AddHours(7), theirCrew);
+
+        await using (DrinkItDbContext asTheirs = sql.CreateContext(theirs.Id))
+        {
+            asTheirs.Nights.Add(theirFriday);
+            await asTheirs.SaveChangesAsync();
+        }
+
+        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
+
+        Assert.Null(await new NightQueries(asMine).GetAsync(theirFriday.Id, CancellationToken.None));
+    }
+
     private async Task<(Venue Venue, StaffUser[] Crew)> SeedVenue()
     {
         Venue venue = Venue.Create("Bar", $"bar-{Guid.NewGuid():N}");

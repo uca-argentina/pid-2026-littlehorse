@@ -75,6 +75,74 @@ public class NightsEndpointsTests
         Assert.Equal(2, response.Body[0].GetProperty("crewIds").GetArrayLength());
     }
 
+    [Fact]
+    public async Task GetAsync_WhenTheVenueHasTheNight_RespondsWithIt()
+    {
+        NightSummary saturday = new(Guid.CreateVersion7(), "Saturday 10/10", Opening, Closing, [MainBar.Id, Till.Id], new AuditInfo(null, null, null, null));
+
+        IResult result = await NightsEndpoints.GetAsync(saturday.Id, new Fake.Queries([saturday]), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{saturday.Id}", HttpMethods.Get);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Equal("Saturday 10/10", response.Text("name"));
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenTheVenueHasNoSuchNight_RespondsWithNotFound()
+    {
+        Guid unknown = Guid.CreateVersion7();
+
+        IResult result = await NightsEndpoints.GetAsync(unknown, new Fake.Queries([]), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{unknown}", HttpMethods.Get);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:night:not-found", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenTheDataIsValid_RespondsWithTheUpdatedNight()
+    {
+        Night saturday = Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]);
+
+        HttpResponseSnapshot response = await Update(saturday, new UpdateNightRequest("Saturday, late", Opening, Closing.AddHours(1), [MainBar.Id, Till.Id]));
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Equal("Saturday, late", response.Text("name"));
+        Assert.Equal(Closing.AddHours(1), response.Body.GetProperty("endsAt").GetDateTimeOffset());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenTheVenueHasNoSuchNight_RespondsWithNotFound()
+    {
+        HttpResponseSnapshot response = await Update(null, new UpdateNightRequest("Saturday", Opening, Closing, [MainBar.Id, Till.Id]));
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenTheNewHoursOverlapAnotherNight_RespondsWithConflict()
+    {
+        Night saturday = Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]);
+
+        HttpResponseSnapshot response = await Update(
+            saturday,
+            new UpdateNightRequest("Saturday", Opening, Closing.AddHours(1), [MainBar.Id, Till.Id]),
+            overlaps: true);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:night:overlaps", response.Text("type"));
+    }
+
+    private static async Task<HttpResponseSnapshot> Update(Night? stored, UpdateNightRequest request, bool overlaps = false)
+    {
+        Guid id = stored?.Id ?? Guid.CreateVersion7();
+        UpdateNightHandler handler = new(new Fake.Nights(overlaps, stored), new Fake.Staff(MainBar, Till), new Fake.Clock(Opening.AddHours(-2)));
+
+        IResult result = await NightsEndpoints.UpdateAsync(id, request, handler, CancellationToken.None);
+
+        return await EndpointResponse.Execute(result, $"{Path}/{id}", HttpMethods.Put);
+    }
+
     private static async Task<HttpResponseSnapshot> Create(CreateNightRequest request, bool overlaps = false)
     {
         CreateNightHandler handler = new(new Fake.Nights(overlaps), new Fake.Staff(MainBar, Till), new Fake.CurrentVenue());
@@ -91,10 +159,20 @@ public class NightsEndpointsTests
             public Guid Id => TheVenue;
         }
 
-        public sealed class Nights(bool overlaps) : INightRepository
+        public sealed class Clock(DateTimeOffset now) : TimeProvider
         {
-            public Task<bool> OverlapsAsync(DateTimeOffset startsAt, DateTimeOffset endsAt, CancellationToken cancellationToken) =>
+            public override DateTimeOffset GetUtcNow() => now;
+        }
+
+        public sealed class Nights(bool overlaps, Night? stored = null) : INightRepository
+        {
+            public Task<bool> OverlapsAsync(DateTimeOffset startsAt, DateTimeOffset endsAt, Guid? excluding, CancellationToken cancellationToken) =>
                 Task.FromResult(overlaps);
+
+            public Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+                Task.FromResult(stored?.Id == id ? stored : null);
+
+            public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
             public Task AddAsync(Night night, CancellationToken cancellationToken) => Task.CompletedTask;
         }
@@ -103,6 +181,9 @@ public class NightsEndpointsTests
         {
             public Task<IReadOnlyList<NightSummary>> ListAsync(CancellationToken cancellationToken) =>
                 Task.FromResult<IReadOnlyList<NightSummary>>(stored);
+
+            public Task<NightSummary?> GetAsync(Guid id, CancellationToken cancellationToken) =>
+                Task.FromResult(stored.FirstOrDefault(night => night.Id == id));
         }
 
         /// <summary>Only what creating a night reads; the rest is never reached here.</summary>

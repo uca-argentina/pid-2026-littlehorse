@@ -18,6 +18,10 @@ public sealed record NightSummary(
 
 public static class NightErrors
 {
+    /// <summary>This venue has no such night. Another venue's reads the same, as with <c>staff.not_found</c>.</summary>
+    public static readonly Error NotFound =
+        new("night.not_found", "This venue has no night with that id.");
+
     /// <summary>
     /// US-35, criterion 1: an order confirmed in a shared minute would not know
     /// which night it belongs to.

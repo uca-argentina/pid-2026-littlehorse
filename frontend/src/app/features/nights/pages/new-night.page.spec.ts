@@ -11,19 +11,14 @@ import { NightsService } from '../nights.service';
 import type { Night } from '../nights.service';
 import { NewNightPage } from './new-night.page';
 
+// The form's own rules are NightForm's spec. Here: that the page loads the
+// team, sends what the form hands over, and says what the API answered.
+
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
 
-function account(id: string, role: StaffUser['role'], isActive = true): StaffUser {
-  return { id, username: id, role, isActive, audit: noAudit };
-}
-
 const theTeam: StaffUser[] = [
-  account('euge.q', 'Administrator'),
-  account('main-bar', 'Kds'),
-  account('vip-bar', 'Kds'),
-  account('till-1', 'Cashier'),
-  account('martin', 'Waiter'),
-  account('former-waiter', 'Waiter', false),
+  { id: 'main-bar', username: 'main-bar', role: 'Kds', isActive: true, audit: noAudit },
+  { id: 'till-1', username: 'till-1', role: 'Cashier', isActive: true, audit: noAudit },
 ];
 
 const created: Night = {
@@ -49,101 +44,30 @@ async function openScreen(create = vi.fn().mockReturnValue(of(created))) {
   return { rendered, create, http: TestBed.inject(HttpTestingController) };
 }
 
-async function openScreenWithTheTeam(create?: Parameters<typeof openScreen>[0]) {
-  const opened = await openScreen(create);
-
-  opened.http.expectOne(STAFF_USERS_URL).flush(theTeam);
-  await opened.rendered.fixture.whenStable();
-
-  return opened;
-}
-
-function type(label: RegExp, value: string): void {
-  fireEvent.input(screen.getByLabelText(label), { target: { value } });
-}
-
-function pick(username: string): void {
-  screen.getByRole('checkbox', { name: new RegExp(username) }).click();
-}
-
-function fillTheNight(): void {
-  type(/nombre/i, 'Saturday');
-  type(/empieza/i, '2026-10-10T23:00');
-  type(/termina/i, '2026-10-11T06:00');
-}
-
-async function save(rendered: Awaited<ReturnType<typeof openScreen>>['rendered']): Promise<void> {
+async function fillAndSave(rendered: Awaited<ReturnType<typeof openScreen>>['rendered']) {
+  fireEvent.input(screen.getByLabelText(/nombre/i), { target: { value: 'Saturday' } });
+  fireEvent.input(screen.getByLabelText(/empieza/i), { target: { value: '2026-10-10T23:00' } });
+  fireEvent.input(screen.getByLabelText(/termina/i), { target: { value: '2026-10-11T06:00' } });
+  screen.getByRole('button', { name: /^KDS/ }).click();
+  screen.getByRole('button', { name: /^Cajeros/ }).click();
+  await rendered.fixture.whenStable();
+  screen.getByRole('checkbox', { name: 'main-bar' }).click();
+  screen.getByRole('checkbox', { name: 'till-1' }).click();
   screen.getByRole('button', { name: /crear noche/i }).click();
   await rendered.fixture.whenStable();
 }
 
 describe('NewNightPage', () => {
-  // US-35: the crew is the venue's KDS, cashiers and waiters. The administrator
-  // is never limited by the night, and a deactivated account cannot work it.
-  it('offers the active KDS, cashiers and waiters, and nobody else', async () => {
-    await openScreenWithTheTeam();
+  it('creates the night the form hands over', async () => {
+    const { rendered, create, http } = await openScreen();
+    http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    await rendered.fixture.whenStable();
 
-    const offered = screen
-      .getAllByRole('checkbox')
-      .map((box) => box.closest('label')?.textContent?.trim());
+    await fillAndSave(rendered);
 
-    expect(offered).toEqual(['main-bar', 'vip-bar', 'till-1', 'martin']);
-  });
-
-  it('creates the night with its hours and the chosen crew', async () => {
-    const { rendered, create } = await openScreenWithTheTeam();
-
-    fillTheNight();
-    pick('main-bar');
-    pick('till-1');
-    pick('martin');
-    await save(rendered);
-
-    expect(create).toHaveBeenCalledWith({
-      name: 'Saturday',
-      startsAt: new Date(2026, 9, 10, 23, 0).toISOString(),
-      endsAt: new Date(2026, 9, 11, 6, 0).toISOString(),
-      crewIds: ['main-bar', 'till-1', 'martin'],
-    });
-  });
-
-  it('asks for a KDS before sending anything', async () => {
-    const { rendered, create } = await openScreenWithTheTeam();
-
-    fillTheNight();
-    pick('till-1');
-    await save(rendered);
-
-    expect(screen.getByText('Elegí al menos una KDS.')).not.toBeNull();
-    // Also said next to the button: the KDS list may be a long scroll above it.
-    expect(screen.getByRole('alert').textContent).toContain('Revisá lo marcado más arriba');
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it('asks for a cashier before sending anything', async () => {
-    const { rendered, create } = await openScreenWithTheTeam();
-
-    fillTheNight();
-    pick('main-bar');
-    await save(rendered);
-
-    expect(screen.getByText('Elegí al menos un cajero.')).not.toBeNull();
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  // A night crosses midnight, so an end "before" the start is the usual typo:
-  // the right day was not picked for it.
-  it('refuses an end that is not after the start', async () => {
-    const { rendered, create } = await openScreenWithTheTeam();
-
-    fillTheNight();
-    type(/termina/i, '2026-10-10T06:00');
-    pick('main-bar');
-    pick('till-1');
-    await save(rendered);
-
-    expect(screen.getByText(/tiene que terminar después de empezar/i)).not.toBeNull();
-    expect(create).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Saturday', crewIds: ['main-bar', 'till-1'] }),
+    );
   });
 
   it('says when the hours overlap another night', async () => {
@@ -154,12 +78,11 @@ describe('NewNightPage', () => {
           () => new HttpErrorResponse({ status: 409, error: { type: ProblemTypes.nightOverlaps } }),
         ),
       );
-    const { rendered } = await openScreenWithTheTeam(overlapping);
+    const { rendered, http } = await openScreen(overlapping);
+    http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    await rendered.fixture.whenStable();
 
-    fillTheNight();
-    pick('main-bar');
-    pick('till-1');
-    await save(rendered);
+    await fillAndSave(rendered);
 
     expect(screen.getByRole('alert').textContent).toContain('se superpone con otra noche');
   });
@@ -177,6 +100,6 @@ describe('NewNightPage', () => {
     http.expectOne(STAFF_USERS_URL).flush(theTeam);
     await rendered.fixture.whenStable();
 
-    expect(screen.getAllByRole('checkbox')).toHaveLength(4);
+    expect(screen.getByLabelText(/nombre/i)).not.toBeNull();
   });
 });

@@ -22,7 +22,7 @@ public sealed class CreateNightHandler(
         IReadOnlyList<StaffUser> crew = await staffUsers.ListByIdsAsync(crewIds, cancellationToken);
 
         if (crew.Count != crewIds.Count) return NightErrors.CrewMemberNotFound;
-        if (await nights.OverlapsAsync(command.StartsAt, command.EndsAt, cancellationToken)) return NightErrors.Overlaps;
+        if (await nights.OverlapsAsync(command.StartsAt, command.EndsAt, excluding: null, cancellationToken)) return NightErrors.Overlaps;
 
         // The crew is put back in the order the administrator chose it: the
         // repository gives no order guarantee. Whatever else is wrong (no KDS,

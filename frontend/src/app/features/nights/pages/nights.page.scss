@@ -61,6 +61,8 @@
 
 .row {
   display: flex;
+  color: inherit;
+  text-decoration: none;
   flex-wrap: wrap;
   gap: var(--dk-space-3);
   align-items: center;
@@ -68,6 +70,15 @@
   border: 1px solid var(--dk-border-subtle);
   border-radius: var(--dk-radius-md);
   background: var(--dk-surface);
+}
+
+a.row:hover {
+  border-color: var(--dk-accent);
+}
+
+.go {
+  color: var(--dk-text-muted);
+  font-size: 22px;
 }
 
 // Faded, not hidden: the metrics (US-47 to US-49) are read per finished night.

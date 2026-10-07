@@ -6,5 +6,6 @@ namespace DrinkIt.Api.Features.Nights;
 internal static class NightHandlers
 {
     public static IServiceCollection AddNightHandlers(this IServiceCollection services) => services
-        .AddScoped<CreateNightHandler>();
+        .AddScoped<CreateNightHandler>()
+        .AddScoped<UpdateNightHandler>();
 }

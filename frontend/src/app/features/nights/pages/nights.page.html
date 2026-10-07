@@ -47,12 +47,23 @@
     @if (rows().length > 0) {
       <ul class="rows">
         @for (row of rows(); track row.id) {
-          <li class="row" [class.row-off]="row.phase === 'over'">
-            <div class="what">
-              <span class="name">{{ row.name }}</span>
-              <span class="hours">{{ row.hours }} · {{ row.crew }}</span>
-            </div>
-            <span class="chip" [class.chip-on]="row.phase === 'underway'">{{ row.phaseName }}</span>
+          <li>
+            <!-- The whole row is the way in: a night is opened to see it or
+                 to change it, and a small "Editar" would be the only target. -->
+            <a
+              class="row"
+              [class.row-off]="row.phase === 'over'"
+              [routerLink]="['/', venueSlug(), 'staff', 'nights', row.id]"
+            >
+              <span class="what">
+                <span class="name">{{ row.name }}</span>
+                <span class="hours">{{ row.hours }} · {{ row.crew }}</span>
+              </span>
+              <span class="chip" [class.chip-on]="row.phase === 'underway'">{{
+                row.phaseName
+              }}</span>
+              <span class="go" aria-hidden="true">›</span>
+            </a>
           </li>
         }
       </ul>

@@ -178,4 +178,105 @@ public class NightTests
     {
         Assert.False(ANight(MainBar, Till).IsWorkedBy(Martin.Id));
     }
+
+    // The edit rules (US-35, "la noche se extiende"): an upcoming night can
+    // change everything, one underway keeps its start, a finished one nothing.
+    private static readonly DateTimeOffset BeforeOpening = Opening.AddHours(-2);
+    private static readonly DateTimeOffset MidNight = Opening.AddHours(3);
+
+    [Fact]
+    public void Update_WhenTheNightHasNotStarted_ChangesTheNameTheHoursAndTheCrew()
+    {
+        Night night = ANight(MainBar, Till);
+
+        night.Update("Saturday, late", Opening.AddHours(1), Closing.AddHours(1), [MainBar, Till, Martin], BeforeOpening);
+
+        Assert.Equal("Saturday, late", night.Name);
+        Assert.Equal(Opening.AddHours(1), night.StartsAt);
+        Assert.Equal(Closing.AddHours(1), night.EndsAt);
+        Assert.Equal([MainBar.Id, Till.Id, Martin.Id], night.CrewIds);
+    }
+
+    // Edits go through the same rules as creating: no KDS, no night.
+    [Fact]
+    public void Update_WhenTheCrewLosesItsKds_ThrowsKdsRequired()
+    {
+        Night night = ANight(MainBar, Till);
+
+        DomainException error = Assert.Throws<DomainException>(
+            () => night.Update("Saturday", Opening, Closing, [Till], BeforeOpening));
+
+        Assert.Equal(Night.ErrorCodes.KdsRequired, error.Code);
+    }
+
+    [Fact]
+    public void Update_WhenItDoesNotEndAfterItStarts_ThrowsHoursInvalid()
+    {
+        Night night = ANight(MainBar, Till);
+
+        DomainException error = Assert.Throws<DomainException>(
+            () => night.Update("Saturday", Opening, Opening, [MainBar, Till], BeforeOpening));
+
+        Assert.Equal(Night.ErrorCodes.HoursInvalid, error.Code);
+    }
+
+    // "La noche se extiende": the bar is full at 05:30 and stays open.
+    [Fact]
+    public void Update_WhenTheNightIsUnderway_CanMoveTheEndLater()
+    {
+        Night night = ANight(MainBar, Till);
+
+        night.Update("Saturday", Opening, Closing.AddHours(1), [MainBar, Till], MidNight);
+
+        Assert.Equal(Closing.AddHours(1), night.EndsAt);
+    }
+
+    // Orders already belong to it from its start: moving the start would
+    // leave some of them outside their own night.
+    [Fact]
+    public void Update_WhenTheNightIsUnderwayAndTheStartMoves_ThrowsStartLocked()
+    {
+        Night night = ANight(MainBar, Till);
+
+        DomainException error = Assert.Throws<DomainException>(
+            () => night.Update("Saturday", Opening.AddHours(1), Closing, [MainBar, Till], MidNight));
+
+        Assert.Equal(Night.ErrorCodes.StartLocked, error.Code);
+    }
+
+    // "Acortarla a una hora que ya pasó es cerrarla": it ends now, not back
+    // then, so no order confirmed meanwhile is left outside its night.
+    [Fact]
+    public void Update_WhenTheNightIsUnderwayAndTheEndIsAlreadyPast_ClosesItNow()
+    {
+        Night night = ANight(MainBar, Till);
+
+        night.Update("Saturday", Opening, Opening.AddHours(1), [MainBar, Till], MidNight);
+
+        Assert.Equal(MidNight, night.EndsAt);
+        Assert.False(night.IsUnderwayAt(MidNight));
+    }
+
+    [Fact]
+    public void Update_WhenTheNightIsUnderway_CanChangeTheNameAndTheCrew()
+    {
+        Night night = ANight(MainBar, Till);
+
+        night.Update("Saturday, packed", Opening, Closing, [MainBar, Till, Martin], MidNight);
+
+        Assert.Equal("Saturday, packed", night.Name);
+        Assert.True(night.IsWorkedBy(Martin.Id));
+    }
+
+    // Its hours are what the metrics of that night are read against.
+    [Fact]
+    public void Update_WhenTheNightIsOver_ThrowsNightOver()
+    {
+        Night night = ANight(MainBar, Till);
+
+        DomainException error = Assert.Throws<DomainException>(
+            () => night.Update("Saturday", Opening, Closing, [MainBar, Till], Closing));
+
+        Assert.Equal(Night.ErrorCodes.NightOver, error.Code);
+    }
 }

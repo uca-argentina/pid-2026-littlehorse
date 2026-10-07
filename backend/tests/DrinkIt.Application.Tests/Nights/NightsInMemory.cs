@@ -13,8 +13,21 @@ internal sealed class NightsInMemory(params Night[] stored) : INightRepository
 
     public Night? Added { get; private set; }
 
-    public Task<bool> OverlapsAsync(DateTimeOffset startsAt, DateTimeOffset endsAt, CancellationToken cancellationToken) =>
-        Task.FromResult(_stored.Exists(night => night.StartsAt < endsAt && startsAt < night.EndsAt));
+    /// <summary>How many times the unit of work was committed.</summary>
+    public int Saves { get; private set; }
+
+    public Task<bool> OverlapsAsync(DateTimeOffset startsAt, DateTimeOffset endsAt, Guid? excluding, CancellationToken cancellationToken) =>
+        Task.FromResult(_stored.Exists(night => night.Id != excluding && night.StartsAt < endsAt && startsAt < night.EndsAt));
+
+    public Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+        Task.FromResult(_stored.Find(night => night.Id == id));
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        Saves++;
+
+        return Task.CompletedTask;
+    }
 
     public Task AddAsync(Night night, CancellationToken cancellationToken)
     {

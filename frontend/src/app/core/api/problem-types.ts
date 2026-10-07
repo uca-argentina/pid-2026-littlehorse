@@ -52,4 +52,13 @@ export const ProblemTypes = {
 
   /** One of the chosen accounts is not the venue's any more. */
   nightCrewMemberNotFound: 'urn:drinkit:problem:night:crew-member-not-found',
+
+  /** The night ended while its screen was open: it can no longer change. */
+  nightOver: 'urn:drinkit:problem:night:over',
+
+  /** The night began while its screen was open, and the edit moved its start. */
+  nightStartLocked: 'urn:drinkit:problem:night:start-locked',
+
+  /** No such night in this venue: a stale link, or another venue's id. */
+  nightNotFound: 'urn:drinkit:problem:night:not-found',
 } as const;
