@@ -3,6 +3,7 @@ using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
@@ -11,6 +12,7 @@ using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Menu;
+using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Seeding;
@@ -70,6 +72,7 @@ public static class InfrastructureServices
         services.AddScoped<IOrderTrackingQueries, OrderTrackingQueries>();
         services.AddScoped<IKdsQueueQueries, KdsQueueQueries>();
         services.AddScoped<ICashierQueries, CashierQueries>();
+        services.AddScoped<INightRepository, NightRepository>();
 
         // Implemented in Application, not here — same reason as DigitalPaymentStrategy
         // below — but registered from this composition root either way.

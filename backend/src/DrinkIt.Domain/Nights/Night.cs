@@ -29,16 +29,15 @@ public sealed class Night : AuditStamps, IBelongsToVenue
 
     public const int NameMaxLength = 60;
 
-    private readonly List<Guid> _crewIds;
+    private readonly List<Guid> _crewIds = [];
 
-    private Night(Guid id, Guid venueId, string name, DateTimeOffset startsAt, DateTimeOffset endsAt, List<Guid> crewIds)
+    private Night(Guid id, Guid venueId, string name, DateTimeOffset startsAt, DateTimeOffset endsAt)
     {
         Id = id;
         VenueId = venueId;
         Name = name;
         StartsAt = startsAt;
         EndsAt = endsAt;
-        _crewIds = crewIds;
     }
 
     public Guid Id { get; }
@@ -77,7 +76,10 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         if (!members.Any(member => member.Role == StaffRole.Kds)) throw new DomainException(ErrorCodes.KdsRequired, "The night needs at least one KDS.");
         if (!members.Any(member => member.Role == StaffRole.Cashier)) throw new DomainException(ErrorCodes.CashierRequired, "The night needs at least one cashier.");
 
-        return new Night(Guid.CreateVersion7(), venueId, cleanName, startsAt, endsAt, members.Select(member => member.Id).ToList());
+        Night night = new(Guid.CreateVersion7(), venueId, cleanName, startsAt, endsAt);
+        night._crewIds.AddRange(members.Select(member => member.Id));
+
+        return night;
     }
 
     public bool IsUnderwayAt(DateTimeOffset moment) => StartsAt <= moment && moment < EndsAt;
