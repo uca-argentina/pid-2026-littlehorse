@@ -20,8 +20,8 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
 
         // The venue filter scopes this, so the same code in another bar is
         // simply not here. Read-only and projected straight to the shape the
-        // screen draws: this runs every three seconds on every phone in a
-        // packed venue.
+        // screen draws: this runs on every phone following an order each time
+        // it moves, in a packed venue.
         var found = await context.Orders
             .AsNoTracking()
             .Where(order => order.Code == wanted)
@@ -41,8 +41,10 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
 
         // Every way of not getting in answers the same. The token is compared
         // after the row is read and in constant time, so nothing about how long
-        // this took says how close a guess was.
-        if (found is null || !found.TrackingToken.Matches(token) || found.Status.IsFinished()) return null;
+        // this took says how close a guess was. Delivered is the only status
+        // that closes the link (2026-09-17): a canceled order (US-23) has
+        // nothing to pick up either, but the customer has to see it say so.
+        if (found is null || !found.TrackingToken.Matches(token) || found.Status == OrderStatus.Delivered) return null;
 
         return new TrackedOrder(
             found.Code.Value,

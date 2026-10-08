@@ -68,6 +68,7 @@ se marca agotado, se da de baja y nada se borra.
 | US-21 | Que me avise el celular              | US-18        |
 | US-22 | Que el estado se actualice solo      | US-12, US-18 |
 | US-23 | Cancelar un pedido                   | US-15        |
+| US-34 | Volver a mi pedido desde la carta    | US-12, US-22 |
 
 **Deuda del tablero** — salió de auditar US-15 ya mergeada. Ninguna rompe un criterio, pero
 las dos dejan a la barra sin ver algo sin que nadie se entere.
@@ -344,26 +345,37 @@ las dos dejan a la barra sin ver algo sin que nadie se entere.
 
 ### US-23 · Cancelar un pedido
 
-> **Como** estación de barra
-> **quiero** cancelar un pedido que no se va a preparar
-> **para** que la cola muestre lo que de verdad hay que hacer.
+> **Como** cliente que eligió pagar en efectivo, o como cajero
+> **quiero** cancelar un pedido que todavía no se pagó en la caja
+> **para** que no quede trabado en "Por cobrar" ni reteniendo stock.
 
 **Criterios de aceptación**
 
-1. **Dado** un pedido en la cola o en preparación, **cuando** lo cancelo indicando el motivo,
-   **entonces** queda cancelado y el cliente lo ve en su pantalla de seguimiento.
-2. **Dado** un pedido ya entregado, **cuando** intento cancelarlo, **entonces** el sistema no
-   me deja.
-3. **Dado** que cancelo un pedido pagado, **cuando** lo confirmo, **entonces** el sistema deja
-   registrado que hay plata a devolver, aunque la devolución se haga fuera del sistema.
+1. **Dado** un pedido esperando el cobro en la caja, **cuando** el cliente lo cancela desde su
+   pantalla de seguimiento o el cajero desde "Por cobrar", **entonces** queda cancelado, sale
+   de "Por cobrar" y el cliente lo ve en su pantalla sin recargar.
+2. **Dado** un pedido ya pagado —en la caja o desde el celular—, **cuando** alguien intenta
+   cancelarlo, **entonces** el sistema no lo deja y lo dice.
+3. **Dado** que se cancela un pedido, **cuando** se confirma, **entonces** los tragos vuelven al
+   stock.
 
 **Notas**
 
-- **Depende de** US-15.
-- El diseño funcional deja las reglas de cancelación **explícitamente sin definir** (§5). Lo
-  de arriba es una propuesta mínima: hay que confirmarla antes de construirla.
-- **Borde:** qué pasa con un pedido que nadie retira en toda la noche. Proponemos **no**
-  cancelarlo solo en este sprint — un vencimiento automático necesita su propia discusión.
+- **Decidido el 2026-09-30:** sólo se cancela en `AwaitingPayment`. Coincide con
+  `docs/modelo-de-datos.md`: los pedidos pagos no se devuelven, en ningún método de pago. Por
+  eso no hay devolución que registrar ni motivo que pedir, y el KDS no cancela: los pedidos
+  que ve ya están pagos.
+- **Pide confirmación** en las dos pantallas: no se puede deshacer. En la caja, el botón
+  que volvía a escanear pasó a decir "Volver a escanear", para que no se confunda con cancelar.
+- **El cliente** cancela con el mismo token de su enlace (`POST
+  /{venueSlug}/orders/{code}/{token}/cancel`), y recibe el mismo 404 ante cualquier forma de
+  no entrar. **El cajero**, con `POST /cashier/orders/{code}/cancel`.
+- **Stock:** vuelve en la misma transacción que la cancelación. Si la caja cobró el pedido
+  en el mismo instante, la cancelación se rechaza y no se mueve nada.
+- Un pedido cancelado **sigue apareciendo** en el seguimiento, a diferencia del entregado,
+  para que el cliente vea que se canceló. Escanear en la caja un pedido cancelado lo dice.
+- **Borde:** qué pasa con un pedido en efectivo que nadie cobra ni cancela en toda la noche.
+  La cancelación automática por tiempo sigue sin definir (§15).
 
 ### US-31 · Que el tablero se ponga al día solo
 
@@ -570,12 +582,69 @@ con el brillo al mínimo contra la tablet de la barra.
 **Notas**
 
 - **Depende de** US-12 y US-18.
-- Hoy esto funciona **consultando cada tres segundos** y estaba anotado como deuda desde el
-  Sprint 1. Esta story es reemplazarlo por tiempo real (§9.3).
-- El criterio 3 **ya está hecho** (`fix(tracking)`, 2026-09-19) y el aviso de falta de señal
-  del criterio 2 también. Lo que queda es el criterio 1.
-- **Borde de escala:** una tablet de barra y cien celulares mirando el mismo local. Vale la
-  pena medir antes de dar por buena la solución.
+- Hasta esta story funcionaba **consultando cada tres segundos**, deuda desde el Sprint 1.
+  Ahora es tiempo real (§9.3) con un hub de SignalR propio del cliente, `/hubs/tracking`.
+- **Cómo se une el cliente:** no tiene cuenta, así que el hub es anónimo y el celular invoca
+  `Follow(token)` con el token de seguimiento, la misma prueba que pide el enlace. El grupo
+  es un hash del token, no el token. El aviso (`OrderChanged`) no lleva datos: la pantalla
+  vuelve a pedir el estado al endpoint de siempre, que es donde se chequea el token y se filtra
+  por boliche. Unirse no consulta la base, así que cien celulares conectándose no le cuestan
+  nada.
+- **Cada evento de `Order` lleva el token** (`IOrderChanged`) y el dispatcher avisa una vez
+  por pedido. Un evento nuevo de pedido tiene que implementarlo: hay un test de dominio que
+  falla si alguno queda afuera.
+- **Criterio 2:** mientras el enlace está caído la pantalla muestra "sin señal"; al volver,
+  el canal se vuelve a unir al pedido y pregunta. También pregunta cuando la pantalla vuelve a
+  estar visible, porque un celular en el bolsillo puede perder el enlace sin enterarse.
+- **Criterio 3:** deja de seguir un pedido entregado (404) y también uno `Canceled`, que
+  sigue respondiendo para que la pantalla lo muestre.
+- El criterio 1 tiene su spec de Playwright: la barra toma el pedido y la pantalla del
+  cliente cambia sola en menos de dos segundos.
+
+### US-34 · Volver a mi pedido desde la carta
+
+> **Como** cliente que salió de la pantalla de seguimiento, aunque haya sido sin querer,
+> **quiero** volver a mi pedido desde la carta
+> **para** no perderlo de vista ni tener que pedirle el código a la barra.
+
+**Criterios de aceptación**
+
+1. **Dado** que abrí el seguimiento de un pedido, **cuando** vuelvo a la carta del mismo
+   boliche, **entonces** veo arriba un aviso con su código y su estado, y tocándolo vuelvo al
+   seguimiento.
+2. **Dado** que mi pedido está listo, **cuando** abro la carta, **entonces** el aviso lo
+   destaca y me lleva al QR de retiro.
+3. **Dado** que tengo más de un pedido en curso, **cuando** abro la carta, **entonces** veo
+   "Tus pedidos de esta noche" como un área que se abre y se cierra: cerrada muestra cuántos
+   son y el más urgente; abierta, cada pedido con su estado y su link.
+4. **Dado** que mi pedido se entregó, se canceló o el link ya no lleva a nada, **cuando** abro
+   la carta, **entonces** deja de aparecer.
+5. **Dado** que tengo un pedido en otro boliche, **cuando** abro esta carta, **entonces** no
+   aparece.
+6. **Dado** que tengo la carta abierta, **cuando** la barra o la caja mueven mi pedido,
+   **entonces** el aviso cambia solo, sin recargar.
+
+**Notas**
+
+- **Depende de** US-12 y US-22. Salió de probar el flujo del cliente: quien salía del
+  seguimiento no tenía forma de volver.
+- **Casi todo frontend** (el hub, ver criterio 6). El seguimiento recuerda el pedido en el celular (`MyOrders`, en
+  `localStorage` con `BrowserStore`) cada vez que la API contesta, no al pagar: así también
+  cubre el link de un push (US-21) o uno compartido. Lo olvida cuando la API deja de mostrarlo.
+- **Se guarda código y token, nunca el estado:** el estado sale del endpoint de seguimiento,
+  y uno guardado ya estaría viejo. Todo vence a las 12 horas.
+- **Un cancelado desaparece igual que uno entregado**, lo haya cancelado el cliente o la caja
+  (decidido el 2026-09-30). No hay nada que retirar ni que pagar, y el seguimiento sigue
+  diciendo que se canceló a quien abra su link. Mostrarlo "una vez" se descartó: una recarga
+  o una pestaña cerrada no corre el cierre de la carta, y el aviso reaparecía durante 12 horas.
+- Si no se puede preguntar el estado, el link queda igual con "Tocá para ver cómo va": la
+  vuelta al pedido no depende del wifi.
+- **Criterio 6:** la carta abre su propia conexión al `TrackingHub` (`OrdersInProgressChannel`)
+  y hace `Follow` por cada pedido que muestra; con `OrderChanged` vuelve a preguntar los
+  estados. Por eso el hub pasó de seguir un pedido por conexión a seguir hasta cinco
+  (`MostFollowedPerConnection`): un sexto suelta el más viejo, así una conexión sigue sin poder
+  acumular grupos.
+- Diseño: lienzo "Volver al seguimiento" en claude.ai, con las cuatro pantallas.
 
 ## El pago
 

@@ -50,6 +50,47 @@ public class CashierEndpointsTests
         Assert.Equal("urn:drinkit:problem:cashier:already-paid", response.Text("type"));
     }
 
+    // US-23: the customer left without paying, and the till cancels it.
+    [Fact]
+    public async Task CancelAsync_WhenTheOrderAwaitsCash_RespondsWithNoContent()
+    {
+        Order order = AnOrderWaitingForCash();
+
+        IResult result = await CashierEndpoints.CancelAsync("K-4821", new CancelAtTillHandler(new Fake.Orders(order)), CancellationToken.None);
+
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path + "/cancel", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status204NoContent, response.StatusCode);
+        Assert.Equal(OrderStatus.Canceled, order.Status);
+    }
+
+    [Fact]
+    public async Task CancelAsync_WhenNoOrderHereHasThatCode_RespondsWithNotFound()
+    {
+        IResult result = await CashierEndpoints.CancelAsync("K-9999", new CancelAtTillHandler(new Fake.Orders(AnOrderWaitingForCash())), CancellationToken.None);
+
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path + "/cancel", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:cashier:order-not-found", response.Text("type"));
+    }
+
+    // Paid is the bar's: the same conflict the screen already names for a
+    // second collection.
+    [Fact]
+    public async Task CancelAsync_WhenTheOrderWasAlreadyPaid_RespondsWithConflict()
+    {
+        Order order = AnOrderWaitingForCash();
+        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+
+        IResult result = await CashierEndpoints.CancelAsync("K-4821", new CancelAtTillHandler(new Fake.Orders(order)), CancellationToken.None);
+
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path + "/cancel", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:cashier:already-paid", response.Text("type"));
+    }
+
     // Criterion 1: the drinks and what to charge.
     [Fact]
     public async Task FindAsync_WhenTheCodeIsThisVenues_RespondsWithTheOrder()
@@ -149,6 +190,9 @@ public class CashierEndpointsTests
                 Task.FromResult(stored.SingleOrDefault(order => order.TrackingToken == token));
 
             public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
+                Task.FromResult<Result<Order>>(order);
+
+            public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
                 Task.FromResult<Result<Order>>(order);
 
             public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>

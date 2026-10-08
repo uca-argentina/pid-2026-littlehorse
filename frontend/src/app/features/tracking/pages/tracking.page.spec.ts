@@ -1,13 +1,16 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { render, screen } from '@testing-library/angular';
+import { fireEvent, render, screen } from '@testing-library/angular';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { TRACKING_INTERVAL_MS, TrackingStore } from '../tracking.store';
-import { trackingUrl } from '../tracking.service';
+import { TrackingChannel } from '../tracking-channel';
+import { TrackingStore } from '../tracking.store';
+import { cancelOrderUrl, trackingUrl } from '../tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
+import { ProblemTypes } from '../../../core/api/problem-types';
 import { TrackingPage } from './tracking.page';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
@@ -25,6 +28,15 @@ function anOrder(status: CustomerOrderStatus): TrackedOrder {
   };
 }
 
+/** A live link that is up and never hears anything. */
+function aQuietChannel(): Pick<TrackingChannel, 'state' | 'follow' | 'disconnect'> {
+  return {
+    state: signal('connected' as const).asReadonly(),
+    follow: () => undefined,
+    disconnect: () => undefined,
+  };
+}
+
 async function openScreenShowing(status: CustomerOrderStatus) {
   const rendered = await render(TrackingPage, {
     inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
@@ -32,9 +44,9 @@ async function openScreenShowing(status: CustomerOrderStatus) {
       provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
-      // Never fires on its own: what these tests are about is what each answer
-      // draws, so the answers are handed over by hand.
-      { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
+      // Never says the order moved: what these tests are about is what each
+      // answer draws, so the answers are handed over by hand.
+      { provide: TrackingChannel, useValue: aQuietChannel() },
     ],
   });
 
@@ -239,7 +251,7 @@ describe('TrackingPage', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
+        { provide: TrackingChannel, useValue: aQuietChannel() },
       ],
     });
 
@@ -254,6 +266,86 @@ describe('TrackingPage', () => {
     expect(screen.getByRole('alert').textContent).toMatch(/no lleva a ning[úu]n pedido/i);
   });
 
+  // US-23: changed their mind before paying at the till.
+  it('offers to cancel while it waits to be paid at the till', async () => {
+    await openScreenShowing('AwaitingPayment');
+
+    expect(screen.getByRole('button', { name: /^cancelar pedido$/i })).not.toBeNull();
+  });
+
+  // Paid, by any method, is the bar's.
+  it('does not offer to cancel once it is paid', async () => {
+    await openScreenShowing('Queued');
+
+    expect(screen.queryByRole('button', { name: /cancelar pedido/i })).toBeNull();
+  });
+
+  it('asks before canceling, and sends nothing yet', async () => {
+    const { rendered, http } = await openScreenShowing('AwaitingPayment');
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('button', { name: /sí, cancelar/i })).not.toBeNull();
+    http.expectNone(cancelOrderUrl('bar-alfa', 'K-4821', token));
+  });
+
+  it('cancels the order, and then says so', async () => {
+    const { rendered, http } = await openScreenShowing('AwaitingPayment');
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+    fireEvent.click(screen.getByRole('button', { name: /sí, cancelar/i }));
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne({ method: 'POST', url: cancelOrderUrl('bar-alfa', 'K-4821', token) })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    http.expectOne(url).flush(anOrder('Canceled'));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/tu pedido fue cancelado/i);
+  });
+
+  // The cashier took the money a moment before: it is the bar's now.
+  it('says it was already paid when canceling is refused', async () => {
+    const { rendered, http } = await openScreenShowing('AwaitingPayment');
+
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+    fireEvent.click(screen.getByRole('button', { name: /sí, cancelar/i }));
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(cancelOrderUrl('bar-alfa', 'K-4821', token))
+      .flush({ type: ProblemTypes.orderNotCancelable }, { status: 409, statusText: 'Conflict' });
+    http.expectOne(url).flush(anOrder('Queued'));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/ya estaba pago/i);
+    expect(screen.queryByRole('button', { name: /cancelar pedido/i })).toBeNull();
+  });
+
+  // Canceled at the till or from here: nothing to pick up, nothing to wait for.
+  it('says plainly when the order was canceled', async () => {
+    await openScreenShowing('Canceled');
+
+    expect(screen.getByRole('alert').textContent).toMatch(/tu pedido fue cancelado/i);
+    expect(screen.getByText(/pedir algo más/i)).not.toBeNull();
+  });
+
+  it('does not show a qr once the order is canceled', async () => {
+    const { rendered } = await openScreenShowing('Canceled');
+
+    expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).toBeNull();
+  });
+
+  it('does not draw the journey once the order is canceled', async () => {
+    await openScreenShowing('Canceled');
+
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+  });
+
   /*
    * Criterion 6 — what a dropped connection does — is proved in
    * tracking.store.spec.ts, which owns it: the screen only draws what the store
@@ -262,9 +354,9 @@ describe('TrackingPage', () => {
    */
 
   /**
-   * The screen asks on its timer, and only on its timer. Reading what the
-   * server said must not be what makes it ask again: that turns one round of
-   * polling into a loop that feeds itself, with a timer left over each time.
+   * The screen asks when the order moves, and only then. Reading what the
+   * server said must not be what makes it ask again: that is a loop that
+   * feeds itself.
    */
   it('does not ask again just because an answer arrived', async () => {
     const { http } = await openScreenShowing('Queued');
@@ -276,7 +368,7 @@ describe('TrackingPage', () => {
    * The signal dropped before the very first answer arrived.
    *
    * This is the screen somebody lands on the instant they pay, so it is exactly
-   * where bad wifi finds them. The order is fine and the screen keeps asking on
+   * where bad wifi finds them. The order is fine and the screen keeps trying on
    * its own, but saying nothing leaves them staring at "Buscando tu pedido…"
    * with no idea whether it is working — the one state the four-state rule
    * exists to prevent.
@@ -288,7 +380,7 @@ describe('TrackingPage', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: TRACKING_INTERVAL_MS, useValue: 600_000 },
+        { provide: TrackingChannel, useValue: aQuietChannel() },
       ],
     });
 

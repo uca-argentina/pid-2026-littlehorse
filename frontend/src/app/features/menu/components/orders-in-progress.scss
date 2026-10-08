@@ -1,0 +1,138 @@
+// US-34, traced from the "Volver al seguimiento" canvas: one order is a single
+// link, several fold into one line that opens.
+
+// Inside the menu's body, which brings the width and the spacing. Contents,
+// not block: with no order the host would still be a flex item, and the
+// body's gap would leave a hole where nothing is.
+:host {
+  display: contents;
+}
+
+.banner,
+.list {
+  border: 1px solid var(--dk-pill-on-border);
+  border-radius: 14px;
+  background: var(--dk-surface);
+  color: var(--dk-text);
+}
+
+.banner,
+.toggle,
+.order {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 60px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.mark {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--dk-pill-on-surface);
+  color: var(--dk-accent);
+}
+
+.what {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.code {
+  font-size: 13px;
+  color: var(--dk-text-muted);
+}
+
+.says {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.go {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dk-accent);
+}
+
+.order .code {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dk-text);
+}
+
+.order .says {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--dk-text-muted);
+}
+
+.order .says.ready {
+  font-weight: 700;
+  color: var(--dk-accent);
+}
+
+// Ready is the one worth interrupting the menu for: the whole banner turns
+// accent, and the text says so too — the color is never the only channel.
+.banner.ready {
+  border-color: var(--dk-accent);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+}
+
+.banner.ready .mark {
+  background: var(--dk-on-accent);
+}
+
+.banner.ready .code,
+.banner.ready .go {
+  color: inherit;
+}
+
+.heading {
+  margin: 0;
+  font: inherit;
+}
+
+.toggle {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 2px solid var(--dk-text-muted);
+  border-radius: 99px;
+}
+
+.dot.ready {
+  border-color: var(--dk-accent);
+  background: var(--dk-accent);
+}
+
+.orders {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--dk-border-subtle);
+  list-style: none;
+}
+
+.orders li + li {
+  border-top: 1px solid var(--dk-border-subtle);
+}

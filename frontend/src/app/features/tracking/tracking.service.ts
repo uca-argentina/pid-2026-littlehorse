@@ -20,6 +20,11 @@ export function trackingUrl(venueSlug: string, code: string, token: string): str
   return `/api/${venueSlug}/orders/${encodeURIComponent(code)}/${encodeURIComponent(token)}`;
 }
 
+/** US-23: from the same link, and proven the same way — the token in it. */
+export function cancelOrderUrl(venueSlug: string, code: string, token: string): string {
+  return `${trackingUrl(venueSlug, code, token)}/cancel`;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TrackingService {
   private readonly http = inject(HttpClient);
@@ -29,5 +34,14 @@ export class TrackingService {
     return this.http.get<TrackedOrder>(trackingUrl(venueSlug, code, token), {
       context: anonymously(),
     });
+  }
+
+  /** US-23: only while it waits to be paid at the till. */
+  cancel(venueSlug: string, code: string, token: string) {
+    return this.http.post<void>(
+      cancelOrderUrl(venueSlug, code, token),
+      {},
+      { context: anonymously() },
+    );
   }
 }

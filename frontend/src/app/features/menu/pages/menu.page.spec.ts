@@ -7,6 +7,9 @@ import { BrowserStore } from '../../../core/storage/browser-store';
 import { StoreInMemory } from '../../../core/storage/store-in-memory';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { MY_ORDERS_STORAGE_PREFIX } from '../../../core/orders/my-orders';
+import { trackingUrl } from '../../tracking/tracking.service';
+import { OrdersInProgressChannel } from '../components/orders-in-progress-channel';
 import { menuUrl } from '../menu.service';
 import type { Menu } from '../menu.service';
 import { MenuPage } from './menu.page';
@@ -54,6 +57,11 @@ async function openScreen() {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: BrowserStore, useValue: store },
+      // The live link has its own spec (OrdersInProgress); here it stays quiet.
+      {
+        provide: OrdersInProgressChannel,
+        useValue: { follow: () => undefined, disconnect: () => undefined },
+      },
     ],
   });
 
@@ -101,6 +109,31 @@ describe('MenuPage', () => {
     await openScreenShowing(carta);
 
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Bar Alfa');
+  });
+
+  // US-34: the menu is where anybody who left the tracking screen ends up.
+  it('leads back to an order this phone followed', async () => {
+    const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
+    store.write(
+      `${MY_ORDERS_STORAGE_PREFIX}bar-alfa`,
+      JSON.stringify([{ code: 'K-4821', token, savedAt: Date.now() }]),
+    );
+    const { rendered, http } = await openScreen();
+
+    http.expectOne(menuUrl('bar-alfa')).flush(carta);
+    http.expectOne(trackingUrl('bar-alfa', 'K-4821', token)).flush({
+      code: 'K-4821',
+      customerName: 'María Quadro',
+      status: 'InPreparation',
+      total: 9000,
+      paidAt: null,
+      items: [],
+    });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('link', { name: /Tu pedido K-4821/ }).getAttribute('href')).toBe(
+      `/bar-alfa/orders/K-4821/${token}`,
+    );
   });
 
   it('writes the price the way it is read here', async () => {

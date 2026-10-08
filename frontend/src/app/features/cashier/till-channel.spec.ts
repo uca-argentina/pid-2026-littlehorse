@@ -15,6 +15,7 @@ describe('TillChannel', () => {
       onclose: () => undefined,
       start: () => Promise.resolve(),
       stop: () => Promise.resolve(),
+      invoke: () => Promise.resolve(),
     };
 
     TestBed.configureTestingModule({

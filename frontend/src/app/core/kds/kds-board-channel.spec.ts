@@ -74,6 +74,10 @@ class FakeHubConnection implements KdsHubConnection {
     return Promise.resolve();
   }
 
+  invoke(): Promise<unknown> {
+    return Promise.resolve();
+  }
+
   losesTheLink(): void {
     this.reconnecting?.();
   }

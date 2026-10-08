@@ -47,6 +47,9 @@ export const ProblemTypes = {
   /** Another screen changed the order in the same instant, and its change stands. */
   orderChangedMeanwhile: 'urn:drinkit:problem:order:changed-meanwhile',
 
+  /** US-23: only an order waiting to be paid at the till can be canceled. */
+  orderNotCancelable: 'urn:drinkit:problem:order:not-cancelable',
+
   /** The till looked up a code this venue does not have. */
   cashierOrderNotFound: 'urn:drinkit:problem:cashier:order-not-found',
 

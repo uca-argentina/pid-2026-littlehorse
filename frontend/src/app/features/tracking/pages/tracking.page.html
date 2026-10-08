@@ -27,6 +27,11 @@
       } @else {
         <p class="note" role="status">Buscando tu pedido…</p>
       }
+    } @else if (isCanceled()) {
+      <!-- US-23: canceled at the till or from here, before anything was paid. -->
+      <p class="note note-bad" role="alert">Tu pedido fue cancelado. No se te cobró nada.</p>
+
+      <a class="ghost" [routerLink]="menuLink()">Pedir algo más</a>
     } @else {
       @if (!paysAtTheTill()) {
         <div class="tick" aria-hidden="true">
@@ -95,6 +100,48 @@
           </li>
         }
       </ol>
+
+      @if (store.cancelProblem() === 'alreadyPaid') {
+        <p class="note note-bad" role="alert">
+          Tu pedido ya estaba pago, así que no se puede cancelar. Ya está en la barra.
+        </p>
+      } @else if (store.cancelProblem() === 'failed') {
+        <p class="note note-bad" role="alert">
+          No pudimos cancelar el pedido. Revisá la conexión y probá de nuevo.
+        </p>
+      }
+
+      <!--
+        US-23: only while it waits to be paid at the till. Paid, by any method,
+        it is the bar's. Asked twice: it cannot be undone.
+      -->
+      @if (paysAtTheTill()) {
+        @if (confirmingCancel()) {
+          <div class="confirm-cancel" role="group" aria-label="Confirmar cancelación">
+            <p class="confirm-text">¿Cancelar tu pedido? No se te cobra nada.</p>
+            <button
+              class="danger-button"
+              type="button"
+              [disabled]="store.canceling()"
+              (click)="store.cancel()"
+            >
+              {{ store.canceling() ? 'Cancelando…' : 'Sí, cancelar' }}
+            </button>
+            <button
+              class="ghost"
+              type="button"
+              [disabled]="store.canceling()"
+              (click)="confirmingCancel.set(false)"
+            >
+              No, lo quiero
+            </button>
+          </div>
+        } @else {
+          <button class="danger-button" type="button" (click)="confirmingCancel.set(true)">
+            Cancelar pedido
+          </button>
+        }
+      }
 
       <!--
         Said once, quietly, and only while the connection is down: the order is

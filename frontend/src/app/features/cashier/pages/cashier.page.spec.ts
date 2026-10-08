@@ -14,6 +14,7 @@ import {
   CASHIER_ORDERS_URL,
   CASHIER_SCAN_URL,
   MY_COLLECTIONS_URL,
+  cancelAtTheTillUrl,
   cashierOrderUrl,
   collectUrl,
 } from '../cashier.service';
@@ -226,11 +227,11 @@ describe('CashierPage', () => {
     expect(collectButton()).not.toBeNull();
   });
 
-  it('goes back to scanning when the cashier cancels', async () => {
+  it('goes back to scanning without collecting', async () => {
     const { rendered } = await openTheTill([anOrder()]);
 
     await openFromTheList('K-4821', rendered);
-    fireEvent.click(screen.getByRole('button', { name: /cancelar y volver a escanear/i }));
+    fireEvent.click(screen.getByRole('button', { name: /volver a escanear/i }));
     await rendered.fixture.whenStable();
 
     expect(screen.queryByRole('button', { name: /confirmar cobro/i })).toBeNull();
@@ -374,6 +375,87 @@ describe('CashierPage', () => {
     expect(screen.getByRole('list', { name: /cobros de tu turno/i }).textContent).toContain(
       'K-4821',
     );
+  });
+
+  // US-23: the customer left without paying. Asked first — it cannot be undone.
+  it('asks before canceling an order, and sends nothing yet', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('button', { name: /sí, cancelar pedido/i })).not.toBeNull();
+    http.expectNone(cancelAtTheTillUrl('K-4821'));
+  });
+
+  it('keeps the order on screen when the cashier changes their mind', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+    fireEvent.click(screen.getByRole('button', { name: /^no$/i }));
+    await rendered.fixture.whenStable();
+
+    expect(collectButton()).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /sí, cancelar pedido/i })).toBeNull();
+    http.expectNone(cancelAtTheTillUrl('K-4821'));
+  });
+
+  it('cancels the order and takes it off what waits for cash', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+    fireEvent.click(screen.getByRole('button', { name: /sí, cancelar pedido/i }));
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne({ method: 'POST', url: cancelAtTheTillUrl('K-4821') })
+      .flush(null, { status: 204, statusText: 'No Content' });
+    TestBed.tick();
+    http.expectOne(CASHIER_ORDERS_URL).flush([]);
+    http.expectOne(MY_COLLECTIONS_URL).flush([]);
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('status').textContent).toMatch(/K-4821.*cancelado/i);
+    expect(screen.queryByRole('button', { name: /confirmar cobro/i })).toBeNull();
+    expect(screen.getByText(/no hay pedidos esperando cobro/i)).not.toBeNull();
+  });
+
+  // Another till collected it a moment before: it is the bar's now.
+  it('says the order was already paid when canceling it is refused', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    fireEvent.click(screen.getByRole('button', { name: /^cancelar pedido$/i }));
+    await rendered.fixture.whenStable();
+    fireEvent.click(screen.getByRole('button', { name: /sí, cancelar pedido/i }));
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(cancelAtTheTillUrl('K-4821'))
+      .flush({ type: ProblemTypes.cashierAlreadyPaid }, { status: 409, statusText: 'Conflict' });
+    TestBed.tick();
+    http.expectOne(CASHIER_ORDERS_URL).flush([]);
+    http.expectOne(MY_COLLECTIONS_URL).flush([]);
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/ya está pago/i);
+  });
+
+  // The customer canceled it from the phone and still showed the code.
+  it('says a canceled order has nothing to collect', async () => {
+    const { rendered, http } = await openTheTill();
+
+    await enter('K-4821', rendered);
+    http.expectOne(cashierOrderUrl('K-4821')).flush(anOrder({ status: 'Canceled' }));
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/K-4821 fue cancelado/i);
+    expect(screen.queryByRole('button', { name: /confirmar cobro/i })).toBeNull();
   });
 
   // US-26, criterion 3.

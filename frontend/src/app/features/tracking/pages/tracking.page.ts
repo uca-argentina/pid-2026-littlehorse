@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, untracked } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { QRCodeComponent } from 'angularx-qrcode';
 import type { CustomerOrderStatus } from '../tracking.service';
@@ -65,8 +65,8 @@ const QR_INK = '#12100e';
 /**
  * Where somebody's order is.
  *
- * The only screen of the app that changes without anybody touching it: it asks
- * the server every three seconds, which is what US-12 asks for and what lets
+ * The customer's screen that changes without anybody touching it: it hears the
+ * order move over a live link (US-22) and asks again, which is what lets
  * somebody stay at their table instead of standing at the bar.
  *
  * It is also the screen somebody lands on the moment they pay, so it opens with
@@ -108,6 +108,12 @@ export class TrackingPage {
   /** Paying in cash: the code is for the cashier first, and the bar only after (US-25). */
   protected readonly paysAtTheTill = computed(() => this.status() === 'AwaitingPayment');
 
+  /** US-23: nothing to pick up and nothing left to wait for, so the journey is not drawn. */
+  protected readonly isCanceled = computed(() => this.status() === 'Canceled');
+
+  /** "Cancelar pedido" was tapped once: it asks before doing it. */
+  protected readonly confirmingCancel = signal(false);
+
   protected readonly whatIsHappening = computed(() => {
     const status = this.status();
 
@@ -143,8 +149,8 @@ export class TrackingPage {
       const token = this.token();
 
       // Only the address is worth reacting to. Following reads the store's own
-      // signals on the way in, and tracking those would make every answer start
-      // the polling over again — a loop that feeds itself, one timer per round.
+      // signals on the way in, and tracking those would make every answer follow
+      // again — reconnect to the hub, ask again, answer, and round it goes.
       untracked(() => this.store.follow(venueSlug, code, token));
     });
   }

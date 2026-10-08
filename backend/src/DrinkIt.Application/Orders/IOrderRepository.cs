@@ -73,4 +73,16 @@ public interface IOrderRepository
     /// the first one stands.
     /// </remarks>
     Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Commits a cancellation (US-23) and puts its drinks back on the shelf, in
+    /// one unit of work: the stock taken when the order was confirmed returns
+    /// with it, or not at all.
+    /// </summary>
+    /// <remarks>
+    /// Refused with <see cref="OrderErrors.ChangedMeanwhile"/> the same way as
+    /// <see cref="SaveAsync"/> — the till collected it in the same instant —
+    /// and then no stock moves either.
+    /// </remarks>
+    Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken);
 }

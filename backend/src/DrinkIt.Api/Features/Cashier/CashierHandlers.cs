@@ -7,5 +7,6 @@ internal static class CashierHandlers
 {
     public static IServiceCollection AddCashierHandlers(this IServiceCollection services) => services
         .AddScoped<CollectCashHandler>()
+        .AddScoped<CancelAtTillHandler>()
         .AddScoped<MyCollectionsHandler>();
 }

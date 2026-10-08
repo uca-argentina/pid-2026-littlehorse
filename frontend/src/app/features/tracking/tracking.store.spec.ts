@@ -1,13 +1,21 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { TRACKING_INTERVAL_MS, TrackingStore } from './tracking.store';
+import { MyOrders } from '../../core/orders/my-orders';
+import type { HubLinkState } from '../../core/realtime/hub-channel';
+import { BrowserStore } from '../../core/storage/browser-store';
+import { StoreInMemory } from '../../core/storage/store-in-memory';
+import { TrackingChannel } from './tracking-channel';
+import { TRACKING_RETRY_MS, TrackingStore } from './tracking.store';
 import { trackingUrl } from './tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from './tracking.service';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
 
 const url = trackingUrl('bar-alfa', 'K-4821', token);
+
+const retryMs = 5_000;
 
 function anOrder(status: CustomerOrderStatus): TrackedOrder {
   return {
@@ -20,34 +28,63 @@ function anOrder(status: CustomerOrderStatus): TrackedOrder {
   };
 }
 
-/** Whether the page is being looked at. The store asks this, the browser answers it. */
-let looking: boolean;
+const notFound = [
+  { type: 'urn:drinkit:problem:order:not-found', detail: 'no existe' },
+  { status: 404, statusText: 'Not Found' },
+] as const;
 
-function aStore(every = 0): { tracking: TrackingStore; http: HttpTestingController } {
+/** Stands in for the live link: the test says when the order moves and when the link drops. */
+class FakeTrackingChannel {
+  readonly link = signal<HubLinkState>('connected');
+
+  readonly state = this.link.asReadonly();
+
+  following: readonly string[] | null = null;
+
+  private changed: (() => void) | null = null;
+
+  follow(tokens: readonly string[], onChanged: () => void): void {
+    this.following = tokens;
+    this.changed = onChanged;
+  }
+
+  disconnect(): void {
+    this.following = null;
+    this.changed = null;
+  }
+
+  orderMoves(): void {
+    this.changed?.();
+  }
+}
+
+function aStore(): {
+  tracking: TrackingStore;
+  http: HttpTestingController;
+  channel: FakeTrackingChannel;
+} {
+  const channel = new FakeTrackingChannel();
+
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
-      // Asked for by hand in these tests rather than on a timer: what is under
-      // test is what each answer does, not that setInterval counts. The one
-      // test about the timer itself passes a real interval.
-      { provide: TRACKING_INTERVAL_MS, useValue: every },
+      { provide: TrackingChannel, useValue: channel },
+      { provide: TRACKING_RETRY_MS, useValue: retryMs },
+      { provide: BrowserStore, useValue: new StoreInMemory() },
       TrackingStore,
     ],
   });
 
-  return { tracking: TestBed.inject(TrackingStore), http: TestBed.inject(HttpTestingController) };
+  return {
+    tracking: TestBed.inject(TrackingStore),
+    http: TestBed.inject(HttpTestingController),
+    channel,
+  };
 }
 
 describe('TrackingStore', () => {
-  beforeEach(() => {
-    looking = true;
-    vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() =>
-      looking ? 'visible' : 'hidden',
-    );
-  });
-
   it('asks where the order is', () => {
     const { tracking, http } = aStore();
 
@@ -56,7 +93,6 @@ describe('TrackingStore', () => {
     expect(http.expectOne(url).request.method).toBe('GET');
   });
 
-  // Criterion 1 and 2: the code, and which of the four steps it is on.
   it('keeps what it was told', () => {
     const { tracking, http } = aStore();
 
@@ -68,152 +104,243 @@ describe('TrackingStore', () => {
     expect(tracking.status()).toBe('following');
   });
 
-  // Criterion 3: the state changed, and the screen catches up on its own.
-  it('notices when the order moves on', () => {
-    const { tracking, http } = aStore();
+  // US-22: told, not asking. The token is what the live link follows it by.
+  it('follows the order live by its token', () => {
+    const { tracking, channel } = aStore();
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+
+    expect(channel.following).toEqual([token]);
+  });
+
+  // US-22, criterion 1: the bar moved it, and the screen catches up on its own.
+  it('asks again when it hears the order moved', () => {
+    const { tracking, http, channel } = aStore();
 
     tracking.follow('bar-alfa', 'K-4821', token);
     http.expectOne(url).flush(anOrder('Queued'));
 
-    tracking.askAgain();
+    channel.orderMoves();
     http.expectOne(url).flush(anOrder('InPreparation'));
 
     expect(tracking.order()?.status).toBe('InPreparation');
   });
 
-  // The link leads nowhere: a wrong token, somebody else's code, a code nobody
-  // has. One answer for all of them, and no retrying. Told apart from an order
-  // that finished by this being the first thing the server ever said.
-  it('stops asking when the link leads nowhere', () => {
-    const { tracking, http } = aStore();
+  // A hundred phones in a packed venue asking every few seconds is what the
+  // live link replaces.
+  it('does not ask on a timer', () => {
+    vi.useFakeTimers();
+
+    try {
+      const { tracking, http } = aStore();
+
+      tracking.follow('bar-alfa', 'K-4821', token);
+      http.expectOne(url).flush(anOrder('Queued'));
+
+      vi.advanceTimersByTime(60_000);
+
+      http.expectNone(url);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The answer on its way may have been read before the move it was told
+  // about. Nothing will say so again, so dropping the second ask would leave
+  // the screen stuck on the old status for good.
+  it('does not lose a move it heard while it was still asking', () => {
+    const { tracking, http, channel } = aStore();
 
     tracking.follow('bar-alfa', 'K-4821', token);
-    http
-      .expectOne(url)
-      .flush(
-        { type: 'urn:drinkit:problem:order:not-found', detail: 'no existe' },
-        { status: 404, statusText: 'Not Found' },
-      );
+    channel.orderMoves();
+    http.expectOne(url).flush(anOrder('Queued'));
 
-    expect(tracking.status()).toBe('nowhere');
+    http.expectOne(url).flush(anOrder('InPreparation'));
 
-    tracking.askAgain();
+    expect(tracking.order()?.status).toBe('InPreparation');
+  });
+
+  // Nor does it pile requests up: however many moves arrive meanwhile, one
+  // more round is enough to catch up with all of them.
+  it('asks once more, not once per move, after an answer in flight', () => {
+    const { tracking, http, channel } = aStore();
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    channel.orderMoves();
+    channel.orderMoves();
+    http.expectOne(url).flush(anOrder('Queued'));
+
+    http.expectOne(url).flush(anOrder('InPreparation'));
     http.expectNone(url);
   });
 
-  /**
-   * Criterion 6: the signal dropped. It is not the same as the link leading
-   * nowhere — the order is fine and so is the link — so the screen says so and
-   * keeps asking, and comes back on its own when the connection does.
-   */
-  it('keeps asking when the connection drops, and catches up', () => {
-    const { tracking, http } = aStore();
+  // US-22, criterion 2: while the live link is down, what is on screen may
+  // already be old, and the customer is told so rather than trusting it.
+  it('says it is out of touch while the live link is down', () => {
+    const { tracking, http, channel } = aStore();
 
     tracking.follow('bar-alfa', 'K-4821', token);
     http.expectOne(url).flush(anOrder('Queued'));
 
-    tracking.askAgain();
-    http.expectOne(url).error(new ProgressEvent('error'));
+    channel.link.set('reconnecting');
 
     expect(tracking.status()).toBe('unreachable');
     // And what it last knew is still on screen rather than blanked out.
     expect(tracking.order()?.status).toBe('Queued');
 
-    tracking.askAgain();
-    http.expectOne(url).flush(anOrder('Ready'));
+    channel.link.set('connected');
 
     expect(tracking.status()).toBe('following');
-    expect(tracking.order()?.status).toBe('Ready');
+  });
+
+  // The move was heard but the answer did not arrive: nothing will announce
+  // that move again, so it keeps asking until it gets through.
+  it('keeps asking when a request fails, and catches up', () => {
+    vi.useFakeTimers();
+
+    try {
+      const { tracking, http, channel } = aStore();
+
+      tracking.follow('bar-alfa', 'K-4821', token);
+      http.expectOne(url).flush(anOrder('Queued'));
+
+      channel.orderMoves();
+      http.expectOne(url).error(new ProgressEvent('error'));
+
+      expect(tracking.status()).toBe('unreachable');
+      expect(tracking.order()?.status).toBe('Queued');
+
+      vi.advanceTimersByTime(retryMs);
+      http.expectOne(url).flush(anOrder('Ready'));
+
+      expect(tracking.status()).toBe('following');
+      expect(tracking.order()?.status).toBe('Ready');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The link leads nowhere: a wrong token, somebody else's code, a code nobody
+  // has. One answer for all of them, and no retrying. Told apart from an order
+  // that finished by this being the first thing the server ever said.
+  it('stops following when the link leads nowhere', () => {
+    const { tracking, http, channel } = aStore();
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    http.expectOne(url).flush(...notFound);
+
+    expect(tracking.status()).toBe('nowhere');
+    expect(channel.following).toBeNull();
+
+    tracking.askAgain();
+    http.expectNone(url);
   });
 
   /**
    * The order was handed over.
    *
    * There is no answer that says so: the API stops showing an order the moment
-   * it is finished, so what arrives is the same 404 as a bad link. Which of the
-   * two it is depends on whether the order was ever on screen — it was, so the
-   * journey is over rather than the link being wrong, and there is nothing left
-   * to ask about.
+   * it is handed over, so what arrives is the same 404 as a bad link. It was on
+   * screen, so the journey is over rather than the link being wrong.
    */
-  it('calls it over when the link stops working after showing the order', () => {
-    const { tracking, http } = aStore();
+  it('calls it over, and stops following, when the link stops working after showing the order', () => {
+    const { tracking, http, channel } = aStore();
 
     tracking.follow('bar-alfa', 'K-4821', token);
     http.expectOne(url).flush(anOrder('Ready'));
 
-    tracking.askAgain();
-    http
-      .expectOne(url)
-      .flush(
-        { type: 'urn:drinkit:problem:order:not-found', detail: 'no existe' },
-        { status: 404, statusText: 'Not Found' },
-      );
+    channel.orderMoves();
+    http.expectOne(url).flush(...notFound);
 
     expect(tracking.status()).toBe('over');
-    // And what it last knew stays, because that is what the screen draws.
     expect(tracking.order()?.code).toBe('K-4821');
+    expect(channel.following).toBeNull();
 
     tracking.askAgain();
     http.expectNone(url);
   });
 
-  // The phone is in a pocket with the screen off. Asking twenty times a minute
-  // for something nobody is reading is battery somebody needs for the night.
-  it('does not ask while nobody is looking', () => {
+  // US-22, criterion 3: a canceled order still answers, so the screen can say
+  // so, but it is not going anywhere any more.
+  it('stops following a canceled order, and keeps showing it', () => {
+    const { tracking, http, channel } = aStore();
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    http.expectOne(url).flush(anOrder('Canceled'));
+
+    expect(tracking.order()?.status).toBe('Canceled');
+    expect(channel.following).toBeNull();
+
+    tracking.askAgain();
+    http.expectNone(url);
+  });
+
+  // US-34: so the menu can lead back here after the customer leaves this screen.
+  it('remembers the order on this phone once it answers', () => {
+    const { tracking, http } = aStore();
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toEqual([]);
+
+    http.expectOne(url).flush(anOrder('Queued'));
+
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toEqual([{ code: 'K-4821', token }]);
+  });
+
+  it('forgets the order once it is handed over', () => {
+    const { tracking, http, channel } = aStore();
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    http.expectOne(url).flush(anOrder('Ready'));
+    channel.orderMoves();
+    http.expectOne(url).flush(...notFound);
+
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toEqual([]);
+  });
+
+  // A link that never led anywhere may still be remembered from before: a
+  // stale token, an order the API no longer shows.
+  it('forgets a remembered order whose link leads nowhere', () => {
+    const { tracking, http } = aStore();
+    TestBed.inject(MyOrders).remember('bar-alfa', 'K-4821', token);
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    http.expectOne(url).flush(...notFound);
+
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toEqual([]);
+  });
+
+  // The wifi, not the order: the way back has to survive a bad connection.
+  it('keeps the order remembered when a request fails', () => {
+    const { tracking, http } = aStore();
+    TestBed.inject(MyOrders).remember('bar-alfa', 'K-4821', token);
+
+    tracking.follow('bar-alfa', 'K-4821', token);
+    http.expectOne(url).error(new ProgressEvent('error'));
+
+    expect(TestBed.inject(MyOrders).of('bar-alfa')).toHaveLength(1);
+  });
+
+  // A phone in a pocket may have lost the live link without noticing yet. The
+  // moment somebody looks again is the moment it has to be right.
+  it('asks again when the screen is looked at again', () => {
     const { tracking, http } = aStore();
 
     tracking.follow('bar-alfa', 'K-4821', token);
     http.expectOne(url).flush(anOrder('Queued'));
 
-    looking = false;
-    tracking.askAgain();
-    http.expectNone(url);
-
-    looking = true;
-    tracking.askAgain();
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
 
     expect(http.expectOne(url).request.method).toBe('GET');
   });
 
-  // Two answers racing on a bad connection would otherwise pile requests up.
-  it('does not ask again while one is still in flight', () => {
-    const { tracking, http } = aStore();
+  it('lets go of the live link when the screen closes', () => {
+    const { tracking, channel } = aStore();
 
     tracking.follow('bar-alfa', 'K-4821', token);
-    tracking.askAgain();
+    TestBed.resetTestingModule();
 
-    http.expectOne(url).flush(anOrder('Queued'));
-  });
-
-  /**
-   * Following again replaces the timer instead of adding one. The two would
-   * drift apart — they start at different moments — so the screen would end up
-   * asking twice per round, and the second timer would outlive the component:
-   * stopping only ever reached the newest one.
-   */
-  it('leaves no timer behind when it is asked to follow again', () => {
-    vi.useFakeTimers();
-
-    try {
-      const { tracking, http } = aStore(3000);
-
-      tracking.follow('bar-alfa', 'K-4821', token);
-      http.expectOne(url).flush(anOrder('Queued'));
-
-      // A second later, which is what makes the two timers drift apart.
-      vi.advanceTimersByTime(1000);
-      tracking.follow('bar-alfa', 'K-4821', token);
-      http.expectOne(url).flush(anOrder('Queued'));
-
-      // The replaced timer's round, if it were still running.
-      vi.advanceTimersByTime(2000);
-      http.expectNone(url);
-
-      // The surviving timer's round, one second behind the one it replaced.
-      vi.advanceTimersByTime(1000);
-      http.expectOne(url).flush(anOrder('Queued'));
-    } finally {
-      vi.useRealTimers();
-    }
+    expect(channel.following).toBeNull();
   });
 });

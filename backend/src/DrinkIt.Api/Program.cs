@@ -14,6 +14,7 @@ using DrinkIt.Infrastructure;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
+using DrinkIt.Infrastructure.Orders;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -118,9 +119,11 @@ app.MapCategories();
 app.MapProducts();
 app.MapKds();
 // The hubs carry their role in [Authorize]; the policy adds the night's crew
-// (US-35), so a tablet outside it hears nothing either.
+// (US-35), so a tablet outside it hears nothing either. The customer's
+// tracking hub has no account behind it, so no night applies there.
 app.MapHub<KdsHub>(KdsHubRoute.Path).RequireAuthorization(Policies.Kds);
 app.MapHub<TillHub>(TillHubRoute.Path).RequireAuthorization(Policies.Cashier);
+app.MapHub<TrackingHub>(TrackingHubRoute.Path);
 app.MapCashier();
 
 await app.RunAsync();

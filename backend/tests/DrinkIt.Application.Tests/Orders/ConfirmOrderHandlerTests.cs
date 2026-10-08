@@ -502,6 +502,9 @@ public class ConfirmOrderHandlerTests
 
         public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
             throw new NotSupportedException("Confirming saves through AddAsync.");
+
+        public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("Confirming saves through AddAsync.");
     }
 
     /// <summary>

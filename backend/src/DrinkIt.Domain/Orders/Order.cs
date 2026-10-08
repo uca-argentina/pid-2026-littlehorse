@@ -176,7 +176,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.AwaitingPayment;
         Method = method;
-        _domainEvents.Add(new OrderAwaitingPayment(VenueId));
+        _domainEvents.Add(new OrderAwaitingPayment(VenueId, TrackingToken));
     }
 
     /// <summary>
@@ -193,7 +193,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         PaidAt = at;
         CollectedBy = cashier;
         Enqueue();
-        _domainEvents.Add(new OrderCollected(VenueId));
+        _domainEvents.Add(new OrderCollected(VenueId, TrackingToken));
     }
 
     /// <summary>Handed to the bar. Nothing takes it from here until the KDS exists.</summary>
@@ -202,7 +202,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.Paid);
 
         Status = OrderStatus.Queued;
-        _domainEvents.Add(new OrderQueued(VenueId));
+        _domainEvents.Add(new OrderQueued(VenueId, TrackingToken));
     }
 
     /// <summary>
@@ -217,7 +217,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.Queued);
 
         Status = OrderStatus.InPreparation;
-        _domainEvents.Add(new OrderPreparationStarted(VenueId));
+        _domainEvents.Add(new OrderPreparationStarted(VenueId, TrackingToken));
     }
 
     /// <summary>
@@ -233,7 +233,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.InPreparation);
 
         Status = OrderStatus.Queued;
-        _domainEvents.Add(new OrderRequeued(VenueId));
+        _domainEvents.Add(new OrderRequeued(VenueId, TrackingToken));
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.InPreparation);
 
         Status = OrderStatus.Ready;
-        _domainEvents.Add(new OrderReady(VenueId, Id));
+        _domainEvents.Add(new OrderReady(VenueId, Id, TrackingToken));
     }
 
     /// <summary>Marked ready by mistake: back to the bar, as if it never was.</summary>
@@ -260,7 +260,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.Ready);
 
         Status = OrderStatus.InPreparation;
-        _domainEvents.Add(new OrderReturnedToPreparation(VenueId));
+        _domainEvents.Add(new OrderReturnedToPreparation(VenueId, TrackingToken));
     }
 
     /// <summary>
@@ -275,7 +275,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.Delivered;
         DeliveredAt = at;
-        _domainEvents.Add(new OrderDelivered(VenueId));
+        _domainEvents.Add(new OrderDelivered(VenueId, TrackingToken));
     }
 
     /// <summary>
@@ -293,7 +293,24 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.Ready;
         DeliveredAt = null;
-        _domainEvents.Add(new OrderDeliveryUndone(VenueId));
+        _domainEvents.Add(new OrderDeliveryUndone(VenueId, TrackingToken));
+    }
+
+    /// <summary>
+    /// Not going ahead (US-23): only while it waits to be paid at the till,
+    /// asked by the cashier or by the customer. Once paid, by any method, it is
+    /// the bar's, and paid orders are not given back (docs/modelo-de-datos.md).
+    /// Asking again for what already happened changes nothing: a double tap,
+    /// or the cashier and the customer at once, is not a second cancellation.
+    /// </summary>
+    public void Cancel()
+    {
+        if (Status == OrderStatus.Canceled) return;
+
+        EnsureItIs(OrderStatus.AwaitingPayment);
+
+        Status = OrderStatus.Canceled;
+        _domainEvents.Add(new OrderCanceled(VenueId, TrackingToken));
     }
 
     /// <summary>
