@@ -1,0 +1,54 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <section class="body" [attr.aria-busy]="night.isLoading() || team.isLoading()">
+    @if (failure() === 'notFound') {
+      <p class="note note-bad" role="alert">
+        No encontramos esa noche en este boliche. Volvé al listado y elegila de nuevo.
+      </p>
+    } @else if (failure() === 'unreachable') {
+      <div class="note note-bad failed" role="alert">
+        <span>No pudimos traer la noche. Fijate la señal y probá de nuevo.</span>
+        <button class="retry" type="button" (click)="retry()">Reintentar</button>
+      </div>
+    } @else if (night.hasValue() && team.hasValue()) {
+      <h1 class="title">{{ night.value().name }}</h1>
+      <p class="phase">
+        <span class="chip" [class.chip-on]="phase() === 'underway'">{{ phaseName() }}</span>
+        <span>{{ hours() }}</span>
+      </p>
+
+      @if (phase() === 'over') {
+        <dl class="facts">
+          <div class="fact">
+            <dt class="fact-name">Horario</dt>
+            <dd class="fact-value">{{ hours() }}</dd>
+          </div>
+          <div class="fact">
+            <dt class="fact-name">Personal</dt>
+            @for (name of crewNames(); track name) {
+              <dd class="fact-value">{{ name }}</dd>
+            }
+          </div>
+        </dl>
+        <p class="note">
+          Una noche terminada ya no se edita: sus métricas se leen contra estos horarios.
+        </p>
+      } @else {
+        <drinkit-night-form
+          [team]="team.value()"
+          [initial]="night.value()"
+          [startLocked]="phase() === 'underway'"
+          [sending]="store.isSending()"
+          [refusal]="refusal()"
+          submitLabel="Guardar cambios"
+          (saved)="save($event)"
+        />
+      }
+    } @else {
+      <p class="note" role="status">Cargando la noche…</p>
+    }
+
+    <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'nights']">Volver a las noches</a>
+  </section>
+</div>

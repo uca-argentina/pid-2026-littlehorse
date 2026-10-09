@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   aFullName,
   aKdsAccount,
+  aKdsAccountOffTonight,
   aNewPassword,
   anOrderPaidBy,
   kdsPath,
@@ -53,6 +54,22 @@ test.describe('KDS board', () => {
     });
 
     await expect(card).toContainText(drinkName);
+  });
+
+  // US-35, criterion 4: the station signs in, and its board says why it is
+  // empty instead of showing a queue that is not its own to see.
+  test('tells a station that is not in tonight’s night, without showing the queue', async ({
+    page,
+    request,
+  }) => {
+    const username = await aKdsAccountOffTonight(request);
+
+    await logIn(page, username, aNewPassword);
+
+    await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
+    await expect(page.getByRole('alert')).toContainText(/no está en la noche de hoy/i);
+    await expect(page.getByRole('group', { name: 'Nuevos' })).toHaveCount(0);
+    await expect(page.getByText(/sin conexión/i)).toHaveCount(0);
   });
 
   // US-16, criteria 1 and 4, through the real API: the order moves column

@@ -106,6 +106,8 @@ internal static class OrdersEndpoints
         [ConfirmOrderHandler.SoldOut.Code] = StatusCodes.Status409Conflict,
         [ConfirmOrderHandler.NotOnTheMenu.Code] = StatusCodes.Status409Conflict,
         [OrderErrors.StockMoved.Code] = StatusCodes.Status409Conflict,
+        // The venue closed, not the order went wrong (US-35).
+        [OrderErrors.NotTakingOrders.Code] = StatusCodes.Status409Conflict,
     };
 
     private static readonly Dictionary<int, string> TitleByStatus = new()

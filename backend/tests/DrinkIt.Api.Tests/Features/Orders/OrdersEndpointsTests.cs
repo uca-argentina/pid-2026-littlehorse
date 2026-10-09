@@ -3,6 +3,7 @@ using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Venues;
 using DrinkIt.Domain.Menu;
@@ -57,6 +58,17 @@ public class OrdersEndpointsTests
         HttpResponseSnapshot response = await Confirm(ARequestFor(1));
 
         Assert.Matches("^[0-9a-f]{32}$", response.Text("trackingToken"));
+    }
+
+    // US-35, criterion 3: the venue being closed is a conflict, not a bad
+    // request. The order was fine; the venue is what changed.
+    [Fact]
+    public async Task ConfirmAsync_WhenNoNightIsOn_RespondsWithConflict()
+    {
+        HttpResponseSnapshot response = await Confirm(ARequestFor(1), nightIsOn: false);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:order:not-taking-orders", response.Text("type"));
     }
 
     // Criterion 3, as the phone receives it: a 400 whose type the screen can
@@ -179,29 +191,37 @@ public class OrdersEndpointsTests
         "abc-123",
         [new OrderLineRequestBody(_gin.Id, quantity, null)]);
 
-    private async Task<HttpResponseSnapshot> Confirm(ConfirmOrderRequest request)
+    private async Task<HttpResponseSnapshot> Confirm(ConfirmOrderRequest request, bool nightIsOn = true)
     {
         CurrentVenue venue = new();
         venue.Resolve(new VenueIdentity(TheVenue, "Bar Alfa", "bar-alfa"));
 
         IResult result = await OrdersEndpoints.ConfirmAsync(
-            "bar-alfa", request, venue, AHandler(), CancellationToken.None);
+            "bar-alfa", request, venue, AHandler(nightIsOn), CancellationToken.None);
 
         return await EndpointResponse.Execute(result, Path, HttpMethods.Post);
     }
 
-    private ConfirmOrderHandler AHandler() => new(
+    private ConfirmOrderHandler AHandler(bool nightIsOn = true) => new(
         new Fake.Orders(),
         new Fake.Menu(_gin),
         new Fake.Sequence(),
         [new DigitalPaymentStrategy(TimeProvider.System), new CashPaymentStrategy()],
-        new Fake.Venue());
+        new Fake.Venue(),
+        new Fake.Tonight(nightIsOn),
+        TimeProvider.System);
 
     private static class Fake
     {
         public sealed class Venue : Application.Common.ICurrentVenue
         {
             public Guid Id => TheVenue;
+        }
+
+        public sealed class Tonight(bool isOn) : IUnderwayNightLookup
+        {
+            public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken) =>
+                Task.FromResult(isOn ? Guid.CreateVersion7() : (Guid?)null);
         }
 
         public sealed class Sequence : IOrderCodeSequence

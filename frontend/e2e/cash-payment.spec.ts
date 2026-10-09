@@ -2,6 +2,7 @@ import { devices, expect, test } from '@playwright/test';
 import type { APIRequestContext, Browser, BrowserContext, Page } from '@playwright/test';
 import { categoryIdNamed } from './categories';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
+import { joinTonight } from './nights';
 
 /**
  * US-24 to US-26, end to end with three actors against the real API: the
@@ -39,12 +40,14 @@ async function adminToken(request: APIRequestContext): Promise<string> {
 async function anAccount(request: APIRequestContext, role: 'Kds' | 'Cashier'): Promise<string> {
   const username = `e2e.${unique()}`;
 
+  const token = await adminToken(request);
   const created = await request.post('/api/staff/users', {
-    headers: { Authorization: `Bearer ${await adminToken(request)}` },
+    headers: { Authorization: `Bearer ${token}` },
     data: { username, password, role },
   });
 
   expect(created.status()).toBe(201);
+  await joinTonight(request, token, ((await created.json()) as { id: string }).id);
 
   return username;
 }

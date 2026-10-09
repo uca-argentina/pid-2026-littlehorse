@@ -5,6 +5,7 @@ using DrinkIt.Api.Features.Authentication;
 using DrinkIt.Api.Features.Cashier;
 using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
+using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tenancy;
@@ -22,6 +23,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // One line per feature: each one lists its own handlers, next to its endpoints.
 builder.Services.AddLoginHandlers();
 builder.Services.AddStaffHandlers();
+builder.Services.AddNightHandlers();
 builder.Services.AddMenuHandlers();
 builder.Services.AddOrderHandlers();
 builder.Services.AddKdsHandlers();
@@ -112,11 +114,15 @@ app.MapMenu();
 app.MapOrders();
 app.MapOrderTracking();
 app.MapStaffUsers();
+app.MapNights();
 app.MapCategories();
 app.MapProducts();
 app.MapKds();
-app.MapHub<KdsHub>(KdsHubRoute.Path);
-app.MapHub<TillHub>(TillHubRoute.Path);
+// The hubs carry their role in [Authorize]; the policy adds the night's crew
+// (US-35), so a tablet outside it hears nothing either. The customer's
+// tracking hub has no account behind it, so no night applies there.
+app.MapHub<KdsHub>(KdsHubRoute.Path).RequireAuthorization(Policies.Kds);
+app.MapHub<TillHub>(TillHubRoute.Path).RequireAuthorization(Policies.Cashier);
 app.MapHub<TrackingHub>(TrackingHubRoute.Path);
 app.MapCashier();
 

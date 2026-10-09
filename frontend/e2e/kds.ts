@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { categoryIdNamed } from './categories';
+import { joinTonight } from './nights';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 
 /**
@@ -46,8 +47,24 @@ async function adminToken(request: APIRequestContext): Promise<string> {
   return ((await login.json()) as { token: string }).token;
 }
 
-/** A fresh Kds account, the way an administrator would create one. */
+/** A fresh Kds account, the way an administrator would create one, working tonight. */
 export async function aKdsAccount(request: APIRequestContext): Promise<string> {
+  const username = aNewUsername();
+
+  const token = await adminToken(request);
+  const created = await request.post('/api/staff/users', {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { username, password: aNewPassword, role: 'Kds' },
+  });
+
+  expect(created.status()).toBe(201);
+  await joinTonight(request, token, ((await created.json()) as { id: string }).id);
+
+  return username;
+}
+
+/** A fresh Kds account that nobody added to tonight's night (US-35, criterion 4). */
+export async function aKdsAccountOffTonight(request: APIRequestContext): Promise<string> {
   const username = aNewUsername();
 
   const created = await request.post('/api/staff/users', {

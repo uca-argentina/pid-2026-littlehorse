@@ -16,3 +16,4 @@ archivo aparte del enunciado, nunca mezclado con él.
 |---|---|---|---|
 | 1 | `sprint-1.md` | `sprint-1-backlog.md` | entregado el 2026-09-17 |
 | 2 | `sprint-2.md` | `sprint-2-backlog.md` | en curso — la consigna fija el formato, el alcance es nuestro |
+| 3 | `sprint-3.md` | `sprint-3-backlog.md` | en planificación — la consigna fija el alcance |

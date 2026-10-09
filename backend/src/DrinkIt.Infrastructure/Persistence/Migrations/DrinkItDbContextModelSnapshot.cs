@@ -120,6 +120,52 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.ToTable("Products", (string)null);
                 });
 
+            modelBuilder.Entity("DrinkIt.Domain.Nights.Night", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.PrimitiveCollection<string>("_crewIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CrewIds");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId", "StartsAt", "EndsAt");
+
+                    b.ToTable("Nights", (string)null);
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Orders.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -165,6 +211,9 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<int?>("Method")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("NightId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("PaidAt")
                         .HasColumnType("datetimeoffset");
 
@@ -191,6 +240,8 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("VenueId", "Code")
                         .IsUnique();
+
+                    b.HasIndex("VenueId", "NightId");
 
                     b.HasIndex("VenueId", "TrackingToken")
                         .IsUnique();
@@ -342,6 +393,15 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Nights.Night", b =>
+                {
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
                         .HasForeignKey("VenueId")

@@ -1,4 +1,5 @@
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
@@ -16,6 +17,59 @@ public class ConfirmOrderHandlerTests
     private readonly Catalog _menu = new(gin: 20, fernet: 20);
 
     private readonly OrdersInMemory _orders = new();
+
+    private static readonly Guid TheNight = Guid.CreateVersion7();
+
+    /// <summary>On by default: most of what is tested here happens during a night.</summary>
+    private readonly TonightIs _nights = new(TheNight);
+
+    // US-35, criterion 2: the order belongs to the night it was placed in.
+    [Fact]
+    public async Task HandleAsync_WhenANightIsUnderway_PlacesTheOrderInIt()
+    {
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(TheNight, _orders.Added!.NightId);
+    }
+
+    // Asked with the server's clock: the phone's would let anybody order at
+    // 07:00 by setting their own time back.
+    [Fact]
+    public async Task HandleAsync_Always_AsksForTheNightAtTheServersMoment()
+    {
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(Tonight, _nights.AskedAt);
+    }
+
+    // US-35, criterion 3, and the edge in its notes: a cart put together at
+    // 05:58 and confirmed at 06:01 gets the same answer.
+    [Fact]
+    public async Task HandleAsync_WhenNoNightIsUnderway_RefusesWithoutPlacingAnything()
+    {
+        _nights.Close();
+        SequenceThatCounts sequence = new();
+
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, sequence).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(OrderErrors.NotTakingOrders, result.Error);
+        Assert.Null(_orders.Added);
+        Assert.Equal(0, sequence.TimesAsked);
+    }
+
+    // A retry of an order placed at 05:59 that lands at 06:01 is the same
+    // order, not a new one: it is answered as before, not refused.
+    [Fact]
+    public async Task HandleAsync_WhenTheNightClosedBeforeARetryOfAnOrderItAlreadyHas_HandsBackThatOrder()
+    {
+        ConfirmOrderHandler handler = AHandler();
+        Result<ConfirmedOrder> first = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        _nights.Close();
+        Result<ConfirmedOrder> retry = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(first.Value.Code, retry.Value.Code);
+    }
 
     [Fact]
     public async Task HandleAsync_WhenEverythingIsInPlace_ConfirmsThePaidOrderIntoTheQueue()
@@ -321,14 +375,18 @@ public class ConfirmOrderHandlerTests
             _menu,
             new SequenceThatAnswers("K-4821"),
             [payment],
-            new TheVenueIsFixed(TheVenue));
+            new TheVenueIsFixed(TheVenue),
+            _nights,
+            new FixedClock(Tonight));
 
     private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null) =>
         new(_orders,
             menu,
             codes ?? new SequenceThatAnswers("K-4821"),
             [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
-            new TheVenueIsFixed(TheVenue));
+            new TheVenueIsFixed(TheVenue),
+            _nights,
+            new FixedClock(Tonight));
 
     /// <summary>
     /// A method that settles the money and stops, without sending the order
@@ -344,6 +402,23 @@ public class ConfirmOrderHandlerTests
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    /// <summary>Which night is on, as the handler asks for it; the test can close it.</summary>
+    private sealed class TonightIs(Guid night) : IUnderwayNightLookup
+    {
+        private Guid? _underway = night;
+
+        public DateTimeOffset? AskedAt { get; private set; }
+
+        public void Close() => _underway = null;
+
+        public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken)
+        {
+            AskedAt = at;
+
+            return Task.FromResult(_underway);
+        }
     }
 
     private sealed class TheVenueIsFixed(Guid id) : ICurrentVenue

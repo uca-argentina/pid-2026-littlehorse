@@ -1,0 +1,138 @@
+// A dropdown in the flow of the form, not floating over it: on a phone a
+// floating panel covers the very button that closes it.
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.label {
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toggle {
+  display: flex;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+  min-height: 54px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 16px;
+  text-align: left;
+}
+
+.toggle:disabled {
+  opacity: 0.6;
+}
+
+.toggle-bad {
+  border-color: var(--dk-danger);
+}
+
+.summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret {
+  flex-shrink: 0;
+  color: var(--dk-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.caret-up {
+  transform: rotate(180deg);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  padding: 10px;
+  overflow-y: auto;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+}
+
+.search {
+  min-height: 48px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // 16px exactly: anything smaller makes iOS Safari zoom into the field.
+  font-size: 16px;
+}
+
+.member {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--dk-space-3);
+  align-items: center;
+  min-height: var(--dk-tap-min);
+  padding: 8px 12px;
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: var(--dk-radius-sm);
+}
+
+.member-on {
+  border-color: var(--dk-accent);
+  background: var(--dk-role-on-surface);
+}
+
+// The native control, only resized: keyboard and screen reader keep working.
+.check {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  accent-color: var(--dk-accent);
+}
+
+.username {
+  font-family: ui-monospace, 'SF Mono', menlo, monospace;
+  font-size: 15.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.done {
+  flex-shrink: 0;
+  min-height: var(--dk-tap-min);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.help {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.bad {
+  margin: 0;
+  color: var(--dk-danger);
+  font-size: 14px;
+}

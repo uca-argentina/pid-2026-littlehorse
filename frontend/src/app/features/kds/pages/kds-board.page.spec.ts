@@ -172,6 +172,45 @@ describe('KdsBoardPage', () => {
     expect(screen.getByRole('alert')).not.toBeNull();
   });
 
+  // US-35, criterion 4: signed in, right role, not in tonight's crew. The hub
+  // is refused too, and keeps trying — that is not a dropped connection, and
+  // saying so would send somebody to check the wifi.
+  it('says the station is not in tonight’s crew, and not that the connection dropped', async () => {
+    const { rendered, http, channel } = await openScreen();
+
+    http
+      .expectOne(KDS_QUEUE_URL)
+      .flush({ type: ProblemTypes.notInTonightsCrew }, { status: 403, statusText: 'Forbidden' });
+    channel.state.set('reconnecting');
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toContain('no está en la noche de hoy');
+    expect(screen.queryByText(/sin conexión|no pudimos cargar/i)).toBeNull();
+  });
+
+  // The board retries on its own; while it does, the reason stays the night.
+  it('keeps saying it is the night while it retries on its own', async () => {
+    const { rendered, http } = await openScreen();
+    vi.useFakeTimers();
+
+    try {
+      http
+        .expectOne(KDS_QUEUE_URL)
+        .flush({ type: ProblemTypes.notInTonightsCrew }, { status: 403, statusText: 'Forbidden' });
+      await vi.advanceTimersByTimeAsync(0);
+      rendered.fixture.detectChanges();
+
+      await vi.advanceTimersByTimeAsync(KDS_RETRY_MS);
+      rendered.fixture.detectChanges();
+      http.expectOne(KDS_QUEUE_URL);
+
+      expect(screen.getByRole('alert').textContent).toContain('no está en la noche de hoy');
+      expect(screen.queryByText(/no pudimos cargar/i)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('draws the outline of the three columns while the queue loads', async () => {
     await openScreen();
 

@@ -16,9 +16,12 @@ internal static class Policies
     /// </summary>
     public const string Administrator = nameof(StaffRole.Administrator);
 
-    /// <summary>The bar's own tablet (US-15): only the station's own account reads its queue.</summary>
+    /// <summary>
+    /// The bar's own tablet (US-15): only the station's own account reads its
+    /// queue, and only while it works the venue's night (US-35).
+    /// </summary>
     public const string Kds = nameof(StaffRole.Kds);
 
-    /// <summary>The till (US-26): looks up what is waiting for cash and takes it.</summary>
+    /// <summary>The till (US-26): looks up what is waiting for cash and takes it, while it works the night.</summary>
     public const string Cashier = nameof(StaffRole.Cashier);
 }

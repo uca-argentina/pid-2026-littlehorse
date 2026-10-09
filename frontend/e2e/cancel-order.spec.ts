@@ -1,6 +1,7 @@
 import { devices, expect, test } from '@playwright/test';
 import type { APIRequestContext, Browser, BrowserContext, Page } from '@playwright/test';
 import { categoryIdNamed } from './categories';
+import { joinTonight } from './nights';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 
 /**
@@ -38,12 +39,15 @@ async function adminToken(request: APIRequestContext): Promise<string> {
 async function aCashierAccount(request: APIRequestContext): Promise<string> {
   const username = `e2e.${unique()}`;
 
+  const token = await adminToken(request);
   const created = await request.post('/api/staff/users', {
-    headers: { Authorization: `Bearer ${await adminToken(request)}` },
+    headers: { Authorization: `Bearer ${token}` },
     data: { username, password, role: 'Cashier' },
   });
 
   expect(created.status()).toBe(201);
+  // US-35, criterion 4: a till outside tonight's night sees no orders.
+  await joinTonight(request, token, ((await created.json()) as { id: string }).id);
 
   return username;
 }

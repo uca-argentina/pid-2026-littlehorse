@@ -6,6 +6,14 @@ namespace DrinkIt.Application.Orders;
 public static class OrderErrors
 {
     /// <summary>
+    /// No night of the venue is on (US-35, criterion 3). The menu is still
+    /// readable; what is closed is confirming. Also the answer for a cart put
+    /// together before closing and confirmed after it.
+    /// </summary>
+    public static readonly Error NotTakingOrders =
+        new("order.not_taking_orders", "The venue is not taking orders right now.");
+
+    /// <summary>
     /// Somebody else's order changed the stock between it being read and this
     /// one being written. Nothing was saved. The customer is told to look at
     /// their order again rather than told a drink ran out, because it may not

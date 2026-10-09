@@ -45,6 +45,15 @@
       </div>
     }
 
+    @if (menu.hasValue() && !isTakingOrders()) {
+      <!-- Said before the menu and not when paying: nobody should fill an
+           order that confirming is going to refuse. -->
+      <p class="note" role="status">
+        El boliche no está tomando pedidos ahora. Podés mirar la carta; vas a poder pedir cuando
+        abra la barra.
+      </p>
+    }
+
     @if (menu.hasValue()) {
       <div class="search">
         <svg

@@ -96,7 +96,7 @@ public sealed class AuditInterceptorTests(SqlServerFixture sql)
         Venue venue = Venue.Create("Bar Audit", $"bar-{Guid.NewGuid():N}");
         Category category = SeedCategory.For(venue.Id);
         Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20, category.Id);
-        Order order = Order.Place(venue.Id, "Maria", OrderCode.First, [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 1, null)]);
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "Maria", OrderCode.First, [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 1, null)]);
 
         await using DrinkItDbContext context = ContextFor(venue, "euge", Evening);
         context.Venues.Add(venue);

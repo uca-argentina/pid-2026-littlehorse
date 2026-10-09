@@ -81,6 +81,11 @@ export class CashierPage {
   /** Everything still waiting for cash, oldest first. */
   protected readonly pending = httpResource<CashierOrder[]>(() => CASHIER_ORDERS_URL);
 
+  /** US-35, criterion 4: signed in as a cashier, but not in tonight's crew. */
+  protected readonly notTonight = computed(
+    () => problemTypeOf(this.pending.error()) === ProblemTypes.notInTonightsCrew,
+  );
+
   /** "Cobros de tu turno": this cashier's, the latest first. */
   protected readonly collected = httpResource<CashierOrder[]>(() => MY_COLLECTIONS_URL);
 

@@ -1,4 +1,5 @@
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Nights;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 
@@ -45,7 +46,9 @@ public sealed class ConfirmOrderHandler(
     IProductsForOrdering products,
     IOrderCodeSequence codes,
     IEnumerable<IPaymentStrategy> paymentStrategies,
-    ICurrentVenue currentVenue)
+    ICurrentVenue currentVenue,
+    IUnderwayNightLookup nights,
+    TimeProvider clock)
 {
     public static readonly Error Empty =
         new("order.empty", "There is nothing in the order.");
@@ -89,6 +92,13 @@ public sealed class ConfirmOrderHandler(
         // menu looks like now. Criterion 6.
         if (await orders.FindByIdempotencyKeyAsync(key, cancellationToken) is Order already) return Confirmation(already);
 
+        // After the retry above, so an order confirmed at 05:59 and retried at
+        // 06:01 is still that order; before anything else, so a closed venue
+        // spends no code. The server's clock, never the phone's.
+        Guid? night = await nights.FindIdAsync(clock.GetUtcNow(), cancellationToken);
+
+        if (night is null) return OrderErrors.NotTakingOrders;
+
         Result<string> name = CustomerNamePolicy.Read(command.CustomerName);
 
         if (!name.IsSuccess) return name.Error!;
@@ -121,7 +131,7 @@ public sealed class ConfirmOrderHandler(
 
         for (int attempt = 0; attempt < Attempts; attempt++)
         {
-            outcome = await TryToConfirm(command, wanted, name.Value, code, payment, cancellationToken);
+            outcome = await TryToConfirm(command, wanted, night.Value, name.Value, code, payment, cancellationToken);
 
             if (outcome.IsSuccess || outcome.Error!.Code != OrderErrors.StockMoved.Code) return outcome;
         }
@@ -140,6 +150,7 @@ public sealed class ConfirmOrderHandler(
     private async Task<Result<ConfirmedOrder>> TryToConfirm(
         ConfirmOrderCommand command,
         Guid[] wanted,
+        Guid night,
         string customerName,
         OrderCode code,
         IPaymentStrategy payment,
@@ -151,7 +162,7 @@ public sealed class ConfirmOrderHandler(
 
         if (!items.IsSuccess) return items.Error!;
 
-        Order order = Order.Place(currentVenue.Id, customerName, code, items.Value);
+        Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
 
         // How far this goes is the payment method's call, not this handler's:
         // digital settles and queues, cash stops at the till.

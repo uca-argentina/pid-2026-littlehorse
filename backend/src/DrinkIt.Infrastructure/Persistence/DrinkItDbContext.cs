@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
@@ -19,6 +20,8 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
     public DbSet<Category> Categories => Set<Category>();
 
     public DbSet<Order> Orders => Set<Order>();
+
+    public DbSet<Night> Nights => Set<Night>();
 
     /// <summary>Where each venue's order codes are up to. Not a domain aggregate.</summary>
     internal DbSet<OrderCodeCounter> OrderCodeCounters => Set<OrderCodeCounter>();
@@ -40,6 +43,7 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
         modelBuilder.Entity<Product>().HasQueryFilter(product => product.VenueId == CurrentVenueId);
         modelBuilder.Entity<Category>().HasQueryFilter(category => category.VenueId == CurrentVenueId);
         modelBuilder.Entity<Order>().HasQueryFilter(order => order.VenueId == CurrentVenueId);
+        modelBuilder.Entity<Night>().HasQueryFilter(night => night.VenueId == CurrentVenueId);
 
         base.OnModelCreating(modelBuilder);
     }

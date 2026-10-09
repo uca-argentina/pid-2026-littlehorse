@@ -90,6 +90,7 @@ public sealed class OrderCancellationTests(SqlServerFixture sql)
 
         Order order = Order.Place(
             venue.Id,
+            Guid.CreateVersion7(),
             "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, TakenByTheOrder, null)]);

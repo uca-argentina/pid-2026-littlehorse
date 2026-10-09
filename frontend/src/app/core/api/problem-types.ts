@@ -11,6 +11,9 @@ export const ProblemTypes = {
   /** The token is good; the role is not the one that screen needs. */
   forbidden: 'urn:drinkit:problem:auth:forbidden',
 
+  /** Right role, but not in the crew of the venue's night (US-35): the administrator adds them. */
+  notInTonightsCrew: 'urn:drinkit:problem:auth:not-in-tonights-crew',
+
   usernameTaken: 'urn:drinkit:problem:staff:username-taken',
   passwordTooShort: 'urn:drinkit:problem:staff:password-too-short',
 
@@ -38,6 +41,9 @@ export const ProblemTypes = {
   orderNameOnlyLetters: 'urn:drinkit:problem:order:name-only-letters',
   orderNameTooLong: 'urn:drinkit:problem:order:name-too-long',
 
+  /** No night of the venue is on: the menu reads, confirming is closed (US-35). */
+  orderNotTakingOrders: 'urn:drinkit:problem:order:not-taking-orders',
+
   /** Another screen changed the order in the same instant, and its change stands. */
   orderChangedMeanwhile: 'urn:drinkit:problem:order:changed-meanwhile',
 
@@ -49,4 +55,19 @@ export const ProblemTypes = {
 
   /** Nothing left to collect: paid at the till already, or from the phone. */
   cashierAlreadyPaid: 'urn:drinkit:problem:cashier:already-paid',
+
+  /** Those hours share a moment with another night of the venue. */
+  nightOverlaps: 'urn:drinkit:problem:night:overlaps',
+
+  /** One of the chosen accounts is not the venue's any more. */
+  nightCrewMemberNotFound: 'urn:drinkit:problem:night:crew-member-not-found',
+
+  /** The night ended while its screen was open: it can no longer change. */
+  nightOver: 'urn:drinkit:problem:night:over',
+
+  /** The night began while its screen was open, and the edit moved its start. */
+  nightStartLocked: 'urn:drinkit:problem:night:start-locked',
+
+  /** No such night in this venue: a stale link, or another venue's id. */
+  nightNotFound: 'urn:drinkit:problem:night:not-found',
 } as const;
