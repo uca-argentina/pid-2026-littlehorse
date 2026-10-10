@@ -28,6 +28,24 @@ internal sealed class NightStocksInMemory(NightForStock? night, params StockedPr
     public Task<IReadOnlyDictionary<Guid, int>> CarriedOverAsync(Guid nightId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyDictionary<Guid, int>>(CarriedOver);
 
+    /// <summary>How many adjustments were written to the database.</summary>
+    public int AdjustmentsSaved { get; private set; }
+
+    /// <summary>A sale landed between reading the row and writing the change.</summary>
+    public bool RefusesTheAdjustment { get; set; }
+
+    public Task<NightStock?> GetForUpdateAsync(Guid nightId, Guid productId, CancellationToken cancellationToken) =>
+        Task.FromResult(Existing.Concat(Added).FirstOrDefault(row => row.NightId == nightId && row.ProductId == productId));
+
+    public Task<bool> SaveAdjustmentAsync(NightStock stock, int change, CancellationToken cancellationToken)
+    {
+        if (RefusesTheAdjustment) return Task.FromResult(false);
+
+        AdjustmentsSaved++;
+
+        return Task.FromResult(true);
+    }
+
     public Task AddRangeAsync(IReadOnlyCollection<NightStock> rows, CancellationToken cancellationToken)
     {
         Added.AddRange(rows);

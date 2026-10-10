@@ -1,6 +1,8 @@
 using DrinkIt.Api.IntegrationTests.Persistence;
 using DrinkIt.Application.Menu;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Nights;
+using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Persistence;
@@ -33,7 +35,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         seed.Products.Add(Product.Create(mine.Id, "Gin Tonic", "Gin, tónica, lima", null, 4500m, 20, drinks));
         await seed.SaveChangesAsync();
 
-        MenuItem item = (await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None))
+        MenuItem item = (await new ProductQueries(seed).ListForMenuAsync(night: null, CancellationToken.None))
             .Single(product => product.Name == "Gin Tonic");
 
         Assert.Equal("Gin, tónica, lima", item.Description);
@@ -56,7 +58,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         TakeOffTheMenu(seed, gone);
         await seed.SaveChangesAsync();
 
-        IReadOnlyList<MenuItem> menu = await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None);
+        IReadOnlyList<MenuItem> menu = await new ProductQueries(seed).ListForMenuAsync(night: null, CancellationToken.None);
 
         Assert.Equal(["Negroni"], menu.Select(item => item.Name));
     }
@@ -68,10 +70,9 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
     /// phone — the card says it cannot be ordered and never why.
     /// </summary>
     [Theory]
-    [InlineData(0, true, false)]
     [InlineData(10, false, false)]
     [InlineData(10, true, true)]
-    public async Task ListForMenuAsync_WhenAProductCannotBeServed_StillShowsItAsNotOrderable(
+    public async Task ListForMenuAsync_WhenTheSwitchIsOff_StillShowsItAsNotOrderable(
         int stock,
         bool available,
         bool expected)
@@ -86,10 +87,85 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
 
         await seed.SaveChangesAsync();
 
-        MenuItem item = (await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None))
+        MenuItem item = (await new ProductQueries(seed).ListForMenuAsync(night: null, CancellationToken.None))
             .Single(x => x.Name == "Aperol Spritz");
 
         Assert.Equal(expected, item.IsOrderable);
+    }
+
+    // US-37, decision of 2026-10-10: with no night on there is nothing to be
+    // sold out of. The menu reads in full and the phone says the venue is not
+    // taking orders; marking a drink sold out would be a lie about a stock
+    // that does not exist yet.
+    [Fact]
+    public async Task ListForMenuAsync_WhenNoNightIsOn_DoesNotMarkAnythingSoldOut()
+    {
+        Venue mine = await SeedVenue();
+
+        await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
+        seed.Products.Add(Product.Create(mine.Id, "Aperol Spritz", null, null, 6000m, 0, await CategoryOf(seed)));
+        await seed.SaveChangesAsync();
+
+        MenuItem item = (await new ProductQueries(seed).ListForMenuAsync(night: null, CancellationToken.None))
+            .Single(x => x.Name == "Aperol Spritz");
+
+        Assert.True(item.IsOrderable);
+    }
+
+    // The number on the product is only where the first night starts from.
+    // What is on the shelf tonight is the night's.
+    [Theory]
+    [InlineData(20, 0, false)]
+    [InlineData(0, 5, true)]
+    public async Task ListForMenuAsync_WhenANightIsOn_UsesWhatTheNightHasLeft(
+        int productStock,
+        int nightRemaining,
+        bool expected)
+    {
+        Venue mine = await SeedVenue();
+        (Product product, Guid night) = await SeedProductWithANight(mine, productStock, nightRemaining);
+
+        await using DrinkItDbContext read = sql.CreateContext(mine.Id);
+
+        MenuItem item = (await new ProductQueries(read).ListForMenuAsync(night, CancellationToken.None))
+            .Single(x => x.Id == product.Id);
+
+        Assert.Equal(expected, item.IsOrderable);
+    }
+
+    // A product the night never opened a row for is not on its shelf.
+    [Fact]
+    public async Task ListForMenuAsync_WhenTheNightHasNoRowForAProduct_ShowsItAsNotOrderable()
+    {
+        Venue mine = await SeedVenue();
+
+        await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
+        Product product = Product.Create(mine.Id, "Aperol Spritz", null, null, 6000m, 10, await CategoryOf(seed));
+        seed.Products.Add(product);
+        Night night = ANight(mine);
+        seed.Nights.Add(night);
+        await seed.SaveChangesAsync();
+
+        MenuItem item = (await new ProductQueries(seed).ListForMenuAsync(night.Id, CancellationToken.None))
+            .Single(x => x.Id == product.Id);
+
+        Assert.False(item.IsOrderable);
+    }
+
+    // Two nights: what the other one has left says nothing about this one.
+    [Fact]
+    public async Task ListForMenuAsync_WhenAnotherNightHasStock_IgnoresIt()
+    {
+        Venue mine = await SeedVenue();
+        (Product product, Guid tonight) = await SeedProductWithANight(mine, productStock: 10, nightRemaining: 0);
+        await SeedAnotherNightWithStock(mine, product, remaining: 8);
+
+        await using DrinkItDbContext read = sql.CreateContext(mine.Id);
+
+        MenuItem item = (await new ProductQueries(read).ListForMenuAsync(tonight, CancellationToken.None))
+            .Single(x => x.Id == product.Id);
+
+        Assert.False(item.IsOrderable);
     }
 
     // The most important invariant of the data model, on the one endpoint that
@@ -107,7 +183,7 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
             Product.Create(theirs.Id, "Lo de ellos", null, null, 1000m, 5, await CategoryOf(asTheirs)));
         await seed.SaveChangesAsync();
 
-        IReadOnlyList<MenuItem> menu = await new ProductQueries(seed).ListForMenuAsync(CancellationToken.None);
+        IReadOnlyList<MenuItem> menu = await new ProductQueries(seed).ListForMenuAsync(night: null, CancellationToken.None);
 
         Assert.Equal(["Lo mio"], menu.Select(item => item.Name));
     }
@@ -120,6 +196,50 @@ public sealed class MenuQueriesTests(SqlServerFixture sql)
         Assert.DoesNotContain(
             typeof(MenuItem).GetProperties(),
             property => property.Name.Contains("Stock", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static readonly DateTimeOffset Opening = new(2026, 10, 10, 23, 0, 0, TimeSpan.FromHours(-3));
+
+    private static Night ANight(Venue venue, int dayOffset = 0) =>
+        Night.Create(
+            venue.Id,
+            $"Night {dayOffset}",
+            Opening.AddDays(dayOffset),
+            Opening.AddDays(dayOffset).AddHours(7),
+            [
+                StaffUser.Create(venue.Id, $"kds-{Guid.NewGuid():N}"[..20], "hash", StaffRole.Kds),
+                StaffUser.Create(venue.Id, $"till-{Guid.NewGuid():N}"[..20], "hash", StaffRole.Cashier),
+            ]);
+
+    private async Task<(Product Product, Guid NightId)> SeedProductWithANight(Venue venue, int productStock, int nightRemaining)
+    {
+        await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
+        Product product = Product.Create(venue.Id, "Aperol Spritz", null, null, 6000m, productStock, await CategoryOf(seed));
+        StaffUser kds = StaffUser.Create(venue.Id, $"kds-{Guid.NewGuid():N}"[..20], "hash", StaffRole.Kds);
+        StaffUser till = StaffUser.Create(venue.Id, $"till-{Guid.NewGuid():N}"[..20], "hash", StaffRole.Cashier);
+        Night night = Night.Create(venue.Id, "Tonight", Opening, Opening.AddHours(7), [kds, till]);
+        NightStock stock = NightStock.Open(venue.Id, night.Id, product.Id, nightRemaining);
+
+        seed.Products.Add(product);
+        seed.StaffUsers.AddRange(kds, till);
+        seed.Nights.Add(night);
+        seed.NightStocks.Add(stock);
+        await seed.SaveChangesAsync();
+
+        return (product, night.Id);
+    }
+
+    private async Task SeedAnotherNightWithStock(Venue venue, Product product, int remaining)
+    {
+        await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
+        StaffUser kds = StaffUser.Create(venue.Id, $"kds-{Guid.NewGuid():N}"[..20], "hash", StaffRole.Kds);
+        StaffUser till = StaffUser.Create(venue.Id, $"till-{Guid.NewGuid():N}"[..20], "hash", StaffRole.Cashier);
+        Night other = Night.Create(venue.Id, "Next", Opening.AddDays(1), Opening.AddDays(1).AddHours(7), [kds, till]);
+
+        seed.StaffUsers.AddRange(kds, till);
+        seed.Nights.Add(other);
+        seed.NightStocks.Add(NightStock.Open(venue.Id, other.Id, product.Id, remaining));
+        await seed.SaveChangesAsync();
     }
 
     /// <summary>

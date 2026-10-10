@@ -54,5 +54,5 @@ public interface IProductQueries
     /// tonight: a product that vanished reads as a mistake and sends somebody
     /// to ask at the bar, which is the walk this product exists to avoid.
     /// </summary>
-    Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? night, CancellationToken cancellationToken);
 }

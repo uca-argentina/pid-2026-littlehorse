@@ -1,4 +1,5 @@
 using DrinkIt.Api.IntegrationTests.Persistence;
+using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
@@ -140,6 +141,128 @@ public sealed class NightStockRepositoryTests(SqlServerFixture sql)
         Assert.Equal(2, listed.Count);
         Assert.Equal(20, listed.Single(row => row.ProductId == s.Gin.Id).Loaded);
         Assert.Equal(8, listed.Single(row => row.ProductId == s.Fernet.Id).Loaded);
+    }
+
+    [Fact]
+    public async Task GetForUpdateAsync_WhenTheNightHasTheProduct_FindsItsRow()
+    {
+        Scenario s = await AVenueWithNights(Friday);
+        await s.OpenWithRemaining(s.Nights[0], s.Gin, loaded: 20, remaining: 11);
+
+        NightStock? found = await Repository(s.Venue).GetForUpdateAsync(s.Nights[0].Id, s.Gin.Id, CancellationToken.None);
+
+        Assert.Equal(11, found!.Remaining);
+    }
+
+    [Fact]
+    public async Task GetForUpdateAsync_WhenTheRowIsAnotherVenues_FindsNothing()
+    {
+        Scenario mine = await AVenueWithNights(Friday);
+        Scenario theirs = await AVenueWithNights(Friday);
+        await theirs.OpenWithRemaining(theirs.Nights[0], theirs.Gin, loaded: 20, remaining: 20);
+
+        Assert.Null(await Repository(mine.Venue).GetForUpdateAsync(theirs.Nights[0].Id, theirs.Gin.Id, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SaveAdjustmentAsync_WhenItFits_AddsToWhatWasLoadedAndWhatIsLeft()
+    {
+        Scenario s = await AVenueWithNights(Friday);
+        await s.OpenWithRemaining(s.Nights[0], s.Gin, loaded: 20, remaining: 11);
+
+        await using DrinkItDbContext context = sql.CreateContext(s.Venue.Id);
+        NightStockRepository repository = new(context);
+        NightStock row = (await repository.GetForUpdateAsync(s.Nights[0].Id, s.Gin.Id, CancellationToken.None))!;
+        row.Adjust(5);
+
+        Assert.True(await repository.SaveAdjustmentAsync(row, 5, CancellationToken.None));
+
+        await using DrinkItDbContext read = sql.CreateContext(s.Venue.Id);
+        NightStock stored = await read.NightStocks.SingleAsync(stock => stock.Id == row.Id);
+
+        Assert.Equal((25, 16, 9), (stored.Loaded, stored.Remaining, stored.Sold));
+    }
+
+    // The bar sold some between the screen reading the row and the write. The
+    // change is added to what the database holds now: the sale keeps its units.
+    [Fact]
+    public async Task SaveAdjustmentAsync_WhenASaleLandedAfterTheRead_KeepsTheSale()
+    {
+        Scenario s = await AVenueWithNights(Friday);
+        await s.OpenWithRemaining(s.Nights[0], s.Gin, loaded: 10, remaining: 10);
+
+        await using DrinkItDbContext context = sql.CreateContext(s.Venue.Id);
+        NightStockRepository repository = new(context);
+        NightStock row = (await repository.GetForUpdateAsync(s.Nights[0].Id, s.Gin.Id, CancellationToken.None))!;
+
+        await SellFromAnotherRequest(s, units: 4);
+        row.Adjust(5);
+
+        Assert.True(await repository.SaveAdjustmentAsync(row, 5, CancellationToken.None));
+
+        // What the screen gets back is what the database has, sales counted in.
+        Assert.Equal((15, 11, 4), (row.Loaded, row.Remaining, row.Sold));
+    }
+
+    [Fact]
+    public async Task SaveAdjustmentAsync_WhenASaleLeftLessThanTheChangeTakesAway_RefusesAndWritesNothing()
+    {
+        Scenario s = await AVenueWithNights(Friday);
+        await s.OpenWithRemaining(s.Nights[0], s.Gin, loaded: 10, remaining: 10);
+
+        await using DrinkItDbContext context = sql.CreateContext(s.Venue.Id);
+        NightStockRepository repository = new(context);
+        NightStock row = (await repository.GetForUpdateAsync(s.Nights[0].Id, s.Gin.Id, CancellationToken.None))!;
+
+        await SellFromAnotherRequest(s, units: 8);
+        row.Adjust(-5);
+
+        Assert.False(await repository.SaveAdjustmentAsync(row, -5, CancellationToken.None));
+        Assert.Equal((10, 2), (row.Loaded, row.Remaining));
+    }
+
+    // US-30: who moved the stock, and when. The relative statement is not a
+    // tracked save, so the mark is written by a save of its own.
+    [Fact]
+    public async Task SaveAdjustmentAsync_WhenItFits_StampsWhoAndWhen()
+    {
+        Scenario s = await AVenueWithNights(Friday);
+        await s.OpenWithRemaining(s.Nights[0], s.Gin, loaded: 10, remaining: 10);
+        DateTimeOffset now = new(2026, 10, 10, 3, 0, 0, TimeSpan.Zero);
+
+        await using (DrinkItDbContext context = sql.CreateContext(s.Venue.Id, new AuditInterceptor(new FixedClock(now), new FixedUser("laura.admin"))))
+        {
+            NightStockRepository repository = new(context);
+            NightStock row = (await repository.GetForUpdateAsync(s.Nights[0].Id, s.Gin.Id, CancellationToken.None))!;
+            row.Adjust(3);
+
+            await repository.SaveAdjustmentAsync(row, 3, CancellationToken.None);
+        }
+
+        await using DrinkItDbContext read = sql.CreateContext(s.Venue.Id);
+        NightStock stored = await read.NightStocks.SingleAsync(stock => stock.NightId == s.Nights[0].Id);
+
+        Assert.Equal("laura.admin", stored.LastModifiedBy);
+        Assert.Equal(now, stored.LastModifiedAt);
+        Assert.Equal((13, 13), (stored.Loaded, stored.Remaining));
+    }
+
+    private async Task SellFromAnotherRequest(Scenario s, int units)
+    {
+        await using DrinkItDbContext sale = sql.CreateContext(s.Venue.Id);
+        await sale.NightStocks
+            .Where(stock => stock.NightId == s.Nights[0].Id && stock.ProductId == s.Gin.Id)
+            .ExecuteUpdateAsync(set => set.SetProperty(stock => stock.Remaining, stock => stock.Remaining - units));
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private sealed class FixedUser(string? username) : ICurrentStaffUser
+    {
+        public string? Username => username;
     }
 
     private NightStockRepository Repository(Venue venue) => new(sql.CreateContext(venue.Id));

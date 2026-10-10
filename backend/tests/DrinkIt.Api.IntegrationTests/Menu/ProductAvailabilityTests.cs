@@ -132,7 +132,7 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         await new MarkProductUnavailableHandler(new ProductRepository(asMine)).HandleAsync(gin.Id, CancellationToken.None);
 
         await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
-        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(CancellationToken.None))
+        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(night: null, CancellationToken.None))
             .Single(item => item.Name == "Gin Tonic");
 
         Assert.False(card.IsOrderable);
@@ -151,7 +151,7 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         await new MarkProductAvailableHandler(new ProductRepository(on)).HandleAsync(gin.Id, CancellationToken.None);
 
         await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
-        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(CancellationToken.None))
+        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(night: null, CancellationToken.None))
             .Single(item => item.Name == "Gin Tonic");
 
         Assert.True(card.IsOrderable);

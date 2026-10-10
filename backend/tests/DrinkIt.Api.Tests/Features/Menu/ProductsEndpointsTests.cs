@@ -467,7 +467,7 @@ public class ProductsEndpointsTests
             public Task<IReadOnlyList<ProductListItem>> ListAsync(CancellationToken cancellationToken) =>
                 Task.FromResult<IReadOnlyList<ProductListItem>>(stored);
 
-            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
+            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? night, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The administration listing never reads the customer's menu.");
         }
     }

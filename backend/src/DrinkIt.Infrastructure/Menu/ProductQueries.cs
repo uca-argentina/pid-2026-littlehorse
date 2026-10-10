@@ -34,30 +34,36 @@ internal sealed class ProductQueries(DrinkItDbContext context) : IProductQueries
                 new AuditInfo(product.CreatedAt, product.CreatedBy, product.LastModifiedAt, product.LastModifiedBy)))
             .ToListAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
-        await context.Products
-            .AsNoTracking()
-            .Where(product => product.IsActive)
-            // What can be ordered first, so the reachable part of the menu is
-            // what a thumb lands on. Sold out stays visible, further down.
-            //
-            // Product.IsOrderable is the same rule and owns the test for it,
-            // but it is not a mapped column, so it cannot cross into SQL and is
-            // restated here. Ordering after projecting to MenuItem would read
-            // better (sort on the already-computed IsOrderable instead of
-            // repeating the expression), but EF Core cannot translate an
-            // OrderBy over a property read back off a constructed record — it
-            // has to be a SQL ORDER BY over the raw columns, so the condition
-            // is written twice.
-            .OrderByDescending(product => product.IsAvailable && product.Stock > 0)
-            .ThenBy(product => product.Name)
-            .Select(product => new MenuItem(
+    /// <remarks>
+    /// What is left of a product is what the night has (US-37), never the
+    /// number on the product. With no night on there is nothing to be sold out
+    /// of, so only the nightly switch counts; and with one on, a product the
+    /// night has no row for is not on its shelf.
+    /// </remarks>
+    public async Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? night, CancellationToken cancellationToken)
+    {
+        bool hasNight = night is not null;
+        Guid nightId = night ?? Guid.Empty;
+
+        // What can be ordered comes first, so the reachable part of the menu is
+        // what a thumb lands on; sold out stays visible, further down. The
+        // rule is restated in SQL because it cannot cross from the domain, and
+        // MenuQueriesTests is the one that owns it.
+        return await (
+            from product in context.Products.AsNoTracking()
+            where product.IsActive
+            join stock in context.NightStocks.AsNoTracking().Where(row => row.NightId == nightId)
+                on product.Id equals stock.ProductId into stocks
+            from stock in stocks.DefaultIfEmpty()
+            orderby (product.IsAvailable && (!hasNight || stock.Remaining > 0)) descending, product.Name
+            select new MenuItem(
                 product.Id,
                 product.Name,
                 product.Description,
                 product.ImageUrl,
                 product.Price,
                 product.CategoryId,
-                product.IsAvailable && product.Stock > 0))
+                product.IsAvailable && (!hasNight || stock.Remaining > 0)))
             .ToListAsync(cancellationToken);
+    }
 }

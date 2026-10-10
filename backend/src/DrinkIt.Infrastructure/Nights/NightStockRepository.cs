@@ -73,6 +73,43 @@ internal sealed class NightStockRepository(DrinkItDbContext context) : INightSto
         return latest.ToDictionary(row => row.ProductId, row => row.Remaining);
     }
 
+    /// <summary>Tracked, so the audit stamp of the adjustment can be saved.</summary>
+    public Task<NightStock?> GetForUpdateAsync(Guid nightId, Guid productId, CancellationToken cancellationToken) =>
+        context.NightStocks.FirstOrDefaultAsync(
+            stock => stock.NightId == nightId && stock.ProductId == productId,
+            cancellationToken);
+
+    /// <summary>
+    /// One conditional statement, the same shape as a sale in OrderRepository:
+    /// the database adds the change to whatever it holds right now, so a sale
+    /// between reading the row and this keeps its units. The venue filter
+    /// applies here too.
+    /// </summary>
+    public async Task<bool> SaveAdjustmentAsync(NightStock stock, int change, CancellationToken cancellationToken)
+    {
+        int applied = await context.NightStocks
+            .Where(row => row.Id == stock.Id && row.Remaining + change >= 0)
+            .ExecuteUpdateAsync(
+                set => set
+                    .SetProperty(row => row.Loaded, row => row.Loaded + change)
+                    .SetProperty(row => row.Remaining, row => row.Remaining + change),
+                cancellationToken);
+
+        // What the domain worked out in memory is not what is stored once sales
+        // are counted in: the screen gets what the database has.
+        await context.Entry(stock).ReloadAsync(cancellationToken);
+
+        if (applied != 1) return false;
+
+        // The statement above is not a tracked save, so it leaves no mark of
+        // who did it. Flagging the stamp as changed makes the interceptor write
+        // it, and only it: the figures just reloaded are not written back.
+        context.Entry(stock).Property(nameof(NightStock.LastModifiedAt)).IsModified = true;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
     public async Task AddRangeAsync(IReadOnlyCollection<NightStock> rows, CancellationToken cancellationToken)
     {
         context.NightStocks.AddRange(rows);

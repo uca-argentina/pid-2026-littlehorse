@@ -39,4 +39,19 @@ public interface INightStockRepository
     /// meantime is not an error: the one that got there first stands.
     /// </summary>
     Task AddRangeAsync(IReadOnlyCollection<NightStock> rows, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The row of one product in one night, tracked so the adjustment can be
+    /// saved. Null when the night has none, including another venue's night.
+    /// </summary>
+    Task<NightStock?> GetForUpdateAsync(Guid nightId, Guid productId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Adds <paramref name="change"/> to what the database holds right now,
+    /// not to a total worked out in memory: a sale made since the row was read
+    /// keeps its units. False, and nothing written, when those sales left less
+    /// than the change takes away. Either way <paramref name="stock"/> ends up
+    /// holding what the database has.
+    /// </summary>
+    Task<bool> SaveAdjustmentAsync(NightStock stock, int change, CancellationToken cancellationToken);
 }

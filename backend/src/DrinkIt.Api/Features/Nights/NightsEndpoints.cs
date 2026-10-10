@@ -24,6 +24,16 @@ public sealed record NightResponse(
         new(night.Id, night.Name, night.StartsAt, night.EndsAt, night.CrewIds, AuditResponse.Of(night.Audit));
 }
 
+/// <summary>One product of a night's stock: what it loaded, what it sold and what is left.</summary>
+/// <remarks>US-37.</remarks>
+public sealed record NightStockLineResponse(Guid ProductId, string ProductName, int Loaded, int Sold, int Remaining);
+
+/// <summary>The units to add to a product's stock of a night, or to take away when it was loaded wrong.</summary>
+public sealed record AdjustNightStockRequest(int Change);
+
+/// <summary>What a product's stock of a night amounts to once an adjustment is in.</summary>
+public sealed record NightStockFiguresResponse(Guid ProductId, int Loaded, int Sold, int Remaining);
+
 internal static class NightsEndpoints
 {
     public static IEndpointRouteBuilder MapNights(this IEndpointRouteBuilder endpoints)
@@ -64,7 +74,57 @@ internal static class NightsEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        group
+            .MapGet("/{id:guid}/stock", GetStockAsync)
+            .WithName("GetNightStock")
+            .WithSummary("What a night has of each product: loaded, sold and left. Opens it from what the night before left, once that one is over.")
+            .Produces<IReadOnlyList<NightStockLineResponse>>()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
+            .MapPost("/{id:guid}/stock/{productId:guid}/adjust", AdjustStockAsync)
+            .WithName("AdjustNightStock")
+            .WithSummary("Moves a product's stock of a night up or down by a number of units.")
+            .Produces<NightStockFiguresResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         return endpoints;
+    }
+
+    internal static async Task<IResult> GetStockAsync(Guid id, OpenNightStockHandler handler, CancellationToken cancellationToken)
+    {
+        Result<IReadOnlyList<NightStockLine>> result = await handler.HandleAsync(id, cancellationToken);
+
+        if (!result.IsSuccess) return Rejected(result.Error!);
+
+        return TypedResults.Ok(result.Value
+            .Select(line => new NightStockLineResponse(line.ProductId, line.ProductName, line.Loaded, line.Sold, line.Remaining))
+            .ToArray());
+    }
+
+    /// <remarks>
+    /// POST and not PUT, as for a product: it moves the stock, it does not
+    /// replace it, so repeating it adds the units twice.
+    /// </remarks>
+    internal static async Task<IResult> AdjustStockAsync(
+        Guid id,
+        Guid productId,
+        AdjustNightStockRequest request,
+        AdjustNightStockHandler handler,
+        CancellationToken cancellationToken)
+    {
+        Result<NightStockFigures> result = await handler.HandleAsync(
+            new AdjustNightStockCommand(id, productId, request.Change),
+            cancellationToken);
+
+        if (!result.IsSuccess) return Rejected(result.Error!);
+
+        NightStockFigures figures = result.Value;
+
+        return TypedResults.Ok(new NightStockFiguresResponse(figures.ProductId, figures.Loaded, figures.Sold, figures.Remaining));
     }
 
     internal static async Task<IResult> ListAsync(INightQueries nights, CancellationToken cancellationToken)
@@ -111,13 +171,18 @@ internal static class NightsEndpoints
     }
 
     /// <summary>
-    /// Overlapping argues with the venue's other nights, so it is a conflict;
-    /// anything the table does not name is malformed input.
+    /// Overlapping argues with the venue's other nights, and a stock that
+    /// moved or whose night before is not over argues with the state of the
+    /// venue, so those are conflicts; anything the table does not name is
+    /// malformed input.
     /// </summary>
     private static readonly Dictionary<string, int> StatusByErrorCode = new(StringComparer.Ordinal)
     {
         [NightErrors.NotFound.Code] = StatusCodes.Status404NotFound,
+        [NightErrors.StockNotFound.Code] = StatusCodes.Status404NotFound,
         [NightErrors.Overlaps.Code] = StatusCodes.Status409Conflict,
+        [NightErrors.PreviousNightNotOver.Code] = StatusCodes.Status409Conflict,
+        [NightErrors.StockMoved.Code] = StatusCodes.Status409Conflict,
     };
 
     private static readonly Dictionary<int, string> TitleByStatus = new()
