@@ -7,5 +7,6 @@ internal static class NightHandlers
 {
     public static IServiceCollection AddNightHandlers(this IServiceCollection services) => services
         .AddScoped<CreateNightHandler>()
-        .AddScoped<UpdateNightHandler>();
+        .AddScoped<UpdateNightHandler>()
+        .AddScoped<OpenNightStockHandler>();
 }

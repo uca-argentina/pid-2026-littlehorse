@@ -35,4 +35,11 @@ public static class NightErrors
     /// </summary>
     public static readonly Error CrewMemberNotFound =
         new("night.crew_member_not_found", "One of the chosen accounts is not part of this venue.");
+
+    /// <summary>
+    /// US-37: a night starts with what the one before it left, so its stock
+    /// does not exist until that one is over.
+    /// </summary>
+    public static readonly Error PreviousNightNotOver =
+        new("night_stock.previous_night_not_over", "The stock of this night is available once the night before it is over.");
 }
