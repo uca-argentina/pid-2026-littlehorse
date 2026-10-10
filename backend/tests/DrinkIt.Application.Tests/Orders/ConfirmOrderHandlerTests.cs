@@ -431,8 +431,8 @@ public class ConfirmOrderHandlerTests
     private static NightStocksInMemory StocksOf(Catalog menu) =>
         new(
             new NightForStock(TheNight, Tonight.AddHours(-1), PreviousEndedAt: null),
-            new StockedProduct(menu.Gin.Id, menu.Gin.Name, menu.Gin.Stock),
-            new StockedProduct(menu.Fernet.Id, menu.Fernet.Name, menu.Fernet.Stock));
+            new StockedProduct(menu.Gin.Id, menu.Gin.Name, menu.Gin.InitialStock),
+            new StockedProduct(menu.Fernet.Id, menu.Fernet.Name, menu.Fernet.InitialStock));
 
     /// <summary>
     /// A method that settles the money and stops, without sending the order

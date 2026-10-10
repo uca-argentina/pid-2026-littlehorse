@@ -24,7 +24,7 @@ internal sealed class NightStocksForAnyNight(params Product[] products) : INight
 
     public Task<IReadOnlyList<StockedProduct>> ListActiveProductsAsync(CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<StockedProduct>>(
-            [.. products.Select(product => new StockedProduct(product.Id, product.Name, product.Stock))]);
+            [.. products.Select(product => new StockedProduct(product.Id, product.Name, product.InitialStock))]);
 
     public Task<IReadOnlyDictionary<Guid, int>> CarriedOverAsync(Guid nightId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyDictionary<Guid, int>>(new Dictionary<Guid, int>());

@@ -45,7 +45,7 @@ internal sealed class NightStockRepository(DrinkItDbContext context) : INightSto
             .AsNoTracking()
             .Where(product => product.IsActive)
             .OrderBy(product => product.Name)
-            .Select(product => new StockedProduct(product.Id, product.Name, product.Stock))
+            .Select(product => new StockedProduct(product.Id, product.Name, product.InitialStock))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyDictionary<Guid, int>> CarriedOverAsync(Guid nightId, CancellationToken cancellationToken)

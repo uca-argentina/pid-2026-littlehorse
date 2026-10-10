@@ -108,8 +108,6 @@ public class UploadProductImageHandlerTests
     {
         public sealed class Products(Product stored) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
-                Task.FromResult(true);
 
             public bool Saved { get; private set; }
 

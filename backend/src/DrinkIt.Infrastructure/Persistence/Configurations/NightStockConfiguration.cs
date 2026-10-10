@@ -18,7 +18,7 @@ internal sealed class NightStockConfiguration : IEntityTypeConfiguration<NightSt
 
         builder.Property(stock => stock.NightId).IsRequired();
         builder.Property(stock => stock.ProductId).IsRequired();
-        // Not concurrency tokens, for the reason Product.Stock never was: a
+        // Not concurrency tokens, for the reason the product's stock never was: a
         // sale moves Remaining with one relative statement in OrderRepository,
         // and a token would put it in the WHERE of every edit of the row.
         builder.Property(stock => stock.Loaded).IsRequired();

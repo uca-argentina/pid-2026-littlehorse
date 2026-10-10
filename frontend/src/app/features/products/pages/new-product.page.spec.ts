@@ -20,10 +20,8 @@ const created: Product = {
   description: null,
   imageUrl: null,
   price: 4500,
-  stock: 20,
   categoryId: 'category-drinks',
   isAvailable: true,
-  isSoldOut: false,
   isActive: true,
 
   audit: noAudit,
@@ -140,7 +138,7 @@ describe('NewProductPage', () => {
       imageUrl: null,
       categoryId: 'category-drinks',
       price: 4500,
-      stock: 20,
+      initialStock: 20,
     });
   });
 
@@ -207,7 +205,7 @@ describe('NewProductPage', () => {
     expect(field(/precio/i).getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('says the stock has to be a whole number of zero or more', async () => {
+  it('says the starting stock has to be a whole number of zero or more', async () => {
     const { rendered } = await openScreen();
 
     type(/^nombre/i, 'Gin Tonic');
@@ -220,7 +218,7 @@ describe('NewProductPage', () => {
   });
 
   // Stock at zero is allowed: a product can be loaded before the delivery
-  // arrives, and it shows as sold out until then.
+  // arrives, and the night starts without any of it.
   it('accepts a stock of zero', async () => {
     const { create } = await openScreen();
 
@@ -230,7 +228,7 @@ describe('NewProductPage', () => {
     fireEvent.click(category(/tragos/i));
     save();
 
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ stock: 0 }));
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ initialStock: 0 }));
   });
 
   it('clears the message of the field that was fixed and keeps the other', async () => {
@@ -410,7 +408,7 @@ describe('NewProductPage', () => {
       imageUrl: null,
       categoryId: 'category-drinks',
       price: 4500,
-      stock: 20,
+      initialStock: 20,
     });
   });
 

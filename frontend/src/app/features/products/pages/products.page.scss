@@ -188,21 +188,6 @@
   white-space: nowrap;
 }
 
-.stock {
-  min-width: 110px;
-  color: var(--dk-text-muted);
-  font-size: 15.5px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-// Sold out is the one state the administrator has to catch tonight, so it is
-// the one that gets colour — and a word, for whoever cannot see the colour.
-.stock-out {
-  color: var(--dk-danger);
-  font-weight: 700;
-}
-
 .chip {
   padding: 6px 13px;
   border: 1.5px solid var(--dk-border);
@@ -299,8 +284,8 @@
   background: var(--dk-text-faint);
 }
 
-// Trabado y no sólo apagado: el stock en cero lo apaga y sólo cargar stock lo
-// devuelve. Se atenúa para que se lea como "no se puede", no como "está en no".
+// Trabado y no sólo apagado: un producto dado de baja no tiene noche en la que
+// servirse. Se atenúa para que se lea como "no se puede", no como "está en no".
 .sw:disabled {
   cursor: default;
   opacity: 0.55;
@@ -310,14 +295,6 @@
   min-width: 96px;
   color: var(--dk-text-muted);
   font-size: 13.5px;
-}
-
-// El único lugar que avisa que se acabó, así que lleva el peso que antes tenía
-// la columna de stock: es lo que hay que ver de una pasada a las tres de la
-// mañana.
-.swl-out {
-  color: var(--dk-danger);
-  font-weight: 700;
 }
 
 .swl-off {

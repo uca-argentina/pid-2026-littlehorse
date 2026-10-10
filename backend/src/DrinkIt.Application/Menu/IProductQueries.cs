@@ -9,10 +9,8 @@ public sealed record ProductListItem(
     string? Description,
     string? ImageUrl,
     decimal Price,
-    int Stock,
     Guid CategoryId,
     bool IsAvailable,
-    bool IsSoldOut,
     bool IsActive,
     AuditInfo Audit);
 

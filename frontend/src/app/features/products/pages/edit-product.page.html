@@ -9,7 +9,6 @@
       submitLabel="Guardar cambios"
       sendingLabel="Guardando"
       [isSending]="store.isBusy()"
-      [stockAdjusted]="store.stockAdjustments()"
       (submitted)="save($event)"
     >
       @if (store.status() === 'nameTaken') {
@@ -21,13 +20,6 @@
       @if (store.status() === 'unreachable') {
         <p class="note note-bad" role="alert">
           No pudimos guardarlo. Fijate la señal y probá de nuevo.
-        </p>
-      }
-
-      @if (store.status() === 'stockMoved') {
-        <p class="note note-bad" role="alert">
-          Se vendió mientras tanto y ahora hay {{ product.stock }}: no alcanza para restar lo que
-          pusiste. El stock no se tocó; revisá el ajuste y guardá de nuevo.
         </p>
       }
 

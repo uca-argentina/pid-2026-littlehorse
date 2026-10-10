@@ -14,7 +14,7 @@ namespace DrinkIt.Domain.Nights;
 /// three cannot disagree. A sale and a cancellation move only
 /// <see cref="Remaining"/>, and the repository does it with one relative
 /// statement rather than by writing back a number read seconds ago — the same
-/// reason <c>Product.Stock</c> was never a concurrency token.
+/// reason the product's stock never was one.
 /// </remarks>
 public sealed class NightStock : AuditStamps, IBelongsToVenue
 {

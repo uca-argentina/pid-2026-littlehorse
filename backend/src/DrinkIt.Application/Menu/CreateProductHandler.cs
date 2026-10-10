@@ -8,7 +8,7 @@ public sealed record CreateProductCommand(
     string? Description,
     string? ImageUrl,
     decimal Price,
-    int Stock,
+    int InitialStock,
     Guid CategoryId);
 
 /// <summary>
@@ -46,7 +46,7 @@ public sealed class CreateProductHandler(
             command.Description,
             command.ImageUrl,
             command.Price,
-            command.Stock,
+            command.InitialStock,
             command.CategoryId);
 
         await products.AddAsync(product, cancellationToken);

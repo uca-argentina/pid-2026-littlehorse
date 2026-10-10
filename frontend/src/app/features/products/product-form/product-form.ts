@@ -1,17 +1,13 @@
 import { httpResource } from '@angular/common/http';
-import type { ElementRef } from '@angular/core';
 import {
   Component,
   DestroyRef,
-  Injector,
-  afterNextRender,
   computed,
   effect,
   inject,
   input,
   output,
   signal,
-  viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
@@ -34,10 +30,7 @@ function positive(control: AbstractControl): ValidationErrors | null {
   return typeof control.value === 'number' && control.value > 0 ? null : { positive: true };
 }
 
-type Field = 'name' | 'description' | 'price' | 'stock' | 'categoryId';
-
-/** Units that arrived, or the real total when it was loaded wrong. */
-type StockMode = 'add' | 'set';
+type Field = 'name' | 'description' | 'price' | 'initialStock' | 'categoryId';
 
 /** What the form hands over once it is valid, already trimmed. */
 export interface ProductFormValue {
@@ -46,8 +39,8 @@ export interface ProductFormValue {
   /** US-14: asked at creation, and correctable from the same field afterwards. */
   readonly categoryId: string;
   readonly price: number;
-  /** For a new product, how many there are. When correcting one, how much it moves; 0 is none. */
-  readonly stock: number;
+  /** Only asked for when creating: where the first night that sells it starts from. */
+  readonly initialStock: number;
   readonly photo: File | null;
   readonly isAvailable: boolean;
 }
@@ -80,26 +73,9 @@ export class ProductForm {
   /** The product being corrected. Without one, the form creates a new product. */
   readonly product = input<Product | undefined>(undefined);
 
-  /**
-   * How many adjustments already reached the API. Saving again after a
-   * failure further down must not send them twice: they move the stock, they
-   * do not set it.
-   */
-  readonly stockAdjusted = input(0);
-
   readonly submitted = output<ProductFormValue>();
 
   protected readonly isEditing = computed(() => this.product() !== undefined);
-
-  /**
-   * When correcting, the stock is shown and not offered as a field: a total
-   * typed over it would erase the sales made while the screen was open.
-   * "Ajustar" opens it, on the units that arrived or on the real total.
-   * Declared before the form: its stock rule reads the mode as it is built.
-   */
-  protected readonly isAdjusting = signal(false);
-
-  protected readonly stockMode = signal<StockMode>('add');
 
   protected readonly form = new FormGroup({
     name: new FormControl('', {
@@ -113,8 +89,10 @@ export class ProductForm {
     // Nothing typed for them: a price of zero left in place by accident would
     // pass straight into the menu.
     price: new FormControl<number | null>(null, { validators: [Validators.required, positive] }),
-    stock: new FormControl<number | null>(null, {
-      validators: [(control) => this.stockRule(control)],
+    // Asked for only at creation. Once a product exists, how many there are is
+    // the night's business and not the product's.
+    initialStock: new FormControl<number | null>(null, {
+      validators: [(control) => this.initialStockRule(control)],
     }),
     // US-14: required, at creation and while correcting one alike.
     categoryId: new FormControl<string | null>(null, { validators: [Validators.required] }),
@@ -159,50 +137,9 @@ export class ProductForm {
     this.errorOf('categoryId', 'Elegí una categoría.'),
   );
 
-  protected readonly stockError = computed(() => {
-    if (!this.isEditing())
-      return this.errorOf('stock', 'El stock tiene que ser un número entero, cero o más.');
-
-    // Checked while typing, unlike the rest: a wrong number next to the total
-    // it would lead to reads as accepted until the save is refused.
-    this.typed();
-    const typed = this.form.controls.stock;
-
-    if (this.isSending() || !(typed.dirty || this.attempted())) return null;
-    if (!typed.invalid) return null;
-
-    return this.stockMode() === 'add'
-      ? 'Poné un número entero mayor a cero.'
-      : 'El stock real tiene que ser un número entero, cero o más.';
-  });
-
-  /** A whole number is in the field, right or wrong. */
-  protected readonly hasStockTyped = computed(() => Number.isInteger(this.typed().stock));
-
-  /**
-   * How much the stock moves, whichever way it was typed: what arrived, or the
-   * real total minus what there is. 0 while the field is empty or wrong. This,
-   * and never the total, is what gets sent.
-   */
-  private readonly stockChange = computed(() => {
-    const typed = this.typed().stock;
-    const now = this.product()?.stock ?? 0;
-
-    if (typeof typed !== 'number' || !Number.isInteger(typed)) return 0;
-    if (this.stockMode() === 'add') return typed > 0 ? typed : 0;
-
-    return typed >= 0 ? typed - now : 0;
-  });
-
-  /** The total the product ends up with, shown before saving. */
-  protected readonly stockAfter = computed(() => (this.product()?.stock ?? 0) + this.stockChange());
-
-  /** "−180" or "+12", as the correction shows it. */
-  protected readonly stockDifference = computed(() => {
-    const change = this.stockChange();
-
-    return change < 0 ? `−${-change}` : `+${change}`;
-  });
+  protected readonly initialStockError = computed(() =>
+    this.errorOf('initialStock', 'El stock inicial tiene que ser un número entero, cero o más.'),
+  );
 
   /**
    * The photo lives outside the reactive form: a file input cannot be bound
@@ -237,21 +174,6 @@ export class ProductForm {
 
   protected readonly isAvailable = signal(true);
 
-  private readonly stockField = viewChild<ElementRef<HTMLInputElement>>('stockField');
-
-  private readonly injector = inject(Injector);
-
-  /**
-   * Running out locks the switch, same as in the listing: the domain refuses
-   * to turn on a product with nothing to sell. An adjustment that leaves some
-   * unlocks it, because the stock is saved before the switch.
-   */
-  protected readonly canSwitch = computed(() => {
-    const product = this.product();
-
-    return product === undefined || !product.isSoldOut || this.stockAfter() > 0;
-  });
-
   constructor() {
     // Filled once, when the product arrives, and never again: refilling on a
     // later answer from the API would wipe what is being typed.
@@ -267,14 +189,10 @@ export class ProductForm {
         name: product.name,
         description: product.description ?? '',
         price: product.price,
-        stock: null,
+        initialStock: null,
         categoryId: product.categoryId,
       });
       this.isAvailable.set(product.isAvailable);
-    });
-
-    effect(() => {
-      if (this.stockAdjusted() > 0) this.closeAdjust();
     });
 
     // Reactive forms are not signal-aware, so enabling and disabling is driven
@@ -288,18 +206,15 @@ export class ProductForm {
   }
 
   /**
-   * A new product needs a stock, zero included. A correction does not: empty
-   * leaves the stock alone. What arrived has to be one or more; a real total,
-   * zero or more.
+   * A new product needs its starting stock, zero included. A correction does
+   * not have the field at all: what a night has is set on the night.
    */
-  private stockRule(control: AbstractControl): ValidationErrors | null {
+  private initialStockRule(control: AbstractControl): ValidationErrors | null {
+    if (this.isEditing()) return null;
+
     const typed: unknown = control.value;
 
-    if (this.isEditing() && typed === null) return null;
-
-    const least = this.isEditing() && this.stockMode() === 'add' ? 1 : 0;
-
-    return Number.isInteger(typed) && (typed as number) >= least ? null : { stock: true };
+    return Number.isInteger(typed) && (typed as number) >= 0 ? null : { initialStock: true };
   }
 
   /**
@@ -335,26 +250,6 @@ export class ProductForm {
     this.setPhoto(event.dataTransfer?.files[0] ?? null);
   }
 
-  protected openAdjust(): void {
-    this.isAdjusting.set(true);
-    this.chooseStockMode('add');
-  }
-
-  /** A number typed for one mode means something else in the other, so it goes. */
-  protected chooseStockMode(mode: StockMode): void {
-    this.stockMode.set(mode);
-    this.form.controls.stock.reset(null);
-
-    // The field only exists once it is drawn; one tap should be enough to
-    // start typing on a tablet.
-    afterNextRender(() => this.stockField()?.nativeElement.focus(), { injector: this.injector });
-  }
-
-  protected closeAdjust(): void {
-    this.isAdjusting.set(false);
-    this.form.controls.stock.reset(null);
-  }
-
   protected removePhoto(): void {
     this.setPhoto(null);
   }
@@ -382,12 +277,9 @@ export class ProductForm {
   protected submit(): void {
     this.attempted.set(true);
 
-    // The stock rule reads the mode, which may have arrived after the value.
-    this.form.controls.stock.updateValueAndValidity();
-
     if (this.form.invalid || this.photoIsInvalid() || this.isSending()) return;
 
-    const { name, description, price, stock, categoryId } = this.form.getRawValue();
+    const { name, description, price, initialStock, categoryId } = this.form.getRawValue();
 
     // Validators.required already rejected these above; this is only what the
     // compiler needs to see.
@@ -398,10 +290,9 @@ export class ProductForm {
       description: description.trim() === '' ? null : description.trim(),
       categoryId,
       price,
-      stock: this.isEditing() ? this.stockChange() : (stock ?? 0),
+      initialStock: initialStock ?? 0,
       photo: this.photo(),
-      // A switch that could not be moved keeps what the product already had.
-      isAvailable: this.canSwitch() ? this.isAvailable() : (this.product()?.isAvailable ?? true),
+      isAvailable: this.isAvailable(),
     });
   }
 }

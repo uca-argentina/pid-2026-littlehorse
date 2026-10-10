@@ -180,7 +180,7 @@ internal sealed partial class OrderRepository(
             await context.Products
                 .Where(product => product.Id == item.ProductId)
                 .ExecuteUpdateAsync(
-                    row => row.SetProperty(product => product.Stock, product => product.Stock + quantity),
+                    row => row.SetProperty(product => product.InitialStock, product => product.InitialStock + quantity),
                     cancellationToken);
         }
 

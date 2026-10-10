@@ -36,8 +36,8 @@
           <button
             class="pill"
             type="button"
-            [class.pill-on]="stockFilter() === pill.filter"
-            [attr.aria-pressed]="stockFilter() === pill.filter"
+            [class.pill-on]="stateFilter() === pill.filter"
+            [attr.aria-pressed]="stateFilter() === pill.filter"
             (click)="narrowTo(pill.filter)"
           >
             {{ pill.name }} · {{ pill.count }}
@@ -112,15 +112,9 @@
             </span>
             <span class="price">{{ row.price }}</span>
             <!--
-              Cuántos quedan y nada más. Que se haya acabado lo dice el rótulo
-              del interruptor, una sola vez: repetirlo acá y en un chip hacía
-              que la misma fila dijera "sin stock" tres veces.
-            -->
-            <span class="stock">{{ row.stock }} en stock</span>
-            <!--
               "Disponible esta noche" del wireframe: un interruptor y, al lado,
-              por qué está donde está. Ese rótulo es el único lugar de la fila
-              que dice que un trago se acabó o que no se puede servir.
+              por qué está donde está. Cuántos quedan no se ve acá: eso es de la
+              noche, y vive en la ficha de cada noche.
             -->
             <span class="switch-cell">
               <button
@@ -139,7 +133,6 @@
               <span
                 class="swl"
                 [id]="'switch-label-' + row.id"
-                [class.swl-out]="row.isSoldOut"
                 [class.swl-off]="row.state === 'unavailable'"
                 >{{ row.switchLabel }}</span
               >
