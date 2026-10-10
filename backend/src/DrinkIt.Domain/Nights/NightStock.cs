@@ -16,7 +16,7 @@ namespace DrinkIt.Domain.Nights;
 /// statement rather than by writing back a number read seconds ago — the same
 /// reason <c>Product.Stock</c> was never a concurrency token.
 /// </remarks>
-public sealed class NightStock : IBelongsToVenue
+public sealed class NightStock : AuditStamps, IBelongsToVenue
 {
     public static class ErrorCodes
     {
@@ -27,14 +27,14 @@ public sealed class NightStock : IBelongsToVenue
         public const string StockChangeZero = "night_stock.stock_change_zero";
     }
 
-    private NightStock(Guid id, Guid venueId, Guid nightId, Guid productId, int carriedOver)
+    private NightStock(Guid id, Guid venueId, Guid nightId, Guid productId, int loaded, int remaining)
     {
         Id = id;
         VenueId = venueId;
         NightId = nightId;
         ProductId = productId;
-        Loaded = carriedOver;
-        Remaining = carriedOver;
+        Loaded = loaded;
+        Remaining = remaining;
     }
 
     public Guid Id { get; }
@@ -66,7 +66,7 @@ public sealed class NightStock : IBelongsToVenue
         if (productId == Guid.Empty) throw new DomainException(ErrorCodes.ProductRequired, "Night stock must be of a product.");
         if (carriedOver < 0) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
 
-        return new NightStock(Guid.CreateVersion7(), venueId, nightId, productId, carriedOver);
+        return new NightStock(Guid.CreateVersion7(), venueId, nightId, productId, carriedOver, carriedOver);
     }
 
     /// <summary>

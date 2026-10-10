@@ -23,6 +23,8 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
 
     public DbSet<Night> Nights => Set<Night>();
 
+    public DbSet<NightStock> NightStocks => Set<NightStock>();
+
     /// <summary>Where each venue's order codes are up to. Not a domain aggregate.</summary>
     internal DbSet<OrderCodeCounter> OrderCodeCounters => Set<OrderCodeCounter>();
 
@@ -44,6 +46,7 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
         modelBuilder.Entity<Category>().HasQueryFilter(category => category.VenueId == CurrentVenueId);
         modelBuilder.Entity<Order>().HasQueryFilter(order => order.VenueId == CurrentVenueId);
         modelBuilder.Entity<Night>().HasQueryFilter(night => night.VenueId == CurrentVenueId);
+        modelBuilder.Entity<NightStock>().HasQueryFilter(stock => stock.VenueId == CurrentVenueId);
 
         base.OnModelCreating(modelBuilder);
     }
