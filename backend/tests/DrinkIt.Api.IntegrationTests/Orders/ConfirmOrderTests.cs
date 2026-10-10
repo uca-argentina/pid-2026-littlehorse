@@ -1,5 +1,6 @@
 using DrinkIt.Api.IntegrationTests.Persistence;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
@@ -114,7 +115,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         Assert.Equal(OrderStatus.Queued, stored.Status);
         Assert.Equal(Tonight, stored.PaidAt);
         Assert.Equal("Gin Tonic", stored.Items.Single().ProductName);
-        Assert.Equal(17, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+        Assert.Equal(17, await RemainingOf(check, gin));
     }
 
     // Criterion 6 against a real database: the same key twice is one order and
@@ -131,7 +132,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
 
         Assert.Equal(first.Value.Code, second.Value.Code);
         Assert.Equal(1, await check.Orders.CountAsync());
-        Assert.Equal(18, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+        Assert.Equal(18, await RemainingOf(check, gin));
     }
 
     /// <summary>
@@ -192,7 +193,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
 
         Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
         Assert.Equal(0, await check.Orders.CountAsync());
-        Assert.Equal(1, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+        Assert.Equal(1, await RemainingOf(check, gin));
     }
 
     /// <summary>
@@ -218,7 +219,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
 
         Assert.Equal(1, attempts.Count(attempt => attempt.IsSuccess));
         Assert.Equal(1, await check.Orders.CountAsync());
-        Assert.Equal(0, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+        Assert.Equal(0, await RemainingOf(check, gin));
     }
 
     /// <summary>
@@ -240,7 +241,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         Assert.All(attempts, attempt => Assert.True(attempt.IsSuccess));
         Assert.Equal(attempts[0].Value.Code, attempts[1].Value.Code);
         Assert.Equal(1, await check.Orders.CountAsync());
-        Assert.Equal(18, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+        Assert.Equal(18, await RemainingOf(check, gin));
     }
 
     // US-15: confirming an order is what raises OrderQueued, and the KDS board
@@ -338,12 +339,20 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
             [new DigitalPaymentStrategy(new FixedClock(Tonight))],
             current,
             new UnderwayNightLookup(context),
+            new OpenNightStockHandler(new NightStockRepository(context), current, new FixedClock(Tonight)),
             new FixedClock(Tonight));
 
         return await handler.HandleAsync(
             new ConfirmOrderCommand(name, PaymentMethod.Digital, key, lines),
             cancellationToken);
     }
+
+    /// <summary>What the night has left of a drink (US-37): the shelf a sale takes from.</summary>
+    private static Task<int> RemainingOf(DrinkItDbContext check, Product product) =>
+        check.NightStocks
+            .Where(stock => stock.ProductId == product.Id)
+            .Select(stock => stock.Remaining)
+            .SingleAsync();
 
     /// <summary>A venue with one drink, and by default a night on around <see cref="Tonight"/>.</summary>
     private async Task<(Venue Venue, Product Product)> AVenueSelling(string drink, int stock, bool withNight = true)

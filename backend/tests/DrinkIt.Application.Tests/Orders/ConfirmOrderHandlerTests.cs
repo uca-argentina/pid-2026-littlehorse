@@ -1,6 +1,7 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Tests.Nights;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 
@@ -22,6 +23,39 @@ public class ConfirmOrderHandlerTests
 
     /// <summary>On by default: most of what is tested here happens during a night.</summary>
     private readonly TonightIs _nights = new(TheNight);
+
+    /// <summary>What the night has of each drink (US-37). Opened from the menu's own numbers unless a test says otherwise.</summary>
+    private readonly NightStocksInMemory _stocks;
+
+    public ConfirmOrderHandlerTests()
+    {
+        _stocks = StocksOf(_menu);
+    }
+
+    // US-37, criterion 2: what can be sold is what the night has, not the
+    // number written on the product.
+    [Fact]
+    public async Task HandleAsync_WhenTheNightHasLessThanTheProductHad_RejectsTheOrderAndNamesTheDrink()
+    {
+        _stocks.CarriedOver[_menu.Gin.Id] = 1;
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Equal("Gin Tonic", result.Error.Subject);
+        Assert.Null(_orders.Added);
+    }
+
+    // Nobody opens the stock by hand for an order to go through: the first
+    // order of the night is what makes it exist.
+    [Fact]
+    public async Task HandleAsync_WhenTheNightsStockWasNeverOpened_OpensItBeforeSellingFromIt()
+    {
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(2, _stocks.Added.Count);
+        Assert.All(_stocks.Added, row => Assert.Equal(TheNight, row.NightId));
+    }
 
     // US-35, criterion 2: the order belongs to the night it was placed in.
     [Fact]
@@ -377,6 +411,7 @@ public class ConfirmOrderHandlerTests
             [payment],
             new TheVenueIsFixed(TheVenue),
             _nights,
+            OpeningFrom(_stocks),
             new FixedClock(Tonight));
 
     private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null) =>
@@ -386,7 +421,18 @@ public class ConfirmOrderHandlerTests
             [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
             new TheVenueIsFixed(TheVenue),
             _nights,
+            OpeningFrom(ReferenceEquals(menu, _menu) ? _stocks : StocksOf(menu)),
             new FixedClock(Tonight));
+
+    private static OpenNightStockHandler OpeningFrom(NightStocksInMemory stocks) =>
+        new(stocks, new TheVenueIsFixed(TheVenue), new FixedClock(Tonight));
+
+    /// <summary>The night's stock over a menu: the first night of the venue, so every drink starts with its own number.</summary>
+    private static NightStocksInMemory StocksOf(Catalog menu) =>
+        new(
+            new NightForStock(TheNight, Tonight.AddHours(-1), PreviousEndedAt: null),
+            new StockedProduct(menu.Gin.Id, menu.Gin.Name, menu.Gin.Stock),
+            new StockedProduct(menu.Fernet.Id, menu.Fernet.Name, menu.Fernet.Stock));
 
     /// <summary>
     /// A method that settles the money and stops, without sending the order

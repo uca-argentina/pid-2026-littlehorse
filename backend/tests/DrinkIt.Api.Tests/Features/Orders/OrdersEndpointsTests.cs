@@ -7,6 +7,7 @@ using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Venues;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Orders;
 using Microsoft.AspNetCore.Http;
 
@@ -209,6 +210,7 @@ public class OrdersEndpointsTests
         [new DigitalPaymentStrategy(TimeProvider.System), new CashPaymentStrategy()],
         new Fake.Venue(),
         new Fake.Tonight(nightIsOn),
+        new OpenNightStockHandler(new Fake.NightStocks(_gin), new Fake.Venue(), TimeProvider.System),
         TimeProvider.System);
 
     private static class Fake
@@ -222,6 +224,32 @@ public class OrdersEndpointsTests
         {
             public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken) =>
                 Task.FromResult(isOn ? Guid.CreateVersion7() : (Guid?)null);
+        }
+
+        /// <summary>Whatever night is asked about is the venue's first, and every product starts with its own number.</summary>
+        public sealed class NightStocks(params Product[] products) : INightStockRepository
+        {
+            private readonly List<NightStock> _rows = [];
+
+            public Task<NightForStock?> FindNightAsync(Guid nightId, CancellationToken cancellationToken) =>
+                Task.FromResult<NightForStock?>(new(nightId, DateTimeOffset.UtcNow.AddHours(-1), PreviousEndedAt: null));
+
+            public Task<IReadOnlyList<NightStock>> ListAsync(Guid nightId, CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<NightStock>>([.. _rows.Where(row => row.NightId == nightId)]);
+
+            public Task<IReadOnlyList<StockedProduct>> ListActiveProductsAsync(CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<StockedProduct>>(
+                    [.. products.Select(product => new StockedProduct(product.Id, product.Name, product.Stock))]);
+
+            public Task<IReadOnlyDictionary<Guid, int>> CarriedOverAsync(Guid nightId, CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyDictionary<Guid, int>>(new Dictionary<Guid, int>());
+
+            public Task AddRangeAsync(IReadOnlyCollection<NightStock> rows, CancellationToken cancellationToken)
+            {
+                _rows.AddRange(rows);
+
+                return Task.CompletedTask;
+            }
         }
 
         public sealed class Sequence : IOrderCodeSequence

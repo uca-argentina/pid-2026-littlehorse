@@ -48,6 +48,7 @@ public sealed class ConfirmOrderHandler(
     IEnumerable<IPaymentStrategy> paymentStrategies,
     ICurrentVenue currentVenue,
     IUnderwayNightLookup nights,
+    OpenNightStockHandler openStock,
     TimeProvider clock)
 {
     public static readonly Error Empty =
@@ -158,7 +159,14 @@ public sealed class ConfirmOrderHandler(
     {
         IReadOnlyList<Product> menu = await products.GetForOrderingAsync(wanted, cancellationToken);
 
-        Result<List<NewOrderItem>> items = Price(command.Lines, menu);
+        // What a night can sell is what the night has, opened by the first
+        // order that needs it. Read again on every attempt, like the menu: a
+        // retry after the stock moved has to price against what is there now.
+        Result<IReadOnlyList<NightStockLine>> stock = await openStock.HandleAsync(night, cancellationToken);
+
+        if (!stock.IsSuccess) return stock.Error!;
+
+        Result<List<NewOrderItem>> items = Price(command.Lines, menu, stock.Value);
 
         if (!items.IsSuccess) return items.Error!;
 
@@ -191,7 +199,8 @@ public sealed class ConfirmOrderHandler(
     /// </remarks>
     private static Result<List<NewOrderItem>> Price(
         IReadOnlyCollection<OrderLineRequest> lines,
-        IReadOnlyList<Product> menu)
+        IReadOnlyList<Product> menu,
+        IReadOnlyList<NightStockLine> stock)
     {
         List<NewOrderItem> items = [];
 
@@ -203,7 +212,10 @@ public sealed class ConfirmOrderHandler(
             // all: the customer is told the same thing, because from where they
             // are standing it is the same thing.
             if (product is not { IsActive: true, IsAvailable: true }) return NotOnTheMenuFor(product);
-            if (product.Stock < line.Quantity) return OutOfStock(product);
+            // No row means the night never had it: nothing to sell.
+            int remaining = stock.FirstOrDefault(row => row.ProductId == product.Id)?.Remaining ?? 0;
+
+            if (remaining < line.Quantity) return OutOfStock(product);
 
             items.Add(new NewOrderItem(product.Id, product.Name, product.Price, line.Quantity, line.Note));
         }
