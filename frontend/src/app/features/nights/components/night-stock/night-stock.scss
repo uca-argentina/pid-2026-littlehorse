@@ -1,0 +1,163 @@
+// A night's stock, read product by product. Same skin as the rest of the
+// night's screen: it lives under the form, or under the facts of a night that
+// ended.
+
+.stock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.failed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.retry {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface-raised);
+}
+
+.name {
+  font-size: 17px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.figures {
+  display: flex;
+  gap: var(--dk-space-5);
+  margin: 0;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.figure-name {
+  color: var(--dk-text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.figure-value {
+  margin: 0;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+// Running out is the one figure worth catching at three in the morning, so it
+// is the only one with colour — and a word, for whoever cannot see it.
+.figure-out {
+  color: var(--dk-danger);
+}
+
+.move {
+  display: flex;
+  gap: var(--dk-space-3);
+  align-items: stretch;
+}
+
+.units {
+  flex: 1;
+  min-width: 0;
+  min-height: 54px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.units[aria-invalid='true'] {
+  border-color: var(--dk-danger);
+}
+
+.action {
+  flex-shrink: 0;
+  min-height: 54px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.action:disabled,
+.units:disabled {
+  opacity: 0.6;
+}
+
+.action:hover:not(:disabled) {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}
+
+.bad {
+  margin: 0;
+  color: var(--dk-danger);
+  font-size: 14px;
+}

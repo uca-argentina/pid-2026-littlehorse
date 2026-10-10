@@ -180,14 +180,44 @@ una KDS.
 - **Depende de** US-35.
 - **No se parte por barra** (decidido el 2026-10-06): todas las KDS sirven del mismo stock. Lo
   que cambia es que el stock **es de la noche**, no del producto suelto.
-- **El criterio 2 ya existe** para el stock único: hoy confirmar descuenta `Product.Stock` y
-  rechaza si no alcanza (`OrderErrors.StockMoved` cubre la carrera por la última unidad).
+- **El criterio 2 ya existía** para el stock único: confirmar descontaba `Product.Stock` y
+  rechazaba si no alcanzaba (`OrderErrors.StockMoved` cubre la carrera por la última unidad).
   Cambia de dónde se descuenta, no la regla. Cancelar (US-23) devuelve a la noche del pedido.
 - **El ajuste suma o resta, no fija un total**, como `AdjustStock` hoy: así no pisa una venta
   hecha mientras la pantalla estaba abierta.
 - **Migración:** el `Product.Stock` de hoy pasa a ser el de la primera noche que se arme.
 - **Diseño: no está dibujado.** Una lista de productos dentro de la ficha de la noche, con el
   ajuste en cada fila. El campo de stock de `AdminProductoEdit` se va.
+
+**Construida el 2026-10-10.** Decidido ese día:
+
+- **El stock es de la noche.** Una fila por producto y noche (`NightStock`): lo **cargado**, lo
+  que **queda**, y lo **vendido** se deriva de las dos, así que no pueden contradecirse. Vender y
+  cancelar mueven sólo lo que queda, con la misma sentencia atómica de antes.
+- **Arranca con lo que sobró de la noche anterior** (la última anterior que tuvo ese producto), o
+  con el número con que se creó el producto si ninguna lo tuvo. **No se arma mientras la noche
+  anterior no terminó**: hasta entonces no se sabe qué va a dejar, y la pantalla lo dice. El fin
+  de una noche es exclusivo, así que a la hora exacta ya cuenta como terminada.
+- **Se abre sola**, la primera vez que alguien la necesita: el administrador al mirarla, el
+  primer pedido de la noche o el primer celular que abre la carta. Nadie la arma a mano antes
+  de vender.
+- **`Product.Stock` pasó a ser `InitialStock`** (la columna conserva el nombre): sólo dice con
+  cuántos arranca el producto la primera noche en que se vende, y ninguna venta lo mueve. El alta
+  lo pide como "Stock inicial"; la edición ya no tiene stock.
+- **La carta** decide "agotado" con lo que tiene la noche en curso. **Sin noche en curso no marca
+  nada como agotado**: no hay un stock del cual quedarse sin nada, y la pantalla ya avisa que el
+  local no toma pedidos.
+- **Cancelar devuelve a la noche del pedido**, no a la que esté en curso. Un pedido anterior a las
+  noches no tiene ninguna, y sus tragos vuelven al producto, de donde salieron.
+- **Se retiró** el ajuste de stock del producto (`adjust-stock`), la regla de que un producto
+  agotado no se puede volver a poner a la venta, y las columnas de stock y "sin stock" del
+  listado de productos.
+- **Migración de datos:** a cada noche que ya existía se le arma su stock a partir del
+  `Product.Stock` de ese momento, que ya venía descontado de todas las ventas, de modo que la
+  cadena de noches termina justo en ese número. Lo vendido sale de los pedidos de cada noche, sin
+  contar los cancelados.
+- **Hecho:** criterios 1, 2 y 3. El 3 (cargado, vendido y quedó de una noche terminada) se lee en
+  la misma lista de la ficha, sin controles para moverlo.
 
 ### US-36 · Distribuir los pedidos entre las KDS
 
