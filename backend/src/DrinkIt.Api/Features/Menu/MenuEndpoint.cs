@@ -65,6 +65,7 @@ internal static class MenuEndpoint
         IProductQueries products,
         ICategoryQueries categories,
         IUnderwayNightLookup nights,
+        OpenNightStockHandler openStock,
         TimeProvider clock,
         CancellationToken cancellationToken)
     {
@@ -73,9 +74,16 @@ internal static class MenuEndpoint
         // finished setting up, and they read nothing alike on a phone.
         if (venue.Identity is null) return NoSuchVenue(venueSlug);
 
-        IReadOnlyList<MenuItem> menu = await products.ListForMenuAsync(cancellationToken);
-        IReadOnlyList<CategoryListItem> tabs = await categories.ListAsync(cancellationToken);
         Guid? tonight = await nights.FindIdAsync(clock.GetUtcNow(), cancellationToken);
+
+        // "Sold out" is what the night has left, and the night's stock is made
+        // by whoever needs it first: the first phone to look at the menu is as
+        // good a trigger as the first order. With no night on there is nothing
+        // to be sold out of, and nobody can order anyway.
+        if (tonight is not null) await openStock.HandleAsync(tonight.Value, cancellationToken);
+
+        IReadOnlyList<MenuItem> menu = await products.ListForMenuAsync(tonight, cancellationToken);
+        IReadOnlyList<CategoryListItem> tabs = await categories.ListAsync(cancellationToken);
 
         return TypedResults.Ok(new MenuResponse(
             venue.Identity.Name,

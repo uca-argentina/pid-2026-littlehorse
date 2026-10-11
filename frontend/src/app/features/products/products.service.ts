@@ -46,7 +46,7 @@ export class ProductsService {
     return this.http.put<ProductImage>(`${PRODUCTS_URL}/${productId}/image`, form);
   }
 
-  /** US-08: corrects name, description and price. Stock, the picture and the two switches each have their own action. */
+  /** US-08: corrects name, description and price. The picture and the two switches each have their own action. */
   update(productId: string, correction: ProductCorrection): Observable<Product> {
     return this.http.put<Product>(`${PRODUCTS_URL}/${productId}`, correction);
   }
@@ -56,17 +56,12 @@ export class ProductsService {
     return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/deactivate`, {});
   }
 
-  /** Moves the stock by a number of units, up or down. Never a new total: the API adds it to what is there. */
-  adjustStock(productId: string, change: number): Observable<Product> {
-    return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/adjust-stock`, { change });
-  }
-
   /** US-07: the nightly switch off. The customer keeps seeing the product, dimmed. */
   markUnavailable(productId: string): Observable<Product> {
     return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-unavailable`, {});
   }
 
-  /** US-07: the switch back on, e.g. after the stock comes back. Does not touch stock. */
+  /** US-07: the switch back on, e.g. after the ice arrived. */
   markAvailable(productId: string): Observable<Product> {
     return this.http.post<Product>(`${PRODUCTS_URL}/${productId}/mark-available`, {});
   }

@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { fireEvent, render, screen, within } from '@testing-library/angular';
+import { fireEvent, render, screen } from '@testing-library/angular';
 import { PRODUCTS_URL, PRODUCT_PLACEHOLDER } from '../products.service';
 import type { Product } from '../products.service';
 import { ProductsPage } from './products.page';
@@ -16,10 +16,8 @@ const theMenu: Product[] = [
     description: 'Gin, tónica y una rodaja de lima.',
     imageUrl: 'https://images.example.com/gin-tonic.jpg',
     price: 4500,
-    stock: 20,
     categoryId: 'category-drinks',
     isAvailable: true,
-    isSoldOut: false,
     isActive: true,
 
     audit: noAudit,
@@ -30,10 +28,8 @@ const theMenu: Product[] = [
     description: null,
     imageUrl: null,
     price: 5200.5,
-    stock: 0,
     categoryId: 'category-drinks',
     isAvailable: true,
-    isSoldOut: true,
     isActive: true,
 
     audit: noAudit,
@@ -44,10 +40,8 @@ const theMenu: Product[] = [
     description: 'Ron, frutilla, limón',
     imageUrl: null,
     price: 4800,
-    stock: 3,
     categoryId: 'category-drinks',
     isAvailable: false,
-    isSoldOut: false,
     isActive: false,
 
     audit: noAudit,
@@ -131,25 +125,6 @@ describe('ProductsPage', () => {
     expect(screen.getByText(/\$\s?5\.200,50/)).not.toBeNull();
   });
 
-  it('shows how many are left of each product', async () => {
-    await openScreenShowing(theMenu);
-
-    expect(screen.getByText(/20 en stock/i)).not.toBeNull();
-  });
-
-  // Decided on 2026-09-14: stock at zero sells a product out on its own. The
-  // administrator sees it here, before a customer tries to order it.
-  it('marks a product with no stock left', async () => {
-    await openScreenShowing(theMenu);
-
-    const row = screen.getByRole('listitem', { name: /aperol spritz/i });
-
-    // Once, and only once: beside the switch, where it also explains why the
-    // switch will not move. The stock column says how many are left and the
-    // chips are for the soft delete, so nothing else in the row repeats it.
-    expect(within(row).getByText('Sin stock')).not.toBeNull();
-  });
-
   // US-08 keeps deactivated products in the listing so old orders still point
   // somewhere. Showing them identical to the rest would be worse than hiding
   // them: the administrator would think customers can still see them.
@@ -221,10 +196,8 @@ describe('ProductsPage', () => {
       description: null,
       imageUrl: null,
       price: 4500,
-      stock: 20,
       categoryId: 'category-drinks',
       isAvailable: true,
-      isSoldOut: false,
       isActive: true,
 
       audit: noAudit,
@@ -275,23 +248,9 @@ describe('ProductsPage', () => {
       expect(theSwitch().getAttribute('aria-checked')).toBe('true');
     });
 
-    /**
-     * Running out is not something the switch can undo, so the screen does not
-     * offer to try: the drink comes back by being restocked, which is US-08.
-     * The API refuses it too — this is the half that stops the tap happening.
-     */
-    it('is off and locked for a drink that ran out', async () => {
-      const soldOut: Product = { ...aGinTonic, stock: 0, isSoldOut: true };
-      await openScreenShowing([soldOut]);
-
-      expect(theSwitch().getAttribute('aria-checked')).toBe('false');
-      expect((theSwitch() as HTMLButtonElement).disabled).toBe(true);
-      expect(screen.getByText('Sin stock')).not.toBeNull();
-    });
-
     it('does not ask the API anything when the locked switch is tapped', async () => {
-      const soldOut: Product = { ...aGinTonic, stock: 0, isSoldOut: true };
-      await openScreenShowing([soldOut]);
+      const gone: Product = { ...aGinTonic, isActive: false };
+      await openScreenShowing([gone]);
 
       theSwitch().click();
 
@@ -395,23 +354,13 @@ describe('ProductsPage', () => {
       expect(screen.queryByText(/todavía no hay ningún producto/i)).toBeNull();
     });
 
-    // The two states an administrator goes looking for at night: what ran
-    // out, and what the customer cannot order for any other reason.
-    it('counts everything, what is sold out and what is not available', async () => {
+    // What an administrator goes looking for at night: what the customer
+    // cannot order tonight.
+    it('counts everything and what is not available', async () => {
       await openScreenShowing(theMenu);
 
       expect(pill(/todos/i).textContent).toContain('3');
-      expect(pill(/sin stock/i).textContent).toContain('1');
       expect(pill(/no disponibles/i).textContent).toContain('1');
-    });
-
-    it('shows only what is sold out when that filter is on', async () => {
-      const rendered = await openScreenShowing(theMenu);
-
-      pill(/sin stock/i).click();
-      await rendered.fixture.whenStable();
-
-      expect(listed()).toEqual(['Aperol Spritz']);
     });
 
     it('shows only what is not available when that filter is on', async () => {
@@ -446,27 +395,10 @@ describe('ProductsPage', () => {
       expect(listed()).toEqual(['Daiquiri', 'Negroni']);
     });
 
-    // Sold out wins: a drink that ran out AND was switched off is one the bar
-    // cannot serve because there is none, and that is the pill that says so.
-    it('counts a drink that ran out once, under sold out', async () => {
-      const both: Product = {
-        ...theMenu[0],
-        id: 'both',
-        name: 'Negroni',
-        stock: 0,
-        isSoldOut: true,
-        isAvailable: false,
-      };
-      await openScreenShowing([both]);
-
-      expect(pill(/sin stock/i).textContent).toContain('1');
-      expect(pill(/no disponibles/i).textContent).toContain('0');
-    });
-
     it('narrows by filter and by what was typed at once', async () => {
       const rendered = await openScreenShowing(theMenu);
 
-      pill(/sin stock/i).click();
+      pill(/no disponibles/i).click();
       search('gin');
       await rendered.fixture.whenStable();
 
@@ -482,7 +414,7 @@ describe('ProductsPage', () => {
       await rendered.fixture.whenStable();
 
       expect(pill(/todos/i).textContent).toContain('1');
-      expect(pill(/sin stock/i).textContent).toContain('0');
+      expect(pill(/no disponibles/i).textContent).toContain('0');
     });
   });
 });

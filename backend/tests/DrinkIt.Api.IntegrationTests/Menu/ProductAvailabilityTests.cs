@@ -1,7 +1,6 @@
 using DrinkIt.Api.IntegrationTests.Persistence;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
-using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Menu;
@@ -73,7 +72,7 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
         Product stored = await fresh.Products.SingleAsync(product => product.Id == gin.Id);
 
-        Assert.Equal(20, stored.Stock);
+        Assert.Equal(20, stored.InitialStock);
         Assert.True(stored.IsActive);
     }
 
@@ -132,7 +131,7 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         await new MarkProductUnavailableHandler(new ProductRepository(asMine)).HandleAsync(gin.Id, CancellationToken.None);
 
         await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
-        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(CancellationToken.None))
+        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(night: null, CancellationToken.None))
             .Single(item => item.Name == "Gin Tonic");
 
         Assert.False(card.IsOrderable);
@@ -151,41 +150,10 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         await new MarkProductAvailableHandler(new ProductRepository(on)).HandleAsync(gin.Id, CancellationToken.None);
 
         await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
-        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(CancellationToken.None))
+        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(night: null, CancellationToken.None))
             .Single(item => item.Name == "Gin Tonic");
 
         Assert.True(card.IsOrderable);
-    }
-
-    /// <summary>
-    /// Running out locks the switch. Only stock can unlock it, and putting
-    /// stock back is US-08: until then the drink stays off the menu, and the
-    /// attempt leaves the row exactly as it was.
-    /// </summary>
-    [Fact]
-    public async Task MarkAvailableAsync_WhenTheProductRanOut_IsRefusedAndWritesNothing()
-    {
-        Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
-        Category category = SeedCategory.For(mine.Id);
-        Product empty = Product.Create(mine.Id, "Gin Tonic", null, null, 4500m, 0, category.Id);
-
-        await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
-        seed.Venues.Add(mine);
-        seed.Categories.Add(category);
-        seed.Products.Add(empty);
-        await seed.SaveChangesAsync();
-
-        await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
-        MarkProductAvailableHandler handler = new(new ProductRepository(asMine));
-
-        await Assert.ThrowsAsync<DomainException>(
-            () => handler.HandleAsync(empty.Id, CancellationToken.None));
-
-        await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
-        Product stored = await fresh.Products.SingleAsync(product => product.Id == empty.Id);
-
-        Assert.Equal(0, stored.Stock);
-        Assert.False(stored.IsOrderable);
     }
 
     private async Task<(Venue Mine, Venue Theirs, Product Gin, Product Foreign)> SeedTwoVenues()

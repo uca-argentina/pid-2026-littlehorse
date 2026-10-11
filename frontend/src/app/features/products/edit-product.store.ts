@@ -11,10 +11,8 @@ import type { Product, ProductCorrection } from './products.service';
 /**
  * How saving ended up. 'partial' is the odd one: the correction went through
  * and something after it did not, so "nothing was saved" would be a lie.
- * 'stockMoved' is a partial with its own answer: sales left less than the
- * adjustment takes away, and looking at the stock again is the fix.
  */
-type SaveStatus = 'idle' | 'sending' | 'nameTaken' | 'unreachable' | 'partial' | 'stockMoved';
+type SaveStatus = 'idle' | 'sending' | 'nameTaken' | 'unreachable' | 'partial';
 
 type AccessStatus = 'idle' | 'sending' | 'unreachable';
 
@@ -22,8 +20,6 @@ type AccessStatus = 'idle' | 'sending' | 'unreachable';
 export interface ProductChanges {
   readonly correction: ProductCorrection;
   readonly photo: File | null;
-  /** How much the stock moves, up or down. 0 leaves it alone. */
-  readonly stockChange: number;
   /** null leaves the nightly switch where it is. */
   readonly isAvailable: boolean | null;
 }
@@ -48,24 +44,18 @@ export class EditProductStore {
   /** The product as the API last returned it, so the screen shows the new state. */
   private readonly current = signal<Product | null>(null);
 
-  private readonly adjusted = signal(0);
-
   readonly status = this.saving.asReadonly();
 
   readonly accessStatus = this.access.asReadonly();
 
   readonly updated = this.current.asReadonly();
 
-  /** How many adjustments reached the API, so the form never sends one twice. */
-  readonly stockAdjustments = this.adjusted.asReadonly();
-
   readonly isBusy = computed(() => this.saving() === 'sending' || this.access() === 'sending');
 
   /**
    * One request per thing that changed, one after the other. The correction
    * goes first, because a taken name is the one refusal the administrator can
-   * fix and nothing else should be sent past it. The stock goes before the
-   * switch: the domain refuses to turn on a product with nothing to sell.
+   * fix and nothing else should be sent past it.
    */
   save(venueSlug: string, id: string, changes: ProductChanges): void {
     if (this.isBusy()) return;
@@ -76,7 +66,7 @@ export class EditProductStore {
       () => this.products.update(id, changes.correction),
     ];
 
-    const { photo, stockChange, isAvailable } = changes;
+    const { photo, isAvailable } = changes;
 
     // The upload answers with the address alone; the rest is what the
     // correction just returned.
@@ -85,13 +75,6 @@ export class EditProductStore {
         this.products
           .uploadImage(id, photo)
           .pipe(map(({ imageUrl }) => ({ ...(this.current() as Product), imageUrl }))),
-      );
-
-    if (stockChange !== 0)
-      steps.push(() =>
-        this.products
-          .adjustStock(id, stockChange)
-          .pipe(tap(() => this.adjusted.update((count) => count + 1))),
       );
 
     if (isAvailable !== null)
@@ -112,8 +95,7 @@ export class EditProductStore {
       )
       .subscribe({
         complete: () => this.showTheListing(venueSlug),
-        error: (error: unknown) =>
-          this.saving.set(done === 0 ? reasonFor(error) : laterReasonFor(error)),
+        error: (error: unknown) => this.saving.set(done === 0 ? reasonFor(error) : 'partial'),
       });
   }
 
@@ -156,11 +138,4 @@ function reasonFor(error: unknown): SaveStatus {
   if (!(error instanceof HttpErrorResponse)) return 'unreachable';
 
   return error.error?.type === ProblemTypes.productNameTaken ? 'nameTaken' : 'unreachable';
-}
-
-/** After the correction went through: something was saved, whatever failed. */
-function laterReasonFor(error: unknown): SaveStatus {
-  if (!(error instanceof HttpErrorResponse)) return 'partial';
-
-  return error.error?.type === ProblemTypes.productStockMoved ? 'stockMoved' : 'partial';
 }

@@ -102,7 +102,7 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
         Assert.Null(stored.Description);
         Assert.Null(stored.ImageUrl);
         Assert.Equal(4500.50m, stored.Price);
-        Assert.Equal(0, stored.Stock);
+        Assert.Equal(0, stored.InitialStock);
         Assert.Equal(drinks, stored.CategoryId);
         Assert.True(stored.IsAvailable);
         Assert.True(stored.IsActive);
@@ -121,10 +121,9 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
     }
 
     // Alphabetical, so the administrator finds a product the way they would on
-    // a printed menu. And a product with no stock left says so: the listing
-    // shows "sin stock" without the screen having to know the rule.
+    // a printed menu.
     [Fact]
-    public async Task ListAsync_WhenTheVenueHasSeveralProducts_ReturnsThemByNameWithTheirStockState()
+    public async Task ListAsync_WhenTheVenueHasSeveralProducts_ReturnsThemByName()
     {
         (Venue mine, _) = await SeedTwoVenues("Gin Tonic", "Nothing");
 
@@ -135,10 +134,8 @@ public sealed class ProductRepositoryTests(SqlServerFixture sql)
         IReadOnlyList<ProductListItem> listed = await new ProductQueries(seed).ListAsync(CancellationToken.None);
 
         Assert.Equal(["Aperol Spritz", "Gin Tonic"], listed.Select(product => product.Name));
-        Assert.True(listed[0].IsSoldOut);
         Assert.Equal("Aperol, prosecco, soda", listed[0].Description);
         Assert.Equal(5200m, listed[0].Price);
-        Assert.False(listed[1].IsSoldOut);
     }
 
     // The id of another venue's product is a valid id: it is the filter, not

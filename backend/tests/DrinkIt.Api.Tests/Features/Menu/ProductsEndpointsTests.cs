@@ -20,16 +20,16 @@ public class ProductsEndpointsTests
     private static CreateProductRequest AGinTonic(
         string name = "Gin Tonic",
         decimal price = 4500m,
-        int stock = 20,
+        int initialStock = 20,
         Guid? categoryId = null) =>
-        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", price, stock, categoryId ?? TheCategory);
+        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", price, initialStock, categoryId ?? TheCategory);
 
     // Pins the success shape: the Angular client is generated from it, so
     // renaming a property here breaks the screen silently.
     [Fact]
     public async Task CreateAsync_WhenTheDataIsValid_RespondsWithTheCreatedProduct()
     {
-        HttpResponseSnapshot response = await Create(AGinTonic(stock: 0));
+        HttpResponseSnapshot response = await Create(AGinTonic(initialStock: 0));
 
         Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
         Assert.StartsWith("application/json", response.ContentType, StringComparison.Ordinal);
@@ -38,10 +38,8 @@ public class ProductsEndpointsTests
         Assert.Equal("Gin, tonic and a slice of lime.", response.Text("description"));
         Assert.Equal("https://images.example.com/gin-tonic.jpg", response.Text("imageUrl"));
         Assert.Equal(4500m, response.Body.GetProperty("price").GetDecimal());
-        Assert.Equal(0, response.Body.GetProperty("stock").GetInt32());
         Assert.Equal(TheCategory, response.Body.GetProperty("categoryId").GetGuid());
         Assert.True(response.Body.GetProperty("isAvailable").GetBoolean());
-        Assert.True(response.Body.GetProperty("isSoldOut").GetBoolean());
         Assert.True(response.Body.GetProperty("isActive").GetBoolean());
     }
 
@@ -95,8 +93,8 @@ public class ProductsEndpointsTests
     {
         ProductListItem[] stored =
         [
-            new(Guid.CreateVersion7(), "Aperol Spritz", "Aperol, prosecco, soda", null, 5200m, 0, TheCategory, IsAvailable: true, IsSoldOut: true, IsActive: true, new AuditInfo(null, null, null, null)),
-            new(Guid.CreateVersion7(), "Gin Tonic", null, "https://images.example.com/gin-tonic.jpg", 4500m, 20, AnotherCategory, IsAvailable: false, IsSoldOut: false, IsActive: false, new AuditInfo(new DateTimeOffset(2026, 9, 27, 21, 0, 0, TimeSpan.Zero), "euge.q", null, null)),
+            new(Guid.CreateVersion7(), "Aperol Spritz", "Aperol, prosecco, soda", null, 5200m, TheCategory, IsAvailable: true, IsActive: true, new AuditInfo(null, null, null, null)),
+            new(Guid.CreateVersion7(), "Gin Tonic", null, "https://images.example.com/gin-tonic.jpg", 4500m, AnotherCategory, IsAvailable: false, IsActive: false, new AuditInfo(new DateTimeOffset(2026, 9, 27, 21, 0, 0, TimeSpan.Zero), "euge.q", null, null)),
         ];
 
         IResult result = await ProductsEndpoints.ListAsync(new Fake.Queries(stored), CancellationToken.None);
@@ -105,9 +103,7 @@ public class ProductsEndpointsTests
         Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
         Assert.Equal(2, response.Body.GetArrayLength());
         Assert.Equal("Aperol Spritz", response.Body[0].GetProperty("name").GetString());
-        Assert.True(response.Body[0].GetProperty("isSoldOut").GetBoolean());
         Assert.Equal(JsonValueKind.Null, response.Body[0].GetProperty("imageUrl").ValueKind);
-        Assert.Equal(20, response.Body[1].GetProperty("stock").GetInt32());
         Assert.Equal(AnotherCategory, response.Body[1].GetProperty("categoryId").GetGuid());
         Assert.Equal("euge.q", response.Body[1].GetProperty("audit").GetProperty("createdBy").GetString());
         Assert.Equal(JsonValueKind.Null, response.Body[0].GetProperty("audit").GetProperty("createdAt").ValueKind);
@@ -168,20 +164,6 @@ public class ProductsEndpointsTests
 
         Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
         Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
-    }
-
-    // The switch cannot undo running out. The endpoint does not check it: the
-    // domain throws and the global handler answers with the rule's own type.
-    [Fact]
-    public async Task MarkAvailableAsync_WhenTheProductRanOut_LetsTheDomainExceptionThrough()
-    {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, TheCategory);
-        MarkProductAvailableHandler handler = new(new Fake.Repository(null, product));
-
-        DomainException error = await Assert.ThrowsAsync<DomainException>(
-            () => ProductsEndpoints.MarkAvailableAsync(product.Id, handler, CancellationToken.None));
-
-        Assert.Equal(Product.ErrorCodes.SoldOutCannotBeAvailable, error.Code);
     }
 
     private static UpdateProductRequest AnUpdate(
@@ -289,65 +271,6 @@ public class ProductsEndpointsTests
         return await EndpointResponse.Execute(result, $"{Path}/{productId}", HttpMethods.Put);
     }
 
-    // The response is the product, so the screen shows the new count and
-    // unlocks the nightly switch without asking again.
-    [Fact]
-    public async Task AdjustStockAsync_WhenTheChangeIsValid_RespondsWithTheProductAndItsNewStock()
-    {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, TheCategory);
-        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
-
-        IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(12), handler, CancellationToken.None);
-        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
-
-        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
-        Assert.Equal(12, response.Body.GetProperty("stock").GetInt32());
-        Assert.False(response.Body.GetProperty("isSoldOut").GetBoolean());
-    }
-
-    [Fact]
-    public async Task AdjustStockAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
-    {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, TheCategory);
-        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
-
-        IResult result = await ProductsEndpoints.AdjustStockAsync(Guid.CreateVersion7(), new AdjustProductStockRequest(12), handler, CancellationToken.None);
-        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{Guid.CreateVersion7()}/adjust-stock", HttpMethods.Post);
-
-        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
-        Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
-    }
-
-    // Sales left less than the change takes away: a conflict with what
-    // happened meanwhile, not a malformed request.
-    [Fact]
-    public async Task AdjustStockAsync_WhenSalesMeanwhileLeftTooLittle_RespondsWithConflict()
-    {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5, TheCategory);
-        AdjustProductStockHandler handler = new(new Fake.Repository(null, product, adjustmentApplies: false));
-
-        IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(-5), handler, CancellationToken.None);
-        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
-
-        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
-        Assert.Equal("urn:drinkit:problem:product:stock-moved", response.Text("type"));
-    }
-
-    // Sales since the screen opened, not the last millisecond: the same 409,
-    // because to the administrator it is the same thing.
-    [Fact]
-    public async Task AdjustStockAsync_WhenWhatIsLeftIsLessThanItTakesAway_RespondsWithConflict()
-    {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 2, TheCategory);
-        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
-
-        IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(-5), handler, CancellationToken.None);
-        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
-
-        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
-        Assert.Equal("urn:drinkit:problem:product:stock-moved", response.Text("type"));
-    }
-
     private static readonly byte[] APng = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52];
 
     private static readonly byte[] APdf = [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A, 0x0A];
@@ -440,11 +363,8 @@ public class ProductsEndpointsTests
             public Guid Id { get; } = Guid.CreateVersion7();
         }
 
-        public sealed class Repository(string? taken, Product? stored = null, bool adjustmentApplies = true) : IProductRepository
+        public sealed class Repository(string? taken, Product? stored = null) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
-                Task.FromResult(adjustmentApplies);
-
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>
                 Task.FromResult(string.Equals(name, taken, StringComparison.OrdinalIgnoreCase));
 
@@ -467,7 +387,7 @@ public class ProductsEndpointsTests
             public Task<IReadOnlyList<ProductListItem>> ListAsync(CancellationToken cancellationToken) =>
                 Task.FromResult<IReadOnlyList<ProductListItem>>(stored);
 
-            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
+            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? night, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The administration listing never reads the customer's menu.");
         }
     }

@@ -1,0 +1,93 @@
+<section class="stock" aria-labelledby="stock-title" [attr.aria-busy]="stock.isLoading()">
+  <h2 id="stock-title" class="title">Stock de la noche</h2>
+
+  @if (failure() === 'waiting') {
+    <p class="note" role="status">
+      El stock de esta noche arranca con lo que sobre de la anterior, así que va a estar disponible
+      cuando termine la noche anterior.
+    </p>
+  } @else if (failure() === 'unreachable') {
+    <div class="note note-bad failed" role="alert">
+      <span>No pudimos traer el stock. Fijate la señal y probá de nuevo.</span>
+      <button class="retry" type="button" (click)="stock.reload()">Reintentar</button>
+    </div>
+  } @else if (stock.hasValue()) {
+    @if (stock.value().length === 0) {
+      <p class="note">
+        Todavía no hay productos en la carta: cuando cargues alguno, su stock aparece acá.
+      </p>
+    } @else {
+      <ul class="list">
+        @for (line of stock.value(); track line.productId) {
+          <li class="row" [attr.aria-label]="line.productName">
+            <span class="name">{{ line.productName }}</span>
+
+            <dl class="figures">
+              <div class="figure">
+                <dt class="figure-name">Cargado</dt>
+                <dd class="figure-value">{{ line.loaded }}</dd>
+              </div>
+              <div class="figure">
+                <dt class="figure-name">Vendido</dt>
+                <dd class="figure-value">{{ line.sold }}</dd>
+              </div>
+              <div class="figure">
+                <dt class="figure-name">Quedan</dt>
+                @if (line.remaining === 0) {
+                  <dd class="figure-value figure-out">Se acabó</dd>
+                } @else {
+                  <dd class="figure-value">{{ line.remaining }}</dd>
+                }
+              </div>
+            </dl>
+
+            @if (editable()) {
+              <div class="move">
+                <label class="dk-sr-only" [for]="'units-' + line.productId"
+                  >Unidades de {{ line.productName }}</label
+                >
+                <input
+                  class="units"
+                  type="number"
+                  inputmode="numeric"
+                  min="1"
+                  step="1"
+                  placeholder="Unidades"
+                  [id]="'units-' + line.productId"
+                  [value]="unitsOf(line.productId)"
+                  [disabled]="isMoving(line.productId)"
+                  [attr.aria-invalid]="problemOf(line.productId) ? 'true' : null"
+                  (input)="type(line.productId, $event)"
+                />
+                <button
+                  class="action"
+                  type="button"
+                  [disabled]="isMoving(line.productId)"
+                  [attr.aria-label]="'Sumar unidades a ' + line.productName"
+                  (click)="move(line, 1)"
+                >
+                  Sumar
+                </button>
+                <button
+                  class="action"
+                  type="button"
+                  [disabled]="isMoving(line.productId)"
+                  [attr.aria-label]="'Restar unidades a ' + line.productName"
+                  (click)="move(line, -1)"
+                >
+                  Restar
+                </button>
+              </div>
+
+              @if (problemOf(line.productId); as problem) {
+                <p class="bad" role="alert">{{ problem }}</p>
+              }
+            }
+          </li>
+        }
+      </ul>
+    }
+  } @else {
+    <p class="note" role="status">Cargando el stock…</p>
+  }
+</section>

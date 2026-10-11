@@ -27,7 +27,7 @@ public class CreateProductHandlerTests
         Assert.Equal("Gin, tonic and a slice of lime.", products.Added.Description);
         Assert.Equal("https://images.example.com/gin-tonic.jpg", products.Added.ImageUrl);
         Assert.Equal(4500m, products.Added.Price);
-        Assert.Equal(20, products.Added.Stock);
+        Assert.Equal(20, products.Added.InitialStock);
     }
 
     // US-14: the category chosen in the creation form ends up on the product.
@@ -118,7 +118,7 @@ public class CreateProductHandlerTests
         Fake.Products products = new();
 
         Result<ProductSummary> result = await HandlerOver(products).HandleAsync(
-            AGinTonic("  Gin Tonic  ") with { Stock = 0 },
+            AGinTonic("  Gin Tonic  "),
             CancellationToken.None);
 
         Assert.Equal(products.Added!.Id, result.Value.Id);
@@ -126,8 +126,6 @@ public class CreateProductHandlerTests
         Assert.Equal("Gin, tonic and a slice of lime.", result.Value.Description);
         Assert.Equal("https://images.example.com/gin-tonic.jpg", result.Value.ImageUrl);
         Assert.Equal(4500m, result.Value.Price);
-        Assert.Equal(0, result.Value.Stock);
-        Assert.True(result.Value.IsSoldOut);
         Assert.True(result.Value.IsAvailable);
         Assert.True(result.Value.IsActive);
     }
@@ -144,8 +142,6 @@ public class CreateProductHandlerTests
 
         public sealed class Products(string? taken = null) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
-                Task.FromResult(true);
 
             public Product? Added { get; private set; }
 

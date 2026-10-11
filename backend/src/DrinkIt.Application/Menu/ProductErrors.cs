@@ -21,11 +21,4 @@ public static class ProductErrors
     /// </summary>
     public static readonly Error CategoryNotFound =
         new("product.category_not_found", "This venue has no category with that id.");
-
-    /// <summary>
-    /// Sales since the screen was opened left less stock than the change takes
-    /// away. Worth its own answer: looking again at the stock is the fix.
-    /// </summary>
-    public static readonly Error StockMoved =
-        new("product.stock_moved", "Sales changed the stock; there is less left than that takes away.");
 }

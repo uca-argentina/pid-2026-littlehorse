@@ -41,8 +41,6 @@ public class MarkProductUnavailableHandlerTests
     {
         public sealed class Products(Product stored) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
-                Task.FromResult(true);
 
             public bool Saved { get; private set; }
 
@@ -102,8 +100,6 @@ public class MarkProductAvailableHandlerTests
     {
         public sealed class Products(Product stored) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
-                Task.FromResult(true);
 
             public bool Saved { get; private set; }
 

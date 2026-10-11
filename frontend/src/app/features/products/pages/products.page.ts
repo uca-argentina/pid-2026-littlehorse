@@ -19,9 +19,7 @@ interface ProductRow {
   /** The product's own picture, or the placeholder when it has none. */
   readonly imageUrl: string;
   readonly price: string;
-  readonly stock: number;
   readonly isAvailable: boolean;
-  readonly isSoldOut: boolean;
   readonly isActive: boolean;
   readonly isToggling: boolean;
   readonly toggleFailed: boolean;
@@ -36,16 +34,14 @@ interface ProductRow {
 /**
  * What the customer can do with this product right now, in one word.
  *
- * Running out is named apart from the rest because it is the one reason the
- * switch cannot be moved, and the administrator has to know why it is locked.
  * Being switched off for tonight and being taken off the menu for good are the
  * same answer here on purpose: from the customer's side they are, and the chip
  * beside the row is what tells the two apart for whoever is behind the bar.
+ * How many are left is not part of it: that belongs to the night.
  */
-type ProductState = 'available' | 'soldOut' | 'unavailable';
+type ProductState = 'available' | 'unavailable';
 
 function stateOf(product: Product): ProductState {
-  if (product.isSoldOut) return 'soldOut';
   if (!product.isAvailable || !product.isActive) return 'unavailable';
 
   return 'available';
@@ -57,16 +53,15 @@ function stateOf(product: Product): ProductState {
  */
 const SWITCH_LABEL: Readonly<Record<ProductState, string>> = {
   available: 'Disponible',
-  soldOut: 'Sin stock',
   unavailable: 'No disponible',
 };
 
 /** Which products the listing is narrowed to, or all of them. */
-type StockFilter = 'all' | ProductState;
+type StateFilter = 'all' | ProductState;
 
 /** One of the pills above the list, with what it would leave on screen. */
 interface FilterPill {
-  readonly filter: StockFilter;
+  readonly filter: StateFilter;
   readonly name: string;
   readonly count: number;
 }
@@ -123,7 +118,7 @@ export class ProductsPage {
    */
   protected readonly search = signal('');
 
-  protected readonly stockFilter = signal<StockFilter>('all');
+  protected readonly stateFilter = signal<StateFilter>('all');
 
   /**
    * US-07: the rows waiting on the switch, so a second tap on one of them is
@@ -149,14 +144,12 @@ export class ProductsPage {
       description: product.description ?? null,
       imageUrl: product.imageUrl ?? PRODUCT_PLACEHOLDER,
       price: pesos(product.price),
-      stock: product.stock,
       isAvailable: product.isAvailable,
-      isSoldOut: product.isSoldOut,
       isActive: product.isActive,
       isToggling: this.toggling().has(product.id),
       toggleFailed: this.toggleFailures().has(product.id),
-      isOn: product.isAvailable && !product.isSoldOut && product.isActive,
-      canSwitch: product.isActive && !product.isSoldOut,
+      isOn: product.isAvailable && product.isActive,
+      canSwitch: product.isActive,
       state: stateOf(product),
       switchLabel: SWITCH_LABEL[stateOf(product)],
     })),
@@ -172,7 +165,7 @@ export class ProductsPage {
   });
 
   protected readonly rows = computed(() => {
-    const filter = this.stockFilter();
+    const filter = this.stateFilter();
 
     if (filter === 'all') return this.matchingTheSearch();
 
@@ -188,11 +181,6 @@ export class ProductsPage {
 
     return [
       { filter: 'all', name: 'Todos', count: matching.length },
-      {
-        filter: 'soldOut',
-        name: 'Sin stock',
-        count: matching.filter((row) => row.state === 'soldOut').length,
-      },
       {
         filter: 'unavailable',
         name: 'No disponibles',
@@ -233,8 +221,8 @@ export class ProductsPage {
     if (!picture.src.endsWith(PRODUCT_PLACEHOLDER)) picture.src = PRODUCT_PLACEHOLDER;
   }
 
-  protected narrowTo(filter: StockFilter): void {
-    this.stockFilter.set(filter);
+  protected narrowTo(filter: StateFilter): void {
+    this.stateFilter.set(filter);
   }
 
   protected searchFor(event: Event): void {

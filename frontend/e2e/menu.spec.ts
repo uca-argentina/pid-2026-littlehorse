@@ -32,7 +32,7 @@ async function loadProduct(
       name,
       description: 'Cargado por la prueba',
       price: 4500,
-      stock,
+      initialStock: stock,
       categoryId: await categoryIdNamed(request, token, categoryName),
     },
   });

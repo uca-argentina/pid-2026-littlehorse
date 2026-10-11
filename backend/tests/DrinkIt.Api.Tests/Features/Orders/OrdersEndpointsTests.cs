@@ -209,6 +209,7 @@ public class OrdersEndpointsTests
         [new DigitalPaymentStrategy(TimeProvider.System), new CashPaymentStrategy()],
         new Fake.Venue(),
         new Fake.Tonight(nightIsOn),
+        new OpenNightStockHandler(new NightStocksForAnyNight(_gin), new Fake.Venue(), TimeProvider.System),
         TimeProvider.System);
 
     private static class Fake

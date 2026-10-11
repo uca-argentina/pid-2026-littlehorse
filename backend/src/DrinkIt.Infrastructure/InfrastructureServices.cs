@@ -73,6 +73,7 @@ public static class InfrastructureServices
         services.AddScoped<IKdsQueueQueries, KdsQueueQueries>();
         services.AddScoped<ICashierQueries, CashierQueries>();
         services.AddScoped<INightRepository, NightRepository>();
+        services.AddScoped<INightStockRepository, NightStockRepository>();
         services.AddScoped<INightQueries, NightQueries>();
         services.AddScoped<IUnderwayNightLookup, UnderwayNightLookup>();
         services.AddScoped<ITonightsCrew, TonightsCrew>();

@@ -34,6 +34,8 @@
         <p class="note">
           Una noche terminada ya no se edita: sus métricas se leen contra estos horarios.
         </p>
+
+        <drinkit-night-stock [nightId]="id()" [editable]="false" />
       } @else {
         <drinkit-night-form
           [team]="team.value()"
@@ -44,6 +46,8 @@
           submitLabel="Guardar cambios"
           (saved)="save($event)"
         />
+
+        <drinkit-night-stock [nightId]="id()" />
       }
     } @else {
       <p class="note" role="status">Cargando la noche…</p>

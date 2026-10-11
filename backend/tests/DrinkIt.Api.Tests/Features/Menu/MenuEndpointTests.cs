@@ -4,6 +4,7 @@ using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Venues;
+using DrinkIt.Domain.Menu;
 using Microsoft.AspNetCore.Http;
 
 namespace DrinkIt.Api.Tests.Features.Menu;
@@ -17,6 +18,8 @@ public class MenuEndpointTests
     private const string Path = "/bar-alfa/menu";
 
     private static readonly Guid TheCategory = Guid.CreateVersion7();
+
+    private static readonly Guid TheNight = Guid.CreateVersion7();
 
     private static readonly MenuItem GinTonic = new(
         Guid.CreateVersion7(), "Gin Tonic", "Gin, tónica, lima", "https://images.example.com/gin.png", 4500m,
@@ -72,7 +75,14 @@ public class MenuEndpointTests
     public async Task GetAsync_WhenNoVenueHasThatSlug_RespondsWithNotFound()
     {
         IResult result = await MenuEndpoint.GetAsync(
-            "bar-que-no-existe", new CurrentVenue(), new Fake.Menu(), new FakeCategoryQueries(), new Fake.Tonight(true), TimeProvider.System, CancellationToken.None);
+            "bar-que-no-existe",
+            new CurrentVenue(),
+            new Fake.Menu(),
+            new FakeCategoryQueries(),
+            new Fake.Tonight(true),
+            new OpenNightStockHandler(new NightStocksForAnyNight(), new Fake.Venue(), TimeProvider.System),
+            TimeProvider.System,
+            CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Get);
 
@@ -121,38 +131,100 @@ public class MenuEndpointTests
         Assert.DoesNotContain("stock", response.Raw, StringComparison.OrdinalIgnoreCase);
     }
 
+    // US-37: "sold out" is what the night has left, so the menu is read about
+    // the night that is on, and about nothing when none is.
+    [Fact]
+    public async Task GetAsync_WhenANightIsOn_ReadsTheMenuAboutThatNight()
+    {
+        Fake.Menu menu = new(GinTonic);
+
+        await Read(menu, new NightStocksForAnyNight(), nightIsOn: true);
+
+        Assert.Equal(TheNight, menu.AskedAbout);
+    }
+
+    [Fact]
+    public async Task GetAsync_WhenNoNightIsOn_ReadsTheMenuAboutNoNight()
+    {
+        Fake.Menu menu = new(GinTonic);
+
+        await Read(menu, new NightStocksForAnyNight(), nightIsOn: false);
+
+        Assert.Null(menu.AskedAbout);
+    }
+
+    // Nobody opens a night's stock by hand for the menu to be right: the
+    // first phone that looks at it is what makes it exist.
+    [Fact]
+    public async Task GetAsync_WhenANightIsOn_OpensItsStockBeforeReadingTheMenu()
+    {
+        Product gin = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 20, TheCategory);
+        NightStocksForAnyNight stocks = new(gin);
+
+        await Read(new Fake.Menu(GinTonic), stocks, nightIsOn: true);
+
+        Assert.Equal(gin.Id, stocks.Rows.Single().ProductId);
+        Assert.Equal(TheNight, stocks.Rows.Single().NightId);
+    }
+
     private static async Task<HttpResponseSnapshot> Menu(params MenuItem[] items) =>
         await MenuWith(new FakeCategoryQueries(), nightIsOn: true, items);
 
     private static async Task<HttpResponseSnapshot> MenuWith(FakeCategoryQueries categories, params MenuItem[] items) =>
         await MenuWith(categories, nightIsOn: true, items);
 
-    private static async Task<HttpResponseSnapshot> MenuWith(FakeCategoryQueries categories, bool nightIsOn, params MenuItem[] items)
+    private static async Task<HttpResponseSnapshot> MenuWith(FakeCategoryQueries categories, bool nightIsOn, params MenuItem[] items) =>
+        await Read(new Fake.Menu(items), new NightStocksForAnyNight(), nightIsOn, categories);
+
+    private static async Task<HttpResponseSnapshot> Read(
+        Fake.Menu menu,
+        NightStocksForAnyNight stocks,
+        bool nightIsOn,
+        FakeCategoryQueries? categories = null)
     {
         CurrentVenue venue = new();
         venue.Resolve(new VenueIdentity(Guid.CreateVersion7(), "Bar Alfa", "bar-alfa"));
 
         IResult result = await MenuEndpoint.GetAsync(
-            "bar-alfa", venue, new Fake.Menu(items), categories, new Fake.Tonight(nightIsOn), TimeProvider.System, CancellationToken.None);
+            "bar-alfa",
+            venue,
+            menu,
+            categories ?? new FakeCategoryQueries(),
+            new Fake.Tonight(nightIsOn),
+            new OpenNightStockHandler(stocks, new Fake.Venue(), TimeProvider.System),
+            TimeProvider.System,
+            CancellationToken.None);
 
         return await EndpointResponse.Execute(result, Path, HttpMethods.Get);
     }
 
     private static class Fake
     {
+        public sealed class Venue : Application.Common.ICurrentVenue
+        {
+            public Guid Id { get; } = Guid.CreateVersion7();
+        }
+
         public sealed class Tonight(bool isOn) : IUnderwayNightLookup
         {
             public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken) =>
-                Task.FromResult(isOn ? Guid.CreateVersion7() : (Guid?)null);
+                Task.FromResult(isOn ? TheNight : (Guid?)null);
         }
 
         public sealed class Menu(params MenuItem[] items) : IProductQueries
         {
+            /// <summary>The night the menu was read about, null when none was on.</summary>
+            public Guid? AskedAbout { get; private set; }
+
             public Task<IReadOnlyList<ProductListItem>> ListAsync(CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The customer's menu never reads the administration listing.");
 
-            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
-                Task.FromResult<IReadOnlyList<MenuItem>>(items);
+            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? night, CancellationToken cancellationToken)
+            {
+                AskedAbout = night;
+
+                return Task.FromResult<IReadOnlyList<MenuItem>>(items);
+            }
         }
     }
 }

@@ -7,8 +7,8 @@ import { of } from 'rxjs';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { STAFF_USERS_URL } from '../../staff-users/staff-users.service';
 import type { StaffUser } from '../../staff-users/staff-users.service';
-import { NIGHTS_URL, NightsService } from '../nights.service';
-import type { Night } from '../nights.service';
+import { NIGHTS_URL, NightsService, nightStockUrl } from '../nights.service';
+import type { Night, NightStockLine } from '../nights.service';
 import { NightPage } from './night.page';
 
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
@@ -27,6 +27,10 @@ const saturday: Night = {
   crewIds: ['main-bar', 'till-1'],
   audit: noAudit,
 };
+
+const theStock: NightStockLine[] = [
+  { productId: 'gin', productName: 'Gin Tonic', loaded: 20, sold: 3, remaining: 17 },
+];
 
 const beforeItStarts = new Date(2026, 9, 10, 20, 0);
 const whileItIsOn = new Date(2026, 9, 11, 1, 0);
@@ -48,6 +52,15 @@ async function openScreen(now: Date, update = vi.fn().mockReturnValue(of(saturda
   return { rendered, update, http: TestBed.inject(HttpTestingController) };
 }
 
+/** Renders what the last answer changed and lets its effects run, without waiting on any request. */
+async function settleOnce(fixture: { detectChanges: () => void }): Promise<void> {
+  for (let round = 0; round < 3; round++) {
+    fixture.detectChanges();
+    TestBed.tick();
+    await Promise.resolve();
+  }
+}
+
 async function openScreenShowing(
   night: Night,
   now: Date,
@@ -57,6 +70,11 @@ async function openScreenShowing(
 
   opened.http.expectOne(`${NIGHTS_URL}/night-1`).flush(night);
   opened.http.expectOne(STAFF_USERS_URL).flush(theTeam);
+  // The stock is asked for once the night is on screen (US-37). The request
+  // is pending until it is answered, and a pending request is what keeps
+  // whenStable() from returning, so it is answered before waiting.
+  await settleOnce(opened.rendered.fixture);
+  opened.http.expectOne(nightStockUrl('night-1')).flush(theStock);
   await opened.rendered.fixture.whenStable();
 
   return opened;
@@ -108,6 +126,24 @@ describe('NightPage', () => {
     expect(screen.queryByLabelText(/nombre/i)).toBeNull();
   });
 
+  // US-37, criterion 1: the stock is loaded from the night's own screen, before
+  // it starts and while it is on.
+  it('shows the stock of the night under its form, with a way to move it', async () => {
+    await openScreenShowing(saturday, beforeItStarts);
+
+    expect(screen.getByRole('heading', { name: /stock de la noche/i })).not.toBeNull();
+    expect(screen.getByRole('listitem', { name: /gin tonic/i })).not.toBeNull();
+    expect(screen.getByRole('spinbutton')).not.toBeNull();
+  });
+
+  // Criterion 3: a night that ended is read, never moved.
+  it('shows the stock of a finished night without a way to move it', async () => {
+    await openScreenShowing(saturday, afterItEnded);
+
+    expect(screen.getByRole('listitem', { name: /gin tonic/i })).not.toBeNull();
+    expect(screen.queryByRole('spinbutton')).toBeNull();
+  });
+
   it('says so when the venue has no such night', async () => {
     const { rendered, http } = await openScreen(beforeItStarts);
 
@@ -131,6 +167,8 @@ describe('NightPage', () => {
     screen.getByRole('button', { name: /reintentar/i }).click();
     TestBed.tick();
     http.expectOne(`${NIGHTS_URL}/night-1`).flush(saturday);
+    await settleOnce(rendered.fixture);
+    http.expectOne(nightStockUrl('night-1')).flush(theStock);
     await rendered.fixture.whenStable();
 
     expect((screen.getByLabelText(/nombre/i) as HTMLInputElement).value).toBe('Saturday');

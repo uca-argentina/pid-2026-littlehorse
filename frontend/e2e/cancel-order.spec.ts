@@ -62,7 +62,7 @@ async function aProduct(request: APIRequestContext): Promise<string> {
       name,
       description: 'Cargado por la prueba',
       price: 4500,
-      stock: 20,
+      initialStock: 20,
       categoryId: await categoryIdNamed(request, token, 'Tragos'),
     },
   });

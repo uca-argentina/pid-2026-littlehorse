@@ -19,10 +19,8 @@ const created: Product = {
   description: null,
   imageUrl: null,
   price: 4500,
-  stock: 20,
   categoryId: 'category-drinks',
   isAvailable: true,
-  isSoldOut: false,
   isActive: true,
 
   audit: noAudit,
@@ -33,7 +31,7 @@ const aNewProduct: NewProduct = {
   description: null,
   imageUrl: null,
   price: 4500,
-  stock: 20,
+  initialStock: 20,
   categoryId: 'category-drinks',
 };
 

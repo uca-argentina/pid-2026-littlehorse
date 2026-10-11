@@ -27,7 +27,7 @@ public class ProductTests
         Assert.Equal("Gin, tonic and a slice of lime.", product.Description);
         Assert.Equal("https://images.example.com/gin-tonic.jpg", product.ImageUrl);
         Assert.Equal(4500m, product.Price);
-        Assert.Equal(20, product.Stock);
+        Assert.Equal(20, product.InitialStock);
         Assert.True(product.IsAvailable);
         Assert.True(product.IsActive);
     }
@@ -122,26 +122,6 @@ public class ProductTests
         Assert.Equal(Product.ErrorCodes.NameRequired, error.Code);
     }
 
-    // Decided on 2026-09-14: running out of stock sells a product out on its
-    // own. The availability switch is a separate thing, for turning a product
-    // off while there is still stock.
-    [Fact]
-    public void Create_WhenStockIsZero_IsSoldOut()
-    {
-        Product product = AGinTonic(stock: 0);
-
-        Assert.True(product.IsSoldOut);
-        Assert.True(product.IsAvailable);
-    }
-
-    [Fact]
-    public void Create_WhenStockIsPositive_IsNotSoldOut()
-    {
-        Product product = AGinTonic(stock: 1);
-
-        Assert.False(product.IsSoldOut);
-    }
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -231,59 +211,6 @@ public class ProductAvailabilityTests
         Assert.True(product.IsAvailable);
     }
 
-    /// <summary>
-    /// Running out is not something the switch can undo. Putting a drink back
-    /// on sale with none left would promise the customer something the bar
-    /// cannot pour: the only way back is restocking it, which is US-08's job.
-    /// </summary>
-    [Fact]
-    public void MarkAvailable_WhenSoldOut_ThrowsSoldOutCannotBeAvailable()
-    {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, ACategory.Id);
-
-        DomainException error = Assert.Throws<DomainException>(product.MarkAvailable);
-
-        Assert.Equal(Product.ErrorCodes.SoldOutCannotBeAvailable, error.Code);
-    }
-
-    // Turning it off is always allowed, sold out included: the administrator
-    // taps the switch without first working out what state it was in.
-    [Fact]
-    public void MarkUnavailable_WhenSoldOut_TurnsTheSwitchOff()
-    {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, ACategory.Id);
-
-        product.MarkUnavailable();
-
-        Assert.False(product.IsAvailable);
-    }
-
-    // The rule the customer's menu runs as SQL, owned here.
-    [Fact]
-    public void IsOrderable_WhenSwitchedOnAndInStock_IsTrue()
-    {
-        Assert.True(AGinTonic().IsOrderable);
-    }
-
-    [Fact]
-    public void IsOrderable_WhenSwitchedOff_IsFalse()
-    {
-        Product product = AGinTonic();
-        product.MarkUnavailable();
-
-        Assert.False(product.IsOrderable);
-    }
-
-    // Sold out and never switched off by anybody: the switch says yes and the
-    // shelf says no, and the shelf wins.
-    [Fact]
-    public void IsOrderable_WhenSoldOut_IsFalse()
-    {
-        Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, ACategory.Id);
-
-        Assert.True(product.IsAvailable);
-        Assert.False(product.IsOrderable);
-    }
 }
 
 public class ProductImageTests
@@ -480,99 +407,3 @@ public class ProductDeactivationTests
     }
 }
 
-// Moving the stock by hand: up when a delivery arrives, down when it was loaded
-// wrong. Always a change and never a new total, so a sale made meanwhile is
-// kept.
-public class ProductStockAdjustmentTests
-{
-    private static Product AGinTonicWith(int stock) =>
-        Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, stock, ACategory.Id);
-
-    // The way out of "sold out" that the nightly switch cannot give.
-    [Fact]
-    public void AdjustStock_WhenSoldOutAndUnitsArrive_IsNoLongerSoldOut()
-    {
-        Product product = AGinTonicWith(0);
-
-        product.AdjustStock(12);
-
-        Assert.Equal(12, product.Stock);
-        Assert.False(product.IsSoldOut);
-    }
-
-    [Fact]
-    public void AdjustStock_WhenTheChangeIsPositive_AddsToWhatWasLeft()
-    {
-        Product product = AGinTonicWith(5);
-
-        product.AdjustStock(10);
-
-        Assert.Equal(15, product.Stock);
-    }
-
-    // Loaded 200 when it was 20.
-    [Fact]
-    public void AdjustStock_WhenTheChangeIsNegative_TakesAwayWhatWasLoadedByMistake()
-    {
-        Product product = AGinTonicWith(200);
-
-        product.AdjustStock(-180);
-
-        Assert.Equal(20, product.Stock);
-    }
-
-    [Fact]
-    public void AdjustStock_WhenItTakesEverythingAway_IsSoldOut()
-    {
-        Product product = AGinTonicWith(5);
-
-        product.AdjustStock(-5);
-
-        Assert.True(product.IsSoldOut);
-    }
-
-    [Fact]
-    public void AdjustStock_WhenItWouldGoBelowZero_ThrowsStockNegativeAndKeepsTheStock()
-    {
-        Product product = AGinTonicWith(5);
-
-        DomainException error = Assert.Throws<DomainException>(() => product.AdjustStock(-6));
-
-        Assert.Equal(Product.ErrorCodes.StockNegative, error.Code);
-        Assert.Equal(5, product.Stock);
-    }
-
-    // What the handler asks first: sales between the screen opening and the
-    // save can leave less than a correction takes away, and that is expected.
-    [Theory]
-    [InlineData(5, -5, true)]
-    [InlineData(5, -6, false)]
-    [InlineData(0, 12, true)]
-    public void CanAdjustStock_WhenComparedWithWhatIsLeft_SaysWhetherItFits(int stock, int change, bool fits)
-    {
-        Assert.Equal(fits, AGinTonicWith(stock).CanAdjustStock(change));
-    }
-
-    // A change of nothing is a screen that sent a request it did not need to.
-    [Fact]
-    public void AdjustStock_WhenTheChangeIsZero_ThrowsStockChangeZero()
-    {
-        Product product = AGinTonicWith(5);
-
-        DomainException error = Assert.Throws<DomainException>(() => product.AdjustStock(0));
-
-        Assert.Equal(Product.ErrorCodes.StockChangeZero, error.Code);
-    }
-
-    // The nightly switch is a separate thing: adjusting does not turn it on.
-    [Fact]
-    public void AdjustStock_WhenTheSwitchWasOff_LeavesItOff()
-    {
-        Product product = AGinTonicWith(0);
-        product.MarkUnavailable();
-
-        product.AdjustStock(12);
-
-        Assert.False(product.IsAvailable);
-    }
-}

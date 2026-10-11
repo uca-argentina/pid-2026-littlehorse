@@ -35,15 +35,20 @@ internal sealed partial class OrderRepository(
     /// two off, but only if there are two" — rather than by writing back a
     /// number that was read seconds ago. That is what settles two customers
     /// reaching for the last one: exactly one of the two statements matches a
-    /// row. It is also why Stock is not a concurrency token; making it one put
-    /// it in the WHERE of every edit of a product, and uploading a photo while
-    /// the bar sold that drink failed with a 500.
+    /// row. It is also why Remaining is not a concurrency token; making one
+    /// would put it in the WHERE of every edit of the row.
+    ///
+    /// It comes off the night the order belongs to (US-37), never off the
+    /// product: what the night sold is how it is read afterwards.
     /// </remarks>
     public async Task<Result<Order>> AddAsync(
         Order order,
         string idempotencyKey,
         CancellationToken cancellationToken)
     {
+        Guid night = order.NightId
+            ?? throw new InvalidOperationException("An order is sold from the stock of a night, and this one has none.");
+
         await using IDbContextTransaction transaction =
             await context.Database.BeginTransactionAsync(cancellationToken);
 
@@ -52,11 +57,11 @@ internal sealed partial class OrderRepository(
             int quantity = item.Quantity;
 
             // The venue filter applies to this too, so no order can take stock
-            // off a product that is not its venue's.
-            int sold = await context.Products
-                .Where(product => product.Id == item.ProductId && product.Stock >= quantity)
+            // off a row that is not its venue's.
+            int sold = await context.NightStocks
+                .Where(stock => stock.NightId == night && stock.ProductId == item.ProductId && stock.Remaining >= quantity)
                 .ExecuteUpdateAsync(
-                    row => row.SetProperty(product => product.Stock, product => product.Stock - quantity),
+                    row => row.SetProperty(stock => stock.Remaining, stock => stock.Remaining - quantity),
                     cancellationToken);
 
             if (sold == 1) continue;
@@ -130,7 +135,10 @@ internal sealed partial class OrderRepository(
     /// The stock goes back with one relative statement per drink — "put three
     /// back" — for the same reason it comes down that way in
     /// <see cref="AddAsync"/>: writing back a number read seconds ago would
-    /// undo whatever the bar sold meanwhile.
+    /// undo whatever the bar sold meanwhile. It goes back to the night the
+    /// order was placed in, which is not necessarily the one on now. An order
+    /// placed before nights owned the stock has no night, and its drinks
+    /// return to the product, which is where they were taken from.
     /// </remarks>
     public async Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken)
     {
@@ -156,12 +164,23 @@ internal sealed partial class OrderRepository(
         {
             int quantity = item.Quantity;
 
-            // The venue filter applies here too, and a product deleted since
-            // simply matches no row: there is no shelf to put it back on.
+            // The venue filter applies here too, and a row that is not there
+            // simply matches nothing: there is no shelf to put it back on.
+            if (order.NightId is Guid night)
+            {
+                await context.NightStocks
+                    .Where(stock => stock.NightId == night && stock.ProductId == item.ProductId)
+                    .ExecuteUpdateAsync(
+                        row => row.SetProperty(stock => stock.Remaining, stock => stock.Remaining + quantity),
+                        cancellationToken);
+
+                continue;
+            }
+
             await context.Products
                 .Where(product => product.Id == item.ProductId)
                 .ExecuteUpdateAsync(
-                    row => row.SetProperty(product => product.Stock, product => product.Stock + quantity),
+                    row => row.SetProperty(product => product.InitialStock, product => product.InitialStock + quantity),
                     cancellationToken);
         }
 

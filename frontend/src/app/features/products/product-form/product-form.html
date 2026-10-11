@@ -122,119 +122,33 @@
           }
         </div>
 
-        <div class="field" [class.field-wide]="isAdjusting()">
-          @if (!isEditing()) {
-            <label class="label" for="stock">Stock</label>
+        @if (!isEditing()) {
+          <div class="field">
+            <label class="label" for="initial-stock">Stock inicial</label>
             <input
-              id="stock"
+              id="initial-stock"
               class="input"
-              [class.input-bad]="stockError() !== null"
-              [attr.aria-invalid]="stockError() !== null ? 'true' : null"
-              [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
-              formControlName="stock"
+              [class.input-bad]="initialStockError() !== null"
+              [attr.aria-invalid]="initialStockError() !== null ? 'true' : null"
+              [attr.aria-describedby]="
+                initialStockError() !== null ? 'initial-stock-error' : 'initial-stock-help'
+              "
+              formControlName="initialStock"
               type="number"
               inputmode="numeric"
               min="0"
               step="1"
               placeholder="20"
             />
-            @if (stockError() !== null) {
-              <p id="stock-error" class="bad">{{ stockError() }}</p>
+            @if (initialStockError() !== null) {
+              <p id="initial-stock-error" class="bad">{{ initialStockError() }}</p>
             } @else {
-              <p id="stock-help" class="help">
-                Cuántos hay para vender. En cero queda como sin stock.
+              <p id="initial-stock-help" class="help">
+                Con cuántos arranca la primera noche. Después se cuenta en cada noche.
               </p>
             }
-          } @else if (isAdjusting()) {
-            <label class="label" for="stock">{{
-              stockMode() === 'add' ? 'Unidades que llegaron' : 'Stock real'
-            }}</label>
-            <div class="modes" role="group" aria-label="Qué querés hacer con el stock">
-              <button
-                class="mode"
-                type="button"
-                [class.mode-on]="stockMode() === 'add'"
-                [attr.aria-pressed]="stockMode() === 'add'"
-                [disabled]="isSending()"
-                (click)="chooseStockMode('add')"
-              >
-                Llegaron unidades
-              </button>
-              <button
-                class="mode"
-                type="button"
-                [class.mode-on]="stockMode() === 'set'"
-                [attr.aria-pressed]="stockMode() === 'set'"
-                [disabled]="isSending()"
-                (click)="chooseStockMode('set')"
-              >
-                Corregir el total
-              </button>
-            </div>
-            <div class="stock-row">
-              <input
-                #stockField
-                id="stock"
-                class="input"
-                [class.input-bad]="stockError() !== null"
-                [attr.aria-invalid]="stockError() !== null ? 'true' : null"
-                [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
-                formControlName="stock"
-                type="number"
-                inputmode="numeric"
-                [attr.min]="stockMode() === 'add' ? 1 : 0"
-                step="1"
-                [attr.placeholder]="stockMode() === 'add' ? '12' : product()!.stock"
-              />
-              <button
-                class="stock-action"
-                type="button"
-                [disabled]="isSending()"
-                (click)="closeAdjust()"
-              >
-                No ajustar
-              </button>
-            </div>
-            @if (stockError() !== null) {
-              <p id="stock-error" class="bad">{{ stockError() }}</p>
-            } @else if (stockMode() === 'add') {
-              <p id="stock-help" class="help">
-                Hoy hay {{ product()!.stock }}.
-                @if (stockAfter() !== product()!.stock) {
-                  <strong class="total">Quedan {{ stockAfter() }} en total.</strong>
-                } @else {
-                  Las que pongas se suman.
-                }
-              </p>
-            } @else {
-              <p id="stock-help" class="help">
-                Hoy hay {{ product()!.stock }}. Usalo si se cargó mal.
-                @if (hasStockTyped() && stockAfter() !== product()!.stock) {
-                  <strong class="total"
-                    >Pasa a {{ stockAfter() }} ({{ stockDifference() }}).</strong
-                  >
-                } @else if (hasStockTyped()) {
-                  <strong class="total">Es el que hay hoy: no cambia nada.</strong>
-                }
-              </p>
-            }
-          } @else {
-            <span class="label">Stock</span>
-            <div class="stock-row">
-              <p class="stock-now" [class.stock-out]="product()!.isSoldOut">
-                {{ product()!.stock }} en stock
-              </p>
-              <button
-                class="stock-action"
-                type="button"
-                [disabled]="isSending()"
-                (click)="openAdjust()"
-              >
-                Ajustar
-              </button>
-            </div>
-          }
-        </div>
+          </div>
+        }
       </div>
 
       <div class="field">
@@ -247,18 +161,14 @@
             role="switch"
             [attr.aria-checked]="isAvailable()"
             aria-labelledby="available-label available-desc"
-            [disabled]="isSending() || !canSwitch()"
+            [disabled]="isSending()"
             (click)="toggleAvailability()"
           >
             <span class="sw-knob"></span>
           </button>
           <span id="available-desc" class="switch-text">Se puede pedir</span>
         </div>
-        @if (canSwitch()) {
-          <p class="help">Apagado, el cliente lo ve en la carta pero no lo puede pedir.</p>
-        } @else {
-          <p class="help">Sin stock: reponé para poder prenderlo.</p>
-        }
+        <p class="help">Apagado, el cliente lo ve en la carta pero no lo puede pedir.</p>
       </div>
 
       <!-- Only a product that exists has a history: a new product has nothing to show yet. -->

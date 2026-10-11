@@ -24,12 +24,19 @@ export class NewProductPage {
    * The availability switch is not sent: a new product always starts
    * available, and the API has no say in it at creation.
    */
-  protected create({ name, description, categoryId, price, stock, photo }: ProductFormValue): void {
+  protected create({
+    name,
+    description,
+    categoryId,
+    price,
+    initialStock,
+    photo,
+  }: ProductFormValue): void {
     this.store.submit(
       this.venueSlug(),
       // The picture goes up on its own request once the product exists; the
       // store handles the second step.
-      { name, description, imageUrl: null, categoryId, price, stock },
+      { name, description, imageUrl: null, categoryId, price, initialStock },
       photo,
     );
   }

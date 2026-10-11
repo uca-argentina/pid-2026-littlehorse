@@ -9,7 +9,7 @@ namespace DrinkIt.Application.Menu;
 /// </summary>
 /// <remarks>
 /// One record for every write and not one per use case: the screen draws the
-/// same row whichever operation produced it, so a second copy of these nine
+/// same row whichever operation produced it, so a second copy of these fields
 /// fields would only be a second thing to keep in step with the first. It stays
 /// separate from <see cref="ProductListItem"/> because that one is the read
 /// side and answers a query, not a command.
@@ -20,10 +20,8 @@ public sealed record ProductSummary(
     string? Description,
     string? ImageUrl,
     decimal Price,
-    int Stock,
     Guid CategoryId,
     bool IsAvailable,
-    bool IsSoldOut,
     bool IsActive,
     AuditInfo Audit)
 {
@@ -33,10 +31,8 @@ public sealed record ProductSummary(
         product.Description,
         product.ImageUrl,
         product.Price,
-        product.Stock,
         product.CategoryId,
         product.IsAvailable,
-        product.IsSoldOut,
         product.IsActive,
         AuditInfo.Of(product));
 }
