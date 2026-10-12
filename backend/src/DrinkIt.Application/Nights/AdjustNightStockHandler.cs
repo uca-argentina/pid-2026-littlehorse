@@ -1,22 +1,26 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Staff;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
+using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Application.Nights;
 
-/// <summary>The units to load into the night, or to take out of it when they were loaded wrong.</summary>
-public sealed record AdjustNightStockCommand(Guid NightId, Guid ProductId, int Change);
+/// <summary>The units to load into one bar for the night, or to take out of it when they were loaded wrong.</summary>
+public sealed record AdjustNightStockCommand(Guid NightId, Guid KdsId, Guid ProductId, int Change);
 
 /// <summary>
-/// US-37: the administrator loads the night's stock, product by product. The
-/// change is what gets saved, never the total on the screen: the bar keeps
-/// selling while it is open, and a total typed over it would put back drinks
-/// already sold.
+/// US-37: the administrator loads each bar's stock for the night, product by
+/// product. A bar is a KDS of the night's crew. The change is what gets saved,
+/// never the total on the screen: the bar keeps selling while it is open, and
+/// a total typed over it would put back drinks already sold.
 /// </summary>
 public sealed class AdjustNightStockHandler(
     INightRepository nights,
     IProductRepository products,
+    IStaffUserRepository staffUsers,
+    INightStockRepository shelves,
     INightStockQueries sheets,
     TimeProvider clock)
 {
@@ -28,24 +32,26 @@ public sealed class AdjustNightStockHandler(
 
         DateTimeOffset now = clock.GetUtcNow();
 
-        // Both expected from a screen that was opened a while ago, so results
-        // and not the domain's exception.
+        // Expected from a screen that was opened a while ago, so results and
+        // not the domain's exceptions.
         if (night.HasEndedAt(now)) return NightErrors.StockClosed;
         if (await nights.HasUnfinishedBeforeAsync(night.StartsAt, now, cancellationToken)) return NightErrors.EarlierNightOpen;
+
+        StaffUser? bar = await staffUsers.GetForUpdateAsync(command.KdsId, cancellationToken);
+
+        if (bar is null) return NightErrors.BarNotFound;
+        if (!night.IsWorkedBy(bar.Id)) return NightErrors.BarNotInNight;
 
         Product? product = await products.GetForUpdateAsync(command.ProductId, cancellationToken);
 
         if (product is null) return ProductErrors.NotFound;
 
-        // Sales since the screen opened leaving too little is expected, and gets
-        // the same answer as a sale landing between this read and the write.
-        if (!product.CanAdjustStock(command.Change)) return ProductErrors.StockMoved;
+        // What is left can only be a malformed request (a change of zero, an
+        // account that is not a KDS): the domain throws and the API answers 400.
+        NightStockAdjustment adjustment = night.AdjustStock(bar, product, command.Change, now);
 
-        // What is left can only be a malformed request (a change of zero): the
-        // domain throws and the API turns it into a 400.
-        NightStockAdjustment adjustment = night.AdjustStock(product, command.Change, now);
-
-        if (!await products.SaveStockAdjustmentAsync(product, adjustment, cancellationToken)) return ProductErrors.StockMoved;
+        // Sales since the screen opened leaving the bar too little is expected.
+        if (!await shelves.SaveAdjustmentAsync(adjustment, cancellationToken)) return ProductErrors.StockMoved;
 
         return (await sheets.GetAsync(night.Id, cancellationToken))!;
     }

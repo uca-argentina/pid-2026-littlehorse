@@ -5,7 +5,7 @@ using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Domain.Tests.Nights;
 
-/// <summary>US-37: loading the night's stock.</summary>
+/// <summary>US-37: loading a bar's stock for the night. A bar is a KDS.</summary>
 public class NightStockTests
 {
     private static readonly Guid AVenue = Guid.CreateVersion7();
@@ -13,84 +13,80 @@ public class NightStockTests
     private static readonly DateTimeOffset Opening = new(2026, 10, 10, 23, 0, 0, TimeSpan.FromHours(-3));
     private static readonly DateTimeOffset Closing = Opening.AddHours(7);
 
-    private static Night ANight() => Night.Create(
-        AVenue,
-        "Saturday 10/10",
-        Opening,
-        Closing,
-        [StaffUser.Create(AVenue, "main-bar", "hash", StaffRole.Kds), StaffUser.Create(AVenue, "till-1", "hash", StaffRole.Cashier)]);
+    private static readonly StaffUser MainBar = StaffUser.Create(AVenue, "main-bar", "hash", StaffRole.Kds);
+    private static readonly StaffUser Till = StaffUser.Create(AVenue, "till-1", "hash", StaffRole.Cashier);
 
-    private static Product AGinTonicWith(int stock, Guid? venueId = null) =>
-        Product.Create(venueId ?? AVenue, "Gin Tonic", null, null, 9500m, stock, Guid.CreateVersion7());
+    private static Night ANight() => Night.Create(AVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]);
+
+    private static Product AGinTonic(Guid? venueId = null) =>
+        Product.Create(venueId ?? AVenue, "Gin Tonic", null, null, 9500m, 0, Guid.CreateVersion7());
 
     [Fact]
-    public void AdjustStock_WhenNightIsUpcoming_RecordsTheChangeAgainstTheNight()
+    public void AdjustStock_WhenNightIsUpcoming_RecordsTheChangeAgainstTheNightAndTheBar()
     {
         Night night = ANight();
-        Product ginTonic = AGinTonicWith(20);
+        Product ginTonic = AGinTonic();
 
-        NightStockAdjustment adjustment = night.AdjustStock(ginTonic, 12, Opening.AddHours(-5));
+        NightStockAdjustment adjustment = night.AdjustStock(MainBar, ginTonic, 12, Opening.AddHours(-5));
 
         Assert.NotEqual(Guid.Empty, adjustment.Id);
         Assert.Equal(AVenue, adjustment.VenueId);
         Assert.Equal(night.Id, adjustment.NightId);
+        Assert.Equal(MainBar.Id, adjustment.KdsId);
         Assert.Equal(ginTonic.Id, adjustment.ProductId);
         Assert.Equal(12, adjustment.Change);
     }
 
     [Fact]
-    public void AdjustStock_WhenNightIsUnderway_MovesWhatIsLeftOfTheProduct()
+    public void AdjustStock_WhenNightIsUnderway_RecordsTakingUnitsOut()
     {
-        Night night = ANight();
-        Product ginTonic = AGinTonicWith(20);
+        NightStockAdjustment adjustment = ANight().AdjustStock(MainBar, AGinTonic(), -5, Opening.AddHours(2));
 
-        night.AdjustStock(ginTonic, -5, Opening.AddHours(2));
-
-        Assert.Equal(15, ginTonic.Stock);
+        Assert.Equal(-5, adjustment.Change);
     }
 
     [Fact]
     public void AdjustStock_WhenNightIsOver_ThrowsNightOver()
     {
-        Night night = ANight();
-        Product ginTonic = AGinTonicWith(20);
-
-        DomainException error = Assert.Throws<DomainException>(() => night.AdjustStock(ginTonic, 12, Closing));
+        DomainException error = Assert.Throws<DomainException>(() => ANight().AdjustStock(MainBar, AGinTonic(), 12, Closing));
 
         Assert.Equal(Night.ErrorCodes.NightOver, error.Code);
-        Assert.Equal(20, ginTonic.Stock);
     }
 
     [Fact]
     public void AdjustStock_WhenProductIsFromAnotherVenue_ThrowsProductFromAnotherVenue()
     {
-        Night night = ANight();
-        Product elsewhere = AGinTonicWith(20, Guid.CreateVersion7());
-
-        DomainException error = Assert.Throws<DomainException>(() => night.AdjustStock(elsewhere, 12, Opening));
+        DomainException error = Assert.Throws<DomainException>(
+            () => ANight().AdjustStock(MainBar, AGinTonic(Guid.CreateVersion7()), 12, Opening));
 
         Assert.Equal(Night.ErrorCodes.ProductFromAnotherVenue, error.Code);
-        Assert.Equal(20, elsewhere.Stock);
+    }
+
+    // Only a KDS has a bar to keep stock in.
+    [Fact]
+    public void AdjustStock_WhenTheAccountIsNotAKds_ThrowsBarRequired()
+    {
+        DomainException error = Assert.Throws<DomainException>(() => ANight().AdjustStock(Till, AGinTonic(), 12, Opening));
+
+        Assert.Equal(Night.ErrorCodes.BarRequired, error.Code);
+    }
+
+    [Fact]
+    public void AdjustStock_WhenTheBarDoesNotWorkTheNight_ThrowsBarNotInNight()
+    {
+        StaffUser vipBar = StaffUser.Create(AVenue, "vip-bar", "hash", StaffRole.Kds);
+
+        DomainException error = Assert.Throws<DomainException>(() => ANight().AdjustStock(vipBar, AGinTonic(), 12, Opening));
+
+        Assert.Equal(Night.ErrorCodes.BarNotInNight, error.Code);
     }
 
     [Fact]
     public void AdjustStock_WhenChangeIsZero_ThrowsStockChangeZero()
     {
-        Night night = ANight();
+        DomainException error = Assert.Throws<DomainException>(() => ANight().AdjustStock(MainBar, AGinTonic(), 0, Opening));
 
-        DomainException error = Assert.Throws<DomainException>(() => night.AdjustStock(AGinTonicWith(20), 0, Opening));
-
-        Assert.Equal(Product.ErrorCodes.StockChangeZero, error.Code);
-    }
-
-    [Fact]
-    public void AdjustStock_WhenItTakesAwayMoreThanIsLeft_ThrowsStockNegative()
-    {
-        Night night = ANight();
-
-        DomainException error = Assert.Throws<DomainException>(() => night.AdjustStock(AGinTonicWith(3), -4, Opening));
-
-        Assert.Equal(Product.ErrorCodes.StockNegative, error.Code);
+        Assert.Equal(Night.ErrorCodes.StockChangeZero, error.Code);
     }
 
     [Theory]

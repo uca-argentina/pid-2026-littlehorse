@@ -23,6 +23,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     {
         public const string VenueRequired = "order.venue_required";
         public const string NightRequired = "order.night_required";
+        public const string KdsRequired = "order.kds_required";
         public const string NameRequired = "order.name_required";
         public const string NameLength = "order.name_length";
         public const string Empty = "order.empty";
@@ -48,11 +49,12 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// parameter, so a constructor that asked for them would make the aggregate
     /// unloadable.
     /// </summary>
-    private Order(Guid id, Guid venueId, Guid? nightId, string customerName, OrderCode code, TrackingToken trackingToken)
+    private Order(Guid id, Guid venueId, Guid? nightId, Guid? kdsId, string customerName, OrderCode code, TrackingToken trackingToken)
     {
         Id = id;
         VenueId = venueId;
         NightId = nightId;
+        KdsId = kdsId;
         CustomerName = customerName;
         Code = code;
         TrackingToken = trackingToken;
@@ -69,6 +71,13 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// ran, which is the lie US-30 refused to tell about creation dates.
     /// </summary>
     public Guid? NightId { get; }
+
+    /// <summary>
+    /// The bar it goes to (US-37): the KDS whose stock it was taken from,
+    /// chosen when it was confirmed. Null only on orders from before bars kept
+    /// a stock of their own, for the same reason as <see cref="NightId"/>.
+    /// </summary>
+    public Guid? KdsId { get; }
 
     /// <summary>Who the bar calls for it.</summary>
     public string CustomerName { get; }
@@ -130,12 +139,14 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     public static Order Place(
         Guid venueId,
         Guid nightId,
+        Guid kdsId,
         string customerName,
         OrderCode code,
         IReadOnlyCollection<NewOrderItem> items)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Orders must belong to a venue.");
         if (nightId == Guid.Empty) throw new DomainException(ErrorCodes.NightRequired, "Orders are placed during a night of the venue.");
+        if (kdsId == Guid.Empty) throw new DomainException(ErrorCodes.KdsRequired, "Orders go to a bar, whose stock they are taken from.");
         if (string.IsNullOrWhiteSpace(customerName)) throw new DomainException(ErrorCodes.NameRequired, "The order needs a name to be called for.");
 
         string cleanName = customerName.Trim();
@@ -144,7 +155,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         if (items.Count == 0) throw new DomainException(ErrorCodes.Empty, "An order with nothing in it cannot be placed.");
         if (items.Select(item => item.ProductId).Distinct().Count() != items.Count) throw new DomainException(ErrorCodes.DuplicateItem, "Each drink goes on one line, with a quantity beside it.");
 
-        Order order = new(Guid.CreateVersion7(), venueId, nightId, cleanName, code, TrackingToken.New());
+        Order order = new(Guid.CreateVersion7(), venueId, nightId, kdsId, cleanName, code, TrackingToken.New());
 
         order._items.AddRange(items.Select(ToItem));
 

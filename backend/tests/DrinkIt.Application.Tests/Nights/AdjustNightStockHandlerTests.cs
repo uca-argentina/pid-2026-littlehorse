@@ -1,6 +1,7 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Application.Nights;
+using DrinkIt.Application.Tests.Staff;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
@@ -8,141 +9,148 @@ using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Application.Tests.Nights;
 
+/// <summary>US-37: loading one bar's stock for a night. A bar is a KDS of the night's crew.</summary>
 public class AdjustNightStockHandlerTests
 {
     private static readonly Guid AVenue = Guid.CreateVersion7();
 
     private static readonly DateTimeOffset Opening = new(2026, 10, 10, 23, 0, 0, TimeSpan.FromHours(-3));
 
-    private static Night ANightStartingAt(DateTimeOffset startsAt) => Night.Create(
-        AVenue,
-        "Saturday",
-        startsAt,
-        startsAt.AddHours(7),
-        [StaffUser.Create(AVenue, "main-bar", "hash", StaffRole.Kds), StaffUser.Create(AVenue, "till-1", "hash", StaffRole.Cashier)]);
+    private static readonly StaffUser MainBar = StaffUser.Create(AVenue, "main-bar", "hash", StaffRole.Kds);
+    private static readonly StaffUser VipBar = StaffUser.Create(AVenue, "vip-bar", "hash", StaffRole.Kds);
+    private static readonly StaffUser Till = StaffUser.Create(AVenue, "till-1", "hash", StaffRole.Cashier);
 
-    private static Product AGinTonicWith(int stock) =>
-        Product.Create(AVenue, "Gin Tonic", null, null, 9500m, stock, Guid.CreateVersion7());
+    private static Night ANightStartingAt(DateTimeOffset startsAt) =>
+        Night.Create(AVenue, "Saturday", startsAt, startsAt.AddHours(7), [MainBar, Till]);
 
-    private static AdjustNightStockHandler Handler(NightsInMemory nights, Fake.Products products, DateTimeOffset now) =>
-        new(nights, products, new Fake.Sheets(), new Fake.FixedClock(now));
+    private static Product AGinTonic() => Product.Create(AVenue, "Gin Tonic", null, null, 9500m, 0, Guid.CreateVersion7());
+
+    private static AdjustNightStockHandler Handler(NightsInMemory nights, Product product, Fake.Shelves shelves, DateTimeOffset now) =>
+        new(nights, new Fake.Products(product), new StaffUsersInMemory(MainBar, VipBar, Till), shelves, new Fake.Sheets(), new Fake.FixedClock(now));
+
+    private static Task<Result<NightStockSheet>> Adjust(
+        Night? night,
+        Product product,
+        Fake.Shelves shelves,
+        DateTimeOffset now,
+        int change = 12,
+        Guid? barId = null,
+        Guid? productId = null,
+        Night? earlier = null)
+    {
+        NightsInMemory nights = new([.. new[] { earlier, night }.OfType<Night>()]);
+
+        return Handler(nights, product, shelves, now).HandleAsync(
+            new AdjustNightStockCommand(night?.Id ?? Guid.CreateVersion7(), barId ?? MainBar.Id, productId ?? product.Id, change),
+            CancellationToken.None);
+    }
 
     [Fact]
-    public async Task HandleAsync_WhenNightIsUpcoming_SavesTheAdjustmentWithTheProductsStock()
+    public async Task HandleAsync_WhenNightIsUpcoming_SavesTheAdjustmentForThatBar()
     {
         Night night = ANightStartingAt(Opening);
-        Product ginTonic = AGinTonicWith(20);
-        Fake.Products products = new(ginTonic);
+        Product ginTonic = AGinTonic();
+        Fake.Shelves shelves = new();
 
-        Result<NightStockSheet> result = await Handler(new NightsInMemory(night), products, Opening.AddHours(-5))
-            .HandleAsync(new AdjustNightStockCommand(night.Id, ginTonic.Id, 12), CancellationToken.None);
+        Result<NightStockSheet> result = await Adjust(night, ginTonic, shelves, Opening.AddHours(-5));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(night.Id, result.Value.NightId);
-        Assert.Equal(night.Id, products.Saved?.NightId);
-        Assert.Equal(12, products.Saved?.Change);
-        Assert.Equal(32, ginTonic.Stock);
+        Assert.Equal(night.Id, shelves.Saved?.NightId);
+        Assert.Equal(MainBar.Id, shelves.Saved?.KdsId);
+        Assert.Equal(ginTonic.Id, shelves.Saved?.ProductId);
+        Assert.Equal(12, shelves.Saved?.Change);
     }
 
     [Fact]
     public async Task HandleAsync_WhenTheNightDoesNotExistInThisVenue_FailsWithNotFound()
     {
-        Product ginTonic = AGinTonicWith(20);
-        Fake.Products products = new(ginTonic);
+        Fake.Shelves shelves = new();
 
-        Result<NightStockSheet> result = await Handler(new NightsInMemory(), products, Opening)
-            .HandleAsync(new AdjustNightStockCommand(Guid.CreateVersion7(), ginTonic.Id, 12), CancellationToken.None);
+        Result<NightStockSheet> result = await Adjust(null, AGinTonic(), shelves, Opening);
 
         Assert.Equal(NightErrors.NotFound, result.Error);
-        Assert.Null(products.Saved);
+        Assert.Null(shelves.Saved);
     }
 
     [Fact]
     public async Task HandleAsync_WhenTheProductDoesNotExistInThisVenue_FailsWithProductNotFound()
     {
-        Night night = ANightStartingAt(Opening);
-        Fake.Products products = new(AGinTonicWith(20));
+        Fake.Shelves shelves = new();
 
-        Result<NightStockSheet> result = await Handler(new NightsInMemory(night), products, Opening)
-            .HandleAsync(new AdjustNightStockCommand(night.Id, Guid.CreateVersion7(), 12), CancellationToken.None);
+        Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, Opening, productId: Guid.CreateVersion7());
 
         Assert.Equal(ProductErrors.NotFound, result.Error);
-        Assert.Null(products.Saved);
+        Assert.Null(shelves.Saved);
     }
 
-    // Criterion 3: a finished night is only looked at. A screen opened before
-    // the end can still send one, and that is something that happens.
+    [Fact]
+    public async Task HandleAsync_WhenTheBarDoesNotExistInThisVenue_FailsWithBarNotFound()
+    {
+        Fake.Shelves shelves = new();
+
+        Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, Opening, barId: Guid.CreateVersion7());
+
+        Assert.Equal(NightErrors.BarNotFound, result.Error);
+        Assert.Null(shelves.Saved);
+    }
+
+    // Taken out of the crew while the screen was open: something that happens.
+    [Fact]
+    public async Task HandleAsync_WhenTheBarDoesNotWorkTheNight_FailsWithBarNotInNight()
+    {
+        Fake.Shelves shelves = new();
+
+        Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, Opening, barId: VipBar.Id);
+
+        Assert.Equal(NightErrors.BarNotInNight, result.Error);
+        Assert.Null(shelves.Saved);
+    }
+
+    // Criterion 3: a finished night is only looked at.
     [Fact]
     public async Task HandleAsync_WhenTheNightIsOver_FailsWithStockClosedWithoutSaving()
     {
         Night night = ANightStartingAt(Opening);
-        Product ginTonic = AGinTonicWith(20);
-        Fake.Products products = new(ginTonic);
+        Fake.Shelves shelves = new();
 
-        Result<NightStockSheet> result = await Handler(new NightsInMemory(night), products, night.EndsAt)
-            .HandleAsync(new AdjustNightStockCommand(night.Id, ginTonic.Id, 12), CancellationToken.None);
+        Result<NightStockSheet> result = await Adjust(night, AGinTonic(), shelves, night.EndsAt);
 
         Assert.Equal(NightErrors.StockClosed, result.Error);
-        Assert.Null(products.Saved);
-        Assert.Equal(20, ginTonic.Stock);
+        Assert.Null(shelves.Saved);
     }
 
-    // Saturday starts from what Friday leaves, and Friday is still selling:
-    // loading Saturday now would put those units on Friday's shelf.
+    // Saturday starts from what Friday leaves, and Friday is still selling.
     [Fact]
     public async Task HandleAsync_WhenAnEarlierNightHasNotEnded_FailsWithEarlierNightOpen()
     {
         Night friday = ANightStartingAt(Opening.AddDays(-1));
-        Night saturday = ANightStartingAt(Opening);
-        Product ginTonic = AGinTonicWith(20);
-        Fake.Products products = new(ginTonic);
+        Fake.Shelves shelves = new();
 
-        Result<NightStockSheet> result = await Handler(new NightsInMemory(friday, saturday), products, friday.StartsAt.AddHours(1))
-            .HandleAsync(new AdjustNightStockCommand(saturday.Id, ginTonic.Id, 12), CancellationToken.None);
+        Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, friday.StartsAt.AddHours(1), earlier: friday);
 
         Assert.Equal(NightErrors.EarlierNightOpen, result.Error);
-        Assert.Null(products.Saved);
+        Assert.Null(shelves.Saved);
     }
 
     [Fact]
     public async Task HandleAsync_WhenTheEarlierNightAlreadyEnded_SavesTheAdjustment()
     {
         Night friday = ANightStartingAt(Opening.AddDays(-1));
-        Night saturday = ANightStartingAt(Opening);
-        Product ginTonic = AGinTonicWith(20);
-        Fake.Products products = new(ginTonic);
+        Fake.Shelves shelves = new();
 
-        Result<NightStockSheet> result = await Handler(new NightsInMemory(friday, saturday), products, friday.EndsAt)
-            .HandleAsync(new AdjustNightStockCommand(saturday.Id, ginTonic.Id, 12), CancellationToken.None);
+        Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, friday.EndsAt, earlier: friday);
 
         Assert.True(result.IsSuccess);
     }
 
-    // The screen worked the change out from what it showed when it opened.
+    // The bar has less than the change takes away, sold since the screen opened.
     [Fact]
-    public async Task HandleAsync_WhenWhatIsLeftIsLessThanItTakesAway_FailsWithStockMovedWithoutSaving()
+    public async Task HandleAsync_WhenTheBarHasLessThanItTakesAway_FailsWithStockMoved()
     {
-        Night night = ANightStartingAt(Opening);
-        Product ginTonic = AGinTonicWith(2);
-        Fake.Products products = new(ginTonic);
+        Fake.Shelves shelves = new(applies: false);
 
-        Result<NightStockSheet> result = await Handler(new NightsInMemory(night), products, Opening)
-            .HandleAsync(new AdjustNightStockCommand(night.Id, ginTonic.Id, -5), CancellationToken.None);
-
-        Assert.Equal(ProductErrors.StockMoved, result.Error);
-        Assert.Null(products.Saved);
-    }
-
-    // A sale landed between the read and the write.
-    [Fact]
-    public async Task HandleAsync_WhenSalesMeanwhileLeftTooLittle_FailsWithStockMoved()
-    {
-        Night night = ANightStartingAt(Opening);
-        Product ginTonic = AGinTonicWith(5);
-        Fake.Products products = new(ginTonic, adjustmentApplies: false);
-
-        Result<NightStockSheet> result = await Handler(new NightsInMemory(night), products, Opening)
-            .HandleAsync(new AdjustNightStockCommand(night.Id, ginTonic.Id, -5), CancellationToken.None);
+        Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, Opening, change: -5);
 
         Assert.Equal(ProductErrors.StockMoved, result.Error);
     }
@@ -151,15 +159,13 @@ public class AdjustNightStockHandlerTests
     [Fact]
     public async Task HandleAsync_WhenTheChangeIsZero_LetsTheDomainExceptionThrowWithoutSaving()
     {
-        Night night = ANightStartingAt(Opening);
-        Product ginTonic = AGinTonicWith(5);
-        Fake.Products products = new(ginTonic);
+        Fake.Shelves shelves = new();
 
-        DomainException error = await Assert.ThrowsAsync<DomainException>(() => Handler(new NightsInMemory(night), products, Opening)
-            .HandleAsync(new AdjustNightStockCommand(night.Id, ginTonic.Id, 0), CancellationToken.None));
+        DomainException error = await Assert.ThrowsAsync<DomainException>(
+            () => Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, Opening, change: 0));
 
-        Assert.Equal(Product.ErrorCodes.StockChangeZero, error.Code);
-        Assert.Null(products.Saved);
+        Assert.Equal(Night.ErrorCodes.StockChangeZero, error.Code);
+        Assert.Null(shelves.Saved);
     }
 
     private static class Fake
@@ -169,10 +175,8 @@ public class AdjustNightStockHandlerTests
             public override DateTimeOffset GetUtcNow() => now.ToUniversalTime();
         }
 
-        public sealed class Products(Product stored, bool adjustmentApplies = true) : IProductRepository
+        public sealed class Products(Product stored) : IProductRepository
         {
-            public NightStockAdjustment? Saved { get; private set; }
-
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) => Task.FromResult(false);
 
             public Task AddAsync(Product product, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -181,12 +185,18 @@ public class AdjustNightStockHandlerTests
                 Task.FromResult(stored.Id == id ? stored : null);
 
             public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        }
 
-            public Task<bool> SaveStockAdjustmentAsync(Product product, NightStockAdjustment adjustment, CancellationToken cancellationToken)
+        /// <summary>The bars' stock. <c>applies: false</c> is a bar left with less than the change takes away.</summary>
+        public sealed class Shelves(bool applies = true) : INightStockRepository
+        {
+            public NightStockAdjustment? Saved { get; private set; }
+
+            public Task<bool> SaveAdjustmentAsync(NightStockAdjustment adjustment, CancellationToken cancellationToken)
             {
-                if (adjustmentApplies) Saved = adjustment;
+                if (applies) Saved = adjustment;
 
-                return Task.FromResult(adjustmentApplies);
+                return Task.FromResult(applies);
             }
         }
 

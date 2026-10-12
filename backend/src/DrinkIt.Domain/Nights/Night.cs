@@ -29,6 +29,9 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         public const string StartLocked = "night.start_locked";
         public const string NightOver = "night.over";
         public const string ProductFromAnotherVenue = "night.product_from_another_venue";
+        public const string BarRequired = "night.bar_required";
+        public const string BarNotInNight = "night.bar_not_in_night";
+        public const string StockChangeZero = "night.stock_change_zero";
     }
 
     public const int NameMaxLength = 60;
@@ -108,24 +111,26 @@ public sealed class Night : AuditStamps, IBelongsToVenue
     public bool HasEndedAt(DateTimeOffset moment) => moment >= EndsAt;
 
     /// <summary>
-    /// US-37: units of a product loaded into the night, or taken out of it.
-    /// The product's stock moves with it, because what is left on the shelf is
-    /// what the night sells from. A change and never a total, as in
-    /// <see cref="Product.AdjustStock"/>, so a sale made meanwhile is kept.
+    /// US-37: units of a product loaded into one bar for the night, or taken
+    /// out of it. A bar is a KDS of the night's crew, and keeps a stock of its
+    /// own: what a customer orders is taken from the bar the order goes to.
     /// </summary>
     /// <remarks>
-    /// A night that ended is read-only, since what it loaded and sold is its
-    /// record. That a later night cannot load while an earlier one is still
-    /// open argues with the venue's other nights, so it is the handler's.
+    /// Only the record: the bar's units move in the database with a
+    /// conditional statement, so a sale made meanwhile is kept. A night that
+    /// ended is read-only, since what it loaded and sold is its record. That a
+    /// later night cannot load while an earlier one is still open argues with
+    /// the venue's other nights, so it is the handler's.
     /// </remarks>
-    public NightStockAdjustment AdjustStock(Product product, int change, DateTimeOffset now)
+    public NightStockAdjustment AdjustStock(StaffUser bar, Product product, int change, DateTimeOffset now)
     {
         if (HasEndedAt(now)) throw new DomainException(ErrorCodes.NightOver, "The night is over and its stock can no longer change.");
         if (product.VenueId != VenueId) throw new DomainException(ErrorCodes.ProductFromAnotherVenue, "Only the venue's own products can be loaded into its night.");
+        if (bar.Role != StaffRole.Kds) throw new DomainException(ErrorCodes.BarRequired, "Stock is loaded into a bar, and a bar is a KDS.");
+        if (!IsWorkedBy(bar.Id)) throw new DomainException(ErrorCodes.BarNotInNight, $"'{bar.Username}' does not work this night.");
+        if (change == 0) throw new DomainException(ErrorCodes.StockChangeZero, "The stock has to change by at least one unit.");
 
-        product.AdjustStock(change);
-
-        return new NightStockAdjustment(VenueId, Id, product.Id, change);
+        return new NightStockAdjustment(VenueId, Id, bar.Id, product.Id, change);
     }
 
     private static string CleanName(string name)

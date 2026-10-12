@@ -9,6 +9,8 @@ public class OrderTests
 
     private static readonly Guid ANight = Guid.CreateVersion7();
 
+    private static readonly Guid MainBar = Guid.CreateVersion7();
+
     private static readonly Guid GinTonic = Guid.CreateVersion7();
 
     private static readonly Guid Fernet = Guid.CreateVersion7();
@@ -20,7 +22,7 @@ public class OrderTests
         new(Fernet, "Fernet con Coca", 4000m, quantity, null);
 
     private static Order AnOrder(params NewOrderItem[] items) =>
-        Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), items.Length == 0 ? [AGinTonic()] : items);
+        Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), items.Length == 0 ? [AGinTonic()] : items);
 
     [Fact]
     public void Place_WhenValid_StartsAsACartThatNobodyHasPaid()
@@ -112,12 +114,28 @@ public class OrderTests
         Assert.Equal(ANight, AnOrder().NightId);
     }
 
+    // US-37: the order is taken from one bar's stock, so it goes to that bar.
+    [Fact]
+    public void Place_WhenValid_KeepsTheBarItGoesTo()
+    {
+        Assert.Equal(MainBar, AnOrder().KdsId);
+    }
+
+    [Fact]
+    public void Place_WhenKdsIdIsEmpty_ThrowsKdsRequired()
+    {
+        DomainException error = Assert.Throws<DomainException>(
+            () => Order.Place(AVenue, ANight, Guid.Empty, "María Quadro", OrderCode.First, [AGinTonic()]));
+
+        Assert.Equal(Order.ErrorCodes.KdsRequired, error.Code);
+    }
+
     // The handler only places an order inside a night; one without it is a bug.
     [Fact]
     public void Place_WhenNightIdIsEmpty_ThrowsNightRequired()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, Guid.Empty, "María Quadro", OrderCode.First, [AGinTonic()]));
+            () => Order.Place(AVenue, Guid.Empty, Guid.CreateVersion7(), "María Quadro", OrderCode.First, [AGinTonic()]));
 
         Assert.Equal(Order.ErrorCodes.NightRequired, error.Code);
     }
@@ -126,7 +144,7 @@ public class OrderTests
     public void Place_WhenVenueIdIsEmpty_ThrowsVenueRequired()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(Guid.Empty, ANight, "María Quadro", OrderCode.First, [AGinTonic()]));
+            () => Order.Place(Guid.Empty, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.First, [AGinTonic()]));
 
         Assert.Equal(Order.ErrorCodes.VenueRequired, error.Code);
     }
@@ -139,7 +157,7 @@ public class OrderTests
     public void Place_WhenThereIsNoName_ThrowsNameRequired(string name)
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, name, OrderCode.First, [AGinTonic()]));
+            () => Order.Place(AVenue, ANight, Guid.CreateVersion7(), name, OrderCode.First, [AGinTonic()]));
 
         Assert.Equal(Order.ErrorCodes.NameRequired, error.Code);
     }
@@ -148,7 +166,7 @@ public class OrderTests
     public void Place_WhenTheNameIsLongerThanATicketFits_ThrowsNameLength()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, new string('a', Order.CustomerNameMaxLength + 1), OrderCode.First, [AGinTonic()]));
+            () => Order.Place(AVenue, ANight, Guid.CreateVersion7(), new string('a', Order.CustomerNameMaxLength + 1), OrderCode.First, [AGinTonic()]));
 
         Assert.Equal(Order.ErrorCodes.NameLength, error.Code);
     }
@@ -157,7 +175,7 @@ public class OrderTests
     public void Place_WhenThereAreNoItems_ThrowsEmpty()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, "María Quadro", OrderCode.First, []));
+            () => Order.Place(AVenue, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.First, []));
 
         Assert.Equal(Order.ErrorCodes.Empty, error.Code);
     }
@@ -199,7 +217,7 @@ public class OrderTests
     public void Place_WhenAPriceIsNotPositive_ThrowsPriceNotPositive(decimal price)
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, "María Quadro", OrderCode.First, [new NewOrderItem(GinTonic, "Gin Tonic", price, 1, null)]));
+            () => Order.Place(AVenue, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.First, [new NewOrderItem(GinTonic, "Gin Tonic", price, 1, null)]));
 
         Assert.Equal(Order.ErrorCodes.PriceNotPositive, error.Code);
     }
@@ -207,7 +225,7 @@ public class OrderTests
     public class Paying
     {
         private static Order ACartOf(string name = "María Quadro") =>
-            Order.Place(AVenue, ANight, name, OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order.Place(AVenue, ANight, Guid.CreateVersion7(), name, OrderCode.Parse("K-4821"), [AGinTonic()]);
 
         [Fact]
         public void Pay_WhenItIsACart_MarksItPaidAndStampsTheMoment()
@@ -391,7 +409,7 @@ public class OrderTests
 
         private static Order APaidOrder()
         {
-            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
             order.Pay(PaidAt, PaymentMethod.Digital);
 
             return order;
@@ -525,7 +543,7 @@ public class OrderTests
 
         private static Order AnOrderInPreparation()
         {
-            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
             order.Pay(PaidAt, PaymentMethod.Digital);
             order.Enqueue();
             order.StartPreparing();
@@ -594,7 +612,7 @@ public class OrderTests
         [Fact]
         public void MarkReady_WhenStillQueued_ThrowsInvalidTransition()
         {
-            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
             order.Pay(PaidAt, PaymentMethod.Digital);
             order.Enqueue();
 
@@ -705,7 +723,7 @@ public class OrderTests
     {
         private static Order AnOrderAwaitingPayment()
         {
-            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
             order.AwaitPayment(PaymentMethod.Cash);
             order.ClearDomainEvents();
 
@@ -751,7 +769,7 @@ public class OrderTests
         [Fact]
         public void Cancel_WhenPaidDigitally_ThrowsInvalidTransition()
         {
-            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
             order.Pay(new DateTimeOffset(2026, 9, 30, 1, 0, 0, TimeSpan.Zero), PaymentMethod.Digital);
             order.Enqueue();
 
@@ -776,7 +794,7 @@ public class OrderTests
         [Fact]
         public void Cancel_WhileStillACart_ThrowsInvalidTransition()
         {
-            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
 
             DomainException error = Assert.Throws<DomainException>(order.Cancel);
 
@@ -793,11 +811,11 @@ public class OrderTests
         /// <summary>Every move an order can make — paid in cash, digitally, or canceled — with who raised each one.</summary>
         private static List<(Order Order, IDomainEvent Raised)> EveryMove()
         {
-            Order cash = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order cash = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
             cash.AwaitPayment(PaymentMethod.Cash);
             cash.CollectCash(At, "laura.caja");
 
-            Order digital = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4822"), [AGinTonic()]);
+            Order digital = Order.Place(AVenue, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.Parse("K-4822"), [AGinTonic()]);
             digital.Pay(At, PaymentMethod.Digital);
             digital.Enqueue();
             digital.StartPreparing();
@@ -809,7 +827,7 @@ public class OrderTests
             digital.Deliver(At);
             digital.UndoDelivery(At);
 
-            Order canceled = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4823"), [AGinTonic()]);
+            Order canceled = Order.Place(AVenue, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.Parse("K-4823"), [AGinTonic()]);
             canceled.AwaitPayment(PaymentMethod.Cash);
             canceled.Cancel();
 

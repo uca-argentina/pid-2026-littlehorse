@@ -5,7 +5,6 @@ using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
-using DrinkIt.Domain.Nights;
 using Microsoft.AspNetCore.Http;
 
 namespace DrinkIt.Api.Tests.Features.Menu;
@@ -21,16 +20,15 @@ public class ProductsEndpointsTests
     private static CreateProductRequest AGinTonic(
         string name = "Gin Tonic",
         decimal price = 4500m,
-        int stock = 20,
         Guid? categoryId = null) =>
-        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", price, stock, categoryId ?? TheCategory);
+        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", price, categoryId ?? TheCategory);
 
     // Pins the success shape: the Angular client is generated from it, so
     // renaming a property here breaks the screen silently.
     [Fact]
     public async Task CreateAsync_WhenTheDataIsValid_RespondsWithTheCreatedProduct()
     {
-        HttpResponseSnapshot response = await Create(AGinTonic(stock: 0));
+        HttpResponseSnapshot response = await Create(AGinTonic());
 
         Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
         Assert.StartsWith("application/json", response.ContentType, StringComparison.Ordinal);
@@ -52,7 +50,7 @@ public class ProductsEndpointsTests
     [Fact]
     public async Task CreateAsync_WhenTheOptionalFieldsAreMissing_RespondsWithThemAsNull()
     {
-        HttpResponseSnapshot response = await Create(new CreateProductRequest("Gin Tonic", null, null, 4500m, 20, TheCategory));
+        HttpResponseSnapshot response = await Create(new CreateProductRequest("Gin Tonic", null, null, 4500m, TheCategory));
 
         Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
         Assert.Equal(JsonValueKind.Null, response.Body.GetProperty("description").ValueKind);
@@ -384,9 +382,6 @@ public class ProductsEndpointsTests
 
         public sealed class Repository(string? taken, Product? stored = null) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, NightStockAdjustment adjustment, CancellationToken cancellationToken) =>
-                Task.FromResult(true);
-
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>
                 Task.FromResult(string.Equals(name, taken, StringComparison.OrdinalIgnoreCase));
 

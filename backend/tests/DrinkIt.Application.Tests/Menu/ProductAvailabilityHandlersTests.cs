@@ -1,7 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Domain.Menu;
-using DrinkIt.Domain.Nights;
 
 namespace DrinkIt.Application.Tests.Menu;
 
@@ -42,9 +41,6 @@ public class MarkProductUnavailableHandlerTests
     {
         public sealed class Products(Product stored) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, NightStockAdjustment adjustment, CancellationToken cancellationToken) =>
-                Task.FromResult(true);
-
             public bool Saved { get; private set; }
 
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>
@@ -103,9 +99,6 @@ public class MarkProductAvailableHandlerTests
     {
         public sealed class Products(Product stored) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, NightStockAdjustment adjustment, CancellationToken cancellationToken) =>
-                Task.FromResult(true);
-
             public bool Saved { get; private set; }
 
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>

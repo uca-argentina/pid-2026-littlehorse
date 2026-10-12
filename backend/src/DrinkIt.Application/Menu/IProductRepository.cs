@@ -1,5 +1,4 @@
 using DrinkIt.Domain.Menu;
-using DrinkIt.Domain.Nights;
 
 namespace DrinkIt.Application.Menu;
 
@@ -31,13 +30,4 @@ public interface IProductRepository
 
     /// <summary>Writes back whatever <see cref="GetForUpdateAsync"/> handed out.</summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Records the night's adjustment (US-37) and adds its change to the stock
-    /// in the database itself, not a total worked out in memory: a sale made
-    /// since the product was read is kept. Both or neither. False, and nothing
-    /// written, when those sales left less than the change takes away. Either
-    /// way <paramref name="product"/> ends up holding the stock the database has.
-    /// </summary>
-    Task<bool> SaveStockAdjustmentAsync(Product product, NightStockAdjustment adjustment, CancellationToken cancellationToken);
 }

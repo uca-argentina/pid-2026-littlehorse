@@ -15,7 +15,6 @@ public sealed record CreateProductRequest(
     string? Description,
     string? ImageUrl,
     decimal Price,
-    int Stock,
     Guid CategoryId);
 
 /// <summary>Where the picture ended up. The listing shows it from here on.</summary>
@@ -151,7 +150,7 @@ internal static class ProductsEndpoints
         // the domain throws and the global handler turns it into a 400 with the
         // rule's own problem type.
         Result<ProductSummary> result = await handler.HandleAsync(
-            new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.Stock, request.CategoryId),
+            new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.CategoryId),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);

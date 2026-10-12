@@ -1,5 +1,6 @@
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
+using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -16,8 +17,8 @@ internal sealed class NightStockAdjustmentConfiguration : IEntityTypeConfigurati
 
         builder.Property(adjustment => adjustment.Change).IsRequired();
 
-        // The night's stock sheet reads every adjustment of a night, by product.
-        builder.HasIndex(adjustment => new { adjustment.VenueId, adjustment.NightId, adjustment.ProductId });
+        // The night's stock sheet reads every adjustment of a night, by bar and product.
+        builder.HasIndex(adjustment => new { adjustment.VenueId, adjustment.NightId, adjustment.KdsId, adjustment.ProductId });
 
         builder.HasOne<Venue>()
             .WithMany()
@@ -27,6 +28,11 @@ internal sealed class NightStockAdjustmentConfiguration : IEntityTypeConfigurati
         builder.HasOne<Night>()
             .WithMany()
             .HasForeignKey(adjustment => adjustment.NightId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<StaffUser>()
+            .WithMany()
+            .HasForeignKey(adjustment => adjustment.KdsId)
             .OnDelete(DeleteBehavior.Restrict);
 
         // Products are never hard-deleted (IsActive), so the key always holds.

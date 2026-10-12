@@ -47,4 +47,12 @@ public static class NightErrors
     /// </summary>
     public static readonly Error EarlierNightOpen =
         new("night.earlier_night_open", "An earlier night has not ended yet. Load this one's stock once it has.");
+
+    /// <summary>US-37: no KDS of this venue has that id. Another venue's reads the same.</summary>
+    public static readonly Error BarNotFound =
+        new("night.bar_not_found", "This venue has no bar with that id.");
+
+    /// <summary>US-37: the bar was taken out of the night's crew while its stock was open.</summary>
+    public static readonly Error BarNotInNight =
+        new("night.bar_not_in_night", "That bar does not work this night any more.");
 }

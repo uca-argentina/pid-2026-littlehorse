@@ -205,6 +205,7 @@ public class OrdersEndpointsTests
     private ConfirmOrderHandler AHandler(bool nightIsOn = true) => new(
         new Fake.Orders(),
         new Fake.Menu(_gin),
+        new Fake.Menu(_gin),
         new Fake.Sequence(),
         [new DigitalPaymentStrategy(TimeProvider.System), new CashPaymentStrategy()],
         new Fake.Venue(),
@@ -254,13 +255,18 @@ public class OrdersEndpointsTests
                 throw new NotSupportedException("Confirming saves through AddAsync.");
         }
 
-        public sealed class Menu(params Product[] products) : IProductsForOrdering
+        /// <summary>The menu, and one bar holding every product's stock (US-37).</summary>
+        public sealed class Menu(params Product[] products) : IProductsForOrdering, IBarsForOrdering
         {
             public Task<IReadOnlyList<Product>> GetForOrderingAsync(
                 IReadOnlyCollection<Guid> ids,
                 CancellationToken cancellationToken) =>
                 Task.FromResult<IReadOnlyList<Product>>(
                     [.. products.Where(product => ids.Contains(product.Id))]);
+
+            public Task<IReadOnlyList<BarSupply>> GetAsync(Guid nightId, IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<BarSupply>>(
+                    [new BarSupply(Guid.CreateVersion7(), 0, products.ToDictionary(product => product.Id, product => product.Stock))]);
         }
     }
 }

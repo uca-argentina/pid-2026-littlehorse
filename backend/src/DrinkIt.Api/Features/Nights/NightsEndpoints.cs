@@ -26,7 +26,7 @@ public sealed record NightResponse(
 }
 
 /// <summary>
-/// How much a product's stock moves in the night: positive when units arrived,
+/// How much a product's stock moves in one bar for the night: positive when units arrived,
 /// negative when they were loaded wrong. A change, never the new total, so a
 /// sale made while the screen was open is not overwritten.
 /// </summary>
@@ -36,11 +36,17 @@ public sealed record AdjustNightStockRequest(int Change);
 /// <summary>One product in the night's stock. Loaded is what it started with plus what came in.</summary>
 public sealed record NightStockLineResponse(Guid ProductId, string ProductName, int Carried, int Added, int Loaded, int Sold, int Left);
 
-public sealed record NightStockResponse(Guid NightId, IReadOnlyList<NightStockLineResponse> Lines)
+/// <summary>One bar of the night: a KDS of its crew, with its own stock.</summary>
+public sealed record NightStockBarResponse(Guid KdsId, string Name, IReadOnlyList<NightStockLineResponse> Lines);
+
+public sealed record NightStockResponse(Guid NightId, IReadOnlyList<NightStockBarResponse> Bars)
 {
     internal static NightStockResponse Of(NightStockSheet sheet) => new(
         sheet.NightId,
-        [.. sheet.Lines.Select(line => new NightStockLineResponse(line.ProductId, line.ProductName, line.Carried, line.Added, line.Loaded, line.Sold, line.Left))]);
+        [.. sheet.Bars.Select(bar => new NightStockBarResponse(
+            bar.KdsId,
+            bar.Name,
+            [.. bar.Lines.Select(line => new NightStockLineResponse(line.ProductId, line.ProductName, line.Carried, line.Added, line.Loaded, line.Sold, line.Left))]))]);
 }
 
 internal static class NightsEndpoints
@@ -78,16 +84,16 @@ internal static class NightsEndpoints
         group
             .MapGet("/{id:guid}/stock", GetStockAsync)
             .WithName("GetNightStock")
-            .WithSummary("The night's stock: what each product started with, what was loaded, sold and is left.")
+            .WithSummary("The night's stock, bar by bar: what each product started with, what was loaded, sold and is left.")
             .Produces<NightStockResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         // POST and not PUT: it moves the stock, it does not replace it, so
         // sending it twice is not the same as sending it once.
         group
-            .MapPost("/{id:guid}/stock/{productId:guid}/adjust", AdjustStockAsync)
+            .MapPost("/{id:guid}/stock/{kdsId:guid}/{productId:guid}/adjust", AdjustStockAsync)
             .WithName("AdjustNightStock")
-            .WithSummary("Loads units of a product into a night that has not ended, or takes them out.")
+            .WithSummary("Loads units of a product into one bar of a night that has not ended, or takes them out.")
             .Produces<NightStockResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -127,12 +133,13 @@ internal static class NightsEndpoints
 
     internal static async Task<IResult> AdjustStockAsync(
         Guid id,
+        Guid kdsId,
         Guid productId,
         AdjustNightStockRequest request,
         AdjustNightStockHandler handler,
         CancellationToken cancellationToken)
     {
-        Result<NightStockSheet> result = await handler.HandleAsync(new AdjustNightStockCommand(id, productId, request.Change), cancellationToken);
+        Result<NightStockSheet> result = await handler.HandleAsync(new AdjustNightStockCommand(id, kdsId, productId, request.Change), cancellationToken);
 
         return result.IsSuccess ? TypedResults.Ok(NightStockResponse.Of(result.Value)) : Rejected(result.Error!);
     }
@@ -177,6 +184,8 @@ internal static class NightsEndpoints
         [NightErrors.Overlaps.Code] = StatusCodes.Status409Conflict,
         [NightErrors.StockClosed.Code] = StatusCodes.Status409Conflict,
         [NightErrors.EarlierNightOpen.Code] = StatusCodes.Status409Conflict,
+        [NightErrors.BarNotFound.Code] = StatusCodes.Status404NotFound,
+        [NightErrors.BarNotInNight.Code] = StatusCodes.Status409Conflict,
         [ProductErrors.NotFound.Code] = StatusCodes.Status404NotFound,
         [ProductErrors.StockMoved.Code] = StatusCodes.Status409Conflict,
     };

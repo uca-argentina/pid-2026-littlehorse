@@ -4,7 +4,7 @@ using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
-using DrinkIt.Infrastructure.Menu;
+using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -97,7 +97,7 @@ public sealed class AuditInterceptorTests(SqlServerFixture sql)
         Venue venue = Venue.Create("Bar Audit", $"bar-{Guid.NewGuid():N}");
         Category category = SeedCategory.For(venue.Id);
         Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20, category.Id);
-        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "Maria", OrderCode.First, [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 1, null)]);
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), Guid.CreateVersion7(), "Maria", OrderCode.First, [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 1, null)]);
 
         await using DrinkItDbContext context = ContextFor(venue, "euge", Evening);
         context.Venues.Add(venue);
@@ -160,27 +160,27 @@ public sealed class AuditInterceptorTests(SqlServerFixture sql)
         Assert.Equal("euge", stored.CreatedBy);
     }
 
-    // The stock moves with a statement of its own, not through SaveChanges:
-    // loading the night is not somebody editing the product, so its mark stays.
+    // The stock moves with statements of their own, not through SaveChanges:
+    // loading a bar is not somebody editing the product, so its mark stays.
     // Who loaded it is on the adjustment (US-37).
     [Fact]
-    public async Task SaveStockAdjustmentAsync_WhenTheStockMoves_StampsTheAdjustmentAndNotTheProduct()
+    public async Task SaveAdjustmentAsync_WhenABarIsLoaded_StampsTheAdjustmentAndNotTheProduct()
     {
         Venue venue = await SeedVenue();
         Product product = await SeedProduct(venue, "euge", Evening);
-        Night night = await SeedNight(venue);
+        (Night night, StaffUser bar) = await SeedNight(venue);
 
         await using (DrinkItDbContext context = ContextFor(venue, "pablo", Evening.AddHours(3)))
         {
             Product tracked = await context.Products.SingleAsync(row => row.Id == product.Id);
             Night trackedNight = await context.Nights.SingleAsync(row => row.Id == night.Id);
-            NightStockAdjustment adjustment = trackedNight.AdjustStock(tracked, -1, Evening.AddHours(3));
-            await new ProductRepository(context).SaveStockAdjustmentAsync(tracked, adjustment, CancellationToken.None);
+            NightStockAdjustment adjustment = trackedNight.AdjustStock(bar, tracked, 1, Evening.AddHours(3));
+            await new NightStockRepository(context).SaveAdjustmentAsync(adjustment, CancellationToken.None);
         }
 
         Product stored = await Stored(venue, product.Id);
 
-        Assert.Equal(19, stored.Stock);
+        Assert.Equal(21, stored.Stock);
         Assert.Null(stored.LastModifiedAt);
 
         await using DrinkItDbContext fresh = sql.CreateContext(venue.Id);
@@ -189,7 +189,7 @@ public sealed class AuditInterceptorTests(SqlServerFixture sql)
         Assert.Equal(Evening.AddHours(3), recorded.CreatedAt);
     }
 
-    private async Task<Night> SeedNight(Venue venue)
+    private async Task<(Night Night, StaffUser Bar)> SeedNight(Venue venue)
     {
         StaffUser[] crew = [StaffUser.Create(venue.Id, "main-bar", "hash", StaffRole.Kds), StaffUser.Create(venue.Id, "till-1", "hash", StaffRole.Cashier)];
         Night night = Night.Create(venue.Id, "Saturday", Evening, Evening.AddHours(7), crew);
@@ -199,7 +199,7 @@ public sealed class AuditInterceptorTests(SqlServerFixture sql)
         context.Nights.Add(night);
         await context.SaveChangesAsync();
 
-        return night;
+        return (night, crew[0]);
     }
 
     private DrinkItDbContext ContextFor(Venue venue, string? username, DateTimeOffset now) =>
