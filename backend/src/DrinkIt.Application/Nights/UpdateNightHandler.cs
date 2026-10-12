@@ -28,6 +28,12 @@ public sealed class UpdateNightHandler(
 
         if (crew.Count != crewIds.Count) return NightErrors.CrewMemberNotFound;
 
+        // US-37: a KDS taken out with stock loaded would leave it stuck, with
+        // nobody to sell it and no screen to give it back from.
+        IReadOnlyCollection<Guid> holding = await nights.BarsHoldingStockAsync(night.Id, cancellationToken);
+
+        if (night.CrewIds.Any(id => !crewIds.Contains(id) && holding.Contains(id))) return NightErrors.BarHoldsStock;
+
         night.Update(
             command.Name,
             command.StartsAt,

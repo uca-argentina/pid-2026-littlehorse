@@ -1,4 +1,5 @@
 using DrinkIt.Domain.Nights;
+using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Application.Nights;
 
@@ -27,6 +28,15 @@ public interface INightRepository
     /// <summary>Commits what the use case changed on a tracked aggregate.</summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
 
-    /// <summary>Persists the new night. Saving is the repository's job, not the caller's.</summary>
-    Task AddAsync(Night night, CancellationToken cancellationToken);
+    /// <summary>
+    /// Persists the new night with what its KDS start with (US-37): each
+    /// active product's storeroom at <paramref name="now"/>, split by
+    /// <see cref="Night.LoadOpeningStock"/> among <paramref name="bars"/>, every
+    /// load on record. The night and its stock, or neither. Saving is the
+    /// repository's job, not the caller's.
+    /// </summary>
+    Task AddAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken);
+
+    /// <summary>The KDS that hold at least one unit of something in that night (US-37).</summary>
+    Task<IReadOnlyCollection<Guid>> BarsHoldingStockAsync(Guid nightId, CancellationToken cancellationToken);
 }

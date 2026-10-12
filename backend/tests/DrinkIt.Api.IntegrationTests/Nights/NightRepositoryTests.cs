@@ -27,7 +27,7 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
 
         await using (DrinkItDbContext write = sql.CreateContext(mine.Id))
         {
-            await new NightRepository(write).AddAsync(Night.Create(mine.Id, "Saturday", Opening, Closing, crew), CancellationToken.None);
+            await new NightRepository(write).AddAsync(Night.Create(mine.Id, "Saturday", Opening, Closing, crew), bars: [], Opening, CancellationToken.None);
         }
 
         await using DrinkItDbContext read = sql.CreateContext(mine.Id);
@@ -51,7 +51,7 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
         await using (DrinkItDbContext seed = sql.CreateContext(mine.Id))
         {
             seed.StaffUsers.Add(waiter);
-            await new NightRepository(seed).AddAsync(night, CancellationToken.None);
+            await new NightRepository(seed).AddAsync(night, bars: [], Opening, CancellationToken.None);
         }
 
         await using (DrinkItDbContext edit = sql.CreateContext(mine.Id))
@@ -77,7 +77,7 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
         Night night = Night.Create(mine.Id, "Saturday", Opening, Closing, crew);
         await using DrinkItDbContext context = sql.CreateContext(mine.Id);
         NightRepository repository = new(context);
-        await repository.AddAsync(night, CancellationToken.None);
+        await repository.AddAsync(night, bars: [], Opening, CancellationToken.None);
 
         Assert.False(await repository.OverlapsAsync(Opening, Closing.AddHours(1), night.Id, CancellationToken.None));
     }
@@ -94,7 +94,7 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
         (Venue mine, StaffUser[] crew, _) = await SeedTwoVenues();
         await using DrinkItDbContext context = sql.CreateContext(mine.Id);
         NightRepository repository = new(context);
-        await repository.AddAsync(Night.Create(mine.Id, "Saturday", Opening, Closing, crew), CancellationToken.None);
+        await repository.AddAsync(Night.Create(mine.Id, "Saturday", Opening, Closing, crew), bars: [], Opening, CancellationToken.None);
 
         bool overlaps = await repository.OverlapsAsync(Opening.AddHours(fromHour), Opening.AddHours(toHour), excluding: null, CancellationToken.None);
 
@@ -109,7 +109,7 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
 
         await using (DrinkItDbContext asTheirs = sql.CreateContext(theirs.Id))
         {
-            await new NightRepository(asTheirs).AddAsync(Night.Create(theirs.Id, "Saturday", Opening, Closing, theirCrew), CancellationToken.None);
+            await new NightRepository(asTheirs).AddAsync(Night.Create(theirs.Id, "Saturday", Opening, Closing, theirCrew), bars: [], Opening, CancellationToken.None);
         }
 
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
@@ -124,7 +124,7 @@ public sealed class NightRepositoryTests(SqlServerFixture sql)
 
         await using (DrinkItDbContext asTheirs = sql.CreateContext(theirs.Id))
         {
-            await new NightRepository(asTheirs).AddAsync(Night.Create(theirs.Id, "Saturday", Opening, Closing, theirCrew), CancellationToken.None);
+            await new NightRepository(asTheirs).AddAsync(Night.Create(theirs.Id, "Saturday", Opening, Closing, theirCrew), bars: [], Opening, CancellationToken.None);
         }
 
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);

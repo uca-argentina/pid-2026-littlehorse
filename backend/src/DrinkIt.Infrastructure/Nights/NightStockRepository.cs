@@ -1,9 +1,7 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Application.Nights;
-using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
-using DrinkIt.Domain.Staff;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -12,43 +10,6 @@ namespace DrinkIt.Infrastructure.Nights;
 
 internal sealed class NightStockRepository(DrinkItDbContext context) : INightStockRepository
 {
-    /// <summary>
-    /// Every active product's row locked first, as anything that checks the
-    /// storeroom does, then the storeroom read, split and written: the bars'
-    /// rows and the record of each load, in one transaction. The night is new,
-    /// so none of its bars has a row yet.
-    /// </summary>
-    public async Task LoadOpeningStockAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        await using IDbContextTransaction transaction = await context.Database.BeginTransactionAsync(cancellationToken);
-
-        await Storeroom.LockActiveProductsAsync(context, night.VenueId, cancellationToken);
-
-        List<Product> products = await context.Products.Where(product => product.IsActive).ToListAsync(cancellationToken);
-        Dictionary<Guid, int> held = await Storeroom.HeldInBarsAsync(context, now, cancellationToken);
-
-        IReadOnlyList<NightStockAdjustment> loads = night.LoadOpeningStock(
-            bars,
-            products.Select(product => (product, product.Stock - held.GetValueOrDefault(product.Id))),
-            now);
-
-        foreach (NightStockAdjustment load in loads)
-        {
-            context.BarStocks.Add(new BarStock
-            {
-                VenueId = load.VenueId,
-                NightId = load.NightId,
-                KdsId = load.KdsId,
-                ProductId = load.ProductId,
-                Units = load.Change,
-            });
-        }
-
-        context.NightStockAdjustments.AddRange(loads);
-        await context.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-    }
-
     /// <summary>
     /// The bar's units and the night's record, in one transaction. The general
     /// stock is not touched: loading moves units from the storeroom into the

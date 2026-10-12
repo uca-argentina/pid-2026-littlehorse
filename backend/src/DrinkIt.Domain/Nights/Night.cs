@@ -137,8 +137,9 @@ public sealed class Night : AuditStamps, IBelongsToVenue
     /// <summary>
     /// US-37: what the night's bars start with by default, when it is created:
     /// each product's storeroom split evenly among them. What does not split
-    /// evenly stays in the storeroom. The administrator changes it from there,
-    /// one <see cref="AdjustStock"/> at a time.
+    /// evenly stays in the storeroom, and a night set up already over takes
+    /// nothing. The administrator changes it from there, one
+    /// <see cref="AdjustStock"/> at a time.
     /// </summary>
     /// <param name="bars">The KDS of the night's crew.</param>
     /// <param name="storeroom">What the storeroom has of each product right now.</param>
@@ -148,7 +149,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         IEnumerable<(Product Product, int InStoreroom)> storeroom,
         DateTimeOffset now)
     {
-        if (bars.Count == 0) return [];
+        if (bars.Count == 0 || HasEndedAt(now)) return [];
 
         return
         [

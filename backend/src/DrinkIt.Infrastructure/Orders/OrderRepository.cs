@@ -49,6 +49,11 @@ internal sealed partial class OrderRepository(
 
         (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
 
+        // The products first, then the bars, the same order a load into a bar
+        // takes them in: two writers that lock in opposite orders can each
+        // end up waiting on the other.
+        await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
+
         foreach (OrderItem item in order.Items)
         {
             int quantity = item.Quantity;
@@ -166,6 +171,9 @@ internal sealed partial class OrderRepository(
         }
 
         (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
+
+        // Products before bars, as everywhere else that writes both.
+        await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
 
         foreach (OrderItem item in order.Items)
         {

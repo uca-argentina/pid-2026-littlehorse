@@ -31,7 +31,7 @@ internal sealed class BarsForOrdering(DrinkItDbContext context) : IBarsForOrderi
 
         Dictionary<Guid, int> loads = await context.Orders
             .AsNoTracking()
-            .Where(order => order.KdsId != null && bars.Contains(order.KdsId.Value)
+            .Where(order => order.NightId == nightId && order.KdsId != null && bars.Contains(order.KdsId.Value)
                 && (order.Status == OrderStatus.Queued || order.Status == OrderStatus.InPreparation))
             .GroupBy(order => order.KdsId!.Value)
             .Select(group => new { Bar = group.Key, Orders = group.Count() })

@@ -32,26 +32,26 @@ internal sealed class NightStockQueries(DrinkItDbContext context, TimeProvider c
             .Select(user => new { user.Id, user.Username })
             .ToListAsync(cancellationToken);
 
-        List<Movement> loaded = await context.NightStockAdjustments
+        Dictionary<(Guid KdsId, Guid ProductId), int> loaded = await context.NightStockAdjustments
             .AsNoTracking()
             .Where(adjustment => adjustment.NightId == nightId)
             .GroupBy(adjustment => new { adjustment.KdsId, adjustment.ProductId })
-            .Select(group => new Movement(group.Key.KdsId, group.Key.ProductId, group.Sum(adjustment => adjustment.Change)))
-            .ToListAsync(cancellationToken);
+            .Select(group => new { group.Key.KdsId, group.Key.ProductId, Units = group.Sum(adjustment => adjustment.Change) })
+            .ToDictionaryAsync(movement => (movement.KdsId, movement.ProductId), movement => movement.Units, cancellationToken);
 
         // A canceled order gave its units back, so it sold nothing.
-        List<Movement> sold = await context.Orders
+        Dictionary<(Guid KdsId, Guid ProductId), int> sold = await context.Orders
             .AsNoTracking()
             .Where(order => order.NightId == nightId && order.KdsId != null && order.Status != OrderStatus.Canceled)
             .SelectMany(order => order.Items, (order, item) => new { KdsId = order.KdsId!.Value, item.ProductId, item.Quantity })
             .GroupBy(line => new { line.KdsId, line.ProductId })
-            .Select(group => new Movement(group.Key.KdsId, group.Key.ProductId, group.Sum(line => line.Quantity)))
-            .ToListAsync(cancellationToken);
+            .Select(group => new { group.Key.KdsId, group.Key.ProductId, Units = group.Sum(line => line.Quantity) })
+            .ToDictionaryAsync(movement => (movement.KdsId, movement.ProductId), movement => movement.Units, cancellationToken);
 
         DateTimeOffset now = clock.GetUtcNow();
         Dictionary<Guid, int> heldInBars = await Storeroom.HeldInBarsAsync(context, now, cancellationToken);
 
-        HashSet<Guid> movedHere = [.. loaded.Concat(sold).Select(movement => movement.ProductId)];
+        HashSet<Guid> movedHere = [.. loaded.Keys.Concat(sold.Keys).Select(key => key.ProductId)];
 
         // What the menu sells, plus anything deleted since that this night
         // still moved: its record has to add up.
@@ -68,14 +68,8 @@ internal sealed class NightStockQueries(DrinkItDbContext context, TimeProvider c
             [.. products.Select(product => new NightStockLine(
                 product.Id,
                 product.Name,
-                Loaded: Units(loaded, bar.Id, product.Id),
-                Sold: Units(sold, bar.Id, product.Id),
+                Loaded: loaded.GetValueOrDefault((bar.Id, product.Id)),
+                Sold: sold.GetValueOrDefault((bar.Id, product.Id)),
                 InStoreroom: product.Stock - heldInBars.GetValueOrDefault(product.Id)))]))]);
-
-        static int Units(List<Movement> movements, Guid kdsId, Guid productId) => movements
-            .Where(movement => movement.KdsId == kdsId && movement.ProductId == productId)
-            .Sum(movement => movement.Units);
     }
-
-    private sealed record Movement(Guid KdsId, Guid ProductId, int Units);
 }

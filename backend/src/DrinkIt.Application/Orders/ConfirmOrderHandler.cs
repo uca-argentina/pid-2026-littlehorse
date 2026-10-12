@@ -170,7 +170,12 @@ public sealed class ConfirmOrderHandler(
         IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, wanted, cancellationToken);
         BarSupply? bar = BarChooser.Choose(nightsBars, lines);
 
-        if (bar is null) return OutOfStock(menu.First(product => product.Id == BarChooser.Missing(nightsBars, lines)));
+        if (bar is null)
+        {
+            Guid missing = BarChooser.Missing(nightsBars, lines);
+
+            return OutOfStock(menu.First(product => product.Id == missing));
+        }
 
         Order order = Order.Place(currentVenue.Id, night, bar.KdsId, customerName, code, items.Value);
 

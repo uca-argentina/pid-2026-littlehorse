@@ -77,6 +77,9 @@ export const ProblemTypes = {
   /** US-37: loading a bar takes from the storeroom, and it has fewer than that. */
   nightStoreroomShort: 'urn:drinkit:problem:night:storeroom-short',
 
+  /** US-37: a KDS still holding stock in the night cannot be taken out of its crew. */
+  nightBarHoldsStock: 'urn:drinkit:problem:night:bar-holds-stock',
+
   /** US-37: the bar was taken out of the night's crew while its stock was open. */
   nightBarNotInNight: 'urn:drinkit:problem:night:bar-not-in-night',
 } as const;

@@ -299,6 +299,79 @@ public sealed class NightStockTests(SqlServerFixture sql)
         Assert.Equal(1, left.InStoreroom);
     }
 
+    // Set up with hours already past: created, and with nothing loaded.
+    [Fact]
+    public async Task CreateNight_WhenItsHoursAlreadyEnded_CreatesItWithNothingLoaded()
+    {
+        Seeded seeded = await Seed();
+
+        Result<NightSummary> created = await CreateSunday(seeded, at: Saturday.AddDays(2));
+
+        Assert.True(created.IsSuccess);
+        await using DrinkItDbContext fresh = sql.CreateContext(seeded.Venue.Id);
+        Assert.False(await fresh.BarStocks.AnyAsync(stock => stock.NightId == created.Value.Id));
+    }
+
+    // A KDS with stock loaded cannot leave the night: nothing could sell it,
+    // show it or give it back. Once it is given back, it can.
+    [Fact]
+    public async Task UpdateNight_WhenItTakesOutAKdsThatHoldsStock_RefusesUntilItIsGivenBack()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.VipBar, seeded.Gin, 6, at: Saturday);
+
+        Result<NightSummary> refused = await TakeTheVipBarOut(seeded);
+        await Adjust(seeded, seeded.VipBar, seeded.Gin, -6, at: Saturday);
+        Result<NightSummary> accepted = await TakeTheVipBarOut(seeded);
+
+        Assert.Equal(NightErrors.BarHoldsStock, refused.Error);
+        Assert.True(accepted.IsSuccess);
+    }
+
+    // A queue left over from Friday is not work on Saturday: both bars are
+    // equally free tonight, so the order goes to the first by name.
+    [Fact]
+    public async Task Confirm_WhenABarHasOrdersLeftFromAnEarlierNight_CountsOnlyTonightsWork()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 5, at: Friday, night: seeded.Friday);
+        await Confirm(seeded, seeded.Gin, 1, at: Friday.AddHours(1));
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 5, at: Saturday);
+        await Adjust(seeded, seeded.VipBar, seeded.Gin, 5, at: Saturday);
+
+        Result<ConfirmedOrder> tonight = await Confirm(seeded, seeded.Gin, 1);
+
+        Assert.Equal(seeded.MainBar.Id, await BarOf(seeded, tonight.Value.Id));
+    }
+
+    // Loading a bar locks the product and then writes the bar; a sale has to
+    // take them in that same order, or the two can wait on each other. Here
+    // the load holds the product, a sale starts, and the load then writes the
+    // bar: with the sale waiting on the product, the bar is free.
+    [Fact]
+    public async Task Confirm_WhileTheProductIsLockedForALoad_WaitsBeforeTouchingTheBar()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 5, at: Saturday);
+
+        await using DrinkItDbContext loader = sql.CreateContext(seeded.Venue.Id);
+        await using Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction load = await loader.Database.BeginTransactionAsync();
+        await loader.Database.ExecuteSqlAsync($"SELECT [Id] FROM [Products] WITH (UPDLOCK, ROWLOCK) WHERE [Id] = {seeded.Gin.Id}");
+
+        Task<Result<ConfirmedOrder>> sale = Confirm(seeded, seeded.Gin, 1, bar: seeded.MainBar);
+        await Task.Delay(TimeSpan.FromSeconds(1));
+
+        await loader.Database.ExecuteSqlRawAsync("SET LOCK_TIMEOUT 2000");
+        int written = await loader.BarStocks
+            .Where(stock => stock.NightId == seeded.Saturday.Id && stock.KdsId == seeded.MainBar.Id && stock.ProductId == seeded.Gin.Id)
+            .ExecuteUpdateAsync(row => row.SetProperty(stock => stock.Units, stock => stock.Units + 1));
+        await load.CommitAsync();
+
+        Assert.Equal(1, written);
+        Assert.True((await sale).IsSuccess);
+        Assert.Equal(5, await UnitsIn(seeded, seeded.MainBar, seeded.Gin));
+    }
+
     // Criterion 3, bar by bar. The main bar loads 12 gins on Friday and sells
     // 7; Saturday it opens empty, loads 10 and sells 4. The VIP bar only works
     // Saturday, loads 6 and sells 1. Looked at during Saturday: of the 18 gins
@@ -359,9 +432,18 @@ public sealed class NightStockTests(SqlServerFixture sql)
                 new NightRepository(context),
                 new StaffUserRepository(context),
                 new FixedVenue(seeded.Venue.Id),
-                new NightStockRepository(context),
                 new FixedClock(at))
             .HandleAsync(new CreateNightCommand("Sunday", sunday, sunday.AddHours(7), [seeded.MainBar.Id, seeded.VipBar.Id, seeded.Till.Id]), CancellationToken.None);
+    }
+
+    private async Task<Result<NightSummary>> TakeTheVipBarOut(Seeded seeded)
+    {
+        await using DrinkItDbContext context = sql.CreateContext(seeded.Venue.Id);
+
+        return await new UpdateNightHandler(new NightRepository(context), new StaffUserRepository(context), new FixedClock(Saturday.AddHours(-1)))
+            .HandleAsync(
+                new UpdateNightCommand(seeded.Saturday.Id, "Saturday", Saturday, Saturday.AddHours(7), [seeded.MainBar.Id, seeded.Till.Id]),
+                CancellationToken.None);
     }
 
     private async Task<Night> NightNamed(Seeded seeded, Guid id)

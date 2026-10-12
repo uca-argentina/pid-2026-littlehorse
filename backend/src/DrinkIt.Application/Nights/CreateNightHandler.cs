@@ -19,7 +19,6 @@ public sealed class CreateNightHandler(
     INightRepository nights,
     IStaffUserRepository staffUsers,
     ICurrentVenue currentVenue,
-    INightStockRepository shelves,
     TimeProvider clock)
 {
     public async Task<Result<NightSummary>> HandleAsync(CreateNightCommand command, CancellationToken cancellationToken)
@@ -40,10 +39,9 @@ public sealed class CreateNightHandler(
             command.EndsAt,
             crewIds.Select(id => crew.First(member => member.Id == id)));
 
-        await nights.AddAsync(night, cancellationToken);
-
         StaffUser[] bars = [.. crewIds.Select(id => crew.First(member => member.Id == id)).Where(member => member.Role == StaffRole.Kds)];
-        await shelves.LoadOpeningStockAsync(night, bars, clock.GetUtcNow(), cancellationToken);
+
+        await nights.AddAsync(night, bars, clock.GetUtcNow(), cancellationToken);
 
         return NightSummary.Of(night);
     }

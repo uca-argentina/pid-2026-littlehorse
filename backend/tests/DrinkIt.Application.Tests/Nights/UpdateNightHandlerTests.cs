@@ -16,6 +16,7 @@ public class UpdateNightHandlerTests
     private static readonly StaffUser MainBar = StaffUser.Create(TheVenue, "main-bar", "hash", StaffRole.Kds);
     private static readonly StaffUser Till = StaffUser.Create(TheVenue, "till-1", "hash", StaffRole.Cashier);
     private static readonly StaffUser Martin = StaffUser.Create(TheVenue, "martin", "hash", StaffRole.Waiter);
+    private static readonly StaffUser VipBar = StaffUser.Create(TheVenue, "vip-bar", "hash", StaffRole.Kds);
 
     [Fact]
     public async Task HandleAsync_WhenTheDataIsValid_SavesTheChangesAndReturnsThem()
@@ -101,10 +102,43 @@ public class UpdateNightHandlerTests
         Assert.Equal(Opening.AddHours(3), result.Value.EndsAt);
     }
 
+    // US-37: a KDS's stock that night is only sold, shown and given back
+    // while it works the night. Taken out of the crew with some still loaded,
+    // it would be stuck: it has to be given back to the storeroom first.
+    [Fact]
+    public async Task HandleAsync_WhenItTakesOutAKdsThatHoldsStock_FailsWithBarHoldsStockWithoutSaving()
+    {
+        Night saturday = Night.Create(TheVenue, "Saturday", Opening, Closing, [MainBar, VipBar, Till]);
+        NightsInMemory nights = new(saturday);
+        nights.BarsHoldingStock.Add(VipBar.Id);
+
+        Result<NightSummary> result = await HandlerOver(nights).HandleAsync(
+            new UpdateNightCommand(saturday.Id, "Saturday", Opening, Closing, [MainBar.Id, Till.Id]),
+            CancellationToken.None);
+
+        Assert.Equal(NightErrors.BarHoldsStock, result.Error);
+        Assert.Equal(0, nights.Saves);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheKdsTakenOutHoldsNothing_SavesTheNewCrew()
+    {
+        Night saturday = Night.Create(TheVenue, "Saturday", Opening, Closing, [MainBar, VipBar, Till]);
+        NightsInMemory nights = new(saturday);
+        nights.BarsHoldingStock.Add(MainBar.Id);
+
+        Result<NightSummary> result = await HandlerOver(nights).HandleAsync(
+            new UpdateNightCommand(saturday.Id, "Saturday", Opening, Closing, [MainBar.Id, Till.Id]),
+            CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal([MainBar.Id, Till.Id], saturday.CrewIds);
+    }
+
     private static Night ASaturday() => Night.Create(TheVenue, "Saturday", Opening, Closing, [MainBar, Till]);
 
     private static UpdateNightHandler HandlerOver(NightsInMemory nights, DateTimeOffset? now = null) =>
-        new(nights, new StaffUsersInMemory(MainBar, Till, Martin), new FixedClock(now ?? Opening.AddHours(-2)));
+        new(nights, new StaffUsersInMemory(MainBar, Till, Martin, VipBar), new FixedClock(now ?? Opening.AddHours(-2)));
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {

@@ -10,7 +10,14 @@ import type { NewNight, Night } from './nights.service';
 
 /** One value rather than a set of booleans, so two of them cannot be true at once. */
 export type SaveNightStatus =
-  'idle' | 'sending' | 'overlaps' | 'crewChanged' | 'over' | 'startLocked' | 'unreachable';
+  | 'idle'
+  | 'sending'
+  | 'overlaps'
+  | 'crewChanged'
+  | 'over'
+  | 'startLocked'
+  | 'barHoldsStock'
+  | 'unreachable';
 
 /**
  * Saving a night, new or edited: the same answers either way. Provided by the
@@ -79,6 +86,7 @@ const REASONS = new Map<string, SaveNightStatus>([
   [ProblemTypes.nightCrewMemberNotFound, 'crewChanged'],
   [ProblemTypes.nightOver, 'over'],
   [ProblemTypes.nightStartLocked, 'startLocked'],
+  [ProblemTypes.nightBarHoldsStock, 'barHoldsStock'],
 ]);
 
 /**
@@ -97,6 +105,8 @@ const REFUSALS: Partial<Record<SaveNightStatus, string>> = {
     'Una de las cuentas elegidas ya no está en el boliche. Recargá la pantalla y elegí de nuevo.',
   over: 'La noche terminó mientras la editabas, y una noche terminada ya no se cambia.',
   startLocked: 'La noche empezó mientras la editabas: el inicio ya no se puede mover.',
+  barHoldsStock:
+    'Una de las KDS que sacaste todavía tiene stock en esta noche. Devolvé su stock al depósito desde el stock de la noche y después sacala.',
   unreachable: 'No pudimos guardarla. Fijate la señal y probá de nuevo.',
 };
 

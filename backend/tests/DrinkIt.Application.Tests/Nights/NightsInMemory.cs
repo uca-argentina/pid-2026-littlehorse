@@ -1,5 +1,6 @@
 using DrinkIt.Application.Nights;
 using DrinkIt.Domain.Nights;
+using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Application.Tests.Nights;
 
@@ -12,6 +13,14 @@ internal sealed class NightsInMemory(params Night[] stored) : INightRepository
     private readonly List<Night> _stored = [.. stored];
 
     public Night? Added { get; private set; }
+
+    /// <summary>The KDS the added night was opened with, and when (US-37).</summary>
+    public IReadOnlyList<StaffUser>? AddedBars { get; private set; }
+
+    public DateTimeOffset? AddedAt { get; private set; }
+
+    /// <summary>The KDS that hold some stock in any night, as the database would answer.</summary>
+    public HashSet<Guid> BarsHoldingStock { get; } = [];
 
     /// <summary>How many times the unit of work was committed.</summary>
     public int Saves { get; private set; }
@@ -29,9 +38,12 @@ internal sealed class NightsInMemory(params Night[] stored) : INightRepository
         return Task.CompletedTask;
     }
 
-    public Task AddAsync(Night night, CancellationToken cancellationToken)
+    public Task<IReadOnlyCollection<Guid>> BarsHoldingStockAsync(Guid nightId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyCollection<Guid>>(BarsHoldingStock);
+
+    public Task AddAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        Added = night;
+        (Added, AddedBars, AddedAt) = (night, bars, now);
         _stored.Add(night);
 
         return Task.CompletedTask;

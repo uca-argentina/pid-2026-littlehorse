@@ -1,3 +1,4 @@
+using System.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore;
 
 namespace DrinkIt.Infrastructure.Persistence;
@@ -25,6 +26,21 @@ internal static class Storeroom
         context.Database
             .SqlQuery<int>($"SELECT [Stock] AS [Value] FROM [Products] WITH (UPDLOCK, ROWLOCK) WHERE [Id] = {productId}")
             .SingleAsync(cancellationToken);
+
+    /// <summary>
+    /// Locks those products' rows until the transaction ends, in the order SQL
+    /// Server sorts their ids — the order <see cref="LockActiveProductsAsync"/>
+    /// walks the key in — so two writers of the same products never take them
+    /// in opposite orders. <see cref="SqlGuid"/>, because .NET sorts a Guid by
+    /// other bytes than the database does.
+    /// </summary>
+    public static async Task LockProductsAsync(DrinkItDbContext context, IEnumerable<Guid> productIds, CancellationToken cancellationToken)
+    {
+        foreach (Guid productId in productIds.Distinct().OrderBy(id => new SqlGuid(id)))
+        {
+            await LockProductAsync(context, productId, cancellationToken);
+        }
+    }
 
     /// <summary>
     /// Locks the rows of every active product of the venue until the

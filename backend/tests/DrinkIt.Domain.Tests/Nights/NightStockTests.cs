@@ -143,4 +143,10 @@ public class NightStockTests
 
         Assert.Equal(20, Assert.Single(loads).Change);
     }
+
+    // A night set up with hours already past takes nothing: its stock is
+    // only looked at, and there is nobody to sell it.
+    [Fact]
+    public void LoadOpeningStock_WhenTheNightIsOver_LoadsNothing() =>
+        Assert.Empty(ANight().LoadOpeningStock([MainBar], [(AGinTonic(), 20)], Closing));
 }

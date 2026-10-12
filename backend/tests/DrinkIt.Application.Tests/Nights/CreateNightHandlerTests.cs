@@ -48,31 +48,18 @@ public class CreateNightHandlerTests
         Assert.Equal([MainBar.Id, Till.Id], result.Value.CrewIds);
     }
 
-    // US-37: a new night starts with the storeroom split among its KDS. Only
-    // the KDS of its crew, and the server's clock decides what the storeroom
-    // has; how much each gets is the night's rule, tested in the domain.
+    // US-37: a new night is saved with the storeroom split among its KDS,
+    // both or neither. Only the KDS of its crew, and the server's clock
+    // decides what the storeroom has; how much each gets is the night's rule.
     [Fact]
-    public async Task HandleAsync_WhenTheNightIsCreated_LoadsItsKdsWithTheOpeningStock()
+    public async Task HandleAsync_WhenTheNightIsCreated_AddsItWithItsKdsAndTheServerClock()
     {
         NightsInMemory nights = new();
-        OpeningShelves shelves = new();
 
-        await HandlerOver(nights, shelves).HandleAsync(ACommand(MainBar.Id, Till.Id, Martin.Id), CancellationToken.None);
+        await HandlerOver(nights).HandleAsync(ACommand(MainBar.Id, Till.Id, Martin.Id), CancellationToken.None);
 
-        Assert.Same(nights.Added, shelves.Night);
-        Assert.Equal([MainBar.Id], shelves.Bars!.Select(bar => bar.Id));
-        Assert.Equal(Now, shelves.At);
-    }
-
-    [Fact]
-    public async Task HandleAsync_WhenTheNightIsNotCreated_LoadsNothing()
-    {
-        Night friday = Night.Create(TheVenue, "Friday 9/10", Opening.AddHours(-20), Opening.AddHours(1), [MainBar, Till]);
-        OpeningShelves shelves = new();
-
-        await HandlerOver(new NightsInMemory(friday), shelves).HandleAsync(ACommand(MainBar.Id, Till.Id), CancellationToken.None);
-
-        Assert.Null(shelves.Night);
+        Assert.Equal([MainBar.Id], nights.AddedBars!.Select(bar => bar.Id));
+        Assert.Equal(Now, nights.AddedAt);
     }
 
     // Criterion 1: two nights of the same venue cannot share a single minute,
@@ -111,32 +98,12 @@ public class CreateNightHandlerTests
 
     private static readonly DateTimeOffset Now = Opening.AddHours(-5);
 
-    private static CreateNightHandler HandlerOver(NightsInMemory nights, OpeningShelves? shelves = null) =>
-        new(nights, new StaffUsersInMemory(MainBar, Till, Martin), new TheCurrentVenue(), shelves ?? new OpeningShelves(), new FixedClock(Now));
+    private static CreateNightHandler HandlerOver(NightsInMemory nights) =>
+        new(nights, new StaffUsersInMemory(MainBar, Till, Martin), new TheCurrentVenue(), new FixedClock(Now));
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now.ToUniversalTime();
-    }
-
-    /// <summary>Records the opening load. What it writes is the database's business, tested there.</summary>
-    private sealed class OpeningShelves : INightStockRepository
-    {
-        public Night? Night { get; private set; }
-
-        public IReadOnlyList<StaffUser>? Bars { get; private set; }
-
-        public DateTimeOffset? At { get; private set; }
-
-        public Task LoadOpeningStockAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken)
-        {
-            (Night, Bars, At) = (night, bars, now);
-
-            return Task.CompletedTask;
-        }
-
-        public Task<Result<NightStockAdjustment>> SaveAdjustmentAsync(NightStockAdjustment adjustment, DateTimeOffset now, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
     }
 
     private sealed class TheCurrentVenue : ICurrentVenue

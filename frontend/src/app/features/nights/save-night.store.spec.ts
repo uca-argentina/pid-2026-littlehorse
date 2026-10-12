@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { ProblemTypes } from '../../core/api/problem-types';
-import { SaveNightStore } from './save-night.store';
+import { SaveNightStore, refusalFor } from './save-night.store';
 import { NightsService } from './nights.service';
 import type { NewNight, Night } from './nights.service';
 
@@ -130,5 +130,16 @@ describe('SaveNightStore', () => {
     store.update('bar-alfa', 'night-1', aNewNight);
 
     expect(store.status()).toBe('startLocked');
+  });
+
+  // US-37: the KDS taken out still holds stock in the night, and would leave
+  // it stuck. The form says to give it back first.
+  it('says a KDS with stock cannot leave the night when the API refuses it for that', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.nightBarHoldsStock)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('barHoldsStock');
+    expect(refusalFor(store.status())).toMatch(/devolvé su stock al depósito/i);
   });
 });

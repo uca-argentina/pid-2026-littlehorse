@@ -1,6 +1,5 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Domain.Nights;
-using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Application.Nights;
 
@@ -11,13 +10,6 @@ namespace DrinkIt.Application.Nights;
 /// </summary>
 public interface INightStockRepository
 {
-    /// <summary>
-    /// What a night that was just created starts with: each active product's
-    /// storeroom at <paramref name="now"/>, split by <see cref="Night.LoadOpeningStock"/>
-    /// among <paramref name="bars"/>, every load on record. All of it or none.
-    /// </summary>
-    Task LoadOpeningStockAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken);
-
     /// <summary>
     /// Records the adjustment and adds its change to what the bar holds for the
     /// night, in the database itself and not as a total worked out in memory: a

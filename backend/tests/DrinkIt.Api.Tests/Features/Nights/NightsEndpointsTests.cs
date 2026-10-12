@@ -136,6 +136,28 @@ public class NightsEndpointsTests
         Assert.Equal("urn:drinkit:problem:night:overlaps", response.Text("type"));
     }
 
+    // US-37: taking a KDS out of the night while it holds stock would leave
+    // that stock stuck; the screen was opened before it was loaded.
+    [Fact]
+    public async Task UpdateAsync_WhenItTakesOutAKdsThatHoldsStock_RespondsWithConflict()
+    {
+        Night saturday = Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, VipBar, Till]);
+        UpdateNightHandler handler = new(
+            new Fake.Nights(overlaps: false, saturday, barHoldingStock: VipBar.Id),
+            new Fake.Staff(MainBar, VipBar, Till),
+            new Fake.Clock(Opening.AddHours(-2)));
+
+        IResult result = await NightsEndpoints.UpdateAsync(
+            saturday.Id,
+            new UpdateNightRequest("Saturday", Opening, Closing, [MainBar.Id, Till.Id]),
+            handler,
+            CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{saturday.Id}", HttpMethods.Put);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:night:bar-holds-stock", response.Text("type"));
+    }
+
     // Pins the stock sheet's shape: the Angular client is generated from it.
     [Fact]
     public async Task GetStockAsync_WhenTheVenueHasTheNight_RespondsWithEachBarAndALinePerProduct()
@@ -293,7 +315,7 @@ public class NightsEndpointsTests
 
     private static async Task<HttpResponseSnapshot> Create(CreateNightRequest request, bool overlaps = false)
     {
-        CreateNightHandler handler = new(new Fake.Nights(overlaps), new Fake.Staff(MainBar, Till), new Fake.CurrentVenue(), new Fake.Shelves(null), new Fake.Clock(Opening.AddHours(-2)));
+        CreateNightHandler handler = new(new Fake.Nights(overlaps), new Fake.Staff(MainBar, Till), new Fake.CurrentVenue(), new Fake.Clock(Opening.AddHours(-2)));
 
         IResult result = await NightsEndpoints.CreateAsync(request, handler, CancellationToken.None);
 
@@ -312,7 +334,7 @@ public class NightsEndpointsTests
             public override DateTimeOffset GetUtcNow() => now;
         }
 
-        public sealed class Nights(bool overlaps, Night? stored = null) : INightRepository
+        public sealed class Nights(bool overlaps, Night? stored = null, Guid? barHoldingStock = null) : INightRepository
         {
             public Task<bool> OverlapsAsync(DateTimeOffset startsAt, DateTimeOffset endsAt, Guid? excluding, CancellationToken cancellationToken) =>
                 Task.FromResult(overlaps);
@@ -322,7 +344,10 @@ public class NightsEndpointsTests
 
             public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-            public Task AddAsync(Night night, CancellationToken cancellationToken) => Task.CompletedTask;
+            public Task<IReadOnlyCollection<Guid>> BarsHoldingStockAsync(Guid nightId, CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyCollection<Guid>>(barHoldingStock is Guid bar ? [bar] : []);
+
+            public Task AddAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         public sealed class Queries(NightSummary[] stored) : INightQueries
@@ -342,9 +367,6 @@ public class NightsEndpointsTests
 
         public sealed class Shelves(Error? refusal) : INightStockRepository
         {
-            public Task LoadOpeningStockAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken) =>
-                Task.CompletedTask;
-
             public Task<Result<NightStockAdjustment>> SaveAdjustmentAsync(NightStockAdjustment adjustment, DateTimeOffset now, CancellationToken cancellationToken) =>
                 Task.FromResult(refusal is null ? (Result<NightStockAdjustment>)adjustment : refusal);
         }

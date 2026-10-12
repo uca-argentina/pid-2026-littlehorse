@@ -47,6 +47,13 @@ public static class NightErrors
     public static readonly Error StoreroomShort =
         new("night.storeroom_short", "There are not that many left in the storeroom to load.");
 
+    /// <summary>
+    /// US-37: a KDS's stock that night is only sold, shown and given back
+    /// while it works the night, so it cannot leave it holding any.
+    /// </summary>
+    public static readonly Error BarHoldsStock =
+        new("night.bar_holds_stock", "A KDS still holds stock in this night. Give it back to the storeroom before taking it out.");
+
     /// <summary>US-37: no KDS of this venue has that id. Another venue's reads the same.</summary>
     public static readonly Error BarNotFound =
         new("night.bar_not_found", "This venue has no bar with that id.");

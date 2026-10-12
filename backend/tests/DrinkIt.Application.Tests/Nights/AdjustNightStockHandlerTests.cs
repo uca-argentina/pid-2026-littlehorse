@@ -211,9 +211,6 @@ public class AdjustNightStockHandlerTests
 
             public DateTimeOffset? SavedAt { get; private set; }
 
-            public Task LoadOpeningStockAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken) =>
-                Task.CompletedTask;
-
             public Task<Result<NightStockAdjustment>> SaveAdjustmentAsync(NightStockAdjustment adjustment, DateTimeOffset now, CancellationToken cancellationToken)
             {
                 if (refusal is not null) return Task.FromResult<Result<NightStockAdjustment>>(refusal);
