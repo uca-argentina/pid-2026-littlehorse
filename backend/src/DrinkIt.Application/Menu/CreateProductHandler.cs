@@ -8,14 +8,14 @@ public sealed record CreateProductCommand(
     string? Description,
     string? ImageUrl,
     decimal Price,
+    int Stock,
     Guid CategoryId);
 
 /// <summary>
 /// Adds a product to the menu of the venue the signed-in administrator belongs
 /// to. The venue comes from <see cref="ICurrentVenue"/>, which reads the token
 /// claim, so an administrator cannot load products anywhere else by changing
-/// the request. It starts with no stock: stock lives in the bars, and is loaded
-/// into each for the night (US-37).
+/// the request.
 /// </summary>
 public sealed class CreateProductHandler(
     IProductRepository products,
@@ -46,7 +46,7 @@ public sealed class CreateProductHandler(
             command.Description,
             command.ImageUrl,
             command.Price,
-            stock: 0,
+            command.Stock,
             command.CategoryId);
 
         await products.AddAsync(product, cancellationToken);

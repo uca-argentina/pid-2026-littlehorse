@@ -95,4 +95,52 @@ public class NightStockTests
     [InlineData(7, true)]
     public void HasEndedAt_ComparedWithTheEnd_IsTrueFromTheEndOn(int hoursAfterClosing, bool expected) =>
         Assert.Equal(expected, ANight().HasEndedAt(Closing.AddHours(hoursAfterClosing)));
+
+    // When a night is created, each product of the storeroom is split evenly
+    // among its KDS by default; the administrator changes it from there.
+    [Fact]
+    public void LoadOpeningStock_WhenTheNightHasTwoBars_GivesEachAnEqualShareOfTheStoreroom()
+    {
+        StaffUser vipBar = StaffUser.Create(AVenue, "vip-bar", "hash", StaffRole.Kds);
+        Night night = Night.Create(AVenue, "Saturday 10/10", Opening, Closing, [MainBar, vipBar, Till]);
+        Product gin = AGinTonic();
+
+        IReadOnlyList<NightStockAdjustment> loads = night.LoadOpeningStock([MainBar, vipBar], [(gin, 30)], Opening.AddHours(-5));
+
+        Assert.Equal([(MainBar.Id, 15), (vipBar.Id, 15)], loads.Select(load => (load.KdsId, load.Change)));
+        Assert.All(loads, load => Assert.Equal((night.Id, gin.Id), (load.NightId, load.ProductId)));
+    }
+
+    // 31 between two is 15 each: the unit left over stays in the storeroom.
+    [Fact]
+    public void LoadOpeningStock_WhenItDoesNotSplitEvenly_LeavesTheRemainderInTheStoreroom()
+    {
+        StaffUser vipBar = StaffUser.Create(AVenue, "vip-bar", "hash", StaffRole.Kds);
+        Night night = Night.Create(AVenue, "Saturday 10/10", Opening, Closing, [MainBar, vipBar, Till]);
+
+        IReadOnlyList<NightStockAdjustment> loads = night.LoadOpeningStock([MainBar, vipBar], [(AGinTonic(), 31)], Opening);
+
+        Assert.Equal([15, 15], loads.Select(load => load.Change));
+    }
+
+    // Fewer than one each, or none at all: nothing to record for it.
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void LoadOpeningStock_WhenThereIsLessThanOneForEachBar_LoadsNoneOfIt(int inStoreroom)
+    {
+        StaffUser vipBar = StaffUser.Create(AVenue, "vip-bar", "hash", StaffRole.Kds);
+        Night night = Night.Create(AVenue, "Saturday 10/10", Opening, Closing, [MainBar, vipBar, Till]);
+
+        Assert.Empty(night.LoadOpeningStock([MainBar, vipBar], [(AGinTonic(), inStoreroom)], Opening));
+    }
+
+    // One KDS takes it all.
+    [Fact]
+    public void LoadOpeningStock_WhenTheNightHasOneBar_GivesItEverything()
+    {
+        IReadOnlyList<NightStockAdjustment> loads = ANight().LoadOpeningStock([MainBar], [(AGinTonic(), 20)], Opening);
+
+        Assert.Equal(20, Assert.Single(loads).Change);
+    }
 }

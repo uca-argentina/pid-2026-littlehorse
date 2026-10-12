@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DrinkIt.Infrastructure.Orders;
 
 /// <summary>
-/// Read-only, like ProductsForOrdering: what each bar of the night holds and
+/// Read-only, like ProductsForOrdering: what each bar holds for the night and
 /// how much work it has. The stock is taken by OrderRepository.AddAsync. No
 /// venue in any WHERE: the global query filters add it.
 /// </summary>
@@ -39,7 +39,7 @@ internal sealed class BarsForOrdering(DrinkItDbContext context) : IBarsForOrderi
 
         var units = await context.BarStocks
             .AsNoTracking()
-            .Where(stock => bars.Contains(stock.KdsId) && productIds.Contains(stock.ProductId))
+            .Where(stock => stock.NightId == nightId && bars.Contains(stock.KdsId) && productIds.Contains(stock.ProductId))
             .Select(stock => new { stock.KdsId, stock.ProductId, stock.Units })
             .ToListAsync(cancellationToken);
 

@@ -41,12 +41,11 @@ public static class NightErrors
         new("night.stock_closed", "The night is over: its stock can only be looked at.");
 
     /// <summary>
-    /// A night starts from what the one before it leaves, so its stock waits
-    /// until that one ends: loaded earlier, the units would be sold by the
-    /// night still on.
+    /// US-37: loading a bar takes from the storeroom, the general stock minus
+    /// what the bars of nights not yet over hold, and there is less than that.
     /// </summary>
-    public static readonly Error EarlierNightOpen =
-        new("night.earlier_night_open", "An earlier night has not ended yet. Load this one's stock once it has.");
+    public static readonly Error StoreroomShort =
+        new("night.storeroom_short", "There are not that many left in the storeroom to load.");
 
     /// <summary>US-37: no KDS of this venue has that id. Another venue's reads the same.</summary>
     public static readonly Error BarNotFound =

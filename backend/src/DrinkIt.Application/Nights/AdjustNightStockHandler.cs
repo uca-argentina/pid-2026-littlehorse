@@ -12,9 +12,10 @@ public sealed record AdjustNightStockCommand(Guid NightId, Guid KdsId, Guid Prod
 
 /// <summary>
 /// US-37: the administrator loads each bar's stock for the night, product by
-/// product. A bar is a KDS of the night's crew. The change is what gets saved,
-/// never the total on the screen: the bar keeps selling while it is open, and
-/// a total typed over it would put back drinks already sold.
+/// product, from the storeroom. A bar is a KDS of the night's crew, and every
+/// night's bars start empty. The change is what gets saved, never the total on
+/// the screen: the bar keeps selling while it is open, and a total typed over
+/// it would put back drinks already sold.
 /// </summary>
 public sealed class AdjustNightStockHandler(
     INightRepository nights,
@@ -35,7 +36,6 @@ public sealed class AdjustNightStockHandler(
         // Expected from a screen that was opened a while ago, so results and
         // not the domain's exceptions.
         if (night.HasEndedAt(now)) return NightErrors.StockClosed;
-        if (await nights.HasUnfinishedBeforeAsync(night.StartsAt, now, cancellationToken)) return NightErrors.EarlierNightOpen;
 
         StaffUser? bar = await staffUsers.GetForUpdateAsync(command.KdsId, cancellationToken);
 
@@ -50,8 +50,11 @@ public sealed class AdjustNightStockHandler(
         // account that is not a KDS): the domain throws and the API answers 400.
         NightStockAdjustment adjustment = night.AdjustStock(bar, product, command.Change, now);
 
-        // Sales since the screen opened leaving the bar too little is expected.
-        if (!await shelves.SaveAdjustmentAsync(adjustment, cancellationToken)) return ProductErrors.StockMoved;
+        // Sales since the screen opened leaving the bar too little, or loads
+        // elsewhere leaving the storeroom too little, are expected.
+        Result<NightStockAdjustment> saved = await shelves.SaveAdjustmentAsync(adjustment, now, cancellationToken);
+
+        if (!saved.IsSuccess) return saved.Error!;
 
         return (await sheets.GetAsync(night.Id, cancellationToken))!;
     }

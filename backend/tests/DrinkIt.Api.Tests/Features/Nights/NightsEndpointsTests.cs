@@ -142,7 +142,7 @@ public class NightsEndpointsTests
     {
         Guid night = Guid.CreateVersion7();
         NightStockSheet sheet = new(night, [
-            new NightStockBar(MainBar.Id, "main-bar", [new NightStockLine(Guid.CreateVersion7(), "Gin Tonic", Carried: 20, Added: 12, Sold: 7)]),
+            new NightStockBar(MainBar.Id, "main-bar", [new NightStockLine(Guid.CreateVersion7(), "Gin Tonic", Loaded: 12, Sold: 7, InStoreroom: 30)]),
         ]);
 
         IResult result = await NightsEndpoints.GetStockAsync(night, new Fake.Sheets(sheet), CancellationToken.None);
@@ -154,11 +154,10 @@ public class NightsEndpointsTests
         Assert.Equal("main-bar", bar.GetProperty("name").GetString());
         System.Text.Json.JsonElement line = bar.GetProperty("lines")[0];
         Assert.Equal("Gin Tonic", line.GetProperty("productName").GetString());
-        Assert.Equal(20, line.GetProperty("carried").GetInt32());
-        Assert.Equal(12, line.GetProperty("added").GetInt32());
-        Assert.Equal(32, line.GetProperty("loaded").GetInt32());
+        Assert.Equal(12, line.GetProperty("loaded").GetInt32());
         Assert.Equal(7, line.GetProperty("sold").GetInt32());
-        Assert.Equal(25, line.GetProperty("left").GetInt32());
+        Assert.Equal(5, line.GetProperty("left").GetInt32());
+        Assert.Equal(30, line.GetProperty("inStoreroom").GetInt32());
     }
 
     [Fact]
@@ -197,15 +196,17 @@ public class NightsEndpointsTests
         Assert.Equal("urn:drinkit:problem:night:stock-closed", response.Text("type"));
     }
 
+    // Sold or loaded elsewhere since the screen opened: what happened
+    // meanwhile, not a malformed request.
     [Fact]
-    public async Task AdjustStockAsync_WhenAnEarlierNightHasNotEnded_RespondsWithConflict()
+    public async Task AdjustStockAsync_WhenTheStoreroomHasLessThanItLoads_RespondsWithConflict()
     {
         (Night saturday, Product gin) = (Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]), AGin(5));
 
-        HttpResponseSnapshot response = await AdjustStock(saturday, gin, 12, now: Opening.AddHours(-2), earlierNightOpen: true);
+        HttpResponseSnapshot response = await AdjustStock(saturday, gin, 12, now: Opening, refusal: NightErrors.StoreroomShort);
 
         Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
-        Assert.Equal("urn:drinkit:problem:night:earlier-night-open", response.Text("type"));
+        Assert.Equal("urn:drinkit:problem:night:storeroom-short", response.Text("type"));
     }
 
     // The bar holds less than the change takes away: a conflict with what
@@ -215,7 +216,7 @@ public class NightsEndpointsTests
     {
         (Night saturday, Product gin) = (Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]), AGin(2));
 
-        HttpResponseSnapshot response = await AdjustStock(saturday, gin, -5, now: Opening, barHasEnough: false);
+        HttpResponseSnapshot response = await AdjustStock(saturday, gin, -5, now: Opening, refusal: ProductErrors.StockMoved);
 
         Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
         Assert.Equal("urn:drinkit:problem:product:stock-moved", response.Text("type"));
@@ -262,17 +263,16 @@ public class NightsEndpointsTests
         Product? product,
         int change,
         DateTimeOffset now,
-        bool earlierNightOpen = false,
-        bool barHasEnough = true,
+        Error? refusal = null,
         Guid? bar = null)
     {
         Guid productId = product?.Id ?? Guid.CreateVersion7();
         Guid kdsId = bar ?? MainBar.Id;
         AdjustNightStockHandler handler = new(
-            new Fake.Nights(overlaps: false, night, earlierNightOpen),
+            new Fake.Nights(overlaps: false, night),
             new Fake.Products(product),
             new Fake.Staff(MainBar, VipBar, Till),
-            new Fake.Shelves(barHasEnough),
+            new Fake.Shelves(refusal),
             new Fake.Sheets(new NightStockSheet(night.Id, [])),
             new Fake.Clock(now));
 
@@ -293,7 +293,7 @@ public class NightsEndpointsTests
 
     private static async Task<HttpResponseSnapshot> Create(CreateNightRequest request, bool overlaps = false)
     {
-        CreateNightHandler handler = new(new Fake.Nights(overlaps), new Fake.Staff(MainBar, Till), new Fake.CurrentVenue());
+        CreateNightHandler handler = new(new Fake.Nights(overlaps), new Fake.Staff(MainBar, Till), new Fake.CurrentVenue(), new Fake.Shelves(null), new Fake.Clock(Opening.AddHours(-2)));
 
         IResult result = await NightsEndpoints.CreateAsync(request, handler, CancellationToken.None);
 
@@ -312,13 +312,10 @@ public class NightsEndpointsTests
             public override DateTimeOffset GetUtcNow() => now;
         }
 
-        public sealed class Nights(bool overlaps, Night? stored = null, bool earlierNightOpen = false) : INightRepository
+        public sealed class Nights(bool overlaps, Night? stored = null) : INightRepository
         {
             public Task<bool> OverlapsAsync(DateTimeOffset startsAt, DateTimeOffset endsAt, Guid? excluding, CancellationToken cancellationToken) =>
                 Task.FromResult(overlaps);
-
-            public Task<bool> HasUnfinishedBeforeAsync(DateTimeOffset startsAt, DateTimeOffset now, CancellationToken cancellationToken) =>
-                Task.FromResult(earlierNightOpen);
 
             public Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
                 Task.FromResult(stored?.Id == id ? stored : null);
@@ -343,10 +340,13 @@ public class NightsEndpointsTests
                 Task.FromResult(stored?.NightId == nightId ? stored : null);
         }
 
-        public sealed class Shelves(bool applies) : INightStockRepository
+        public sealed class Shelves(Error? refusal) : INightStockRepository
         {
-            public Task<bool> SaveAdjustmentAsync(NightStockAdjustment adjustment, CancellationToken cancellationToken) =>
-                Task.FromResult(applies);
+            public Task LoadOpeningStockAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken) =>
+                Task.CompletedTask;
+
+            public Task<Result<NightStockAdjustment>> SaveAdjustmentAsync(NightStockAdjustment adjustment, DateTimeOffset now, CancellationToken cancellationToken) =>
+                Task.FromResult(refusal is null ? (Result<NightStockAdjustment>)adjustment : refusal);
         }
 
         /// <summary>Only what loading the night's stock reads and writes.</summary>
@@ -360,6 +360,8 @@ public class NightsEndpointsTests
             public Task AddAsync(Product product, CancellationToken cancellationToken) => throw new NotSupportedException();
 
             public Task SaveChangesAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, DateTimeOffset now, CancellationToken cancellationToken) => throw new NotSupportedException();
         }
 
         /// <summary>Only what creating a night and loading a bar read; the rest is never reached here.</summary>

@@ -301,7 +301,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** The night's stock: what each product started with, what was loaded, sold and is left. */
+    /** The night's stock, bar by bar: what was loaded of each product, sold and is left, and what the storeroom still has. */
     get: operations['GetNightStock'];
     put?: never;
     post?: never;
@@ -311,7 +311,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/nights/{id}/stock/{productId}/adjust': {
+  '/nights/{id}/stock/{kdsId}/{productId}/adjust': {
     parameters: {
       query?: never;
       header?: never;
@@ -320,7 +320,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Loads units of a product into a night that has not ended, or takes them out. */
+    /** Moves units of a product from the storeroom into one bar of a night that has not ended, or back. */
     post: operations['AdjustNightStock'];
     delete?: never;
     options?: never;
@@ -409,6 +409,23 @@ export interface paths {
     /** Corrects a product's name, description, price and category. */
     put: operations['UpdateProduct'];
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/products/{id}/adjust-stock': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Moves a product's stock up or down by a number of units. */
+    post: operations['AdjustProductStock'];
     delete?: never;
     options?: never;
     head?: never;
@@ -627,11 +644,20 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     /**
-     * @description How much a product's stock moves in the night: positive when units arrived,
-     *     negative when they were loaded wrong. A change, never the new total, so a
-     *     sale made while the screen was open is not overwritten.
+     * @description How much a product's stock moves in one bar for the night: positive when
+     *     units go in from the storeroom, negative when they go back to it. A change,
+     *     never the new total, so a sale made while the screen was open is not
+     *     overwritten.
      */
     AdjustNightStockRequest: {
+      /** Format: int32 */
+      change: number;
+    };
+    /**
+     * @description How much the stock moves: positive when units arrived, negative when it was
+     *     loaded wrong. A change, never the new total.
+     */
+    AdjustProductStockRequest: {
       /** Format: int32 */
       change: number;
     };
@@ -812,26 +838,35 @@ export interface components {
       crewIds: string[];
       audit: components['schemas']['AuditResponse'];
     };
-    /** @description One product in the night's stock. Loaded is what it started with plus what came in. */
+    /** @description One bar of the night: a KDS of its crew, with its own stock. */
+    NightStockBarResponse: {
+      /** Format: uuid */
+      kdsId: string;
+      name: string;
+      lines: components['schemas']['NightStockLineResponse'][];
+    };
+    /**
+     * @description One product in one bar for the night. Every night's bars start empty, so
+     *     Loaded is all that came in. InStoreroom is the product's, the same in every
+     *     bar: what is left to load.
+     */
     NightStockLineResponse: {
       /** Format: uuid */
       productId: string;
       productName: string;
-      /** Format: int32 */
-      carried: number;
-      /** Format: int32 */
-      added: number;
       /** Format: int32 */
       loaded: number;
       /** Format: int32 */
       sold: number;
       /** Format: int32 */
       left: number;
+      /** Format: int32 */
+      inStoreroom: number;
     };
     NightStockResponse: {
       /** Format: uuid */
       nightId: string;
-      lines: components['schemas']['NightStockLineResponse'][];
+      bars: components['schemas']['NightStockBarResponse'][];
     };
     /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
@@ -1673,6 +1708,7 @@ export interface operations {
       header?: never;
       path: {
         id: string;
+        kdsId: string;
         productId: string;
       };
       cookie?: never;
@@ -1919,6 +1955,59 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['UpdateProductRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  AdjustProductStock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AdjustProductStockRequest'];
       };
     };
     responses: {

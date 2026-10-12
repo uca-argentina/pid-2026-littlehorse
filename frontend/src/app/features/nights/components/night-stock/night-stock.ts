@@ -5,35 +5,51 @@ import { problemTypeOf } from '../../../../core/api/problem-type-of';
 import { ProblemTypes } from '../../../../core/api/problem-types';
 import type { NightPhase } from '../../night-calendar';
 import { NIGHTS_URL, NightsService } from '../../nights.service';
-import type { NightStock as NightStockSheet, NightStockLine } from '../../nights.service';
+import type {
+  NightStockBar,
+  NightStock as NightStockSheet,
+  NightStockLine,
+} from '../../nights.service';
 
-/** A message that belongs to one product's row. */
+/** A message that belongs to one product's row in one bar. */
 interface RowMessage {
+  readonly kdsId: string;
   readonly productId: string;
   readonly text: string;
 }
 
 const NOT_A_COUNT = 'Escribí cuántas unidades: un número entero mayor que cero.';
 
+const STOREROOM_SHORT =
+  'En el depósito no hay tantas: se cargaron en otra barra o se ajustó el stock. Ya actualizamos cuántas hay.';
+
 const STOCK_MOVED =
-  'Se vendió mientras tanto y no alcanza para restar eso. Ya actualizamos cuánto queda.';
+  'La barra vendió mientras tanto y no alcanza para devolver eso. Ya actualizamos cuánto queda.';
 
 const UNREACHABLE = 'No pudimos guardarlo. Fijate la señal y probá de nuevo.';
 
-/** Refusals about the whole night rather than about one product. */
+/** Refusals about the whole night rather than about one row. */
 const NIGHT_REFUSALS = new Map<string, string>([
   [ProblemTypes.nightStockClosed, 'La noche terminó mientras cargabas: su stock ya sólo se mira.'],
   [
-    ProblemTypes.nightEarlierNightOpen,
-    'Todavía no terminó la noche anterior. Cargá el stock de esta cuando termine: arranca con lo que esa deje.',
+    ProblemTypes.nightBarNotInNight,
+    'Esa barra ya no trabaja esta noche. Revisá el personal de la noche.',
   ],
 ]);
 
+/** Refusals that the sheet as it is now explains, so it is asked for again. */
+const ROW_REFUSALS = new Map<string, string>([
+  [ProblemTypes.nightStoreroomShort, STOREROOM_SHORT],
+  [ProblemTypes.productStockMoved, STOCK_MOVED],
+]);
+
 /**
- * The night's stock (US-37), inside its own screen: one row per product with
- * what it starts with, what was loaded, sold and is left, and the units to add
- * or take away. A finished night's is only read. The API holds the rules; this
- * only avoids offering what it would refuse.
+ * The night's stock (US-37), inside its own screen: one section per bar (a
+ * KDS of the night), one row per product with what was loaded, sold and is
+ * left, beside what the storeroom still has, and the units to load into the
+ * bar or give back. A new night's bars start with the storeroom split evenly
+ * among them. A finished night's is only read. The API holds the rules; this only avoids offering what it would
+ * refuse.
  */
 @Component({
   selector: 'drinkit-night-stock',
@@ -55,58 +71,61 @@ export class NightStock {
 
   protected readonly isOver = computed(() => this.phase() === 'over');
 
-  /** "Arranca" while the night before may still sell; "arrancó" once this one is on. */
-  protected readonly startsWith = computed(() =>
-    this.phase() === 'upcoming' ? 'Arranca con' : 'Arrancó con',
+  /** Products are the same in every bar, so the first one says whether the menu is empty. */
+  protected readonly hasProducts = computed(
+    () => this.sheet.hasValue() && (this.sheet.value().bars[0]?.lines.length ?? 0) > 0,
   );
 
-  /** The product whose change is on its way. One at a time: each answer is the whole sheet. */
-  protected readonly pending = signal<string | null>(null);
+  /** Whether a change is on its way. One at a time: each answer is the whole sheet. */
+  protected readonly pending = signal(false);
 
   protected readonly rowMessage = signal<RowMessage | null>(null);
 
   protected readonly refusal = signal<string | null>(null);
 
-  /** "+12", "−5" or "0", as the row shows what was loaded. */
-  protected signed(units: number): string {
-    if (units > 0) return `+${units}`;
-
-    return units < 0 ? `−${-units}` : '0';
-  }
-
-  protected messageFor(line: NightStockLine): string | null {
+  protected messageFor(bar: NightStockBar, line: NightStockLine): string | null {
     const message = this.rowMessage();
 
-    return message?.productId === line.productId ? message.text : null;
+    if (message === null) return null;
+
+    return message.kdsId === bar.kdsId && message.productId === line.productId
+      ? message.text
+      : null;
   }
 
-  protected adjust(line: NightStockLine, field: HTMLInputElement, direction: 1 | -1): void {
-    if (this.pending() !== null) return;
+  protected adjust(
+    bar: NightStockBar,
+    line: NightStockLine,
+    field: HTMLInputElement,
+    direction: 1 | -1,
+  ): void {
+    if (this.pending()) return;
 
     const units = Number(field.value);
+    const row = { kdsId: bar.kdsId, productId: line.productId };
 
     if (field.value.trim() === '' || !Number.isInteger(units) || units <= 0) {
-      this.rowMessage.set({ productId: line.productId, text: NOT_A_COUNT });
+      this.rowMessage.set({ ...row, text: NOT_A_COUNT });
 
       return;
     }
 
     this.rowMessage.set(null);
     this.refusal.set(null);
-    this.pending.set(line.productId);
+    this.pending.set(true);
 
     this.nights
-      .adjustStock(this.nightId(), line.productId, direction * units)
+      .adjustStock(this.nightId(), bar.kdsId, line.productId, direction * units)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updated) => {
-          this.pending.set(null);
+          this.pending.set(false);
           this.sheet.set(updated);
           field.value = '';
         },
         error: (error: unknown) => {
-          this.pending.set(null);
-          this.answer(error, line.productId);
+          this.pending.set(false);
+          this.answer(error, row);
         },
       });
   }
@@ -115,7 +134,7 @@ export class NightStock {
     this.sheet.reload();
   }
 
-  private answer(error: unknown, productId: string): void {
+  private answer(error: unknown, row: Omit<RowMessage, 'text'>): void {
     const type = error instanceof HttpErrorResponse ? (problemTypeOf(error) ?? '') : '';
     const nightRefusal = NIGHT_REFUSALS.get(type);
 
@@ -125,13 +144,15 @@ export class NightStock {
       return;
     }
 
-    if (type === ProblemTypes.productStockMoved) {
-      this.rowMessage.set({ productId, text: STOCK_MOVED });
+    const rowRefusal = ROW_REFUSALS.get(type);
+
+    if (rowRefusal !== undefined) {
+      this.rowMessage.set({ ...row, text: rowRefusal });
       this.sheet.reload();
 
       return;
     }
 
-    this.rowMessage.set({ productId, text: UNREACHABLE });
+    this.rowMessage.set({ ...row, text: UNREACHABLE });
   }
 }

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
+import { loadIntoTonight } from './stock';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 import { categoryIdNamed } from './categories';
 import { aKdsAccount, aNewPassword } from './kds';
@@ -15,7 +16,11 @@ function aNewProduct(): string {
   return `E2E ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 }
 
-async function loadProduct(request: APIRequestContext, name: string): Promise<void> {
+async function loadProduct(
+  request: APIRequestContext,
+  name: string,
+  kdsUsername?: string,
+): Promise<void> {
   const login = await request.post(`/api/${seededVenueSlug}/auth/login`, {
     data: { username: seededAdminUsername, password: seededAdminPassword() },
   });
@@ -33,11 +38,17 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
   });
 
   expect(created.status()).toBe(201);
+  await loadIntoTonight(
+    request,
+    token,
+    ((await created.json()) as { id: string }).id,
+    20,
+    kdsUsername,
+  );
 }
 
-/** Signs a fresh bar station in through the API, the way its tablet would. */
-async function aKdsToken(request: APIRequestContext): Promise<string> {
-  const username = await aKdsAccount(request);
+/** Signs a bar station in through the API, the way its tablet would. */
+async function aKdsToken(request: APIRequestContext, username: string): Promise<string> {
   const login = await request.post(`/api/${seededVenueSlug}/auth/login`, {
     data: { username, password: aNewPassword },
   });
@@ -45,10 +56,10 @@ async function aKdsToken(request: APIRequestContext): Promise<string> {
   return ((await login.json()) as { token: string }).token;
 }
 
-/** Buys one drink and ends up on the order's own screen. */
-async function anOrderJustPaid(page: Page, request: APIRequestContext) {
+/** Buys one drink and ends up on the order's own screen. Into that KDS when one is named. */
+async function anOrderJustPaid(page: Page, request: APIRequestContext, kdsUsername?: string) {
   const name = aNewProduct();
-  await loadProduct(request, name);
+  await loadProduct(request, name, kdsUsername);
 
   await page.goto(menuPath);
   await page.getByRole('searchbox', { name: /buscar trago/i }).fill(name);
@@ -120,11 +131,13 @@ test.describe('Tracking', () => {
    * says the order moved.
    */
   test('moves on its own when the bar takes the order', async ({ page, request }) => {
-    await anOrderJustPaid(page, request);
+    // The bar the order goes to (US-36): the one its drink was loaded into.
+    const bar = await aKdsAccount(request);
+    await anOrderJustPaid(page, request, bar);
     const code = await page.getByTestId('order-code').textContent();
 
     const taken = await request.post(`/api/kds/orders/${code}/start-preparing`, {
-      headers: { Authorization: `Bearer ${await aKdsToken(request)}` },
+      headers: { Authorization: `Bearer ${await aKdsToken(request, bar)}` },
     });
     expect(taken.ok()).toBe(true);
 

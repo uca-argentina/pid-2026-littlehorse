@@ -54,5 +54,10 @@ public interface IProductQueries
     /// tonight: a product that vanished reads as a mistake and sends somebody
     /// to ask at the bar, which is the walk this product exists to avoid.
     /// </summary>
-    Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken);
+    /// <remarks>
+    /// <paramref name="nightId"/> is the night on right now, or null when there
+    /// is none. A product can be ordered when some KDS of that night holds at
+    /// least one (US-37).
+    /// </remarks>
+    Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? nightId, CancellationToken cancellationToken);
 }

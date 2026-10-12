@@ -26,15 +26,20 @@ public sealed record NightResponse(
 }
 
 /// <summary>
-/// How much a product's stock moves in one bar for the night: positive when units arrived,
-/// negative when they were loaded wrong. A change, never the new total, so a
-/// sale made while the screen was open is not overwritten.
+/// How much a product's stock moves in one bar for the night: positive when
+/// units go in from the storeroom, negative when they go back to it. A change,
+/// never the new total, so a sale made while the screen was open is not
+/// overwritten.
 /// </summary>
 /// <remarks>US-37.</remarks>
 public sealed record AdjustNightStockRequest(int Change);
 
-/// <summary>One product in the night's stock. Loaded is what it started with plus what came in.</summary>
-public sealed record NightStockLineResponse(Guid ProductId, string ProductName, int Carried, int Added, int Loaded, int Sold, int Left);
+/// <summary>
+/// One product in one bar for the night. Every night's bars start empty, so
+/// Loaded is all that came in. InStoreroom is the product's, the same in every
+/// bar: what is left to load.
+/// </summary>
+public sealed record NightStockLineResponse(Guid ProductId, string ProductName, int Loaded, int Sold, int Left, int InStoreroom);
 
 /// <summary>One bar of the night: a KDS of its crew, with its own stock.</summary>
 public sealed record NightStockBarResponse(Guid KdsId, string Name, IReadOnlyList<NightStockLineResponse> Lines);
@@ -46,7 +51,7 @@ public sealed record NightStockResponse(Guid NightId, IReadOnlyList<NightStockBa
         [.. sheet.Bars.Select(bar => new NightStockBarResponse(
             bar.KdsId,
             bar.Name,
-            [.. bar.Lines.Select(line => new NightStockLineResponse(line.ProductId, line.ProductName, line.Carried, line.Added, line.Loaded, line.Sold, line.Left))]))]);
+            [.. bar.Lines.Select(line => new NightStockLineResponse(line.ProductId, line.ProductName, line.Loaded, line.Sold, line.Left, line.InStoreroom))]))]);
 }
 
 internal static class NightsEndpoints
@@ -84,7 +89,7 @@ internal static class NightsEndpoints
         group
             .MapGet("/{id:guid}/stock", GetStockAsync)
             .WithName("GetNightStock")
-            .WithSummary("The night's stock, bar by bar: what each product started with, what was loaded, sold and is left.")
+            .WithSummary("The night's stock, bar by bar: what was loaded of each product, sold and is left, and what the storeroom still has.")
             .Produces<NightStockResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -93,7 +98,7 @@ internal static class NightsEndpoints
         group
             .MapPost("/{id:guid}/stock/{kdsId:guid}/{productId:guid}/adjust", AdjustStockAsync)
             .WithName("AdjustNightStock")
-            .WithSummary("Loads units of a product into one bar of a night that has not ended, or takes them out.")
+            .WithSummary("Moves units of a product from the storeroom into one bar of a night that has not ended, or back.")
             .Produces<NightStockResponse>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
@@ -183,7 +188,7 @@ internal static class NightsEndpoints
         [NightErrors.NotFound.Code] = StatusCodes.Status404NotFound,
         [NightErrors.Overlaps.Code] = StatusCodes.Status409Conflict,
         [NightErrors.StockClosed.Code] = StatusCodes.Status409Conflict,
-        [NightErrors.EarlierNightOpen.Code] = StatusCodes.Status409Conflict,
+        [NightErrors.StoreroomShort.Code] = StatusCodes.Status409Conflict,
         [NightErrors.BarNotFound.Code] = StatusCodes.Status404NotFound,
         [NightErrors.BarNotInNight.Code] = StatusCodes.Status409Conflict,
         [ProductErrors.NotFound.Code] = StatusCodes.Status404NotFound,

@@ -120,35 +120,49 @@ public class AdjustNightStockHandlerTests
         Assert.Null(shelves.Saved);
     }
 
-    // Saturday starts from what Friday leaves, and Friday is still selling.
+    // Saturday no longer starts from what Friday leaves: it opens empty and
+    // takes from the storeroom, so Friday still selling holds nothing up.
     [Fact]
-    public async Task HandleAsync_WhenAnEarlierNightHasNotEnded_FailsWithEarlierNightOpen()
+    public async Task HandleAsync_WhileAnEarlierNightIsStillOn_SavesTheAdjustment()
     {
         Night friday = ANightStartingAt(Opening.AddDays(-1));
         Fake.Shelves shelves = new();
 
         Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, friday.StartsAt.AddHours(1), earlier: friday);
 
-        Assert.Equal(NightErrors.EarlierNightOpen, result.Error);
-        Assert.Null(shelves.Saved);
+        Assert.True(result.IsSuccess);
     }
 
+    // What is in the storeroom depends on which nights have ended, so the
+    // repository is told when "now" is, and it is the server's clock.
     [Fact]
-    public async Task HandleAsync_WhenTheEarlierNightAlreadyEnded_SavesTheAdjustment()
+    public async Task HandleAsync_WhenItSaves_TellsTheRepositoryWhenNowIs()
     {
-        Night friday = ANightStartingAt(Opening.AddDays(-1));
         Fake.Shelves shelves = new();
 
-        Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, friday.EndsAt, earlier: friday);
+        await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, Opening.AddHours(-5));
 
-        Assert.True(result.IsSuccess);
+        Assert.Equal(Opening.AddHours(-5), shelves.SavedAt);
+    }
+
+    // Loading takes from the storeroom: the general stock minus what the bars
+    // of nights not yet over hold. Sold or loaded elsewhere since the screen
+    // opened, there can be less than it asks for.
+    [Fact]
+    public async Task HandleAsync_WhenTheStoreroomHasLessThanItLoads_FailsWithStoreroomShort()
+    {
+        Fake.Shelves shelves = new(refusal: NightErrors.StoreroomShort);
+
+        Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, Opening, change: 40);
+
+        Assert.Equal(NightErrors.StoreroomShort, result.Error);
     }
 
     // The bar has less than the change takes away, sold since the screen opened.
     [Fact]
     public async Task HandleAsync_WhenTheBarHasLessThanItTakesAway_FailsWithStockMoved()
     {
-        Fake.Shelves shelves = new(applies: false);
+        Fake.Shelves shelves = new(refusal: ProductErrors.StockMoved);
 
         Result<NightStockSheet> result = await Adjust(ANightStartingAt(Opening), AGinTonic(), shelves, Opening, change: -5);
 
@@ -185,18 +199,29 @@ public class AdjustNightStockHandlerTests
                 Task.FromResult(stored.Id == id ? stored : null);
 
             public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, DateTimeOffset now, CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
         }
 
-        /// <summary>The bars' stock. <c>applies: false</c> is a bar left with less than the change takes away.</summary>
-        public sealed class Shelves(bool applies = true) : INightStockRepository
+        /// <summary>The bars' stock. A <c>refusal</c> is what the database found: too little in the bar, or in the storeroom.</summary>
+        public sealed class Shelves(Error? refusal = null) : INightStockRepository
         {
             public NightStockAdjustment? Saved { get; private set; }
 
-            public Task<bool> SaveAdjustmentAsync(NightStockAdjustment adjustment, CancellationToken cancellationToken)
-            {
-                if (applies) Saved = adjustment;
+            public DateTimeOffset? SavedAt { get; private set; }
 
-                return Task.FromResult(applies);
+            public Task LoadOpeningStockAsync(Night night, IReadOnlyList<StaffUser> bars, DateTimeOffset now, CancellationToken cancellationToken) =>
+                Task.CompletedTask;
+
+            public Task<Result<NightStockAdjustment>> SaveAdjustmentAsync(NightStockAdjustment adjustment, DateTimeOffset now, CancellationToken cancellationToken)
+            {
+                if (refusal is not null) return Task.FromResult<Result<NightStockAdjustment>>(refusal);
+
+                Saved = adjustment;
+                SavedAt = now;
+
+                return Task.FromResult<Result<NightStockAdjustment>>(adjustment);
             }
         }
 

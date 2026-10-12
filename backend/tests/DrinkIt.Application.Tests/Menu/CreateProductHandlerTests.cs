@@ -12,7 +12,7 @@ public class CreateProductHandlerTests
     private static readonly Guid TheCategory = Guid.CreateVersion7();
 
     private static CreateProductCommand AGinTonic(string name = "Gin Tonic", Guid? categoryId = null) =>
-        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", 4500m, categoryId ?? TheCategory);
+        new(name, "Gin, tonic and a slice of lime.", "https://images.example.com/gin-tonic.jpg", 4500m, 20, categoryId ?? TheCategory);
 
     [Fact]
     public async Task HandleAsync_WhenTheDataIsValid_AddsTheProductToTheVenueOfTheSignedInAdministrator()
@@ -27,18 +27,7 @@ public class CreateProductHandlerTests
         Assert.Equal("Gin, tonic and a slice of lime.", products.Added.Description);
         Assert.Equal("https://images.example.com/gin-tonic.jpg", products.Added.ImageUrl);
         Assert.Equal(4500m, products.Added.Price);
-    }
-
-    // US-37: stock lives in the bars, loaded into each for the night. A new
-    // product has none until then.
-    [Fact]
-    public async Task HandleAsync_WhenTheDataIsValid_StartsTheProductWithNoStock()
-    {
-        Fake.Products products = new();
-
-        await HandlerOver(products).HandleAsync(AGinTonic(), CancellationToken.None);
-
-        Assert.Equal(0, products.Added!.Stock);
+        Assert.Equal(20, products.Added.Stock);
     }
 
     // US-14: the category chosen in the creation form ends up on the product.
@@ -129,7 +118,7 @@ public class CreateProductHandlerTests
         Fake.Products products = new();
 
         Result<ProductSummary> result = await HandlerOver(products).HandleAsync(
-            AGinTonic("  Gin Tonic  "),
+            AGinTonic("  Gin Tonic  ") with { Stock = 0 },
             CancellationToken.None);
 
         Assert.Equal(products.Added!.Id, result.Value.Id);
@@ -155,6 +144,9 @@ public class CreateProductHandlerTests
 
         public sealed class Products(string? taken = null) : IProductRepository
         {
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, DateTimeOffset now, CancellationToken cancellationToken) =>
+                Task.FromResult(true);
+
             public Product? Added { get; private set; }
 
             // Ignores case like the real one: the database collation does the

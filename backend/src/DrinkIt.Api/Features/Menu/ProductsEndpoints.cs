@@ -15,6 +15,7 @@ public sealed record CreateProductRequest(
     string? Description,
     string? ImageUrl,
     decimal Price,
+    int Stock,
     Guid CategoryId);
 
 /// <summary>Where the picture ended up. The listing shows it from here on.</summary>
@@ -29,6 +30,16 @@ public sealed record ProductImageResponse(string ImageUrl);
 /// touches one of the others cannot accidentally overwrite the rest.
 /// </remarks>
 public sealed record UpdateProductRequest(string Name, string? Description, decimal Price, Guid CategoryId);
+
+/// <summary>
+/// How much the stock moves: positive when units arrived, negative when it was
+/// loaded wrong. A change, never the new total.
+/// </summary>
+/// <remarks>
+/// A change is what keeps a sale made while the screen was open from being
+/// overwritten.
+/// </remarks>
+public sealed record AdjustProductStockRequest(int Change);
 
 public sealed record ProductResponse(
     Guid Id,
@@ -95,6 +106,17 @@ internal static class ProductsEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        // POST and not PUT: it moves the stock, it does not replace it, so
+        // sending it twice is not the same as sending it once.
+        group
+            .MapPost("/{id:guid}/adjust-stock", AdjustStockAsync)
+            .WithName("AdjustProductStock")
+            .WithSummary("Moves a product's stock up or down by a number of units.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         // POST and not DELETE: nothing is deleted. The row stays so the orders
         // that pointed at it keep showing it as it was, exactly the same shape
         // as StaffUsersEndpoints' deactivate. CLAUDE.md, State pattern.
@@ -150,7 +172,7 @@ internal static class ProductsEndpoints
         // the domain throws and the global handler turns it into a 400 with the
         // rule's own problem type.
         Result<ProductSummary> result = await handler.HandleAsync(
-            new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.CategoryId),
+            new CreateProductCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.Stock, request.CategoryId),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -175,6 +197,13 @@ internal static class ProductsEndpoints
 
         return Answer(result);
     }
+
+    internal static async Task<IResult> AdjustStockAsync(
+        Guid id,
+        AdjustProductStockRequest request,
+        AdjustProductStockHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(new AdjustProductStockCommand(id, request.Change), cancellationToken));
 
     internal static async Task<IResult> DeactivateAsync(
         Guid id,
@@ -256,6 +285,7 @@ internal static class ProductsEndpoints
         {
             _ when error == CreateProductHandler.NameTaken => ("Product name already taken", StatusCodes.Status409Conflict),
             _ when error == ProductErrors.NotFound => ("Product not found", StatusCodes.Status404NotFound),
+            _ when error == ProductErrors.StockMoved => ("Stock changed meanwhile", StatusCodes.Status409Conflict),
             _ when error == UploadProductImageHandler.ImageTooLarge => ("Picture too large", StatusCodes.Status413PayloadTooLarge),
             _ when error == UploadProductImageHandler.ImageFormatUnsupported => ("Picture format not supported", StatusCodes.Status415UnsupportedMediaType),
             _ => ("Invalid request", StatusCodes.Status400BadRequest),

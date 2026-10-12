@@ -3,6 +3,8 @@ using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Nights;
+using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Persistence;
@@ -131,8 +133,9 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
         await new MarkProductUnavailableHandler(new ProductRepository(asMine)).HandleAsync(gin.Id, CancellationToken.None);
 
+        Guid tonight = await TonightHolding(mine, gin);
         await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
-        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(CancellationToken.None))
+        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(tonight, CancellationToken.None))
             .Single(item => item.Name == "Gin Tonic");
 
         Assert.False(card.IsOrderable);
@@ -150,8 +153,9 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
         await using DrinkItDbContext on = sql.CreateContext(mine.Id);
         await new MarkProductAvailableHandler(new ProductRepository(on)).HandleAsync(gin.Id, CancellationToken.None);
 
+        Guid tonight = await TonightHolding(mine, gin);
         await using DrinkItDbContext fresh = sql.CreateContext(mine.Id);
-        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(CancellationToken.None))
+        MenuItem card = (await new ProductQueries(fresh).ListForMenuAsync(tonight, CancellationToken.None))
             .Single(item => item.Name == "Gin Tonic");
 
         Assert.True(card.IsOrderable);
@@ -186,6 +190,23 @@ public sealed class ProductAvailabilityTests(SqlServerFixture sql)
 
         Assert.Equal(0, stored.Stock);
         Assert.False(stored.IsOrderable);
+    }
+
+    /// <summary>A night of the venue whose one KDS holds some of the product (US-37), so only the switch decides.</summary>
+    private async Task<Guid> TonightHolding(Venue venue, Product product)
+    {
+        StaffUser bar = StaffUser.Create(venue.Id, "main-bar", "hash", StaffRole.Kds);
+        StaffUser till = StaffUser.Create(venue.Id, "till-1", "hash", StaffRole.Cashier);
+        DateTimeOffset startsAt = new(2026, 10, 10, 23, 0, 0, TimeSpan.FromHours(-3));
+        Night night = Night.Create(venue.Id, "Saturday", startsAt, startsAt.AddHours(7), [bar, till]);
+
+        await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
+        seed.StaffUsers.AddRange(bar, till);
+        seed.Nights.Add(night);
+        seed.BarStocks.Add(new BarStock { VenueId = venue.Id, NightId = night.Id, KdsId = bar.Id, ProductId = product.Id, Units = 5 });
+        await seed.SaveChangesAsync();
+
+        return night.Id;
     }
 
     private async Task<(Venue Mine, Venue Theirs, Product Gin, Product Foreign)> SeedTwoVenues()

@@ -1,5 +1,5 @@
 // The night's stock, under the night's form: the same notes and buttons as
-// the rest of its screen, one card per product.
+// the rest of its screen, one section per bar and one card per product.
 
 :host {
   display: block;
@@ -63,6 +63,18 @@
 
 .action:disabled {
   color: var(--dk-text-faint);
+}
+
+.bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+}
+
+.bar-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .lines {

@@ -11,77 +11,85 @@
       <button class="retry" type="button" (click)="retry()">Reintentar</button>
     </div>
   } @else if (sheet.hasValue()) {
-    @if (sheet.value().lines.length === 0) {
+    @if (!hasProducts()) {
       <p class="note">Todavía no hay productos en la carta. Cargalos desde Productos.</p>
     } @else {
       @if (!isOver()) {
         <p class="help">
-          Lo que sumes o restes se agrega a lo que hay: una venta mientras tanto no se pisa.
+          Al crear la noche, el depósito se repartió en partes iguales entre las barras. Lo que
+          cargues sale del depósito y lo que devuelvas vuelve a él; lo que una barra no venda vuelve
+          solo cuando la noche termina.
         </p>
       }
-      <ul class="lines">
-        @for (line of sheet.value().lines; track line.productId) {
-          <li class="line" [attr.aria-label]="line.productName">
-            <div class="line-head">
-              <span class="line-name">{{ line.productName }}</span>
-              <span class="line-left" [class.line-out]="line.left === 0">
-                {{ isOver() ? 'Quedaron' : 'Quedan' }} {{ line.left }}
-              </span>
-            </div>
+      @for (bar of sheet.value().bars; track bar.kdsId) {
+        <section class="bar" [attr.aria-labelledby]="'bar-' + bar.kdsId">
+          <h3 class="bar-title" [id]="'bar-' + bar.kdsId">{{ bar.name }}</h3>
 
-            @if (isOver()) {
-              <p class="facts">
-                <span>Se cargaron {{ line.loaded }}</span>
-                <span>Se vendieron {{ line.sold }}</span>
-              </p>
-            } @else {
-              <p class="facts">
-                <span>{{ startsWith() }} {{ line.carried }}</span>
-                <span>Cargadas {{ signed(line.added) }}</span>
-                <span>Vendidas {{ line.sold }}</span>
-              </p>
+          <ul class="lines">
+            @for (line of bar.lines; track line.productId) {
+              <li class="line" [attr.aria-label]="line.productName">
+                <div class="line-head">
+                  <span class="line-name">{{ line.productName }}</span>
+                  <span class="line-left" [class.line-out]="line.left === 0">
+                    {{ isOver() ? 'Quedaron' : 'Quedan' }} {{ line.left }}
+                  </span>
+                </div>
 
-              <div class="adjust">
-                <label class="dk-sr-only" [for]="'units-' + line.productId"
-                  >Unidades de {{ line.productName }}</label
-                >
-                <input
-                  #units
-                  class="input"
-                  [id]="'units-' + line.productId"
-                  type="number"
-                  inputmode="numeric"
-                  min="1"
-                  step="1"
-                  placeholder="Unidades"
-                  [attr.aria-invalid]="messageFor(line) === null ? null : 'true'"
-                  [disabled]="pending() !== null"
-                />
-                <button
-                  class="action"
-                  type="button"
-                  [disabled]="pending() !== null"
-                  (click)="adjust(line, units, 1)"
-                >
-                  Sumar
-                </button>
-                <button
-                  class="action"
-                  type="button"
-                  [disabled]="pending() !== null"
-                  (click)="adjust(line, units, -1)"
-                >
-                  Restar
-                </button>
-              </div>
+                @if (isOver()) {
+                  <p class="facts">
+                    <span>Se cargaron {{ line.loaded }}</span>
+                    <span>Se vendieron {{ line.sold }}</span>
+                  </p>
+                } @else {
+                  <p class="facts">
+                    <span>Cargadas {{ line.loaded }}</span>
+                    <span>Vendidas {{ line.sold }}</span>
+                    <span>En el depósito {{ line.inStoreroom }}</span>
+                  </p>
 
-              @if (messageFor(line); as message) {
-                <p class="bad" role="alert">{{ message }}</p>
-              }
+                  <div class="adjust">
+                    <label class="dk-sr-only" [for]="'units-' + bar.kdsId + '-' + line.productId"
+                      >Unidades de {{ line.productName }} en {{ bar.name }}</label
+                    >
+                    <input
+                      #units
+                      class="input"
+                      [id]="'units-' + bar.kdsId + '-' + line.productId"
+                      type="number"
+                      inputmode="numeric"
+                      min="1"
+                      step="1"
+                      placeholder="Unidades"
+                      [attr.aria-invalid]="messageFor(bar, line) === null ? null : 'true'"
+                      [disabled]="pending()"
+                    />
+                    <button
+                      class="action"
+                      type="button"
+                      [disabled]="pending()"
+                      (click)="adjust(bar, line, units, 1)"
+                    >
+                      Cargar
+                    </button>
+                    <button
+                      class="action"
+                      type="button"
+                      [disabled]="pending()"
+                      (click)="adjust(bar, line, units, -1)"
+                    >
+                      Devolver
+                    </button>
+                  </div>
+
+                  @if (messageFor(bar, line); as message) {
+                    <p class="bad" role="alert">{{ message }}</p>
+                  }
+                }
+              </li>
             }
-          </li>
-        }
-      </ul>
+          </ul>
+        </section>
+      }
     }
   } @else {
     <p class="note" role="status">Cargando el stock…</p>

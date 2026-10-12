@@ -33,6 +33,7 @@ const onlyTheCorrection: ProductChanges = {
     categoryId: 'category-drinks',
   },
   photo: null,
+  stockChange: 0,
   isAvailable: null,
 };
 
@@ -47,6 +48,7 @@ describe('EditProductStore', () => {
     products = {
       update: vi.fn().mockReturnValue(of({ ...ginTonic, name: 'Gin Tonic Doble', price: 5200 })),
       uploadImage: vi.fn().mockReturnValue(of({ imageUrl: 'https://images.example.com/new.png' })),
+      adjustStock: vi.fn().mockReturnValue(of({ ...ginTonic, stock: 32 })),
       markAvailable: vi.fn().mockReturnValue(of(ginTonic)),
       markUnavailable: vi.fn().mockReturnValue(of({ ...ginTonic, isAvailable: false })),
       deactivate: vi.fn().mockReturnValue(of({ ...ginTonic, isActive: false })),
@@ -85,10 +87,10 @@ describe('EditProductStore', () => {
   it('says nothing was saved when the correction itself fails', () => {
     open({ update: rejectedWith(0) });
 
-    store.save('bar-alfa', 'id-1', { ...onlyTheCorrection, isAvailable: false });
+    store.save('bar-alfa', 'id-1', { ...onlyTheCorrection, stockChange: 12 });
 
     expect(store.status()).toBe('unreachable');
-    expect(products['markUnavailable']).not.toHaveBeenCalled();
+    expect(products['adjustStock']).not.toHaveBeenCalled();
   });
 
   it('tells a taken name apart from any other failure', () => {
@@ -100,11 +102,30 @@ describe('EditProductStore', () => {
   });
 
   it('says part of it was saved when a later step fails', () => {
-    open({ markUnavailable: rejectedWith(0) });
+    open({ adjustStock: rejectedWith(0) });
 
-    store.save('bar-alfa', 'id-1', { ...onlyTheCorrection, isAvailable: false });
+    store.save('bar-alfa', 'id-1', { ...onlyTheCorrection, stockChange: 12 });
 
     expect(store.status()).toBe('partial');
+    expect(store.stockAdjustments()).toBe(0);
+  });
+
+  // Sales left less than the correction takes away. Worth its own answer:
+  // looking at the stock again is the fix, not trying the same save.
+  it('tells sales made meanwhile apart from any other failure of the stock', () => {
+    open({ adjustStock: rejectedWith(409, ProblemTypes.productStockMoved) });
+
+    store.save('bar-alfa', 'id-1', { ...onlyTheCorrection, stockChange: -18 });
+
+    expect(store.status()).toBe('stockMoved');
+  });
+
+  it('counts the adjustments that reached the API', () => {
+    open({ markUnavailable: rejectedWith(0) });
+
+    store.save('bar-alfa', 'id-1', { ...onlyTheCorrection, stockChange: 12, isAvailable: false });
+
+    expect(store.stockAdjustments()).toBe(1);
   });
 
   it('does not start a second save while the first is in flight', () => {

@@ -53,14 +53,15 @@ describe('SaveNightStore', () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 
-  // Criterion 1: the night "queda en el listado".
-  it('goes back to the listing once the night exists', () => {
+  // US-37: setting up a night goes on with loading what each KDS will have
+  // that night, which lives in the new night's own screen.
+  it('opens the new night once it exists, to load the stock of each KDS', () => {
     create.mockReturnValue(of(created));
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     store.create('bar-alfa', aNewNight);
 
-    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'nights']);
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'nights', 'night-1']);
     expect(store.status()).toBe('idle');
   });
 

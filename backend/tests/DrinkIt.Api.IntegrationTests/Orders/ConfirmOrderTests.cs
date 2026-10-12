@@ -363,9 +363,14 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         seed.Categories.Add(category);
         seed.Products.Add(product);
         seed.StaffUsers.AddRange(crew);
-        // US-37: the stock is the main bar's, and the product's total says so.
-        seed.BarStocks.Add(new BarStock { VenueId = venue.Id, KdsId = crew[0].Id, ProductId = product.Id, Units = stock });
-        if (withNight) seed.Nights.Add(Night.Create(venue.Id, "Tonight", Tonight.AddHours(-3), Tonight.AddHours(4), crew));
+        if (withNight)
+        {
+            Night tonight = Night.Create(venue.Id, "Tonight", Tonight.AddHours(-3), Tonight.AddHours(4), crew);
+            seed.Nights.Add(tonight);
+            // US-37: all of it loaded into tonight's main bar, so the storeroom is empty.
+            seed.BarStocks.Add(new BarStock { VenueId = venue.Id, NightId = tonight.Id, KdsId = crew[0].Id, ProductId = product.Id, Units = stock });
+        }
+
         await seed.SaveChangesAsync();
 
         return (venue, product);

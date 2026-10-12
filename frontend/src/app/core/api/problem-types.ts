@@ -74,6 +74,9 @@ export const ProblemTypes = {
   /** US-37: the night ended while its stock was open, and a finished night's stock is only read. */
   nightStockClosed: 'urn:drinkit:problem:night:stock-closed',
 
-  /** US-37: a night starts from what the one before leaves, so it loads once that one ended. */
-  nightEarlierNightOpen: 'urn:drinkit:problem:night:earlier-night-open',
+  /** US-37: loading a bar takes from the storeroom, and it has fewer than that. */
+  nightStoreroomShort: 'urn:drinkit:problem:night:storeroom-short',
+
+  /** US-37: the bar was taken out of the night's crew while its stock was open. */
+  nightBarNotInNight: 'urn:drinkit:problem:night:bar-not-in-night',
 } as const;

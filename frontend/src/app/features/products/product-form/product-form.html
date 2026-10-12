@@ -122,7 +122,7 @@
           }
         </div>
 
-        <div class="field">
+        <div class="field" [class.field-wide]="isAdjusting()">
           @if (!isEditing()) {
             <label class="label" for="stock">Stock</label>
             <input
@@ -145,12 +145,94 @@
                 Cuántos hay para vender. En cero queda como sin stock.
               </p>
             }
+          } @else if (isAdjusting()) {
+            <label class="label" for="stock">{{
+              stockMode() === 'add' ? 'Unidades que llegaron' : 'Stock real'
+            }}</label>
+            <div class="modes" role="group" aria-label="Qué querés hacer con el stock">
+              <button
+                class="mode"
+                type="button"
+                [class.mode-on]="stockMode() === 'add'"
+                [attr.aria-pressed]="stockMode() === 'add'"
+                [disabled]="isSending()"
+                (click)="chooseStockMode('add')"
+              >
+                Llegaron unidades
+              </button>
+              <button
+                class="mode"
+                type="button"
+                [class.mode-on]="stockMode() === 'set'"
+                [attr.aria-pressed]="stockMode() === 'set'"
+                [disabled]="isSending()"
+                (click)="chooseStockMode('set')"
+              >
+                Corregir el total
+              </button>
+            </div>
+            <div class="stock-row">
+              <input
+                #stockField
+                id="stock"
+                class="input"
+                [class.input-bad]="stockError() !== null"
+                [attr.aria-invalid]="stockError() !== null ? 'true' : null"
+                [attr.aria-describedby]="stockError() !== null ? 'stock-error' : 'stock-help'"
+                formControlName="stock"
+                type="number"
+                inputmode="numeric"
+                [attr.min]="stockMode() === 'add' ? 1 : 0"
+                step="1"
+                [attr.placeholder]="stockMode() === 'add' ? '12' : product()!.stock"
+              />
+              <button
+                class="stock-action"
+                type="button"
+                [disabled]="isSending()"
+                (click)="closeAdjust()"
+              >
+                No ajustar
+              </button>
+            </div>
+            @if (stockError() !== null) {
+              <p id="stock-error" class="bad">{{ stockError() }}</p>
+            } @else if (stockMode() === 'add') {
+              <p id="stock-help" class="help">
+                Hoy hay {{ product()!.stock }}.
+                @if (stockAfter() !== product()!.stock) {
+                  <strong class="total">Quedan {{ stockAfter() }} en total.</strong>
+                } @else {
+                  Las que pongas se suman.
+                }
+              </p>
+            } @else {
+              <p id="stock-help" class="help">
+                Hoy hay {{ product()!.stock }}. Usalo si se cargó mal.
+                @if (hasStockTyped() && stockAfter() !== product()!.stock) {
+                  <strong class="total"
+                    >Pasa a {{ stockAfter() }} ({{ stockDifference() }}).</strong
+                  >
+                } @else if (hasStockTyped()) {
+                  <strong class="total">Es el que hay hoy: no cambia nada.</strong>
+                }
+              </p>
+            }
           } @else {
             <span class="label">Stock</span>
-            <p class="stock-now" [class.stock-out]="product()!.isSoldOut">
-              {{ product()!.stock }} en stock
-            </p>
-            <p class="help">Se carga en el stock de la noche, desde Noches.</p>
+            <div class="stock-row">
+              <p class="stock-now" [class.stock-out]="product()!.isSoldOut">
+                {{ product()!.stock }} en stock
+              </p>
+              <button
+                class="stock-action"
+                type="button"
+                [disabled]="isSending()"
+                (click)="openAdjust()"
+              >
+                Ajustar
+              </button>
+            </div>
           }
         </div>
       </div>

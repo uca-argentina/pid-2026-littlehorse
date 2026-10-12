@@ -30,15 +30,20 @@ const saturday: Night = {
 
 const itsStock: NightStock = {
   nightId: 'night-1',
-  lines: [
+  bars: [
     {
-      productId: 'gin',
-      productName: 'Gin Tonic',
-      carried: 20,
-      added: 12,
-      loaded: 32,
-      sold: 7,
-      left: 25,
+      kdsId: 'main-bar',
+      name: 'main-bar',
+      lines: [
+        {
+          productId: 'gin',
+          productName: 'Gin Tonic',
+          loaded: 12,
+          sold: 7,
+          left: 5,
+          inStoreroom: 18,
+        },
+      ],
     },
   ],
 };
@@ -128,7 +133,8 @@ describe('NightPage', () => {
     await openScreenShowing(saturday, afterItEnded);
 
     expect(screen.getByText('Terminada')).not.toBeNull();
-    expect(screen.getByText('main-bar')).not.toBeNull();
+    // The crew, not the stock's section of the same bar further down.
+    expect(screen.getByText('main-bar', { selector: 'dd' })).not.toBeNull();
     expect(screen.getByText('till-1')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /guardar/i })).toBeNull();
     expect(screen.queryByLabelText(/nombre/i)).toBeNull();
@@ -139,14 +145,14 @@ describe('NightPage', () => {
     await openScreenShowing(saturday, beforeItStarts);
 
     expect(screen.getByRole('heading', { name: /stock de la noche/i })).not.toBeNull();
-    expect(screen.getByRole('button', { name: /sumar/i })).not.toBeNull();
+    expect(screen.getByRole('button', { name: /cargar/i })).not.toBeNull();
   });
 
   it("shows a finished night's stock without offering to change it", async () => {
     await openScreenShowing(saturday, afterItEnded);
 
-    expect(screen.getByText(/se cargaron 32/i)).not.toBeNull();
-    expect(screen.queryByRole('button', { name: /sumar/i })).toBeNull();
+    expect(screen.getByText(/se cargaron 12/i)).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /cargar/i })).toBeNull();
   });
 
   it('says so when the venue has no such night', async () => {

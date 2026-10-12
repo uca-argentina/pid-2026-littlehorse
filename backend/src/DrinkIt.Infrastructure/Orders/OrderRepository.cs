@@ -47,24 +47,24 @@ internal sealed partial class OrderRepository(
         await using IDbContextTransaction transaction =
             await context.Database.BeginTransactionAsync(cancellationToken);
 
-        Guid? bar = order.KdsId;
+        (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
 
         foreach (OrderItem item in order.Items)
         {
             int quantity = item.Quantity;
 
-            // Taken from the bar the order goes to (US-37). The venue filter
-            // applies to this too, so no order can take stock off a product or
-            // a bar that is not its venue's.
+            // Taken from what the bar the order goes to holds for its night
+            // (US-37). The venue filter applies to this too, so no order can
+            // take stock off a product or a bar that is not its venue's.
             int sold = await context.BarStocks
-                .Where(stock => stock.KdsId == bar && stock.ProductId == item.ProductId && stock.Units >= quantity)
+                .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == item.ProductId && stock.Units >= quantity)
                 .ExecuteUpdateAsync(
                     row => row.SetProperty(stock => stock.Units, stock => stock.Units - quantity),
                     cancellationToken);
 
             if (sold == 1)
             {
-                // The product's total is the sum over every bar: it follows.
+                // The bar's units are part of the general stock: it follows.
                 await context.Products
                     .Where(product => product.Id == item.ProductId)
                     .ExecuteUpdateAsync(
@@ -165,19 +165,20 @@ internal sealed partial class OrderRepository(
             return OrderErrors.ChangedMeanwhile;
         }
 
-        Guid? bar = order.KdsId;
+        (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
 
         foreach (OrderItem item in order.Items)
         {
             int quantity = item.Quantity;
 
-            // Back to the bar it was taken from (US-37), and the product's
-            // total with it. The venue filter applies here too. An order from
-            // before bars kept stock has none to go back to but the total.
+            // Back to the bar and night it was taken from (US-37), and the
+            // general stock with it. The venue filter applies here too. An
+            // order from before bars kept stock has none to go back to but the
+            // general stock.
             if (bar is not null)
             {
                 await context.BarStocks
-                    .Where(stock => stock.KdsId == bar && stock.ProductId == item.ProductId)
+                    .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == item.ProductId)
                     .ExecuteUpdateAsync(
                         row => row.SetProperty(stock => stock.Units, stock => stock.Units + quantity),
                         cancellationToken);

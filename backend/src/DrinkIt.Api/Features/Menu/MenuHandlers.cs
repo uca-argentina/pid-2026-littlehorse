@@ -10,6 +10,7 @@ internal static class MenuHandlers
         .AddScoped<CreateProductHandler>()
         .AddScoped<UpdateProductHandler>()
         .AddScoped<DeactivateProductHandler>()
+        .AddScoped<AdjustProductStockHandler>()
         .AddScoped<UploadProductImageHandler>()
         .AddScoped<MarkProductUnavailableHandler>()
         .AddScoped<MarkProductAvailableHandler>();

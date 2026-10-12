@@ -86,7 +86,7 @@ test.describe('KDS scan screen', () => {
 
     // The customer pays and has the QR on screen, next to the code.
     const customer = await aCustomerPhone(browser);
-    await anOrderPaidBy(customer, request, customerName);
+    await anOrderPaidBy(customer, request, customerName, username);
     const code = (await customer.getByTestId('order-code').textContent())!.trim();
     await expect(
       customer.getByRole('img', { name: `Código QR para retirar el pedido ${code}` }),
@@ -148,7 +148,7 @@ test.describe('KDS scan screen', () => {
     const username = await aKdsAccount(request);
     const customerName = aFullName();
     const customer = await aCustomerPhone(browser);
-    await anOrderPaidBy(customer, request, customerName);
+    await anOrderPaidBy(customer, request, customerName, username);
     const token = tokenShownBy(customer);
 
     await logIn(tablet, username, aNewPassword);
@@ -200,7 +200,7 @@ test.describe('KDS scan screen', () => {
     const username = await aKdsAccount(request);
     const customerName = aFullName();
     const customer = await aCustomerPhone(browser);
-    await anOrderPaidBy(customer, request, customerName);
+    await anOrderPaidBy(customer, request, customerName, username);
     const code = (await customer.getByTestId('order-code').textContent())!.trim();
 
     await logIn(tablet, username, aNewPassword);

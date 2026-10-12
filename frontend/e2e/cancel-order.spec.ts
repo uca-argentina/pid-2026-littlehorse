@@ -2,6 +2,7 @@ import { devices, expect, test } from '@playwright/test';
 import type { APIRequestContext, Browser, BrowserContext, Page } from '@playwright/test';
 import { categoryIdNamed } from './categories';
 import { joinTonight } from './nights';
+import { loadIntoTonight } from './stock';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 
 /**
@@ -68,6 +69,7 @@ async function aProduct(request: APIRequestContext): Promise<string> {
   });
 
   expect(created.status()).toBe(201);
+  await loadIntoTonight(request, token, ((await created.json()) as { id: string }).id, 20);
 
   return name;
 }

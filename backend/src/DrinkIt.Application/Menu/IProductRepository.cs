@@ -30,4 +30,14 @@ public interface IProductRepository
 
     /// <summary>Writes back whatever <see cref="GetForUpdateAsync"/> handed out.</summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Adds <paramref name="change"/> to the stock in the database itself, not a
+    /// total worked out in memory: a sale made since the product was read is
+    /// kept. False, and nothing written, when the storeroom holds less than the
+    /// change takes away: what is left once the bars of the nights not over at
+    /// <paramref name="now"/> are counted out (US-37). Either way
+    /// <paramref name="product"/> ends up holding the stock the database has.
+    /// </summary>
+    Task<bool> SaveStockAdjustmentAsync(Product product, int change, DateTimeOffset now, CancellationToken cancellationToken);
 }

@@ -19,13 +19,6 @@ public interface INightRepository
     Task<bool> OverlapsAsync(DateTimeOffset startsAt, DateTimeOffset endsAt, Guid? excluding, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Whether a night of the current venue starting before <paramref name="startsAt"/>
-    /// has not ended at <paramref name="now"/> (US-37). The end is exclusive,
-    /// as in <see cref="Night.HasEndedAt"/>.
-    /// </summary>
-    Task<bool> HasUnfinishedBeforeAsync(DateTimeOffset startsAt, DateTimeOffset now, CancellationToken cancellationToken);
-
-    /// <summary>
     /// The whole aggregate, tracked, so a use case can change it. Null when this
     /// venue has no such night, including when another venue does.
     /// </summary>

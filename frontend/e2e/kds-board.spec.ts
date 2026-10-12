@@ -41,7 +41,7 @@ test.describe('KDS board', () => {
     const customerName = aFullName();
 
     const customer = await browser.newPage();
-    const drinkName = await anOrderPaidBy(customer, request, customerName);
+    const drinkName = await anOrderPaidBy(customer, request, customerName, username);
     await customer.close();
 
     await logIn(page, username, aNewPassword);
@@ -83,7 +83,7 @@ test.describe('KDS board', () => {
     const customerName = aFullName();
 
     const customer = await browser.newPage();
-    await anOrderPaidBy(customer, request, customerName);
+    await anOrderPaidBy(customer, request, customerName, username);
     await customer.close();
 
     await logIn(page, username, aNewPassword);
@@ -116,7 +116,7 @@ test.describe('KDS board', () => {
     const customerName = aFullName();
 
     const customer = await browser.newPage();
-    await anOrderPaidBy(customer, request, customerName);
+    await anOrderPaidBy(customer, request, customerName, username);
 
     await logIn(page, username, aNewPassword);
     await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
@@ -338,7 +338,7 @@ test.describe('KDS board', () => {
     await expect(page).toHaveURL(new RegExp(`${kdsPath}$`));
 
     const customer = await browser.newPage();
-    await anOrderPaidBy(customer, request, customerName);
+    await anOrderPaidBy(customer, request, customerName, username);
     await customer.close();
 
     await expect(page.getByText(customerName)).toBeVisible({ timeout: 15000 });

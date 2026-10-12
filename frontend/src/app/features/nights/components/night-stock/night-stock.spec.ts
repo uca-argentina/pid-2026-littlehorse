@@ -13,30 +13,64 @@ const STOCK_URL = `${NIGHTS_URL}/night-1/stock`;
 
 const sheet: NightStockSheet = {
   nightId: 'night-1',
-  lines: [
+  bars: [
     {
-      productId: 'fernet',
-      productName: 'Fernet',
-      carried: 8,
-      added: 0,
-      loaded: 8,
-      sold: 0,
-      left: 8,
+      kdsId: 'main',
+      name: 'main-bar',
+      lines: [
+        {
+          productId: 'fernet',
+          productName: 'Fernet',
+          loaded: 0,
+          sold: 0,
+          left: 0,
+          inStoreroom: 10,
+        },
+        {
+          productId: 'gin',
+          productName: 'Gin Tonic',
+          loaded: 12,
+          sold: 7,
+          left: 5,
+          inStoreroom: 18,
+        },
+      ],
     },
     {
-      productId: 'gin',
-      productName: 'Gin Tonic',
-      carried: 20,
-      added: 12,
-      loaded: 32,
-      sold: 7,
-      left: 25,
+      kdsId: 'vip',
+      name: 'vip-bar',
+      lines: [
+        {
+          productId: 'fernet',
+          productName: 'Fernet',
+          loaded: 0,
+          sold: 0,
+          left: 0,
+          inStoreroom: 10,
+        },
+        {
+          productId: 'gin',
+          productName: 'Gin Tonic',
+          loaded: 6,
+          sold: 1,
+          left: 5,
+          inStoreroom: 18,
+        },
+      ],
     },
   ],
 };
 
-function withGin(line: Partial<NightStockSheet['lines'][number]>): NightStockSheet {
-  return { ...sheet, lines: [sheet.lines[0], { ...sheet.lines[1], ...line }] };
+/** The sheet with the main bar's gin changed, and the storeroom with it when given. */
+function withMainGin(
+  line: Partial<NightStockSheet['bars'][number]['lines'][number]>,
+): NightStockSheet {
+  const [main, vip] = sheet.bars;
+
+  return {
+    ...sheet,
+    bars: [{ ...main, lines: [main.lines[0], { ...main.lines[1], ...line }] }, vip],
+  };
 }
 
 function refusal(type: string): HttpErrorResponse {
@@ -70,8 +104,8 @@ async function openStockShowing(
   return opened;
 }
 
-function rowOf(name: string): HTMLElement {
-  return screen.getByRole('listitem', { name });
+function rowOf(bar: string, product: string): HTMLElement {
+  return within(screen.getByRole('region', { name: bar })).getByRole('listitem', { name: product });
 }
 
 function type(row: HTMLElement, units: string): void {
@@ -83,104 +117,138 @@ function press(row: HTMLElement, name: RegExp): void {
 }
 
 describe('NightStock', () => {
-  it('shows what each product starts with, what was loaded, sold and what is left', async () => {
+  it('shows each bar with what it loaded, sold and has left, and what is in the storeroom', async () => {
     await openStockShowing(sheet, 'underway');
 
-    const gin = rowOf('Gin Tonic');
-    expect(within(gin).getByText(/arrancó con 20/i)).not.toBeNull();
-    expect(within(gin).getByText(/cargadas \+12/i)).not.toBeNull();
+    const gin = rowOf('main-bar', 'Gin Tonic');
+    expect(within(gin).getByText(/cargadas 12/i)).not.toBeNull();
     expect(within(gin).getByText(/vendidas 7/i)).not.toBeNull();
-    expect(within(gin).getByText(/quedan 25/i)).not.toBeNull();
+    expect(within(gin).getByText(/quedan 5/i)).not.toBeNull();
+    expect(within(gin).getByText(/en el depósito 18/i)).not.toBeNull();
+    expect(within(rowOf('vip-bar', 'Gin Tonic')).getByText(/cargadas 6/i)).not.toBeNull();
   });
 
-  it('says what an upcoming night will start with', async () => {
-    await openStockShowing(sheet, 'upcoming');
-
-    expect(within(rowOf('Fernet')).getByText(/arranca con 8/i)).not.toBeNull();
-  });
-
-  it('loads units into the night and shows the stock the API answers', async () => {
+  it('loads units from the storeroom into one bar and shows the stock the API answers', async () => {
     const { rendered, adjustStock } = await openStockShowing(
       sheet,
       'upcoming',
-      vi.fn().mockReturnValue(of(withGin({ added: 22, loaded: 42, left: 35 }))),
+      vi.fn().mockReturnValue(of(withMainGin({ loaded: 22, left: 15, inStoreroom: 8 }))),
     );
 
-    type(rowOf('Gin Tonic'), '10');
-    press(rowOf('Gin Tonic'), /sumar/i);
+    type(rowOf('main-bar', 'Gin Tonic'), '10');
+    press(rowOf('main-bar', 'Gin Tonic'), /cargar/i);
     await rendered.fixture.whenStable();
 
-    expect(adjustStock).toHaveBeenCalledWith('night-1', 'gin', 10);
-    expect(within(rowOf('Gin Tonic')).getByText(/quedan 35/i)).not.toBeNull();
-    expect((within(rowOf('Gin Tonic')).getByLabelText(/unidades/i) as HTMLInputElement).value).toBe(
-      '',
-    );
+    expect(adjustStock).toHaveBeenCalledWith('night-1', 'main', 'gin', 10);
+    expect(within(rowOf('main-bar', 'Gin Tonic')).getByText(/quedan 15/i)).not.toBeNull();
+    expect(
+      (within(rowOf('main-bar', 'Gin Tonic')).getByLabelText(/unidades/i) as HTMLInputElement)
+        .value,
+    ).toBe('');
   });
 
-  it('takes units out when they were loaded wrong', async () => {
+  it('gives units back to the storeroom', async () => {
     const { rendered, adjustStock } = await openStockShowing(sheet, 'underway');
 
-    type(rowOf('Gin Tonic'), '5');
-    press(rowOf('Gin Tonic'), /restar/i);
+    type(rowOf('vip-bar', 'Gin Tonic'), '5');
+    press(rowOf('vip-bar', 'Gin Tonic'), /devolver/i);
     await rendered.fixture.whenStable();
 
-    expect(adjustStock).toHaveBeenCalledWith('night-1', 'gin', -5);
+    expect(adjustStock).toHaveBeenCalledWith('night-1', 'vip', 'gin', -5);
   });
 
   it('does not send units that are not a whole number above zero', async () => {
     const { rendered, adjustStock } = await openStockShowing(sheet, 'underway');
 
-    type(rowOf('Gin Tonic'), '0');
-    press(rowOf('Gin Tonic'), /sumar/i);
+    type(rowOf('main-bar', 'Gin Tonic'), '0');
+    press(rowOf('main-bar', 'Gin Tonic'), /cargar/i);
     await rendered.fixture.whenStable();
 
     expect(adjustStock).not.toHaveBeenCalled();
-    expect(within(rowOf('Gin Tonic')).getByRole('alert').textContent).toMatch(/número entero/i);
+    expect(within(rowOf('main-bar', 'Gin Tonic')).getByRole('alert').textContent).toMatch(
+      /número entero/i,
+    );
   });
 
-  it('says so on the row when sales left less than it takes away, and reloads the stock', async () => {
+  it('says so on the row when the storeroom has less than it loads, and reloads the stock', async () => {
+    const { rendered, http } = await openStockShowing(
+      sheet,
+      'underway',
+      vi.fn().mockReturnValue(throwError(() => refusal(ProblemTypes.nightStoreroomShort))),
+    );
+
+    type(rowOf('main-bar', 'Gin Tonic'), '30');
+    press(rowOf('main-bar', 'Gin Tonic'), /cargar/i);
+    TestBed.tick();
+    http.expectOne(STOCK_URL).flush(withMainGin({ inStoreroom: 4 }));
+    await rendered.fixture.whenStable();
+
+    const gin = rowOf('main-bar', 'Gin Tonic');
+    expect(within(gin).getByRole('alert').textContent).toMatch(/depósito/i);
+    expect(within(gin).getByText(/en el depósito 4/i)).not.toBeNull();
+  });
+
+  it('says so on the row when the bar sold meanwhile and has less than it gives back', async () => {
     const { rendered, http } = await openStockShowing(
       sheet,
       'underway',
       vi.fn().mockReturnValue(throwError(() => refusal(ProblemTypes.productStockMoved))),
     );
 
-    type(rowOf('Gin Tonic'), '30');
-    press(rowOf('Gin Tonic'), /restar/i);
+    type(rowOf('main-bar', 'Gin Tonic'), '5');
+    press(rowOf('main-bar', 'Gin Tonic'), /devolver/i);
     TestBed.tick();
-    http.expectOne(STOCK_URL).flush(withGin({ sold: 15, left: 17 }));
+    http.expectOne(STOCK_URL).flush(withMainGin({ sold: 9, left: 3 }));
     await rendered.fixture.whenStable();
 
-    expect(within(rowOf('Gin Tonic')).getByRole('alert').textContent).toMatch(/se vendió/i);
-    expect(within(rowOf('Gin Tonic')).getByText(/quedan 17/i)).not.toBeNull();
+    const gin = rowOf('main-bar', 'Gin Tonic');
+    expect(within(gin).getByRole('alert').textContent).toMatch(/vendió/i);
+    expect(within(gin).getByText(/quedan 3/i)).not.toBeNull();
   });
 
-  it('says to wait when an earlier night has not ended', async () => {
+  it('says so when the night ended while loading', async () => {
+    const { rendered } = await openStockShowing(
+      sheet,
+      'underway',
+      vi.fn().mockReturnValue(throwError(() => refusal(ProblemTypes.nightStockClosed))),
+    );
+
+    type(rowOf('main-bar', 'Gin Tonic'), '10');
+    press(rowOf('main-bar', 'Gin Tonic'), /cargar/i);
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/la noche terminó/i);
+  });
+
+  it('says so when the bar was taken out of the night while loading', async () => {
     const { rendered } = await openStockShowing(
       sheet,
       'upcoming',
-      vi.fn().mockReturnValue(throwError(() => refusal(ProblemTypes.nightEarlierNightOpen))),
+      vi.fn().mockReturnValue(throwError(() => refusal(ProblemTypes.nightBarNotInNight))),
     );
 
-    type(rowOf('Gin Tonic'), '10');
-    press(rowOf('Gin Tonic'), /sumar/i);
+    type(rowOf('vip-bar', 'Gin Tonic'), '10');
+    press(rowOf('vip-bar', 'Gin Tonic'), /cargar/i);
     await rendered.fixture.whenStable();
 
-    expect(screen.getByRole('alert').textContent).toMatch(/noche anterior/i);
+    expect(screen.getByRole('alert').textContent).toMatch(/ya no trabaja/i);
   });
 
-  it('shows a finished night read-only, with what it loaded, sold and left', async () => {
+  it('shows a finished night read-only, with what each bar loaded, sold and left', async () => {
     await openStockShowing(sheet, 'over');
 
-    const gin = rowOf('Gin Tonic');
-    expect(within(gin).getByText(/se cargaron 32/i)).not.toBeNull();
+    const gin = rowOf('main-bar', 'Gin Tonic');
+    expect(within(gin).getByText(/se cargaron 12/i)).not.toBeNull();
     expect(within(gin).getByText(/se vendieron 7/i)).not.toBeNull();
-    expect(within(gin).getByText(/quedaron 25/i)).not.toBeNull();
-    expect(screen.queryByRole('button', { name: /sumar/i })).toBeNull();
+    expect(within(gin).getByText(/quedaron 5/i)).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /cargar/i })).toBeNull();
   });
 
   it('says the menu is empty instead of showing nothing', async () => {
-    await openStockShowing({ nightId: 'night-1', lines: [] }, 'upcoming');
+    await openStockShowing(
+      { nightId: 'night-1', bars: [{ kdsId: 'main', name: 'main-bar', lines: [] }] },
+      'upcoming',
+    );
 
     expect(screen.getByText(/no hay productos en la carta/i)).not.toBeNull();
   });
@@ -196,6 +264,6 @@ describe('NightStock', () => {
     http.expectOne(STOCK_URL).flush(sheet);
     await rendered.fixture.whenStable();
 
-    expect(rowOf('Gin Tonic')).not.toBeNull();
+    expect(rowOf('main-bar', 'Gin Tonic')).not.toBeNull();
   });
 });

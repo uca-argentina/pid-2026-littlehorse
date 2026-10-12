@@ -20,9 +20,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace DrinkIt.Api.IntegrationTests.Nights;
 
 /// <summary>
-/// US-37 against the real database: each bar (a KDS) keeps a stock of its
-/// own, loaded for the night while it keeps selling, and the sheet reads back
-/// what each bar started with, loaded, sold and left.
+/// US-37 against the real database. The product keeps the general stock; each
+/// night opens with its bars (its KDS) empty, and the administrator moves units
+/// from the storeroom into them. The storeroom is the general stock minus what
+/// the bars of nights not yet over hold, so what a bar did not sell is back in
+/// it as soon as its night ends.
 /// </summary>
 [Collection(nameof(SqlServerCollection))]
 public sealed class NightStockTests(SqlServerFixture sql)
@@ -32,7 +34,7 @@ public sealed class NightStockTests(SqlServerFixture sql)
     private static readonly DateTimeOffset Saturday = Friday.AddDays(1);
 
     [Fact]
-    public async Task HandleAsync_WhenTheNightIsOpen_LoadsTheBarAndRecordsTheAdjustment()
+    public async Task HandleAsync_WhenTheStoreroomHasEnough_LoadsTheBarAndLeavesTheGeneralStockAlone()
     {
         Seeded seeded = await Seed();
 
@@ -41,7 +43,7 @@ public sealed class NightStockTests(SqlServerFixture sql)
         Assert.True(result.IsSuccess);
         Assert.Equal(12, await UnitsIn(seeded, seeded.MainBar, seeded.Gin));
         Assert.Equal(0, await UnitsIn(seeded, seeded.VipBar, seeded.Gin));
-        Assert.Equal(12, await TotalOf(seeded, seeded.Gin));
+        Assert.Equal(30, await TotalOf(seeded, seeded.Gin));
 
         await using DrinkItDbContext read = sql.CreateContext(seeded.Venue.Id);
         NightStockAdjustment recorded = await read.NightStockAdjustments.SingleAsync();
@@ -57,7 +59,65 @@ public sealed class NightStockTests(SqlServerFixture sql)
         await Adjust(seeded, seeded.MainBar, seeded.Gin, -2, at: Saturday);
 
         Assert.Equal(10, await UnitsIn(seeded, seeded.MainBar, seeded.Gin));
-        Assert.Equal(10, await TotalOf(seeded, seeded.Gin));
+        Assert.Equal(30, await TotalOf(seeded, seeded.Gin));
+    }
+
+    // 30 gins: 25 go to the main bar, and only 5 are left for the VIP one.
+    [Fact]
+    public async Task HandleAsync_WhenTheStoreroomHasLessThanItLoads_FailsWithStoreroomShortAndWritesNothing()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 25, at: Saturday);
+
+        Result<NightStockSheet> result = await Adjust(seeded, seeded.VipBar, seeded.Gin, 10, at: Saturday);
+
+        Assert.Equal(NightErrors.StoreroomShort, result.Error);
+        Assert.Equal(0, await UnitsIn(seeded, seeded.VipBar, seeded.Gin));
+
+        await using DrinkItDbContext fresh = sql.CreateContext(seeded.Venue.Id);
+        Assert.Equal(1, await fresh.NightStockAdjustments.CountAsync());
+    }
+
+    // Saturday loaded ahead of time: those units are not Friday's to take.
+    [Fact]
+    public async Task HandleAsync_WhenAnUpcomingNightAlreadyHoldsSome_LeavesThatMuchLessInTheStoreroom()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 25, at: Friday);
+
+        Result<NightStockSheet> result = await Adjust(seeded, seeded.MainBar, seeded.Gin, 10, at: Friday, night: seeded.Friday);
+
+        Assert.Equal(NightErrors.StoreroomShort, result.Error);
+    }
+
+    // Friday loads 12 and sells 7. Once it is over, the 5 left are back in
+    // the storeroom, and Saturday's bar opens empty rather than with them.
+    [Fact]
+    public async Task HandleAsync_WhenTheEarlierNightIsOver_ItsLeftoversAreBackInTheStoreroom()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 12, at: Friday, night: seeded.Friday);
+        await Confirm(seeded, seeded.Gin, 7, at: Friday.AddHours(1));
+
+        Result<NightStockSheet> result = await Adjust(seeded, seeded.MainBar, seeded.Gin, 23, at: seeded.Friday.EndsAt);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(23, await UnitsIn(seeded, seeded.MainBar, seeded.Gin));
+        Assert.Equal(23, await TotalOf(seeded, seeded.Gin));
+    }
+
+    // Nothing waits for the night before to end any more.
+    [Fact]
+    public async Task HandleAsync_WhileAnEarlierNightIsStillOn_LoadsTheNextOne()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 12, at: Friday, night: seeded.Friday);
+
+        Result<NightStockSheet> result = await Adjust(seeded, seeded.MainBar, seeded.Gin, 10, at: Friday.AddHours(1));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(10, await UnitsIn(seeded, seeded.MainBar, seeded.Gin));
+        Assert.Equal(12, await UnitsIn(seeded, seeded.MainBar, seeded.Gin, seeded.Friday));
     }
 
     // The bar has 5, sells 3, and a correction of −5 arrives: it would leave −2.
@@ -88,6 +148,20 @@ public sealed class NightStockTests(SqlServerFixture sql)
         Assert.Equal(ProductErrors.StockMoved, result.Error);
     }
 
+    // Taken back out of the bar, the units are in the storeroom again.
+    [Fact]
+    public async Task HandleAsync_WhenUnitsAreTakenOut_TheyCanBeLoadedIntoAnotherBar()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 30, at: Saturday);
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, -10, at: Saturday);
+
+        Result<NightStockSheet> result = await Adjust(seeded, seeded.VipBar, seeded.Gin, 10, at: Saturday);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(30, await TotalOf(seeded, seeded.Gin));
+    }
+
     [Fact]
     public async Task HandleAsync_WhenTheProductBelongsToAnotherVenue_FindsNothing()
     {
@@ -108,7 +182,8 @@ public sealed class NightStockTests(SqlServerFixture sql)
         Assert.Equal(NightErrors.BarNotFound, result.Error);
     }
 
-    // Criterion 2, per bar: the order is taken from the bar it goes to.
+    // Criterion 2, per bar: the order is taken from the bar it goes to, and
+    // from the general stock with it.
     [Fact]
     public async Task Confirm_WhenOnlyOneBarHasIt_SendsTheOrderThereAndTakesItsUnits()
     {
@@ -120,7 +195,7 @@ public sealed class NightStockTests(SqlServerFixture sql)
         Assert.True(result.IsSuccess);
         Assert.Equal(seeded.VipBar.Id, await BarOf(seeded, result.Value.Id));
         Assert.Equal(3, await UnitsIn(seeded, seeded.VipBar, seeded.Gin));
-        Assert.Equal(3, await TotalOf(seeded, seeded.Gin));
+        Assert.Equal(28, await TotalOf(seeded, seeded.Gin));
     }
 
     // The first order queues at one bar; the second goes to the other.
@@ -152,7 +227,22 @@ public sealed class NightStockTests(SqlServerFixture sql)
         Assert.Equal(5, await UnitsIn(seeded, seeded.VipBar, seeded.Fernet));
     }
 
-    // US-23 with bars: what a canceled order took goes back to its own bar.
+    // Friday's bar is Friday's: on Saturday it serves nothing, even with
+    // units left, until Saturday's own bar is loaded.
+    [Fact]
+    public async Task Confirm_WhenOnlyAnEarlierNightsBarHasIt_Refuses()
+    {
+        Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 5, at: Friday, night: seeded.Friday);
+
+        Result<ConfirmedOrder> result = await Confirm(seeded, seeded.Gin, 1, at: Saturday.AddHours(1));
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Equal(30, await TotalOf(seeded, seeded.Gin));
+    }
+
+    // US-23 with bars: what a canceled order took goes back to its own bar,
+    // and to the general stock with it.
     [Fact]
     public async Task Cancel_PutsTheUnitsBackInTheBarTheOrderWentTo()
     {
@@ -169,37 +259,52 @@ public sealed class NightStockTests(SqlServerFixture sql)
         }
 
         Assert.Equal(5, await UnitsIn(seeded, seeded.VipBar, seeded.Gin));
-        Assert.Equal(5, await TotalOf(seeded, seeded.Gin));
+        Assert.Equal(30, await TotalOf(seeded, seeded.Gin));
     }
 
+    // Created with both bars: 30 gins and 10 fernets in the storeroom, split
+    // evenly. The general stock does not move, and each load is on record.
     [Fact]
-    public async Task HasUnfinishedBeforeAsync_WhileTheEarlierNightIsOn_IsTrueAndOnceItEnded_IsFalse()
+    public async Task CreateNight_SplitsTheStoreroomEvenlyAmongItsKds()
     {
         Seeded seeded = await Seed();
 
-        await using DrinkItDbContext context = sql.CreateContext(seeded.Venue.Id);
-        NightRepository repository = new(context);
+        Result<NightSummary> created = await CreateSunday(seeded, at: Saturday.AddDays(1).AddHours(-5));
 
-        Assert.True(await repository.HasUnfinishedBeforeAsync(Saturday, Friday.AddHours(2), CancellationToken.None));
-        Assert.False(await repository.HasUnfinishedBeforeAsync(Saturday, seeded.Friday.EndsAt, CancellationToken.None));
-        Assert.False(await repository.HasUnfinishedBeforeAsync(Friday, Friday.AddHours(2), CancellationToken.None));
+        Night sunday = await NightNamed(seeded, created.Value.Id);
+        Assert.Equal(15, await UnitsIn(seeded, seeded.MainBar, seeded.Gin, sunday));
+        Assert.Equal(15, await UnitsIn(seeded, seeded.VipBar, seeded.Gin, sunday));
+        Assert.Equal(5, await UnitsIn(seeded, seeded.MainBar, seeded.Fernet, sunday));
+        Assert.Equal(5, await UnitsIn(seeded, seeded.VipBar, seeded.Fernet, sunday));
+        Assert.Equal(30, await TotalOf(seeded, seeded.Gin));
+
+        await using DrinkItDbContext fresh = sql.CreateContext(seeded.Venue.Id);
+        Assert.Equal(4, await fresh.NightStockAdjustments.CountAsync(adjustment => adjustment.NightId == sunday.Id));
     }
 
+    // Saturday already holds 25 gins, so only 5 are left to split: 2 each,
+    // and the one left over stays in the storeroom.
     [Fact]
-    public async Task HasUnfinishedBeforeAsync_WhenOnlyAnotherVenueHasANightOn_IsFalse()
+    public async Task CreateNight_OnlySplitsWhatOtherNightsLeftInTheStoreroom()
     {
         Seeded seeded = await Seed();
+        await Adjust(seeded, seeded.MainBar, seeded.Gin, 25, at: Friday);
 
-        await using DrinkItDbContext context = sql.CreateContext(seeded.Theirs.Id);
+        Result<NightSummary> created = await CreateSunday(seeded, at: Friday);
 
-        Assert.False(await new NightRepository(context).HasUnfinishedBeforeAsync(Saturday, Friday.AddHours(2), CancellationToken.None));
+        Night sunday = await NightNamed(seeded, created.Value.Id);
+        Assert.Equal(2, await UnitsIn(seeded, seeded.MainBar, seeded.Gin, sunday));
+        Assert.Equal(2, await UnitsIn(seeded, seeded.VipBar, seeded.Gin, sunday));
+        NightStockLine left = GinIn(await SheetOf(seeded, sunday, at: Friday), seeded.MainBar, seeded);
+        Assert.Equal(1, left.InStoreroom);
     }
 
-    // Criteria 1 and 3, bar by bar. The main bar loads 12 gins on Friday and
-    // sells 7; Saturday it starts with the 5 left, loads 10 and sells 4. The
-    // VIP bar only works Saturday, loads 6 and sells 1.
+    // Criterion 3, bar by bar. The main bar loads 12 gins on Friday and sells
+    // 7; Saturday it opens empty, loads 10 and sells 4. The VIP bar only works
+    // Saturday, loads 6 and sells 1. Looked at during Saturday: of the 18 gins
+    // in all, Saturday's bars hold 11, so 7 are in the storeroom.
     [Fact]
-    public async Task GetAsync_AfterTwoNights_SaysWhatEachBarStartedWithLoadedSoldAndLeft()
+    public async Task GetAsync_AfterTwoNights_SaysWhatEachBarLoadedSoldAndLeft()
     {
         Seeded seeded = await Seed();
         await Adjust(seeded, seeded.MainBar, seeded.Gin, 12, at: Friday, night: seeded.Friday);
@@ -209,18 +314,18 @@ public sealed class NightStockTests(SqlServerFixture sql)
         await Confirm(seeded, seeded.Gin, 4, at: Saturday.AddHours(1), bar: seeded.MainBar);
         await Confirm(seeded, seeded.Gin, 1, at: Saturday.AddHours(1), bar: seeded.VipBar);
 
-        NightStockSheet friday = await SheetOf(seeded, seeded.Friday);
-        NightStockSheet saturday = await SheetOf(seeded, seeded.Saturday);
+        NightStockSheet friday = await SheetOf(seeded, seeded.Friday, at: Saturday.AddHours(2));
+        NightStockSheet saturday = await SheetOf(seeded, seeded.Saturday, at: Saturday.AddHours(2));
 
         Assert.Equal(["main-bar"], friday.Bars.Select(bar => bar.Name));
         NightStockLine mainOnFriday = GinIn(friday, seeded.MainBar, seeded);
-        Assert.Equal((0, 12, 12, 7, 5), (mainOnFriday.Carried, mainOnFriday.Added, mainOnFriday.Loaded, mainOnFriday.Sold, mainOnFriday.Left));
+        Assert.Equal((12, 7, 5), (mainOnFriday.Loaded, mainOnFriday.Sold, mainOnFriday.Left));
 
         Assert.Equal(["main-bar", "vip-bar"], saturday.Bars.Select(bar => bar.Name));
         NightStockLine mainOnSaturday = GinIn(saturday, seeded.MainBar, seeded);
-        Assert.Equal((5, 10, 15, 4, 11), (mainOnSaturday.Carried, mainOnSaturday.Added, mainOnSaturday.Loaded, mainOnSaturday.Sold, mainOnSaturday.Left));
+        Assert.Equal((10, 4, 6, 7), (mainOnSaturday.Loaded, mainOnSaturday.Sold, mainOnSaturday.Left, mainOnSaturday.InStoreroom));
         NightStockLine vipOnSaturday = GinIn(saturday, seeded.VipBar, seeded);
-        Assert.Equal((0, 6, 6, 1, 5), (vipOnSaturday.Carried, vipOnSaturday.Added, vipOnSaturday.Loaded, vipOnSaturday.Sold, vipOnSaturday.Left));
+        Assert.Equal((6, 1, 5, 7), (vipOnSaturday.Loaded, vipOnSaturday.Sold, vipOnSaturday.Left, vipOnSaturday.InStoreroom));
     }
 
     [Fact]
@@ -228,7 +333,7 @@ public sealed class NightStockTests(SqlServerFixture sql)
     {
         Seeded seeded = await Seed();
 
-        NightStockSheet saturday = await SheetOf(seeded, seeded.Saturday);
+        NightStockSheet saturday = await SheetOf(seeded, seeded.Saturday, at: Saturday);
 
         NightStockBar main = saturday.Bars.Single(bar => bar.KdsId == seeded.MainBar.Id);
         Assert.Equal(["Fernet", "Gin Tonic"], main.Lines.Select(line => line.ProductName));
@@ -241,17 +346,39 @@ public sealed class NightStockTests(SqlServerFixture sql)
 
         await using DrinkItDbContext context = sql.CreateContext(seeded.Theirs.Id);
 
-        Assert.Null(await new NightStockQueries(context).GetAsync(seeded.Friday.Id, CancellationToken.None));
+        Assert.Null(await new NightStockQueries(context, new FixedClock(Saturday)).GetAsync(seeded.Friday.Id, CancellationToken.None));
+    }
+
+    /// <summary>Sunday, worked by both bars, created as the administration does it.</summary>
+    private async Task<Result<NightSummary>> CreateSunday(Seeded seeded, DateTimeOffset at)
+    {
+        await using DrinkItDbContext context = sql.CreateContext(seeded.Venue.Id);
+        DateTimeOffset sunday = Saturday.AddDays(1);
+
+        return await new CreateNightHandler(
+                new NightRepository(context),
+                new StaffUserRepository(context),
+                new FixedVenue(seeded.Venue.Id),
+                new NightStockRepository(context),
+                new FixedClock(at))
+            .HandleAsync(new CreateNightCommand("Sunday", sunday, sunday.AddHours(7), [seeded.MainBar.Id, seeded.VipBar.Id, seeded.Till.Id]), CancellationToken.None);
+    }
+
+    private async Task<Night> NightNamed(Seeded seeded, Guid id)
+    {
+        await using DrinkItDbContext fresh = sql.CreateContext(seeded.Venue.Id);
+
+        return await fresh.Nights.SingleAsync(night => night.Id == id);
     }
 
     private static NightStockLine GinIn(NightStockSheet sheet, StaffUser bar, Seeded seeded) =>
         sheet.Bars.Single(candidate => candidate.KdsId == bar.Id).Lines.Single(line => line.ProductId == seeded.Gin.Id);
 
-    private async Task<NightStockSheet> SheetOf(Seeded seeded, Night night)
+    private async Task<NightStockSheet> SheetOf(Seeded seeded, Night night, DateTimeOffset at)
     {
         await using DrinkItDbContext context = sql.CreateContext(seeded.Venue.Id);
 
-        return (await new NightStockQueries(context).GetAsync(night.Id, CancellationToken.None))!;
+        return (await new NightStockQueries(context, new FixedClock(at)).GetAsync(night.Id, CancellationToken.None))!;
     }
 
     private async Task<Result<NightStockSheet>> Adjust(Seeded seeded, StaffUser bar, Product product, int change, DateTimeOffset at, Night? night = null)
@@ -263,7 +390,7 @@ public sealed class NightStockTests(SqlServerFixture sql)
                 new ProductRepository(context),
                 new StaffUserRepository(context),
                 new NightStockRepository(context),
-                new NightStockQueries(context),
+                new NightStockQueries(context, new FixedClock(at)),
                 new FixedClock(at))
             .HandleAsync(new AdjustNightStockCommand((night ?? seeded.Saturday).Id, bar.Id, product.Id, change), CancellationToken.None);
     }
@@ -306,12 +433,14 @@ public sealed class NightStockTests(SqlServerFixture sql)
             .HandleAsync(new ConfirmOrderCommand("María Quadro", method, Guid.NewGuid().ToString(), lines), CancellationToken.None);
     }
 
-    private async Task<int> UnitsIn(Seeded seeded, StaffUser bar, Product product)
+    /// <summary>What the bar holds of it for a night, Saturday unless said otherwise.</summary>
+    private async Task<int> UnitsIn(Seeded seeded, StaffUser bar, Product product, Night? night = null)
     {
         await using DrinkItDbContext fresh = sql.CreateContext(seeded.Venue.Id);
+        Guid nightId = (night ?? seeded.Saturday).Id;
 
         return await fresh.BarStocks
-            .Where(row => row.KdsId == bar.Id && row.ProductId == product.Id)
+            .Where(row => row.NightId == nightId && row.KdsId == bar.Id && row.ProductId == product.Id)
             .Select(row => row.Units)
             .SingleOrDefaultAsync();
     }
@@ -335,6 +464,7 @@ public sealed class NightStockTests(SqlServerFixture sql)
         Venue Theirs,
         StaffUser MainBar,
         StaffUser VipBar,
+        StaffUser Till,
         StaffUser ForeignBar,
         Night Friday,
         Night Saturday,
@@ -343,8 +473,8 @@ public sealed class NightStockTests(SqlServerFixture sql)
         Product ForeignGin);
 
     /// <summary>
-    /// Friday is worked by the main bar alone; Saturday by both. Nothing is
-    /// loaded yet: every bar starts empty, as a new product does since US-37.
+    /// Friday is worked by the main bar alone; Saturday by both. 30 gins and 10
+    /// fernets in all, every one of them in the storeroom: no bar holds any yet.
     /// </summary>
     private async Task<Seeded> Seed()
     {
@@ -366,11 +496,12 @@ public sealed class NightStockTests(SqlServerFixture sql)
             theirs,
             mainBar,
             vipBar,
+            till,
             foreignBar,
             Night.Create(mine.Id, "Friday", Friday, Friday.AddHours(7), [mainBar, till]),
             Night.Create(mine.Id, "Saturday", Saturday, Saturday.AddHours(7), [mainBar, vipBar, till]),
-            Product.Create(mine.Id, "Gin Tonic", null, null, 9500m, 0, category.Id),
-            Product.Create(mine.Id, "Fernet", null, null, 7000m, 0, category.Id),
+            Product.Create(mine.Id, "Gin Tonic", null, null, 9500m, 30, category.Id),
+            Product.Create(mine.Id, "Fernet", null, null, 7000m, 10, category.Id),
             Product.Create(theirs.Id, "Gin Tonic", null, null, 9500m, 0, theirCategory.Id));
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
