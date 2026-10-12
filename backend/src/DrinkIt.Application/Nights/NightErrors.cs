@@ -35,4 +35,16 @@ public static class NightErrors
     /// </summary>
     public static readonly Error CrewMemberNotFound =
         new("night.crew_member_not_found", "One of the chosen accounts is not part of this venue.");
+
+    /// <summary>US-37, criterion 3: a night that ended keeps the stock it had, to be looked at.</summary>
+    public static readonly Error StockClosed =
+        new("night.stock_closed", "The night is over: its stock can only be looked at.");
+
+    /// <summary>
+    /// A night starts from what the one before it leaves, so its stock waits
+    /// until that one ends: loaded earlier, the units would be sold by the
+    /// night still on.
+    /// </summary>
+    public static readonly Error EarlierNightOpen =
+        new("night.earlier_night_open", "An earlier night has not ended yet. Load this one's stock once it has.");
 }

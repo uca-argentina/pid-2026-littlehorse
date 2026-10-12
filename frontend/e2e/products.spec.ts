@@ -14,6 +14,7 @@ import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './see
  */
 const loginPath = `/${seededVenueSlug}/staff/login`;
 const productsPath = `/${seededVenueSlug}/staff/products`;
+const nightsPath = `/${seededVenueSlug}/staff/nights`;
 
 /**
  * The development database is not reset between runs, and a product name is
@@ -70,6 +71,20 @@ async function aCustomerBuys(browser: Browser, name: string, units: number): Pro
   await expect(customer.getByTestId('order-code')).toBeVisible({ timeout: 15000 });
 
   await phone.close();
+}
+
+/**
+ * US-37: the stock is loaded into the night. night.setup.ts left one on, and
+ * the listing marks it "En curso".
+ */
+async function openTonightsStock(page: Page): Promise<void> {
+  await page.goto(nightsPath);
+  await page
+    .getByRole('link')
+    .filter({ hasText: /en curso/i })
+    .first()
+    .click();
+  await expect(page.getByRole('heading', { name: /stock de la noche/i })).toBeVisible();
 }
 
 /** A one-pixel PNG: enough to be a picture, small enough to live in the repo. */
@@ -352,7 +367,7 @@ test.describe('Products', () => {
   });
 
   // The way out of "sold out" that the nightly switch cannot give: the units
-  // that arrived are added, and the product can be sold again.
+  // that arrived are loaded into tonight (US-37), and it can be sold again.
   test('brings stock back to a product that ran out', async ({ page }) => {
     const name = aNewProductName();
 
@@ -362,47 +377,42 @@ test.describe('Products', () => {
     const row = page.getByRole('listitem').filter({ hasText: name });
     await expect(row).toContainText(/sin stock/i);
 
-    await row.getByRole('link', { name: /editar/i }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/editar producto/i);
-    await expect(page.getByText('0 en stock', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: /^ajustar$/i }).click();
-    await page.getByRole('spinbutton', { name: /unidades que llegaron/i }).fill('12');
+    await openTonightsStock(page);
+    const stock = page.getByRole('listitem', { name });
+    await expect(stock).toContainText(/quedan 0(?!\d)/i);
+    await stock.getByRole('spinbutton').fill('12');
+    await stock.getByRole('button', { name: /sumar/i }).click();
+    await expect(stock).toContainText(/quedan 12(?!\d)/i);
+    await expect(stock).toContainText(/cargadas \+12(?!\d)/i);
 
-    // Added, not set: the total it lands on is on screen before saving.
-    await expect(page.getByText(/quedan 12 en total/i)).toBeVisible();
-    await page.getByRole('button', { name: /guardar cambios/i }).click();
-
-    await expect(page).toHaveURL(new RegExp(`${productsPath}$`));
+    await page.goto(productsPath);
     await expect(row).not.toContainText(/sin stock/i);
   });
 
-  // Loaded 200 when it was 20: the real total goes in, and the difference is
-  // what reaches the API.
-  test('corrects a stock that was loaded wrong', async ({ page }) => {
+  // Loaded 200 when it was 20: the extra units are taken back out.
+  test('takes out units that were loaded wrong', async ({ page }) => {
     const name = aNewProductName();
 
     await logInAsTheAdministrator(page);
     await page.goto(`${productsPath}/new`);
     await fillTheForm(page, name, '4500', '200');
     const row = page.getByRole('listitem').filter({ hasText: name });
+    await expect(row).toBeVisible();
 
-    await row.getByRole('link', { name: /editar/i }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/editar producto/i);
-    await page.getByRole('button', { name: /^ajustar$/i }).click();
-    await page.getByRole('button', { name: /corregir el total/i }).click();
-    await page.getByRole('spinbutton', { name: /stock real/i }).fill('20');
+    await openTonightsStock(page);
+    const stock = page.getByRole('listitem', { name });
+    await stock.getByRole('spinbutton').fill('180');
+    await stock.getByRole('button', { name: /restar/i }).click();
+    await expect(stock).toContainText(/quedan 20(?!\d)/i);
 
-    await expect(page.getByText(/pasa a 20 \(−180\)/i)).toBeVisible();
-    await page.getByRole('button', { name: /guardar cambios/i }).click();
-
-    await expect(page).toHaveURL(new RegExp(`${productsPath}$`));
+    await page.goto(productsPath);
     await expect(row).toContainText('20 en stock');
   });
 
   // Two actors: the tablet shows 5, the bar sells 3 from a customer's phone,
-  // and a correction to 0 would take away the 5 the screen still shows. The
-  // stock is left as the sale left it, and the screen says how many there are.
-  test('refuses a correction that sales made meanwhile no longer fit', async ({
+  // and taking out the 5 the screen still shows would leave −3. The stock is
+  // left as the sale left it, and the row says what happened.
+  test('refuses to take out units that sales made meanwhile no longer fit', async ({
     page,
     browser,
   }) => {
@@ -411,24 +421,19 @@ test.describe('Products', () => {
     await logInAsTheAdministrator(page);
     await page.goto(`${productsPath}/new`);
     await fillTheForm(page, name, '4500', '5');
-    const row = page.getByRole('listitem').filter({ hasText: name });
+    await expect(page.getByRole('listitem').filter({ hasText: name })).toBeVisible();
 
-    await row.getByRole('link', { name: /editar/i }).click();
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/editar producto/i);
-    await expect(page.getByText('5 en stock', { exact: true })).toBeVisible();
+    await openTonightsStock(page);
+    const stock = page.getByRole('listitem', { name });
+    await expect(stock).toContainText(/quedan 5(?!\d)/i);
 
     await aCustomerBuys(browser, name, 3);
 
-    await page.getByRole('button', { name: /^ajustar$/i }).click();
-    await page.getByRole('button', { name: /corregir el total/i }).click();
-    await page.getByRole('spinbutton', { name: /stock real/i }).fill('0');
-    await expect(page.getByText(/pasa a 0 \(−5\)/i)).toBeVisible();
-    await page.getByRole('button', { name: /guardar cambios/i }).click();
+    await stock.getByRole('spinbutton').fill('5');
+    await stock.getByRole('button', { name: /restar/i }).click();
 
-    await expect(page.getByRole('alert')).toContainText(/se vendió mientras tanto y ahora hay 2/i);
-
-    await page.goto(productsPath);
-    await expect(row).toContainText('2 en stock');
+    await expect(stock.getByRole('alert')).toContainText(/se vendió mientras tanto/i);
+    await expect(stock).toContainText(/quedan 2(?!\d)/i);
   });
 
   // The administrator has to be able to fix it on the spot, so the message has

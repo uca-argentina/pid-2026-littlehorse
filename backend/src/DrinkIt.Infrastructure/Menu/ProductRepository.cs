@@ -1,7 +1,9 @@
 using DrinkIt.Application.Menu;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Nights;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DrinkIt.Infrastructure.Menu;
 
@@ -36,19 +38,35 @@ internal sealed class ProductRepository(DrinkItDbContext context) : IProductRepo
     /// <summary>
     /// One conditional statement, the same shape as a sale in OrderRepository:
     /// the database adds the change to whatever it holds right now, so a sale
-    /// between reading the product and this keeps its units. The venue filter
+    /// between reading the product and this keeps its units. The night's record
+    /// of it goes in the same transaction: both or neither. The venue filter
     /// applies here too.
     /// </summary>
-    public async Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken)
+    public async Task<bool> SaveStockAdjustmentAsync(Product product, NightStockAdjustment adjustment, CancellationToken cancellationToken)
     {
+        await using IDbContextTransaction transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+
+        int change = adjustment.Change;
         int applied = await context.Products
             .Where(row => row.Id == product.Id && row.Stock + change >= 0)
             .ExecuteUpdateAsync(row => row.SetProperty(p => p.Stock, p => p.Stock + change), cancellationToken);
 
-        // What the domain worked out in memory is not what is stored once sales
-        // are counted in: the screen gets the stock the database has.
+        // Before saving anything tracked: what the domain worked out in memory
+        // is not what is stored once sales are counted in, and saving it would
+        // write the stale total over them. The screen gets what the database has.
         await context.Entry(product).ReloadAsync(cancellationToken);
 
-        return applied == 1;
+        if (applied != 1)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+
+            return false;
+        }
+
+        context.NightStockAdjustments.Add(adjustment);
+        await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return true;
     }
 }

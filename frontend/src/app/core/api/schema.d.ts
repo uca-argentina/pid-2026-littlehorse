@@ -294,6 +294,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/nights/{id}/stock': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The night's stock: what each product started with, what was loaded, sold and is left. */
+    get: operations['GetNightStock'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}/stock/{productId}/adjust': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Loads units of a product into a night that has not ended, or takes them out. */
+    post: operations['AdjustNightStock'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/categories': {
     parameters: {
       query?: never;
@@ -375,23 +409,6 @@ export interface paths {
     /** Corrects a product's name, description, price and category. */
     put: operations['UpdateProduct'];
     post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/{id}/adjust-stock': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Moves a product's stock up or down by a number of units. */
-    post: operations['AdjustProductStock'];
     delete?: never;
     options?: never;
     head?: never;
@@ -610,10 +627,11 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     /**
-     * @description How much the stock moves: positive when units arrived, negative when it was
-     *     loaded wrong. A change, never the new total.
+     * @description How much a product's stock moves in the night: positive when units arrived,
+     *     negative when they were loaded wrong. A change, never the new total, so a
+     *     sale made while the screen was open is not overwritten.
      */
-    AdjustProductStockRequest: {
+    AdjustNightStockRequest: {
       /** Format: int32 */
       change: number;
     };
@@ -793,6 +811,27 @@ export interface components {
       endsAt: string;
       crewIds: string[];
       audit: components['schemas']['AuditResponse'];
+    };
+    /** @description One product in the night's stock. Loaded is what it started with plus what came in. */
+    NightStockLineResponse: {
+      /** Format: uuid */
+      productId: string;
+      productName: string;
+      /** Format: int32 */
+      carried: number;
+      /** Format: int32 */
+      added: number;
+      /** Format: int32 */
+      loaded: number;
+      /** Format: int32 */
+      sold: number;
+      /** Format: int32 */
+      left: number;
+    };
+    NightStockResponse: {
+      /** Format: uuid */
+      nightId: string;
+      lines: components['schemas']['NightStockLineResponse'][];
     };
     /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
@@ -1597,6 +1636,91 @@ export interface operations {
       };
     };
   };
+  GetNightStock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightStockResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  AdjustNightStock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        productId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AdjustNightStockRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightStockResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   ListCategories: {
     parameters: {
       query?: never;
@@ -1795,59 +1919,6 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['UpdateProductRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  AdjustProductStock: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['AdjustProductStockRequest'];
       };
     };
     responses: {

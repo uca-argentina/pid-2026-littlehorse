@@ -1,8 +1,10 @@
 using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Menu;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Staff;
+using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Staff;
 using Microsoft.AspNetCore.Http;
@@ -133,6 +135,113 @@ public class NightsEndpointsTests
         Assert.Equal("urn:drinkit:problem:night:overlaps", response.Text("type"));
     }
 
+    // Pins the stock sheet's shape: the Angular client is generated from it.
+    [Fact]
+    public async Task GetStockAsync_WhenTheVenueHasTheNight_RespondsWithALinePerProduct()
+    {
+        Guid night = Guid.CreateVersion7();
+        NightStockSheet sheet = new(night, [new NightStockLine(Guid.CreateVersion7(), "Gin Tonic", Carried: 20, Added: 12, Sold: 7)]);
+
+        IResult result = await NightsEndpoints.GetStockAsync(night, new Fake.Sheets(sheet), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{night}/stock", HttpMethods.Get);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        System.Text.Json.JsonElement line = response.Body.GetProperty("lines")[0];
+        Assert.Equal("Gin Tonic", line.GetProperty("productName").GetString());
+        Assert.Equal(20, line.GetProperty("carried").GetInt32());
+        Assert.Equal(12, line.GetProperty("added").GetInt32());
+        Assert.Equal(32, line.GetProperty("loaded").GetInt32());
+        Assert.Equal(7, line.GetProperty("sold").GetInt32());
+        Assert.Equal(25, line.GetProperty("left").GetInt32());
+    }
+
+    [Fact]
+    public async Task GetStockAsync_WhenTheVenueHasNoSuchNight_RespondsWithNotFound()
+    {
+        Guid unknown = Guid.CreateVersion7();
+
+        IResult result = await NightsEndpoints.GetStockAsync(unknown, new Fake.Sheets(null), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{unknown}/stock", HttpMethods.Get);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:night:not-found", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task AdjustStockAsync_WhenTheChangeIsValid_RespondsWithTheSheet()
+    {
+        (Night saturday, Product gin) = (Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]), AGin(5));
+
+        HttpResponseSnapshot response = await AdjustStock(saturday, gin, 12, now: Opening.AddHours(-2));
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Equal(saturday.Id, response.Body.GetProperty("nightId").GetGuid());
+    }
+
+    // Criterion 3: the screen of a night that ended is read-only, but one
+    // opened before the end can still send.
+    [Fact]
+    public async Task AdjustStockAsync_WhenTheNightIsOver_RespondsWithConflict()
+    {
+        (Night saturday, Product gin) = (Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]), AGin(5));
+
+        HttpResponseSnapshot response = await AdjustStock(saturday, gin, 12, now: Closing);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:night:stock-closed", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task AdjustStockAsync_WhenAnEarlierNightHasNotEnded_RespondsWithConflict()
+    {
+        (Night saturday, Product gin) = (Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]), AGin(5));
+
+        HttpResponseSnapshot response = await AdjustStock(saturday, gin, 12, now: Opening.AddHours(-2), earlierNightOpen: true);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:night:earlier-night-open", response.Text("type"));
+    }
+
+    // Sales left less than the change takes away: a conflict with what
+    // happened meanwhile, not a malformed request.
+    [Fact]
+    public async Task AdjustStockAsync_WhenWhatIsLeftIsLessThanItTakesAway_RespondsWithConflict()
+    {
+        (Night saturday, Product gin) = (Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]), AGin(2));
+
+        HttpResponseSnapshot response = await AdjustStock(saturday, gin, -5, now: Opening);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:stock-moved", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task AdjustStockAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
+    {
+        Night saturday = Night.Create(TheVenue, "Saturday 10/10", Opening, Closing, [MainBar, Till]);
+
+        HttpResponseSnapshot response = await AdjustStock(saturday, null, 12, now: Opening);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:product:not-found", response.Text("type"));
+    }
+
+    private static Product AGin(int stock) => Product.Create(TheVenue, "Gin Tonic", null, null, 9500m, stock, Guid.CreateVersion7());
+
+    private static async Task<HttpResponseSnapshot> AdjustStock(Night night, Product? product, int change, DateTimeOffset now, bool earlierNightOpen = false)
+    {
+        Guid productId = product?.Id ?? Guid.CreateVersion7();
+        AdjustNightStockHandler handler = new(
+            new Fake.Nights(overlaps: false, night, earlierNightOpen),
+            new Fake.Products(product),
+            new Fake.Sheets(new NightStockSheet(night.Id, [])),
+            new Fake.Clock(now));
+
+        IResult result = await NightsEndpoints.AdjustStockAsync(night.Id, productId, new AdjustNightStockRequest(change), handler, CancellationToken.None);
+
+        return await EndpointResponse.Execute(result, $"{Path}/{night.Id}/stock/{productId}/adjust", HttpMethods.Post);
+    }
+
     private static async Task<HttpResponseSnapshot> Update(Night? stored, UpdateNightRequest request, bool overlaps = false)
     {
         Guid id = stored?.Id ?? Guid.CreateVersion7();
@@ -164,10 +273,13 @@ public class NightsEndpointsTests
             public override DateTimeOffset GetUtcNow() => now;
         }
 
-        public sealed class Nights(bool overlaps, Night? stored = null) : INightRepository
+        public sealed class Nights(bool overlaps, Night? stored = null, bool earlierNightOpen = false) : INightRepository
         {
             public Task<bool> OverlapsAsync(DateTimeOffset startsAt, DateTimeOffset endsAt, Guid? excluding, CancellationToken cancellationToken) =>
                 Task.FromResult(overlaps);
+
+            public Task<bool> HasUnfinishedBeforeAsync(DateTimeOffset startsAt, DateTimeOffset now, CancellationToken cancellationToken) =>
+                Task.FromResult(earlierNightOpen);
 
             public Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
                 Task.FromResult(stored?.Id == id ? stored : null);
@@ -184,6 +296,28 @@ public class NightsEndpointsTests
 
             public Task<NightSummary?> GetAsync(Guid id, CancellationToken cancellationToken) =>
                 Task.FromResult(stored.FirstOrDefault(night => night.Id == id));
+        }
+
+        public sealed class Sheets(NightStockSheet? stored) : INightStockQueries
+        {
+            public Task<NightStockSheet?> GetAsync(Guid nightId, CancellationToken cancellationToken) =>
+                Task.FromResult(stored?.NightId == nightId ? stored : null);
+        }
+
+        /// <summary>Only what loading the night's stock reads and writes.</summary>
+        public sealed class Products(Product? stored) : IProductRepository
+        {
+            public Task<Product?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
+                Task.FromResult(stored?.Id == id ? stored : null);
+
+            public Task<bool> SaveStockAdjustmentAsync(Product product, NightStockAdjustment adjustment, CancellationToken cancellationToken) =>
+                Task.FromResult(true);
+
+            public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+            public Task AddAsync(Product product, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+            public Task SaveChangesAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
         }
 
         /// <summary>Only what creating a night reads; the rest is never reached here.</summary>

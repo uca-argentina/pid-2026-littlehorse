@@ -1,0 +1,148 @@
+// The night's stock, under the night's form: the same notes and buttons as
+// the rest of its screen, one card per product.
+
+:host {
+  display: block;
+}
+
+.stock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+}
+
+.stock-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.help {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.failed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.retry,
+.action {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.action:disabled {
+  color: var(--dk-text-faint);
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.line {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-2);
+  padding: var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+}
+
+.line-head {
+  display: flex;
+  gap: var(--dk-space-3);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.line-name {
+  font-size: 16.5px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+// What is left is what the administrator came to read.
+.line-left {
+  font-size: 16.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.line-out {
+  color: var(--dk-danger);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-1) var(--dk-space-4);
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.adjust {
+  display: flex;
+  gap: var(--dk-space-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-3);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+
+  // Above the 16px that keeps iOS Safari from zooming into the field.
+  font-size: 17px;
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--dk-danger);
+}
+
+.bad {
+  margin: 0;
+  color: var(--dk-danger);
+  font-size: 14px;
+}

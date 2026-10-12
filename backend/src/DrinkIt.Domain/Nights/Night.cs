@@ -1,4 +1,5 @@
 using DrinkIt.Domain.Common;
+using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Domain.Nights;
@@ -27,6 +28,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         public const string CrewMemberFromAnotherVenue = "night.crew_member_from_another_venue";
         public const string StartLocked = "night.start_locked";
         public const string NightOver = "night.over";
+        public const string ProductFromAnotherVenue = "night.product_from_another_venue";
     }
 
     public const int NameMaxLength = 60;
@@ -79,7 +81,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
     /// </summary>
     public void Update(string name, DateTimeOffset startsAt, DateTimeOffset endsAt, IEnumerable<StaffUser> crew, DateTimeOffset now)
     {
-        if (now >= EndsAt) throw new DomainException(ErrorCodes.NightOver, "The night is over and can no longer change.");
+        if (HasEndedAt(now)) throw new DomainException(ErrorCodes.NightOver, "The night is over and can no longer change.");
 
         bool underway = IsUnderwayAt(now);
 
@@ -101,6 +103,30 @@ public sealed class Night : AuditStamps, IBelongsToVenue
     public bool IsUnderwayAt(DateTimeOffset moment) => StartsAt <= moment && moment < EndsAt;
 
     public bool IsWorkedBy(Guid staffUserId) => _crewIds.Contains(staffUserId);
+
+    /// <summary>From its end on the night is over: it takes no orders and its stock is only read.</summary>
+    public bool HasEndedAt(DateTimeOffset moment) => moment >= EndsAt;
+
+    /// <summary>
+    /// US-37: units of a product loaded into the night, or taken out of it.
+    /// The product's stock moves with it, because what is left on the shelf is
+    /// what the night sells from. A change and never a total, as in
+    /// <see cref="Product.AdjustStock"/>, so a sale made meanwhile is kept.
+    /// </summary>
+    /// <remarks>
+    /// A night that ended is read-only, since what it loaded and sold is its
+    /// record. That a later night cannot load while an earlier one is still
+    /// open argues with the venue's other nights, so it is the handler's.
+    /// </remarks>
+    public NightStockAdjustment AdjustStock(Product product, int change, DateTimeOffset now)
+    {
+        if (HasEndedAt(now)) throw new DomainException(ErrorCodes.NightOver, "The night is over and its stock can no longer change.");
+        if (product.VenueId != VenueId) throw new DomainException(ErrorCodes.ProductFromAnotherVenue, "Only the venue's own products can be loaded into its night.");
+
+        product.AdjustStock(change);
+
+        return new NightStockAdjustment(VenueId, Id, product.Id, change);
+    }
 
     private static string CleanName(string name)
     {

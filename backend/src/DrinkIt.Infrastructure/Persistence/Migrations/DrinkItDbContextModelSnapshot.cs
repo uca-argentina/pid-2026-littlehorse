@@ -166,6 +166,49 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.ToTable("Nights", (string)null);
                 });
 
+            modelBuilder.Entity("DrinkIt.Domain.Nights.NightStockAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Change")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("NightId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NightId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("VenueId", "NightId", "ProductId");
+
+                    b.ToTable("NightStockAdjustments", (string)null);
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Orders.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -402,6 +445,27 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DrinkIt.Domain.Nights.Night", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Nights.NightStockAdjustment", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Nights.Night", null)
+                        .WithMany()
+                        .HasForeignKey("NightId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Menu.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
                         .HasForeignKey("VenueId")

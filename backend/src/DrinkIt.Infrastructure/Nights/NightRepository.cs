@@ -16,6 +16,10 @@ internal sealed class NightRepository(DrinkItDbContext context) : INightReposito
             night => night.Id != excluding && night.StartsAt < endsAt && startsAt < night.EndsAt,
             cancellationToken);
 
+    /// <summary>The same rule as Night.HasEndedAt, written as SQL. No venue in the WHERE: the global query filter adds it.</summary>
+    public Task<bool> HasUnfinishedBeforeAsync(DateTimeOffset startsAt, DateTimeOffset now, CancellationToken cancellationToken) =>
+        context.Nights.AnyAsync(night => night.StartsAt < startsAt && now < night.EndsAt, cancellationToken);
+
     /// <summary>Tracked, so the edit is saved. No venue in the WHERE: the global query filter adds it.</summary>
     public Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
         context.Nights.FirstOrDefaultAsync(night => night.Id == id, cancellationToken);

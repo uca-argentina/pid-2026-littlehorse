@@ -77,7 +77,6 @@ export class EditProductPage {
     description,
     categoryId,
     price,
-    stock,
     photo,
     isAvailable,
   }: ProductFormValue): void {
@@ -88,7 +87,6 @@ export class EditProductPage {
     this.store.save(this.venueSlug(), this.id(), {
       correction: { name, description, price, categoryId },
       photo,
-      stockChange: stock,
       isAvailable: isAvailable === product.isAvailable ? null : isAvailable,
     });
   }

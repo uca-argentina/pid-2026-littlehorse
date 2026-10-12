@@ -45,6 +45,10 @@
           (saved)="save($event)"
         />
       }
+
+      @if (phase(); as phase) {
+        <drinkit-night-stock [nightId]="id()" [phase]="phase" />
+      }
     } @else {
       <p class="note" role="status">Cargando la noche…</p>
     }

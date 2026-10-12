@@ -2,6 +2,7 @@ using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Nights;
 
 namespace DrinkIt.Application.Tests.Menu;
 
@@ -144,7 +145,7 @@ public class CreateProductHandlerTests
 
         public sealed class Products(string? taken = null) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
+            public Task<bool> SaveStockAdjustmentAsync(Product product, NightStockAdjustment adjustment, CancellationToken cancellationToken) =>
                 Task.FromResult(true);
 
             public Product? Added { get; private set; }
