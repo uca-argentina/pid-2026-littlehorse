@@ -59,7 +59,8 @@ public class CancelAtTillHandlerTests
     public async Task HandleAsync_WhenTheOrderWasAlreadyPaid_RefusesWithoutSaving()
     {
         Order order = AnOrderWaitingForCash();
-        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", Guid.CreateVersion7());
+        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+        order.Enqueue(Guid.CreateVersion7());
         KdsOrdersInMemory orders = new(order);
 
         Result<OrderStatus> result = await new CancelAtTillHandler(orders).HandleAsync("K-4821", CancellationToken.None);

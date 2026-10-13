@@ -112,17 +112,6 @@ internal sealed partial class OrderRepository(
             .FirstOrDefaultAsync(order => order.TrackingToken == token, cancellationToken);
 
     /// <summary>
-    /// The cancellation and the stock it gives back, in one transaction. The
-    /// order is written first, so a cancellation that lost to the till's
-    /// collection is refused before a single drink moves.
-    /// </summary>
-    /// <remarks>
-    /// The stock goes back with one relative statement per drink — "put three
-    /// back" — for the same reason it comes down that way in
-    /// <see cref="AddAsync"/>: writing back a number read seconds ago would
-    /// undo whatever the bar sold meanwhile.
-    /// </remarks>
-    /// <summary>
     /// The collection and the stock it takes, in one transaction (US-36). The
     /// order is written first, as in <see cref="SaveCancellationAsync"/>, so a
     /// collection that lost to another till is refused before a drink moves.
@@ -165,6 +154,17 @@ internal sealed partial class OrderRepository(
         return order;
     }
 
+    /// <summary>
+    /// The cancellation and the stock it gives back, in one transaction. The
+    /// order is written first, so a cancellation that lost to the till's
+    /// collection is refused before a single drink moves.
+    /// </summary>
+    /// <remarks>
+    /// The stock goes back with one relative statement per drink — "put three
+    /// back" — for the same reason it comes down that way in
+    /// <see cref="AddAsync"/>: writing back a number read seconds ago would
+    /// undo whatever the bar sold meanwhile.
+    /// </remarks>
     public async Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken)
     {
         await using IDbContextTransaction transaction =

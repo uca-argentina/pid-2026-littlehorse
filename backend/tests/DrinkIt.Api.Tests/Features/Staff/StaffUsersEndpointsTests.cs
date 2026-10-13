@@ -2,6 +2,7 @@ using DrinkIt.Api.Common;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Kds;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
 using DrinkIt.Domain.Staff;
@@ -143,7 +144,7 @@ public class StaffUsersEndpointsTests
         IResult result = await StaffUsersEndpoints.RenameAsync(
             martin.Id,
             new RenameStaffUserRequest("Barra Pista"),
-            new RenameStaffUserHandler(new Fake.Repository(martin)),
+            new RenameStaffUserHandler(new Fake.Repository(martin), new Fake.Boards()),
             CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Put);
@@ -282,6 +283,12 @@ public class StaffUsersEndpointsTests
 
     private static class Fake
     {
+        /// <summary>No tablet listening: renaming a KDS tells its board, and nobody hears it here.</summary>
+        public sealed class Boards : IKdsBoardNotifier
+        {
+            public Task NotifyBoardChangedAsync(Guid venueId, Guid kdsId, CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
         public sealed class CurrentVenue : ICurrentVenue
         {
             public Guid Id { get; } = Guid.CreateVersion7();

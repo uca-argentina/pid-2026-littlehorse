@@ -9,15 +9,18 @@ namespace DrinkIt.Domain.Orders;
 /// <see cref="NewOrderItem"/>: those generate init setters, and
 /// DrinkIt.ArchitectureTests refuses a public setter anywhere in the domain.
 /// </remarks>
-public sealed record OrderQueued : IOrderChanged
+public sealed record OrderQueued : IBoardChanged
 {
-    public OrderQueued(Guid venueId, TrackingToken trackingToken)
+    public OrderQueued(Guid venueId, Guid? kdsId, TrackingToken trackingToken)
     {
         VenueId = venueId;
+        KdsId = kdsId;
         TrackingToken = trackingToken;
     }
 
     public Guid VenueId { get; }
+
+    public Guid? KdsId { get; }
 
     public TrackingToken TrackingToken { get; }
 }

@@ -59,6 +59,9 @@ export const ProblemTypes = {
   /** US-36: cash takes its drinks when collected, and by then no bar has one of them. */
   cashierSoldOut: 'urn:drinkit:problem:cashier:sold-out',
 
+  /** The order belongs to a night that is over: nothing to collect it against. */
+  cashierNightOver: 'urn:drinkit:problem:cashier:night-over',
+
   /** US-36: a real order of the venue, scanned at a bar it did not go to. */
   kdsAtAnotherBar: 'urn:drinkit:problem:kds:at-another-bar',
 

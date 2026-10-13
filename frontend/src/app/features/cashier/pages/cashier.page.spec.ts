@@ -540,6 +540,40 @@ describe('CashierPage', () => {
     expect(collectButton()).not.toBeNull();
   });
 
+  // Somebody kept buying the same drink while the till was collecting: the
+  // order still waits, so the cashier tries again — it is not "not found".
+  it('asks to try again when collecting keeps losing the race, and keeps the order', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    collectButton().click();
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(collectUrl('K-4821'))
+      .flush({ type: ProblemTypes.orderStockMoved }, { status: 409, statusText: 'Conflict' });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/probá cobrar de nuevo/i);
+    expect(collectButton()).not.toBeNull();
+  });
+
+  // The order belongs to a night that is over: nothing to collect it against.
+  it('says the order is from a night that is over, and does not collect it', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    collectButton().click();
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(collectUrl('K-4821'))
+      .flush({ type: ProblemTypes.cashierNightOver }, { status: 409, statusText: 'Conflict' });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/noche que ya terminó/i);
+  });
+
   it('does not collect twice on a double tap', async () => {
     const { rendered, http } = await openTheTill([anOrder()]);
 

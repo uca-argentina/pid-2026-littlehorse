@@ -21,8 +21,8 @@ public class ReadyAndDeliveredHandlersTests
         Order order = Order.Place(TheVenue, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse("K-4821"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
-        order.Pay(Now.AddMinutes(-10), PaymentMethod.Digital, TestBars.Main);
-        order.Enqueue();
+        order.Pay(Now.AddMinutes(-10), PaymentMethod.Digital);
+        order.Enqueue(TestBars.Main);
         order.StartPreparing(DateTimeOffset.UtcNow);
 
         return order;

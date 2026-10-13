@@ -21,8 +21,8 @@ public class ScanHandlerTests
         Order order = Order.Place(TheVenue, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse("K-4821"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
-        order.Pay(Now.AddMinutes(-10), PaymentMethod.Digital, TestBars.Main);
-        order.Enqueue();
+        order.Pay(Now.AddMinutes(-10), PaymentMethod.Digital);
+        order.Enqueue(TestBars.Main);
 
         return order;
     }
@@ -58,6 +58,21 @@ public class ScanHandlerTests
         Assert.Equal(OrderStatus.Delivered, order.Status);
         Assert.Equal(Now, order.DeliveredAt);
         Assert.Equal(1, orders.Saves);
+    }
+
+    // US-36: cash waiting at the till goes to no bar yet, so it is not "at
+    // another bar" — it is not ready, because nobody has paid for it.
+    [Fact]
+    public async Task HandleAsync_WhenTheOrderStillWaitsForCash_SaysItIsNotReadyYet()
+    {
+        Order order = Order.Place(TheVenue, Guid.CreateVersion7(), "María Quadro", OrderCode.Parse("K-4821"), [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
+        order.AwaitPayment(PaymentMethod.Cash);
+        KdsOrdersInMemory orders = new(order);
+
+        Result<ScannedOrder> result = await HandlerOver(orders).HandleAsync(order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Equal(ScanOutcome.NotReadyYet, result.Value.Outcome);
+        Assert.Equal(0, orders.Saves);
     }
 
     // US-36: the customer went to the wrong bar. Not "unknown": the order is

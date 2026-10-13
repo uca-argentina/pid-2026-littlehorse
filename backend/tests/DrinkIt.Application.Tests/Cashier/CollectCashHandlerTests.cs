@@ -1,5 +1,6 @@
 using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Tests.Kds;
 using DrinkIt.Domain.Orders;
@@ -36,7 +37,12 @@ public class CollectCashHandlerTests
     }
 
     private static CollectCashHandler AHandlerOver(KdsOrdersInMemory orders, IBarsForOrdering? bars = null) =>
-        new(orders, bars ?? new Bars(MainBar), new FixedClock(Tonight), new TheCashierIs("laura.caja"));
+        new(
+            orders,
+            bars ?? new Bars(MainBar),
+            new TonightIs(TheNight),
+            new FixedClock(Tonight),
+            new TheCashierIs("laura.caja"));
 
     // Criterion 2: paid now, not when the customer confirmed on the phone —
     // the bar counts its age from here — and straight into the bar's queue.
@@ -84,6 +90,26 @@ public class CollectCashHandlerTests
 
         Assert.Equal(CashierErrors.SoldOut.Code, result.Error!.Code);
         Assert.Equal("Gin Tonic", result.Error.Subject);
+        Assert.Equal(OrderStatus.AwaitingPayment, order.Status);
+        Assert.Equal(0, orders.Collections);
+    }
+
+    // The night the order was placed in is over: its bars and their stock are
+    // done with, and a bar of that night may not be working tonight. The till
+    // is told so, and nothing is charged.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task HandleAsync_WhenTheOrdersNightIsOver_RefusesWithoutCollecting(bool anotherNightIsOn)
+    {
+        Order order = AnOrderWaitingForCash();
+        KdsOrdersInMemory orders = new(order);
+        TonightIs nights = new(anotherNightIsOn ? Guid.CreateVersion7() : null);
+
+        Result<OrderStatus> result = await new CollectCashHandler(orders, new Bars(MainBar), nights, new FixedClock(Tonight), new TheCashierIs("laura.caja"))
+            .HandleAsync("K-4821", CancellationToken.None);
+
+        Assert.Equal(CashierErrors.NightOver, result.Error);
         Assert.Equal(OrderStatus.AwaitingPayment, order.Status);
         Assert.Equal(0, orders.Collections);
     }
@@ -159,6 +185,11 @@ public class CollectCashHandlerTests
 
             return Task.FromResult<IReadOnlyList<BarSupply>>(bars);
         }
+    }
+
+    private sealed class TonightIs(Guid? night) : IUnderwayNightLookup
+    {
+        public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken) => Task.FromResult(night);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

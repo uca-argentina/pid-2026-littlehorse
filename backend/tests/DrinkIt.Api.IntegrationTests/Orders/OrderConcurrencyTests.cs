@@ -42,8 +42,10 @@ public sealed class OrderConcurrencyTests(SqlServerFixture sql)
 
         Order atTheFirstTill = (await firstTill.GetForUpdateAsync(waiting.Code, CancellationToken.None))!;
         Order atTheSecondTill = (await secondTill.GetForUpdateAsync(waiting.Code, CancellationToken.None))!;
-        atTheFirstTill.CollectCash(Tonight, "caja.uno", TheBar);
-        atTheSecondTill.CollectCash(Tonight.AddSeconds(1), "caja.dos", TheBar);
+        atTheFirstTill.CollectCash(Tonight, "caja.uno");
+        atTheFirstTill.Enqueue(TheBar);
+        atTheSecondTill.CollectCash(Tonight.AddSeconds(1), "caja.dos");
+        atTheSecondTill.Enqueue(TheBar);
 
         Result<Order> won = await firstTill.SaveAsync(atTheFirstTill, CancellationToken.None);
         Result<Order> lost = await secondTill.SaveAsync(atTheSecondTill, CancellationToken.None);
@@ -125,8 +127,8 @@ public sealed class OrderConcurrencyTests(SqlServerFixture sql)
     private Task<Order> AnOrderInPreparation(Venue venue) =>
         Stored(venue, order =>
         {
-            order.Pay(Tonight, PaymentMethod.Digital, TheBar);
-            order.Enqueue();
+            order.Pay(Tonight, PaymentMethod.Digital);
+            order.Enqueue(TheBar);
             order.StartPreparing(DateTimeOffset.UtcNow);
         });
 

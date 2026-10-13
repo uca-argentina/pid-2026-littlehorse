@@ -52,4 +52,16 @@ internal sealed class KdsQueueQueries(DrinkItDbContext context, ICurrentStaffUse
                 order.OrderItems))
             .ToList();
     }
+
+    public async Task<string> GetStationNameAsync(CancellationToken cancellationToken)
+    {
+        // The account of the token, of this venue by the global filter.
+        Guid? bar = kds.Id;
+
+        return await context.StaffUsers
+            .AsNoTracking()
+            .Where(user => user.Id == bar)
+            .Select(user => user.DisplayName ?? user.Username)
+            .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+    }
 }

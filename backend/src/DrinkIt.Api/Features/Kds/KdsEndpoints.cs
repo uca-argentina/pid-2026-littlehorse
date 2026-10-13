@@ -23,6 +23,9 @@ public sealed record KdsQueueOrderResponse(
 /// <summary>What the bar's camera or reader read off the customer's phone.</summary>
 public sealed record ScanRequest(string? Read);
 
+/// <summary>Which bar this tablet is, by the name it goes by now.</summary>
+public sealed record KdsStationResponse(string Name);
+
 /// <summary>Whose order a scan found, and what it did with it.</summary>
 public sealed record ScannedOrderResponse(string Code, string CustomerName, ScanOutcomeName Outcome);
 
@@ -40,6 +43,14 @@ internal static class KdsEndpoints
             .WithTags("Kds")
             .WithSummary("The bar's queue: every paid order still on its way, oldest paid first.")
             .Produces<IReadOnlyList<KdsQueueOrderResponse>>();
+
+        endpoints
+            .MapGet("/kds/station", GetStationAsync)
+            .RequireAuthorization(Policies.Kds)
+            .WithName("GetKdsStation")
+            .WithTags("Kds")
+            .WithSummary("Which bar this tablet is, by the name it goes by now.")
+            .Produces<KdsStationResponse>();
 
         endpoints
             .MapPost("/kds/scan", ScanAsync)
@@ -198,6 +209,9 @@ internal static class KdsEndpoints
             statusCode: conflict ? StatusCodes.Status409Conflict : StatusCodes.Status404NotFound,
             type: ProblemTypes.For(error.Code));
     }
+
+    internal static async Task<IResult> GetStationAsync(IKdsQueueQueries queue, CancellationToken cancellationToken) =>
+        TypedResults.Ok(new KdsStationResponse(await queue.GetStationNameAsync(cancellationToken)));
 
     internal static async Task<IResult> GetQueueAsync(IKdsQueueQueries queue, CancellationToken cancellationToken)
     {

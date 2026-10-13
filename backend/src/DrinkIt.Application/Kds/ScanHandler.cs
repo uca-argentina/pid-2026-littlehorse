@@ -43,7 +43,9 @@ public sealed class ScanHandler(IOrderRepository orders, TimeProvider clock, ICu
         Order? order = await orders.GetForUpdateAsync(token!, cancellationToken);
 
         if (order is null) return KdsErrors.UnknownCode;
-        if (order.KdsId != kds.Id) return KdsErrors.AtAnotherBar;
+        // Another bar's order (US-36). One with no bar yet — cash waiting at the
+        // till — is not another bar's: it is not ready, which the switch says.
+        if (order.KdsId is not null && order.KdsId != kds.Id) return KdsErrors.AtAnotherBar;
 
         ScanOutcome outcome = order.Status switch
         {

@@ -125,16 +125,18 @@ export class EditStaffUserPage {
     effect(() => {
       const role = this.person()?.role;
 
-      if (role !== undefined && this.pickedRole.value === null)
+      if (role !== undefined && this.pickedRole.value === null) {
         this.pickedRole.setValue(role as StaffRole);
+      }
     });
 
     // Once, when they first load: after that the field is the administrator's.
     effect(() => {
       const person = this.person();
 
-      if (person !== undefined && !this.displayName.dirty)
+      if (person !== undefined && !this.displayName.dirty) {
         this.displayName.setValue(person.displayName ?? '');
+      }
     });
   }
 

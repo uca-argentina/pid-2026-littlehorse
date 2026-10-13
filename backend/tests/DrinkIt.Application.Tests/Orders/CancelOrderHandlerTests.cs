@@ -72,7 +72,8 @@ public class CancelOrderHandlerTests
     public async Task HandleAsync_WhenTheOrderWasPaid_RefusesAsNotCancelable()
     {
         Order order = AnOrderWaitingForCash();
-        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", Guid.CreateVersion7());
+        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+        order.Enqueue(Guid.CreateVersion7());
         KdsOrdersInMemory orders = new(order);
 
         Result<OrderStatus> result = await new CancelOrderHandler(orders)

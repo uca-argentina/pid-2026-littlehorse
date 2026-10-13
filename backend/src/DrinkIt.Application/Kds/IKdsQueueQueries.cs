@@ -38,4 +38,11 @@ public sealed record KdsQueueOrder(
 public interface IKdsQueueQueries
 {
     Task<IReadOnlyList<KdsQueueOrder>> GetQueueAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The name of the bar this tablet is (US-36), as it goes by now: its
+    /// display name, or its username when it has none. Asked with the queue,
+    /// so a rename reaches a tablet that signed in before it.
+    /// </summary>
+    Task<string> GetStationNameAsync(CancellationToken cancellationToken);
 }

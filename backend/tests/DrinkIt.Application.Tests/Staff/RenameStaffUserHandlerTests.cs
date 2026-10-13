@@ -1,4 +1,5 @@
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Kds;
 using DrinkIt.Application.Staff;
 using DrinkIt.Domain.Staff;
 
@@ -20,7 +21,7 @@ public class RenameStaffUserHandlerTests
         StaffUser bar = ABar();
         StaffUsersInMemory staff = new(bar);
 
-        Result<StaffUserSummary> result = await new RenameStaffUserHandler(staff)
+        Result<StaffUserSummary> result = await new RenameStaffUserHandler(staff, new SpyBoards())
             .HandleAsync(new RenameStaffUserCommand(bar.Id, "Barra Pista"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -35,10 +36,47 @@ public class RenameStaffUserHandlerTests
     {
         StaffUsersInMemory staff = new(ABar());
 
-        Result<StaffUserSummary> result = await new RenameStaffUserHandler(staff)
+        Result<StaffUserSummary> result = await new RenameStaffUserHandler(staff, new SpyBoards())
             .HandleAsync(new RenameStaffUserCommand(Guid.CreateVersion7(), "Barra Pista"), CancellationToken.None);
 
         Assert.Equal(StaffUserErrors.NotFound, result.Error);
         Assert.Equal(0, staff.Saves);
+    }
+
+    // A tablet already signed in shows the new name without signing in again:
+    // its board redraws, and asks for its name with the queue.
+    [Fact]
+    public async Task HandleAsync_WhenTheAccountIsAKds_TellsItsBoard()
+    {
+        StaffUser bar = ABar();
+        SpyBoards boards = new();
+
+        await new RenameStaffUserHandler(new StaffUsersInMemory(bar), boards)
+            .HandleAsync(new RenameStaffUserCommand(bar.Id, "Barra Pista"), CancellationToken.None);
+
+        Assert.Equal((TheVenue, bar.Id), Assert.Single(boards.Notified));
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheAccountHasNoBoard_TellsNoBoard()
+    {
+        StaffUser waiter = StaffUser.Create(TheVenue, "martin.p", "hash", StaffRole.Waiter);
+        SpyBoards boards = new();
+
+        await new RenameStaffUserHandler(new StaffUsersInMemory(waiter), boards)
+            .HandleAsync(new RenameStaffUserCommand(waiter.Id, "Martín"), CancellationToken.None);
+
+        Assert.Empty(boards.Notified);
+    }
+
+    private sealed class SpyBoards : IKdsBoardNotifier
+    {
+        public List<(Guid VenueId, Guid KdsId)> Notified { get; } = [];
+
+        public Task NotifyBoardChangedAsync(Guid venueId, Guid kdsId, CancellationToken cancellationToken)
+        {
+            Notified.Add((venueId, kdsId));
+            return Task.CompletedTask;
+        }
     }
 }

@@ -208,8 +208,8 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
             OrderCode.First,
             [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 2, "sin hielo")]);
 
-        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, bar.Id);
-        order.Enqueue();
+        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+        order.Enqueue(bar.Id);
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Venues.Add(venue);

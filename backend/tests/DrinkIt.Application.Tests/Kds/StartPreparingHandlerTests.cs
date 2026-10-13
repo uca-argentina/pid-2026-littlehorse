@@ -18,8 +18,8 @@ public class StartPreparingHandlerTests
         Order order = Order.Place(TheVenue, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse(code),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
-        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, TestBars.Main);
-        order.Enqueue();
+        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+        order.Enqueue(TestBars.Main);
 
         return order;
     }

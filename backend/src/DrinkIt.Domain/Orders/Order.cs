@@ -172,17 +172,15 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// <summary>
     /// Paid from the phone, straight from the cart — the gateway is simulated,
     /// as the brief allows. Cash goes through <see cref="CollectCash"/> instead.
-    /// Paid is when it goes to a bar (US-36).
+    /// Either way, what follows is <see cref="Enqueue"/> into a bar.
     /// </summary>
-    public void Pay(DateTimeOffset at, PaymentMethod method, Guid kdsId)
+    public void Pay(DateTimeOffset at, PaymentMethod method)
     {
         EnsureItIs(OrderStatus.Cart);
-        EnsureABar(kdsId);
 
         Status = OrderStatus.Paid;
         PaidAt = at;
         Method = method;
-        KdsId = kdsId;
     }
 
     /// <summary>
@@ -201,32 +199,35 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     }
 
     /// <summary>
-    /// The till took the money (US-26): paid now, remembering who took it, and
-    /// straight to the bar — the one chosen now, not when it was confirmed
-    /// (US-36). The only way out of waiting for cash.
+    /// The till took the money (US-26): paid now, remembering who took it. The
+    /// only way out of waiting for cash; into a bar's queue next, like every
+    /// paid order, with the bar chosen now and not when it was confirmed (US-36).
     /// </summary>
-    public void CollectCash(DateTimeOffset at, string cashier, Guid kdsId)
+    public void CollectCash(DateTimeOffset at, string cashier)
     {
         if (string.IsNullOrWhiteSpace(cashier)) throw new DomainException(ErrorCodes.CollectorRequired, "Somebody has to have taken the money.");
 
         EnsureItIs(OrderStatus.AwaitingPayment);
-        EnsureABar(kdsId);
 
         Status = OrderStatus.Paid;
         PaidAt = at;
         CollectedBy = cashier;
-        KdsId = kdsId;
-        Enqueue();
         _domainEvents.Add(new OrderCollected(VenueId, TrackingToken));
     }
 
-    /// <summary>Handed to the bar. Nothing takes it from here until the KDS exists.</summary>
-    public void Enqueue()
+    /// <summary>
+    /// Into the queue of one bar (US-36): the flow every way of paying
+    /// converges on once the money is in. A queued order always has its bar.
+    /// </summary>
+    public void Enqueue(Guid kdsId)
     {
         EnsureItIs(OrderStatus.Paid);
 
+        if (kdsId == Guid.Empty) throw new DomainException(ErrorCodes.KdsRequired, "A paid order goes to a bar, whose stock it is taken from.");
+
         Status = OrderStatus.Queued;
-        _domainEvents.Add(new OrderQueued(VenueId, TrackingToken));
+        KdsId = kdsId;
+        _domainEvents.Add(new OrderQueued(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -242,7 +243,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.InPreparation;
         PreparationStartedAt = at;
-        _domainEvents.Add(new OrderPreparationStarted(VenueId, TrackingToken));
+        _domainEvents.Add(new OrderPreparationStarted(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -259,7 +260,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.Queued;
         PreparationStartedAt = null;
-        _domainEvents.Add(new OrderRequeued(VenueId, TrackingToken));
+        _domainEvents.Add(new OrderRequeued(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -276,7 +277,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.Ready;
         ReadyAt = at;
-        _domainEvents.Add(new OrderReady(VenueId, Id, TrackingToken));
+        _domainEvents.Add(new OrderReady(VenueId, KdsId, Id, TrackingToken));
     }
 
     /// <summary>Marked ready by mistake: back to the bar, as if it never was.</summary>
@@ -288,7 +289,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.InPreparation;
         ReadyAt = null;
-        _domainEvents.Add(new OrderReturnedToPreparation(VenueId, TrackingToken));
+        _domainEvents.Add(new OrderReturnedToPreparation(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -303,7 +304,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.Delivered;
         DeliveredAt = at;
-        _domainEvents.Add(new OrderDelivered(VenueId, TrackingToken));
+        _domainEvents.Add(new OrderDelivered(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -321,7 +322,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.Ready;
         DeliveredAt = null;
-        _domainEvents.Add(new OrderDeliveryUndone(VenueId, TrackingToken));
+        _domainEvents.Add(new OrderDeliveryUndone(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -357,11 +358,6 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         if (note?.Length > OrderItem.NoteMaxLength) throw new DomainException(ErrorCodes.NoteLength, $"A note cannot be longer than {OrderItem.NoteMaxLength} characters.");
 
         return new OrderItem(Guid.CreateVersion7(), item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, note);
-    }
-
-    private static void EnsureABar(Guid kdsId)
-    {
-        if (kdsId == Guid.Empty) throw new DomainException(ErrorCodes.KdsRequired, "A paid order goes to a bar, whose stock it is taken from.");
     }
 
     /// <summary>

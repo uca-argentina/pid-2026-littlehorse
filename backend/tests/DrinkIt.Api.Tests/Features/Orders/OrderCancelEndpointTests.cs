@@ -61,7 +61,8 @@ public class OrderCancelEndpointTests
     public async Task CancelAsync_WhenTheOrderWasPaid_RespondsWithConflict()
     {
         Order order = AnOrderWaitingForCash();
-        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", TheBar);
+        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+        order.Enqueue(TheBar);
 
         HttpResponseSnapshot response = await Cancel(order, order.TrackingToken.Value);
 

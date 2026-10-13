@@ -42,6 +42,10 @@ type Outcome =
   | { readonly kind: 'collectFailed' }
   /** US-36: no bar has one of its drinks any more, so it cannot be collected. */
   | { readonly kind: 'soldOut'; readonly productName: string | null }
+  /** Every attempt lost the race for a drink: the order still waits, so try again. */
+  | { readonly kind: 'stockMoved' }
+  /** The order's night is over: nothing to collect it against. */
+  | { readonly kind: 'nightOver' }
   | { readonly kind: 'cancelFailed' };
 
 /** What the customer's QR carries: the order's tracking token. Codes have a dash. */
@@ -296,6 +300,10 @@ export class CashierPage {
             // Still waiting for money, and it stays on screen: the till
             // cancels it, or the customer goes and orders something else.
             this.outcome.set({ kind: 'soldOut', productName: problemProductNameOf(error) });
+          } else if (problem === ProblemTypes.orderStockMoved) {
+            this.outcome.set({ kind: 'stockMoved' });
+          } else if (problem === ProblemTypes.cashierNightOver) {
+            this.outcome.set({ kind: 'nightOver' });
           } else if (problem === ProblemTypes.cashierAlreadyPaid) {
             this.outcome.set({ kind: 'alreadyPaid', code: order.code, paidAt: null });
           } else if (isNotFound(error)) {

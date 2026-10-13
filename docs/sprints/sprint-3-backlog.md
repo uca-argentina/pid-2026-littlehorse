@@ -224,6 +224,13 @@ una KDS.
   digital no cambia: confirma y paga en el mismo paso.
 - **Escanear en la barra equivocada** responde "se retira en otra barra" y no entrega: el
   pedido existe, sólo que es de otra KDS.
+- **Cobrar sólo dentro de la noche del pedido** (decidido el 2026-10-13). Si la noche en que se
+  confirmó ya terminó, la caja no cobra: sus barras y su stock ya no corren, y una KDS de esa
+  noche puede no estar en la de hoy. El pedido se cancela y el cliente pide de nuevo.
+- **Desplegar sin pedidos abiertos** (decidido el 2026-10-13). Los pedidos de antes de este
+  cambio no tienen barra: uno pagado no aparece en ningún tablero, y uno en efectivo no se
+  puede cobrar. Por eso este cambio se despliega con el local cerrado, sin pedidos en curso, y
+  no se escribe código para convivir con ellos.
 - **Multi-tenancy:** la KDS sale **del claim del token**, igual que el local. Nunca de la URL:
   una tablet no puede pedir la cola de otra cambiando la ruta. Necesita su test de aislamiento
   entre KDS, además del de locales.

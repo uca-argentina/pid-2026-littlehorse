@@ -56,6 +56,17 @@
           cliente que arme otro.
         </p>
       }
+      @case ('stockMoved') {
+        <p class="note note-bad" role="alert">
+          Se vendió lo último mientras cobrabas y no se cobró nada. Probá cobrar de nuevo.
+        </p>
+      }
+      @case ('nightOver') {
+        <p class="note note-bad" role="alert">
+          Ese pedido es de una noche que ya terminó. No cobres: cancelalo y que el cliente pida de
+          nuevo.
+        </p>
+      }
       @case ('collectFailed') {
         <p class="note note-bad" role="alert">
           No pudimos confirmar el cobro. Revisá la conexión y probá de nuevo: no se cobra dos veces.

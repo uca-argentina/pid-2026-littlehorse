@@ -138,6 +138,26 @@ public sealed class KdsScanOverHttpTests(SqlServerFixture sql) : IAsyncDisposabl
         Assert.Equal(OrderStatus.Ready, await StatusOf(venue, order));
     }
 
+    // US-36: the board names its bar in the header, by the name it goes by
+    // now — so a rename reaches a tablet that signed in before it.
+    [Fact]
+    public async Task Station_Always_AnswersTheNameTheBarGoesByNow()
+    {
+        Venue venue = await ASeededVenue();
+        using HttpClient tablet = ClientFor(venue, _barOf[venue.Id], StaffRole.Kds);
+
+        await using (DrinkItDbContext renaming = sql.CreateContext(venue.Id))
+        {
+            StaffUser bar = await renaming.StaffUsers.SingleAsync(user => user.Id == _barOf[venue.Id]);
+            bar.Rename("Barra Pista");
+            await renaming.SaveChangesAsync();
+        }
+
+        string station = await tablet.GetStringAsync("/kds/station");
+
+        Assert.Contains("\"name\":\"Barra Pista\"", station);
+    }
+
     private async Task<HttpResponseMessage> ScanAs(Venue venue, StaffRole role, string body)
     {
         Guid account = role == StaffRole.Kds ? _barOf[venue.Id] : Guid.CreateVersion7();
@@ -184,8 +204,8 @@ public sealed class KdsScanOverHttpTests(SqlServerFixture sql) : IAsyncDisposabl
         Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
-        order.Pay(DateTimeOffset.UtcNow.AddMinutes(-10), PaymentMethod.Digital, _barOf[venue.Id]);
-        order.Enqueue();
+        order.Pay(DateTimeOffset.UtcNow.AddMinutes(-10), PaymentMethod.Digital);
+        order.Enqueue(_barOf[venue.Id]);
         order.StartPreparing(DateTimeOffset.UtcNow);
         order.MarkReady(DateTimeOffset.UtcNow);
         order.ClearDomainEvents();

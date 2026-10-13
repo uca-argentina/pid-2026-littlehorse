@@ -243,8 +243,8 @@ public class ConfirmOrderHandlerTests
         Assert.Null(_orders.Added);
     }
 
-    // US-37: the order is taken from one bar's stock, the one with less work
-    // among those that have all of it, and it goes to that bar.
+    // US-36 and US-37: a paid order goes to the bar with less work among those
+    // that have all of it, and is taken from that bar's stock.
     [Fact]
     public async Task HandleAsync_WhenTwoBarsHaveItAll_SendsTheOrderToTheOneWithLessWork()
     {
@@ -396,26 +396,25 @@ public class ConfirmOrderHandlerTests
     }
 
     /// <summary>
-    /// How far the order gets is the strategy's call, not the handler's.
+    /// Whether the money is in is the strategy's call; what follows once it is,
+    /// is the same for every way of paying (CLAUDE.md: they converge on the
+    /// same flow after Paid).
     /// </summary>
     /// <remarks>
-    /// The three ways of paying do not end in the same place. Digital and VIP
-    /// settle there and then and the drinks go straight to the bar; cash leaves
-    /// the order waiting at the till (§6 of the functional design), and putting
-    /// it in the queue before the cashier has taken the money would send drinks
-    /// to the bar that nobody paid for. If the handler is the one that enqueues,
-    /// building the cash method means editing the handler — which is the one
-    /// thing the Strategy is here to prevent.
+    /// A new way of paying that settles on the spot is only a class that pays:
+    /// queuing it into a bar is not its business, so it cannot forget to.
+    /// Cash, which does not pay here, stays at the till (the test above).
     /// </remarks>
     [Fact]
-    public async Task HandleAsync_WhenTheStrategyDoesNotQueueTheOrder_LeavesItWhereTheStrategyPutIt()
+    public async Task HandleAsync_WhenTheStrategyPaysOnTheSpot_QueuesTheOrderIntoABar()
     {
-        ConfirmOrderHandler handler = AHandlerPaidBy(new SettlesWithoutQueueing(Tonight));
+        ConfirmOrderHandler handler = AHandlerPaidBy(new PaysOnTheSpot(Tonight));
 
         Result<ConfirmedOrder> result = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(OrderStatus.Paid, _orders.Added!.Status);
+        Assert.Equal(OrderStatus.Queued, _orders.Added!.Status);
+        Assert.NotNull(_orders.Added.KdsId);
     }
 
     private static OrderLineRequest One(Product product) => new(product.Id, 1, null);
@@ -454,15 +453,12 @@ public class ConfirmOrderHandlerTests
             _nights,
             new FixedClock(Tonight));
 
-    /// <summary>
-    /// A method that settles the money and stops, without sending the order
-    /// to the bar: proves the handler never queues on its own.
-    /// </summary>
-    private sealed class SettlesWithoutQueueing(DateTimeOffset now) : IPaymentStrategy
+    /// <summary>A method that only takes the money, as every method that pays on the spot does.</summary>
+    private sealed class PaysOnTheSpot(DateTimeOffset now) : IPaymentStrategy
     {
         public PaymentMethod Method => PaymentMethod.Digital;
 
-        public void Settle(Order order, Guid kdsId) => order.Pay(now, Method, kdsId);
+        public void Settle(Order order) => order.Pay(now, Method);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

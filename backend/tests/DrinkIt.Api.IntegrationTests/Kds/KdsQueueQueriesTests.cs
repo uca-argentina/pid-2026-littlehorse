@@ -214,8 +214,8 @@ public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Gin, "Gin Tonic", 4500m, quantity, note)]);
 
-        order.Pay(paidAt, method, bar ?? TheBar);
-        order.Enqueue();
+        order.Pay(paidAt, method);
+        order.Enqueue(bar ?? TheBar);
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Orders.Add(order);

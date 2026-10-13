@@ -61,7 +61,8 @@ public sealed class OrderCancellationTests(SqlServerFixture sql)
 
         Order collecting = (await till.GetForUpdateAsync(waiting.Code, CancellationToken.None))!;
         Order canceling = (await phone.GetForUpdateAsync(waiting.Code, CancellationToken.None))!;
-        collecting.CollectCash(DateTimeOffset.UtcNow, "laura.caja", TheBar);
+        collecting.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+        collecting.Enqueue(TheBar);
         canceling.Cancel();
 
         Assert.True((await till.SaveAsync(collecting, CancellationToken.None)).IsSuccess);

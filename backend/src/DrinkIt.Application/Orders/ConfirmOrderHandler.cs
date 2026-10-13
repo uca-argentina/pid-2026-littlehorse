@@ -72,14 +72,6 @@ public sealed class ConfirmOrderHandler(
     public static readonly Error QuantityNotPositive =
         new("order.quantity_not_positive", "Every drink in the order needs a quantity of at least one.");
 
-    /// <summary>
-    /// How many times an order will be rebuilt against a menu that moved
-    /// underneath it. A packed venue has everybody ordering the same three
-    /// drinks at once, so losing a race is ordinary and must not reach anybody:
-    /// what must reach them is running out, which is a different answer.
-    /// </summary>
-    private const int Attempts = 5;
-
     public async Task<Result<ConfirmedOrder>> HandleAsync(
         ConfirmOrderCommand command,
         CancellationToken cancellationToken)
@@ -128,18 +120,9 @@ public sealed class ConfirmOrderHandler(
         OrderCode code = await codes.NextAsync(cancellationToken);
 
         Guid[] wanted = [.. command.Lines.Select(line => line.ProductId)];
-        Result<ConfirmedOrder> outcome = OrderErrors.StockMoved;
 
-        for (int attempt = 0; attempt < Attempts; attempt++)
-        {
-            outcome = await TryToConfirm(command, wanted, night.Value, name.Value, code, payment, cancellationToken);
-
-            if (outcome.IsSuccess || outcome.Error!.Code != OrderErrors.StockMoved.Code) return outcome;
-        }
-
-        // Every attempt lost the race. Somebody is hammering the same drink and
-        // the honest answer is to look at the order again, not to keep trying.
-        return outcome;
+        return await StockRace.RunAsync(
+            () => TryToConfirm(command, wanted, night.Value, name.Value, code, payment, cancellationToken));
     }
 
     /// <summary>
@@ -181,10 +164,12 @@ public sealed class ConfirmOrderHandler(
 
         Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
 
-        // How far this goes is the payment method's call, not this handler's:
-        // digital settles and goes to that bar, cash stops at the till without
-        // one (US-36).
-        payment.Settle(order, bar.KdsId);
+        // Whether the money is in is the payment method's call: digital pays
+        // here, cash stops at the till. What follows once it is in is the same
+        // for every method (US-36): into the queue of that bar.
+        payment.Settle(order);
+
+        if (order.Status == OrderStatus.Paid) order.Enqueue(bar.KdsId);
 
         // The one write of the use case: the order and the stock it sold. It
         // can come back refused, because somebody else sold from the same

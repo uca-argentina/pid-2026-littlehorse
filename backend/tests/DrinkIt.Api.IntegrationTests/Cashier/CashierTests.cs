@@ -10,6 +10,7 @@ using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
+using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -139,6 +140,23 @@ public sealed class CashierTests(SqlServerFixture sql)
         Assert.Equal(18, (await check.Products.SingleAsync()).Stock);
     }
 
+    // The order's night is over by the time it reaches the till: nothing is
+    // collected, and no stock moves.
+    [Fact]
+    public async Task Collect_WhenTheOrdersNightIsOver_RefusesAndTakesNothing()
+    {
+        Venue venue = await ASeededVenue(barUnits: 20);
+        Order order = await AnOrderWaitingForCash(venue);
+
+        Result<OrderStatus> result = await CollectAsync(venue, order.Code.Value, at: Tonight.AddHours(5));
+
+        Assert.Equal(CashierErrors.NightOver, result.Error);
+
+        await using DrinkItDbContext check = sql.CreateContext(venue.Id);
+        Assert.Equal(OrderStatus.AwaitingPayment, (await check.Orders.SingleAsync(row => row.Id == order.Id)).Status);
+        Assert.Equal(20, (await check.BarStocks.SingleAsync()).Units);
+    }
+
     // US-36: what was there when the customer confirmed went in the meantime.
     // The till hears it before the money changes hands, and nothing moves.
     [Fact]
@@ -247,6 +265,7 @@ public sealed class CashierTests(SqlServerFixture sql)
         return await new CollectCashHandler(
                 new OrderRepository(context, spy ?? new SpyDispatcher(), NullLogger<OrderRepository>.Instance),
                 new BarsForOrdering(context),
+                new UnderwayNightLookup(context),
                 new FixedClock(at ?? Tonight),
                 new TheCashierIs(cashier))
             .HandleAsync(code, CancellationToken.None);
@@ -260,7 +279,9 @@ public sealed class CashierTests(SqlServerFixture sql)
         Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20, category.Id);
         StaffUser bar = StaffUser.Create(venue.Id, "barra.pista", "hash", StaffRole.Kds);
         StaffUser till = StaffUser.Create(venue.Id, "laura.caja", "hash", StaffRole.Cashier);
-        Night tonight = Night.Create(venue.Id, "Tonight", Tonight.AddHours(-3), Tonight.AddHours(4), [bar, till]);
+        // From well before: the shift test below collects one order thirteen
+        // hours earlier, and collecting is only within the order's night.
+        Night tonight = Night.Create(venue.Id, "Tonight", Tonight.AddHours(-14), Tonight.AddHours(4), [bar, till]);
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Venues.Add(venue);
