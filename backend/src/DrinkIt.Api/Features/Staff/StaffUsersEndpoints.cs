@@ -6,8 +6,14 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Staff;
 
-/// <summary>What the administration screen posts. The role travels as its name.</summary>
-public sealed record CreateStaffUserRequest(string Username, string Password, [property: JsonRequired] StaffRoleName Role);
+/// <summary>
+/// What the administration screen posts. The role travels as its name; the
+/// display name is optional, and a KDS shows it as its bar's.
+/// </summary>
+public sealed record CreateStaffUserRequest(string Username, string Password, [property: JsonRequired] StaffRoleName Role, string? DisplayName = null);
+
+/// <summary>What it sends to give somebody the name people read. Blank takes it away.</summary>
+public sealed record RenameStaffUserRequest(string? DisplayName);
 
 /// <summary>What the administration screen sends to correct somebody's role.</summary>
 public sealed record ChangeStaffUserRoleRequest([property: JsonRequired] StaffRoleName Role);
@@ -15,7 +21,7 @@ public sealed record ChangeStaffUserRoleRequest([property: JsonRequired] StaffRo
 /// <summary>What it sends to hand somebody a new password.</summary>
 public sealed record ResetStaffUserPasswordRequest(string Password);
 
-public sealed record StaffUserResponse(Guid Id, string Username, StaffRoleName Role, bool IsActive, AuditResponse Audit);
+public sealed record StaffUserResponse(Guid Id, string Username, string? DisplayName, StaffRoleName Role, bool IsActive, AuditResponse Audit);
 
 internal static class StaffUsersEndpoints
 {
@@ -53,6 +59,14 @@ internal static class StaffUsersEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         group
+            .MapPut("/{id:guid}/display-name", RenameAsync)
+            .WithName("RenameStaffUser")
+            .WithSummary("Gives somebody the name people read instead of their username.")
+            .Produces<StaffUserResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
             .MapPut("/{id:guid}/password", ResetPasswordAsync)
             .WithName("ResetStaffUserPassword")
             .WithSummary("Replaces a forgotten password with a new one.")
@@ -86,7 +100,7 @@ internal static class StaffUsersEndpoints
         IReadOnlyList<StaffUserListItem> everyone = await staffUsers.ListAsync(cancellationToken);
 
         return TypedResults.Ok(everyone
-            .Select(user => new StaffUserResponse(user.Id, user.Username, user.Role.ToContract(), user.IsActive, AuditResponse.Of(user.Audit)))
+            .Select(user => new StaffUserResponse(user.Id, user.Username, user.DisplayName, user.Role.ToContract(), user.IsActive, AuditResponse.Of(user.Audit)))
             .ToArray());
     }
 
@@ -96,7 +110,7 @@ internal static class StaffUsersEndpoints
         CancellationToken cancellationToken)
     {
         Result<CreatedStaffUser> result = await handler.HandleAsync(
-            new CreateStaffUserCommand(request.Username, request.Password, request.Role.ToDomain()),
+            new CreateStaffUserCommand(request.Username, request.Password, request.Role.ToDomain(), request.DisplayName),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -108,7 +122,7 @@ internal static class StaffUsersEndpoints
         // identifies.
         return TypedResults.Created(
             (string?)null,
-            new StaffUserResponse(created.Id, created.Username, created.Role.ToContract(), created.IsActive, AuditResponse.Of(created.Audit)));
+            new StaffUserResponse(created.Id, created.Username, created.DisplayName, created.Role.ToContract(), created.IsActive, AuditResponse.Of(created.Audit)));
     }
 
     internal static async Task<IResult> ChangeRoleAsync(
@@ -119,6 +133,13 @@ internal static class StaffUsersEndpoints
     {
         return Answer(await handler.HandleAsync(new ChangeStaffUserRoleCommand(id, request.Role.ToDomain()), cancellationToken));
     }
+
+    internal static async Task<IResult> RenameAsync(
+        Guid id,
+        RenameStaffUserRequest request,
+        RenameStaffUserHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(new RenameStaffUserCommand(id, request.DisplayName), cancellationToken));
 
     internal static async Task<IResult> ResetPasswordAsync(
         Guid id,
@@ -148,7 +169,7 @@ internal static class StaffUsersEndpoints
         StaffUserSummary user = result.Value;
 
         return TypedResults.Ok(
-            new StaffUserResponse(user.Id, user.Username, user.Role.ToContract(), user.IsActive, AuditResponse.Of(user.Audit)));
+            new StaffUserResponse(user.Id, user.Username, user.DisplayName, user.Role.ToContract(), user.IsActive, AuditResponse.Of(user.Audit)));
     }
 
     /// <summary>

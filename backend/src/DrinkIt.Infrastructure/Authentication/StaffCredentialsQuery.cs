@@ -22,6 +22,7 @@ internal sealed class StaffCredentialsQuery(DrinkItDbContext context) : IStaffCr
                 user.Username,
                 user.PasswordHash,
                 user.Role,
-                user.IsActive))
+                user.IsActive,
+                user.DisplayName))
             .FirstOrDefaultAsync(cancellationToken);
 }

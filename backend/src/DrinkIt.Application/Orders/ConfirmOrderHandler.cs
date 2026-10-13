@@ -163,9 +163,11 @@ public sealed class ConfirmOrderHandler(
 
         if (!items.IsSuccess) return items.Error!;
 
-        // US-37: each bar keeps a stock of its own, and the order is taken from
-        // one of them. Like the menu above, a few seconds old by the write: the
-        // conditional statement in the repository is what settles a race.
+        // US-37: each bar keeps a stock of its own, and a paid order is taken
+        // from one of them. Asked even for cash, which pays later: nobody
+        // should walk to the till for something no bar has. Like the menu
+        // above, a few seconds old by the write: the conditional statement in
+        // the repository is what settles a race.
         OrderLine[] lines = [.. command.Lines.Select(line => new OrderLine(line.ProductId, line.Quantity))];
         IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, wanted, cancellationToken);
         BarSupply? bar = BarChooser.Choose(nightsBars, lines);
@@ -177,11 +179,12 @@ public sealed class ConfirmOrderHandler(
             return OutOfStock(menu.First(product => product.Id == missing));
         }
 
-        Order order = Order.Place(currentVenue.Id, night, bar.KdsId, customerName, code, items.Value);
+        Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
 
         // How far this goes is the payment method's call, not this handler's:
-        // digital settles and queues, cash stops at the till.
-        payment.Settle(order);
+        // digital settles and goes to that bar, cash stops at the till without
+        // one (US-36).
+        payment.Settle(order, bar.KdsId);
 
         // The one write of the use case: the order and the stock it sold. It
         // can come back refused, because somebody else sold from the same

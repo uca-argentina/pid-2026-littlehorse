@@ -12,7 +12,7 @@ import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { slowLoading } from '../../../shared/loading/slow-loading';
 import { PasswordEye } from '../../../shared/password-eye/password-eye';
 import { EditStaffUserStore } from '../edit-staff-user.store';
-import { STAFF_USERS_URL } from '../staff-users.service';
+import { DISPLAY_NAME_MAX_LENGTH, STAFF_USERS_URL } from '../staff-users.service';
 import type { StaffUser } from '../staff-users.service';
 
 /** Kept in step with StaffPasswordPolicy.MinLength on the server. */
@@ -87,6 +87,11 @@ export class EditStaffUserPage {
 
   protected readonly pickedRole = new FormControl<StaffRole | null>(null);
 
+  /** US-36: what people read instead of the username. Filled with theirs once they load. */
+  protected readonly displayName = new FormControl('', { nonNullable: true });
+
+  protected readonly displayNameMaxLength = DISPLAY_NAME_MAX_LENGTH;
+
   protected readonly password = new FormControl('', { nonNullable: true });
 
   /** Dots by default, same as everywhere else a password is typed. */
@@ -123,6 +128,14 @@ export class EditStaffUserPage {
       if (role !== undefined && this.pickedRole.value === null)
         this.pickedRole.setValue(role as StaffRole);
     });
+
+    // Once, when they first load: after that the field is the administrator's.
+    effect(() => {
+      const person = this.person();
+
+      if (person !== undefined && !this.displayName.dirty)
+        this.displayName.setValue(person.displayName ?? '');
+    });
   }
 
   protected saveRole(): void {
@@ -131,6 +144,11 @@ export class EditStaffUserPage {
     if (role === null) return;
 
     this.store.changeRole(this.id(), role);
+  }
+
+  protected saveName(): void {
+    // Blank is no name, and the screens fall back to the username.
+    this.store.rename(this.id(), this.displayName.value.trim() || null);
   }
 
   protected savePassword(): void {

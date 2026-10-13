@@ -13,6 +13,7 @@ const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastMo
 const created: StaffUser = {
   id: 'id-1',
   username: 'martin.p',
+  displayName: null,
   role: 'Waiter',
   isActive: true,
   audit: noAudit,
@@ -176,9 +177,23 @@ describe('NewStaffUserPage', () => {
 
     expect(create).toHaveBeenCalledWith({
       username: 'Martin.P',
+      displayName: null,
       password: 'a long enough one',
       role: 'Waiter',
     });
+  });
+
+  // US-36: a KDS goes by its bar's name, on its board and on the customer's tracking.
+  it('sends the display name, without the spaces around it', async () => {
+    const { create } = await openScreen();
+
+    type(/usuario/i, 'barra.pista');
+    type(/nombre visible/i, '  Barra Pista ');
+    type(/contraseña/i, 'a long enough one');
+    fireEvent.click(role(/KDS/i));
+    save();
+
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ displayName: 'Barra Pista' }));
   });
 
   it('sends the role that was picked', async () => {

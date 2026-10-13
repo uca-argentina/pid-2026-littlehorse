@@ -20,4 +20,12 @@ public static class KdsErrors
     /// </summary>
     public static readonly Error UnknownCode =
         new("kds.unknown_code", "What was scanned is not one of this venue's orders.");
+
+    /// <summary>
+    /// US-36: a real order of this venue, scanned at a bar it did not go to.
+    /// Unlike the buttons, which only ever see their own bar's cards, a scan
+    /// is the customer standing at the wrong bar, and they need sending on.
+    /// </summary>
+    public static readonly Error AtAnotherBar =
+        new("kds.at_another_bar", "That order is picked up at another bar.");
 }

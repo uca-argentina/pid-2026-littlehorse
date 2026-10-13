@@ -21,6 +21,8 @@ namespace DrinkIt.Api.IntegrationTests.Kds;
 [Collection(nameof(SqlServerCollection))]
 public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
 {
+    private static readonly Guid TheBar = Guid.CreateVersion7();
+
     private static readonly Guid Gin = Guid.CreateVersion7();
 
     private static readonly DateTimeOffset PaidAt = new(2026, 9, 28, 1, 0, 0, TimeSpan.Zero);
@@ -73,7 +75,7 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
 
         await using (DrinkItDbContext context = sql.CreateContext(venue.Id))
         {
-            await new ReturnToQueueHandler(Repository(context, new SpyDispatcher()))
+            await new ReturnToQueueHandler(Repository(context, new SpyDispatcher()), new Station())
                 .HandleAsync(order.Code.Value, CancellationToken.None);
         }
 
@@ -94,7 +96,7 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
         Order order = await AQueuedOrder(venue);
 
         await AsTheStationAt(venue, Tonight, context =>
-            new StartPreparingHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+            new StartPreparingHandler(Repository(context, new SpyDispatcher()), TimeProvider.System, new Station()).HandleAsync(order.Code.Value, CancellationToken.None));
 
         Order stored = await StoredAsync(venue, order);
         Assert.Equal(Tonight, stored.LastModifiedAt);
@@ -110,9 +112,9 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
         DateTimeOffset later = Tonight.AddMinutes(4);
 
         await AsTheStationAt(venue, Tonight, context =>
-            new StartPreparingHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+            new StartPreparingHandler(Repository(context, new SpyDispatcher()), TimeProvider.System, new Station()).HandleAsync(order.Code.Value, CancellationToken.None));
         await AsTheStationAt(venue, later, context =>
-            new MarkReadyHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+            new MarkReadyHandler(Repository(context, new SpyDispatcher()), TimeProvider.System, new Station()).HandleAsync(order.Code.Value, CancellationToken.None));
 
         Order stored = await StoredAsync(venue, order);
         Assert.Equal(OrderStatus.Ready, stored.Status);
@@ -128,9 +130,9 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
         Order order = await AQueuedOrder(venue);
 
         await AsTheStationAt(venue, Tonight, context =>
-            new StartPreparingHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+            new StartPreparingHandler(Repository(context, new SpyDispatcher()), TimeProvider.System, new Station()).HandleAsync(order.Code.Value, CancellationToken.None));
         await AsTheStationAt(venue, Tonight.AddMinutes(3), context =>
-            new StartPreparingHandler(Repository(context, new SpyDispatcher())).HandleAsync(order.Code.Value, CancellationToken.None));
+            new StartPreparingHandler(Repository(context, new SpyDispatcher()), TimeProvider.System, new Station()).HandleAsync(order.Code.Value, CancellationToken.None));
 
         Assert.Equal(Tonight, (await StoredAsync(venue, order)).LastModifiedAt);
     }
@@ -144,7 +146,7 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
         await TakeAsync(theirs, order.Code.Value);
 
         Result<OrderStatus> result = await MoveAsync(mine, context =>
-            new MarkReadyHandler(Repository(context, new SpyDispatcher()))
+            new MarkReadyHandler(Repository(context, new SpyDispatcher()), TimeProvider.System, new Station())
                 .HandleAsync(order.Code.Value, CancellationToken.None));
 
         Assert.Equal(KdsErrors.OrderNotFound, result.Error);
@@ -158,12 +160,12 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
         Venue venue = await ASeededVenue();
         Order order = await AReadyOrder(venue);
 
-        await MoveAsync(venue, context => new DeliverHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight))
+        await MoveAsync(venue, context => new DeliverHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight), new Station())
             .HandleAsync(order.Code.Value, CancellationToken.None));
 
         Assert.Equal(Tonight, (await StoredAsync(venue, order)).DeliveredAt);
         await using DrinkItDbContext queue = sql.CreateContext(venue.Id);
-        Assert.Empty(await new DrinkIt.Infrastructure.Kds.KdsQueueQueries(queue).GetQueueAsync(CancellationToken.None));
+        Assert.Empty(await new DrinkIt.Infrastructure.Kds.KdsQueueQueries(queue, new Station()).GetQueueAsync(CancellationToken.None));
     }
 
     // US-20: the QR on the customer's phone carries the token, and the bar
@@ -222,7 +224,7 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
     {
         await using DrinkItDbContext context = sql.CreateContext(venue.Id);
 
-        return await new ScanHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight))
+        return await new ScanHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight), new Station())
             .HandleAsync(read, CancellationToken.None);
     }
 
@@ -242,7 +244,7 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
         }
 
         DomainException error = await Assert.ThrowsAsync<DomainException>(() => MoveAsync(venue, context =>
-            new UndoDeliveryHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight))
+            new UndoDeliveryHandler(Repository(context, new SpyDispatcher()), new FixedClock(Tonight), new Station())
                 .HandleAsync(order.Code.Value, CancellationToken.None)));
 
         Assert.Equal(Order.ErrorCodes.UndoWindowPassed, error.Code);
@@ -263,6 +265,8 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
     private sealed class Station : ICurrentStaffUser
     {
         public string? Username => "barra.demo";
+
+        public Guid? Id => TheBar;
     }
 
     private async Task<Result<OrderStatus>> MoveAsync(Venue venue, Func<DrinkItDbContext, Task<Result<OrderStatus>>> move)
@@ -276,7 +280,7 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
     {
         Order order = await AQueuedOrder(venue);
         await TakeAsync(venue, order.Code.Value);
-        await MoveAsync(venue, context => new MarkReadyHandler(Repository(context, new SpyDispatcher()))
+        await MoveAsync(venue, context => new MarkReadyHandler(Repository(context, new SpyDispatcher()), TimeProvider.System, new Station())
             .HandleAsync(order.Code.Value, CancellationToken.None));
 
         return order;
@@ -298,7 +302,7 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
     {
         await using DrinkItDbContext context = sql.CreateContext(venue.Id);
 
-        return await new StartPreparingHandler(Repository(context, spy ?? new SpyDispatcher()))
+        return await new StartPreparingHandler(Repository(context, spy ?? new SpyDispatcher()), TimeProvider.System, new Station())
             .HandleAsync(code, CancellationToken.None);
     }
 
@@ -328,13 +332,10 @@ public sealed class KdsOrderTransitionsTests(SqlServerFixture sql)
 
     private async Task<Order> AQueuedOrder(Venue venue)
     {
-        Order order = Order.Place(
-            venue.Id,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Gin, "Gin Tonic", 4500m, 1, null)]);
-        order.Pay(PaidAt, PaymentMethod.Digital);
+        order.Pay(PaidAt, PaymentMethod.Digital, TheBar);
         order.Enqueue();
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);

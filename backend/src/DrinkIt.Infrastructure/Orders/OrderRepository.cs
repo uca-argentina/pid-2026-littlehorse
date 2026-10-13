@@ -47,38 +47,10 @@ internal sealed partial class OrderRepository(
         await using IDbContextTransaction transaction =
             await context.Database.BeginTransactionAsync(cancellationToken);
 
-        (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
-
-        // The products first, then the bars, the same order a load into a bar
-        // takes them in: two writers that lock in opposite orders can each
-        // end up waiting on the other.
-        await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
-
-        foreach (OrderItem item in order.Items)
+        // Only a paid order has a bar to take from (US-36): cash waiting at
+        // the till takes nothing until it is collected.
+        if (order.KdsId is not null && !await TakeTheDrinksAsync(order, cancellationToken))
         {
-            int quantity = item.Quantity;
-
-            // Taken from what the bar the order goes to holds for its night
-            // (US-37). The venue filter applies to this too, so no order can
-            // take stock off a product or a bar that is not its venue's.
-            int sold = await context.BarStocks
-                .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == item.ProductId && stock.Units >= quantity)
-                .ExecuteUpdateAsync(
-                    row => row.SetProperty(stock => stock.Units, stock => stock.Units - quantity),
-                    cancellationToken);
-
-            if (sold == 1)
-            {
-                // The bar's units are part of the general stock: it follows.
-                await context.Products
-                    .Where(product => product.Id == item.ProductId)
-                    .ExecuteUpdateAsync(
-                        row => row.SetProperty(product => product.Stock, product => product.Stock - quantity),
-                        cancellationToken);
-
-                continue;
-            }
-
             // Somebody else got there in the seconds this order took to price.
             // Nothing is written, and the caller may try the whole thing again
             // against the menu as it is now.
@@ -150,6 +122,49 @@ internal sealed partial class OrderRepository(
     /// <see cref="AddAsync"/>: writing back a number read seconds ago would
     /// undo whatever the bar sold meanwhile.
     /// </remarks>
+    /// <summary>
+    /// The collection and the stock it takes, in one transaction (US-36). The
+    /// order is written first, as in <see cref="SaveCancellationAsync"/>, so a
+    /// collection that lost to another till is refused before a drink moves.
+    /// </summary>
+    public async Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken)
+    {
+        await using IDbContextTransaction transaction =
+            await context.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // See SaveAsync: somebody else saved it first, and theirs stands.
+            await transaction.RollbackAsync(cancellationToken);
+            Forget(order);
+            LogChangedMeanwhile(logger, order.Code.Value);
+
+            return OrderErrors.ChangedMeanwhile;
+        }
+
+        if (!await TakeTheDrinksAsync(order, cancellationToken))
+        {
+            // The bar sold them while the till was asking. Nothing stays
+            // written, and nothing stays tracked: the caller finds the order
+            // again, as it is in the database, and chooses a bar once more.
+            await transaction.RollbackAsync(cancellationToken);
+            Forget(order);
+
+            return OrderErrors.StockMoved;
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
+        // Committed by now, so the same reasoning as a new order applies.
+        await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
+
+        return order;
+    }
+
     public async Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken)
     {
         await using IDbContextTransaction transaction =
@@ -171,6 +186,16 @@ internal sealed partial class OrderRepository(
         }
 
         (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
+
+        // Cash waiting at the till took nothing (US-36), so nothing goes back.
+        // Only an order from before nights took stock without a bar.
+        if (night is not null && bar is null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
+
+            return order;
+        }
 
         // Products before bars, as everywhere else that writes both.
         await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
@@ -229,6 +254,55 @@ internal sealed partial class OrderRepository(
         await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
 
         return order;
+    }
+
+    /// <summary>
+    /// Takes every drink of the order off the bar it goes to and off the
+    /// general stock, inside the caller's transaction. False as soon as the
+    /// bar is short of one, and then the caller rolls back whatever this took.
+    /// </summary>
+    /// <remarks>
+    /// The products are locked first, then the bars, the same order a load
+    /// into a bar takes them in: two writers that lock in opposite orders can
+    /// each end up waiting on the other.
+    /// </remarks>
+    private async Task<bool> TakeTheDrinksAsync(Order order, CancellationToken cancellationToken)
+    {
+        (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
+
+        await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
+
+        foreach (OrderItem item in order.Items)
+        {
+            int quantity = item.Quantity;
+
+            // Taken from what the bar the order goes to holds for its night
+            // (US-37). The venue filter applies to this too, so no order can
+            // take stock off a product or a bar that is not its venue's.
+            int sold = await context.BarStocks
+                .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == item.ProductId && stock.Units >= quantity)
+                .ExecuteUpdateAsync(
+                    row => row.SetProperty(stock => stock.Units, stock => stock.Units - quantity),
+                    cancellationToken);
+
+            if (sold != 1) return false;
+
+            // The bar's units are part of the general stock: it follows.
+            await context.Products
+                .Where(product => product.Id == item.ProductId)
+                .ExecuteUpdateAsync(
+                    row => row.SetProperty(product => product.Stock, product => product.Stock - quantity),
+                    cancellationToken);
+        }
+
+        return true;
+    }
+
+    /// <summary>Drops a change that was not written, and what it raised with it.</summary>
+    private void Forget(Order order)
+    {
+        order.ClearDomainEvents();
+        context.ChangeTracker.Clear();
     }
 
     /// <summary>

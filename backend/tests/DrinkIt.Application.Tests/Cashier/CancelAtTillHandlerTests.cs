@@ -15,10 +15,7 @@ public class CancelAtTillHandlerTests
 
     private static Order AnOrderWaitingForCash()
     {
-        Order order = Order.Place(
-            TheVenue,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(TheVenue, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse("K-4821"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
         order.AwaitPayment(PaymentMethod.Cash);
@@ -62,7 +59,7 @@ public class CancelAtTillHandlerTests
     public async Task HandleAsync_WhenTheOrderWasAlreadyPaid_RefusesWithoutSaving()
     {
         Order order = AnOrderWaitingForCash();
-        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", Guid.CreateVersion7());
         KdsOrdersInMemory orders = new(order);
 
         Result<OrderStatus> result = await new CancelAtTillHandler(orders).HandleAsync("K-4821", CancellationToken.None);

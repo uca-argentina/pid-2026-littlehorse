@@ -38,6 +38,19 @@
   line-height: 1.45;
 }
 
+// Which bar has it (US-36): read across the room like the code above it, so
+// the bar's name carries the weight.
+.where {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 15px;
+
+  strong {
+    color: var(--dk-text);
+    font-weight: 700;
+  }
+}
+
 // What is happening right now, which is the sentence somebody opens the screen
 // to read. Louder than the rest of the prose and in the page's own voice.
 .what-now {

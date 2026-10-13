@@ -13,7 +13,7 @@ namespace DrinkIt.Api.Features.Authentication;
 /// </remarks>
 public sealed record LoginRequest(string Username, string Password);
 
-public sealed record LoginResponse(string Token, DateTimeOffset ExpiresAt, string Username, StaffRoleName Role);
+public sealed record LoginResponse(string Token, DateTimeOffset ExpiresAt, string Username, StaffRoleName Role, string? DisplayName);
 
 internal static class LoginEndpoint
 {
@@ -51,7 +51,8 @@ internal static class LoginEndpoint
             session.Token,
             session.ExpiresAt,
             session.Username,
-            session.Role.ToContract()));
+            session.Role.ToContract(),
+            session.DisplayName));
     }
 
     /// <summary>

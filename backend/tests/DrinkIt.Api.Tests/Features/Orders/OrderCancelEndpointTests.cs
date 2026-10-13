@@ -16,6 +16,8 @@ namespace DrinkIt.Api.Tests.Features.Orders;
 /// </summary>
 public class OrderCancelEndpointTests
 {
+    private static readonly Guid TheBar = Guid.CreateVersion7();
+
     [Fact]
     public async Task CancelAsync_WhenTheOrderAwaitsPayment_RespondsWithNoContent()
     {
@@ -59,7 +61,7 @@ public class OrderCancelEndpointTests
     public async Task CancelAsync_WhenTheOrderWasPaid_RespondsWithConflict()
     {
         Order order = AnOrderWaitingForCash();
-        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", TheBar);
 
         HttpResponseSnapshot response = await Cancel(order, order.TrackingToken.Value);
 
@@ -69,10 +71,7 @@ public class OrderCancelEndpointTests
 
     private static Order AnOrderWaitingForCash()
     {
-        Order order = Order.Place(
-            Guid.CreateVersion7(),
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(Guid.CreateVersion7(), Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse("K-4821"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
         order.AwaitPayment(PaymentMethod.Cash);
@@ -105,6 +104,9 @@ public class OrderCancelEndpointTests
 
             public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
                 Task.FromResult<Result<Order>>(order);
+
+            public Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Canceling saves through SaveCancellationAsync.");
 
             public Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("Canceling saves through SaveCancellationAsync.");

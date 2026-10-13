@@ -17,7 +17,11 @@ public sealed class StaffUser : AuditStamps, IBelongsToVenue
         public const string UsernameWhitespace = "staff.username_whitespace";
         public const string PasswordHashRequired = "staff.password_hash_required";
         public const string RoleInvalid = "staff.role_invalid";
+        public const string DisplayNameLength = "staff.display_name_length";
     }
+
+    /// <summary>Short enough for the board's header and the customer's "Retiralo en…" line.</summary>
+    public const int DisplayNameMaxLength = 40;
 
     private const int UsernameMinLength = 3;
     private const int UsernameMaxLength = 50;
@@ -39,6 +43,13 @@ public sealed class StaffUser : AuditStamps, IBelongsToVenue
 
     public string Username { get; private set; }
 
+    /// <summary>
+    /// What people read instead of the username (US-36): a KDS is "Barra
+    /// Pista" to the customer sent to pick up there. Null when nobody gave
+    /// one, and then the screens show the username.
+    /// </summary>
+    public string? DisplayName { get; private set; }
+
     public string PasswordHash { get; private set; }
 
     public StaffRole Role { get; private set; }
@@ -46,7 +57,7 @@ public sealed class StaffUser : AuditStamps, IBelongsToVenue
     /// <summary>False after the ABM's soft delete. Rows are never removed.</summary>
     public bool IsActive { get; private set; }
 
-    public static StaffUser Create(Guid venueId, string username, string passwordHash, StaffRole role)
+    public static StaffUser Create(Guid venueId, string username, string passwordHash, StaffRole role, string? displayName = null)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Staff users must belong to a venue.");
         if (string.IsNullOrWhiteSpace(username)) throw new DomainException(ErrorCodes.UsernameRequired, "Username is required.");
@@ -58,7 +69,10 @@ public sealed class StaffUser : AuditStamps, IBelongsToVenue
         if (string.IsNullOrWhiteSpace(passwordHash)) throw new DomainException(ErrorCodes.PasswordHashRequired, "Password hash is required.");
         if (!Enum.IsDefined(role)) throw new DomainException(ErrorCodes.RoleInvalid, $"'{role}' is not a valid staff role.");
 
-        return new StaffUser(Guid.CreateVersion7(), venueId, cleanUsername, passwordHash, role);
+        StaffUser user = new(Guid.CreateVersion7(), venueId, cleanUsername, passwordHash, role);
+        user.Rename(displayName);
+
+        return user;
     }
 
     /// <summary>
@@ -95,6 +109,16 @@ public sealed class StaffUser : AuditStamps, IBelongsToVenue
         if (string.IsNullOrWhiteSpace(passwordHash)) throw new DomainException(ErrorCodes.PasswordHashRequired, "Password hash is required.");
 
         PasswordHash = passwordHash;
+    }
+
+    /// <summary>Gives the account the name people read, or takes it away with a blank one.</summary>
+    public void Rename(string? displayName)
+    {
+        string? cleanName = string.IsNullOrWhiteSpace(displayName) ? null : displayName.Trim();
+
+        if (cleanName?.Length > DisplayNameMaxLength) throw new DomainException(ErrorCodes.DisplayNameLength, $"The name cannot be longer than {DisplayNameMaxLength} characters.");
+
+        DisplayName = cleanName;
     }
 
     public void Deactivate() => IsActive = false;

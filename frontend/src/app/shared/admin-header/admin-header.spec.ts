@@ -29,6 +29,7 @@ async function openHeader() {
     token: 'un-token',
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
     username: 'euge',
+    displayName: null,
     role: 'Administrator',
   });
   await rendered.fixture.whenStable();

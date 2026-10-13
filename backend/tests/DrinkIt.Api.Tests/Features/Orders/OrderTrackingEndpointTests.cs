@@ -24,6 +24,7 @@ public class OrderTrackingEndpointTests
         OrderStatus.Queued,
         9000m,
         new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero),
+        "Barra Pista",
         [new TrackedOrderItem("Gin Tonic", 2, "sin hielo")]);
 
     // Pins the shape: the Angular client is generated from it, and this is
@@ -39,6 +40,7 @@ public class OrderTrackingEndpointTests
         Assert.Equal("María Quadro", response.Text("customerName"));
         Assert.Equal(9000m, response.Body.GetProperty("total").GetDecimal());
         Assert.Equal("Gin Tonic", response.Body.GetProperty("items")[0].GetProperty("productName").GetString());
+        Assert.Equal("Barra Pista", response.Text("barName"));
     }
 
     /// <summary>

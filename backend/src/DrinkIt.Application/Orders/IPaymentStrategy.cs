@@ -22,7 +22,13 @@ public interface IPaymentStrategy
 {
     PaymentMethod Method { get; }
 
-    void Settle(Order order);
+    /// <summary>
+    /// <paramref name="kdsId"/> is the bar the order goes to if this method
+    /// pays it now (US-36): the KDS with the least work among those holding
+    /// all of it. A method that does not pay on the spot leaves it unused, and
+    /// the bar is chosen again when the money is in.
+    /// </summary>
+    void Settle(Order order, Guid kdsId);
 }
 
 /// <summary>
@@ -40,9 +46,9 @@ public sealed class DigitalPaymentStrategy(TimeProvider clock) : IPaymentStrateg
     /// The money is settled on the spot, so the drinks go straight to the bar:
     /// there is nothing left for anybody to do before they are made.
     /// </summary>
-    public void Settle(Order order)
+    public void Settle(Order order, Guid kdsId)
     {
-        order.Pay(clock.GetUtcNow(), Method);
+        order.Pay(clock.GetUtcNow(), Method, kdsId);
         order.Enqueue();
     }
 }
@@ -50,11 +56,12 @@ public sealed class DigitalPaymentStrategy(TimeProvider clock) : IPaymentStrateg
 /// <summary>
 /// Cash at the till (§6, US-24). Nothing is settled here: the order waits
 /// with its code until a cashier takes the money (US-26), and only then does it
-/// reach the bar.
+/// reach the bar — whichever has the least work at that moment (US-36), so the
+/// bar offered here is not taken.
 /// </summary>
 public sealed class CashPaymentStrategy : IPaymentStrategy
 {
     public PaymentMethod Method => PaymentMethod.Cash;
 
-    public void Settle(Order order) => order.AwaitPayment(Method);
+    public void Settle(Order order, Guid kdsId) => order.AwaitPayment(Method);
 }

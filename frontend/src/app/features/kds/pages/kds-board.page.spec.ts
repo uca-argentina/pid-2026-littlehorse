@@ -59,6 +59,7 @@ function signedInAsTheStation(): void {
       token: 'un-token',
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
       username: 'barra.demo',
+      displayName: null,
       role: 'Kds',
     }),
   );
@@ -338,6 +339,7 @@ describe('KdsBoardPage', () => {
       token: 'un-token',
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
       username: 'barra-principal',
+      displayName: null,
       role: 'Kds',
     });
     await rendered.fixture.whenStable();
@@ -345,6 +347,22 @@ describe('KdsBoardPage', () => {
     const header = screen.getByRole('banner');
     expect(header.textContent).toContain('bar-alfa');
     expect(header.textContent).toContain('barra-principal');
+  });
+
+  // US-36: with more than one bar, the header says which one this tablet is.
+  it('shows the name of its bar in the header when the account has one', async () => {
+    const { rendered } = await openScreenShowing([]);
+
+    rendered.fixture.debugElement.injector.get(SessionStorage).remember({
+      token: 'un-token',
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      username: 'barra-principal',
+      displayName: 'Barra Pista',
+      role: 'Kds',
+    });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('banner').textContent).toContain('Barra Pista');
   });
 
   // US-15: this is the whole point of SignalR — a new order shows up without

@@ -25,6 +25,21 @@ public class CreateStaffUserHandlerTests
         Assert.Equal(StaffRole.Waiter, staff.Added.Role);
     }
 
+    // US-36: a KDS gets the bar's name when it is created, so the board and
+    // the customer read it from the first night.
+    [Fact]
+    public async Task HandleAsync_WhenANameIsGiven_KeepsIt()
+    {
+        StaffUsersInMemory staff = new();
+
+        Result<CreatedStaffUser> result = await HandlerOver(staff).HandleAsync(
+            new CreateStaffUserCommand("barra.pista", "a long enough password", StaffRole.Kds, "Barra Pista"),
+            CancellationToken.None);
+
+        Assert.Equal("Barra Pista", staff.Added!.DisplayName);
+        Assert.Equal("Barra Pista", result.Value.DisplayName);
+    }
+
     // "Puede iniciar sesión enseguida": login rejects an inactive user, so a new
     // one that did not start active would be created and unusable.
     [Fact]

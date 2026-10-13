@@ -80,10 +80,15 @@ export class KdsBoardPage {
   private readonly router = inject(Router);
 
   /**
-   * The station's own account stands in for "Barra principal" until there is
-   * a BarStation to name: the account is the station's, not a person's.
+   * Which bar this tablet is (US-36): the name the account goes by, or its
+   * username when nobody gave it one. A session saved before names existed
+   * has no such field at all, hence the fallback on undefined too.
    */
-  protected readonly station = computed(() => this.sessions.session()?.username ?? '');
+  protected readonly station = computed(() => {
+    const session = this.sessions.session();
+
+    return session?.displayName ?? session?.username ?? '';
+  });
 
   /**
    * The Resource API rather than a subscription: loading, error and value

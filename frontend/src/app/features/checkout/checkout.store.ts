@@ -6,6 +6,7 @@ import { forkJoin, timer } from 'rxjs';
 import { Cart } from '../../core/cart/cart';
 import { BrowserStore } from '../../core/storage/browser-store';
 import { ProblemTypes } from '../../core/api/problem-types';
+import { problemProductNameOf } from '../../core/api/problem-product-name-of';
 import { problemTypeOf } from '../../core/api/problem-type-of';
 import { CheckoutService } from './checkout.service';
 import type { ConfirmedOrder, PaymentMethod } from './checkout.service';
@@ -183,16 +184,7 @@ export interface Refusal {
   readonly productName: string | null;
 }
 
-/**
- * The problem's type, and the drink it names when the menu moved underneath.
- * Never its detail: that sentence is the API's, in English, for developers.
- */
+/** The problem's type, and the drink it names when the menu moved underneath. */
 function refusalOf(error: HttpErrorResponse, type: string | undefined): Refusal {
-  const body: unknown = error.error;
-  const productName =
-    typeof body === 'object' && body !== null && 'productName' in body
-      ? String((body as { productName: unknown }).productName)
-      : null;
-
-  return { type, productName };
+  return { type, productName: problemProductNameOf(error) };
 }

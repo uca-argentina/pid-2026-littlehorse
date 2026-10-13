@@ -117,6 +117,23 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         Assert.Equal(17, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
     }
 
+    // US-36: cash goes to no bar until the till collects it, and takes nothing
+    // off any bar or the general stock while it waits.
+    [Fact]
+    public async Task ConfirmOrder_WhenPaidInCash_StoresTheOrderWithoutABarOrAnyStockMoved()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20);
+
+        await Confirm(venue, [new OrderLineRequest(gin.Id, 3, null)], method: PaymentMethod.Cash);
+
+        await using DrinkItDbContext check = sql.CreateContext(venue.Id);
+        Order stored = await check.Orders.SingleAsync();
+        Assert.Equal(OrderStatus.AwaitingPayment, stored.Status);
+        Assert.Null(stored.KdsId);
+        Assert.Equal(20, (await check.BarStocks.SingleAsync()).Units);
+        Assert.Equal(20, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+    }
+
     // Criterion 6 against a real database: the same key twice is one order and
     // one stock movement, whatever the network did in between.
     [Fact]
@@ -321,6 +338,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         OrderLineRequest[] lines,
         string key = "a-key",
         string name = "María Quadro",
+        PaymentMethod method = PaymentMethod.Digital,
         IDomainEventDispatcher? dispatcher = null,
         ILogger<OrderRepository>? logger = null,
         CancellationToken cancellationToken = default)
@@ -336,13 +354,13 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
             new ProductsForOrdering(context),
             new BarsForOrdering(context),
             new OrderCodeSequence(context, current),
-            [new DigitalPaymentStrategy(new FixedClock(Tonight))],
+            [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
             current,
             new UnderwayNightLookup(context),
             new FixedClock(Tonight));
 
         return await handler.HandleAsync(
-            new ConfirmOrderCommand(name, PaymentMethod.Digital, key, lines),
+            new ConfirmOrderCommand(name, method, key, lines),
             cancellationToken);
     }
 

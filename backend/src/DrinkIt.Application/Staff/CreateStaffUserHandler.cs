@@ -4,10 +4,10 @@ using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Application.Staff;
 
-public sealed record CreateStaffUserCommand(string Username, string Password, StaffRole Role);
+public sealed record CreateStaffUserCommand(string Username, string Password, StaffRole Role, string? DisplayName = null);
 
 /// <summary>The new user as the listing shows it. No password travels back, hashed or not.</summary>
-public sealed record CreatedStaffUser(Guid Id, string Username, StaffRole Role, bool IsActive, AuditInfo Audit);
+public sealed record CreatedStaffUser(Guid Id, string Username, string? DisplayName, StaffRole Role, bool IsActive, AuditInfo Audit);
 
 /// <summary>
 /// Adds someone to the venue the signed-in administrator belongs to. The venue
@@ -41,10 +41,11 @@ public sealed class CreateStaffUserHandler(
             currentVenue.Id,
             username,
             passwordHasher.Hash(command.Password!),
-            command.Role);
+            command.Role,
+            command.DisplayName);
 
         await staffUsers.AddAsync(user, cancellationToken);
 
-        return new CreatedStaffUser(user.Id, user.Username, user.Role, user.IsActive, AuditInfo.Of(user));
+        return new CreatedStaffUser(user.Id, user.Username, user.DisplayName, user.Role, user.IsActive, AuditInfo.Of(user));
     }
 }

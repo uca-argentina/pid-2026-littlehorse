@@ -518,6 +518,28 @@ describe('CashierPage', () => {
     expect(screen.getByRole('alert').textContent).toMatch(/ya está pago/i);
   });
 
+  // US-36: cash takes its drinks when collected, and by then none was left.
+  // Nothing was charged; the order stays on screen so the till can cancel it.
+  it('says which drink ran out when collecting is refused for it, and keeps the order', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    collectButton().click();
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(collectUrl('K-4821'))
+      .flush(
+        { type: ProblemTypes.cashierSoldOut, productName: 'Gin Tonic' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/no queda gin tonic/i);
+    expect(screen.getByRole('alert').textContent).toMatch(/no cobres/i);
+    expect(collectButton()).not.toBeNull();
+  });
+
   it('does not collect twice on a double tap', async () => {
     const { rendered, http } = await openTheTill([anOrder()]);
 

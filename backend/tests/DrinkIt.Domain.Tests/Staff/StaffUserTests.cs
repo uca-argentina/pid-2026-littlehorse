@@ -159,4 +159,55 @@ public class StaffUserTests
 
         Assert.True(user.IsActive);
     }
+
+    // US-36: "Retiralo en Barra Pista". The customer reads the bar's name,
+    // not the username the tablet signs in with.
+    [Fact]
+    public void Rename_WhenTheNameIsGiven_KeepsItTrimmed()
+    {
+        StaffUser user = AnAdministrator();
+
+        user.Rename("  Barra Pista ");
+
+        Assert.Equal("Barra Pista", user.DisplayName);
+    }
+
+    // No name is a valid answer: the screens fall back to the username.
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Rename_WhenTheNameIsBlank_LeavesItWithoutOne(string? name)
+    {
+        StaffUser user = AnAdministrator();
+        user.Rename("Barra Pista");
+
+        user.Rename(name);
+
+        Assert.Null(user.DisplayName);
+    }
+
+    [Fact]
+    public void Rename_WhenTheNameIsLongerThanAHeaderFits_ThrowsDisplayNameLength()
+    {
+        StaffUser user = AnAdministrator();
+
+        DomainException error = Assert.Throws<DomainException>(() => user.Rename(new string('a', StaffUser.DisplayNameMaxLength + 1)));
+
+        Assert.Equal(StaffUser.ErrorCodes.DisplayNameLength, error.Code);
+    }
+
+    [Fact]
+    public void Create_WhenANameIsGiven_KeepsIt()
+    {
+        StaffUser user = StaffUser.Create(AVenue, "barra.pista", "hash", StaffRole.Kds, " Barra Pista ");
+
+        Assert.Equal("Barra Pista", user.DisplayName);
+    }
+
+    [Fact]
+    public void Create_WhenNoNameIsGiven_HasNone()
+    {
+        Assert.Null(AnAdministrator().DisplayName);
+    }
 }

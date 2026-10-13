@@ -49,12 +49,11 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// parameter, so a constructor that asked for them would make the aggregate
     /// unloadable.
     /// </summary>
-    private Order(Guid id, Guid venueId, Guid? nightId, Guid? kdsId, string customerName, OrderCode code, TrackingToken trackingToken)
+    private Order(Guid id, Guid venueId, Guid? nightId, string customerName, OrderCode code, TrackingToken trackingToken)
     {
         Id = id;
         VenueId = venueId;
         NightId = nightId;
-        KdsId = kdsId;
         CustomerName = customerName;
         Code = code;
         TrackingToken = trackingToken;
@@ -73,11 +72,12 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     public Guid? NightId { get; }
 
     /// <summary>
-    /// The bar it goes to (US-37): the KDS whose stock it was taken from,
-    /// chosen when it was confirmed. Null only on orders from before bars kept
+    /// The bar it goes to (US-36): the KDS whose stock it is taken from (US-37),
+    /// chosen when it is paid. Null while nobody has paid — a cash order
+    /// waiting at the till holds no bar — and on orders from before bars kept
     /// a stock of their own, for the same reason as <see cref="NightId"/>.
     /// </summary>
-    public Guid? KdsId { get; }
+    public Guid? KdsId { get; private set; }
 
     /// <summary>Who the bar calls for it.</summary>
     public string CustomerName { get; }
@@ -104,6 +104,15 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// spends settling the order.
     /// </summary>
     public PaymentMethod? Method { get; private set; }
+
+    /// <summary>
+    /// When the bar took it (US-36, for the metrics of US-47), or null while
+    /// nobody is preparing it. Handing it back forgets it.
+    /// </summary>
+    public DateTimeOffset? PreparationStartedAt { get; private set; }
+
+    /// <summary>When the drink was made, or null while it is not. Undoing it forgets it.</summary>
+    public DateTimeOffset? ReadyAt { get; private set; }
 
     /// <summary>When it was handed over, or null while nobody has picked it up.</summary>
     public DateTimeOffset? DeliveredAt { get; private set; }
@@ -139,14 +148,12 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     public static Order Place(
         Guid venueId,
         Guid nightId,
-        Guid kdsId,
         string customerName,
         OrderCode code,
         IReadOnlyCollection<NewOrderItem> items)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Orders must belong to a venue.");
         if (nightId == Guid.Empty) throw new DomainException(ErrorCodes.NightRequired, "Orders are placed during a night of the venue.");
-        if (kdsId == Guid.Empty) throw new DomainException(ErrorCodes.KdsRequired, "Orders go to a bar, whose stock they are taken from.");
         if (string.IsNullOrWhiteSpace(customerName)) throw new DomainException(ErrorCodes.NameRequired, "The order needs a name to be called for.");
 
         string cleanName = customerName.Trim();
@@ -155,7 +162,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         if (items.Count == 0) throw new DomainException(ErrorCodes.Empty, "An order with nothing in it cannot be placed.");
         if (items.Select(item => item.ProductId).Distinct().Count() != items.Count) throw new DomainException(ErrorCodes.DuplicateItem, "Each drink goes on one line, with a quantity beside it.");
 
-        Order order = new(Guid.CreateVersion7(), venueId, nightId, kdsId, cleanName, code, TrackingToken.New());
+        Order order = new(Guid.CreateVersion7(), venueId, nightId, cleanName, code, TrackingToken.New());
 
         order._items.AddRange(items.Select(ToItem));
 
@@ -165,14 +172,17 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// <summary>
     /// Paid from the phone, straight from the cart — the gateway is simulated,
     /// as the brief allows. Cash goes through <see cref="CollectCash"/> instead.
+    /// Paid is when it goes to a bar (US-36).
     /// </summary>
-    public void Pay(DateTimeOffset at, PaymentMethod method)
+    public void Pay(DateTimeOffset at, PaymentMethod method, Guid kdsId)
     {
         EnsureItIs(OrderStatus.Cart);
+        EnsureABar(kdsId);
 
         Status = OrderStatus.Paid;
         PaidAt = at;
         Method = method;
+        KdsId = kdsId;
     }
 
     /// <summary>
@@ -192,17 +202,20 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
     /// <summary>
     /// The till took the money (US-26): paid now, remembering who took it, and
-    /// straight to the bar. The only way out of waiting for cash.
+    /// straight to the bar — the one chosen now, not when it was confirmed
+    /// (US-36). The only way out of waiting for cash.
     /// </summary>
-    public void CollectCash(DateTimeOffset at, string cashier)
+    public void CollectCash(DateTimeOffset at, string cashier, Guid kdsId)
     {
         if (string.IsNullOrWhiteSpace(cashier)) throw new DomainException(ErrorCodes.CollectorRequired, "Somebody has to have taken the money.");
 
         EnsureItIs(OrderStatus.AwaitingPayment);
+        EnsureABar(kdsId);
 
         Status = OrderStatus.Paid;
         PaidAt = at;
         CollectedBy = cashier;
+        KdsId = kdsId;
         Enqueue();
         _domainEvents.Add(new OrderCollected(VenueId, TrackingToken));
     }
@@ -221,13 +234,14 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// comes out. Asking again for what already happened changes nothing: a
     /// double tap, or a retry over a bad signal, is not a second order taken.
     /// </summary>
-    public void StartPreparing()
+    public void StartPreparing(DateTimeOffset at)
     {
         if (Status == OrderStatus.InPreparation) return;
 
         EnsureItIs(OrderStatus.Queued);
 
         Status = OrderStatus.InPreparation;
+        PreparationStartedAt = at;
         _domainEvents.Add(new OrderPreparationStarted(VenueId, TrackingToken));
     }
 
@@ -244,6 +258,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.InPreparation);
 
         Status = OrderStatus.Queued;
+        PreparationStartedAt = null;
         _domainEvents.Add(new OrderRequeued(VenueId, TrackingToken));
     }
 
@@ -253,13 +268,14 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// nothing, so nothing is saved and the board's clock — the audit stamp of
     /// the last change — keeps counting from when it really became ready.
     /// </summary>
-    public void MarkReady()
+    public void MarkReady(DateTimeOffset at)
     {
         if (Status == OrderStatus.Ready) return;
 
         EnsureItIs(OrderStatus.InPreparation);
 
         Status = OrderStatus.Ready;
+        ReadyAt = at;
         _domainEvents.Add(new OrderReady(VenueId, Id, TrackingToken));
     }
 
@@ -271,6 +287,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.Ready);
 
         Status = OrderStatus.InPreparation;
+        ReadyAt = null;
         _domainEvents.Add(new OrderReturnedToPreparation(VenueId, TrackingToken));
     }
 
@@ -340,6 +357,11 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         if (note?.Length > OrderItem.NoteMaxLength) throw new DomainException(ErrorCodes.NoteLength, $"A note cannot be longer than {OrderItem.NoteMaxLength} characters.");
 
         return new OrderItem(Guid.CreateVersion7(), item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, note);
+    }
+
+    private static void EnsureABar(Guid kdsId)
+    {
+        if (kdsId == Guid.Empty) throw new DomainException(ErrorCodes.KdsRequired, "A paid order goes to a bar, whose stock it is taken from.");
     }
 
     /// <summary>

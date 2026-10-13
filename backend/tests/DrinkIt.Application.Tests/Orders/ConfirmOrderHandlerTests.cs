@@ -374,6 +374,27 @@ public class ConfirmOrderHandlerTests
         Assert.IsType<OrderAwaitingPayment>(Assert.Single(_orders.Added.DomainEvents));
     }
 
+    // US-36: the bar is chosen when the money is in. Cash has not paid yet, so
+    // it holds no bar and takes no stock until the till collects it.
+    [Fact]
+    public async Task HandleAsync_WhenPaidInCash_GoesToNoBarYet()
+    {
+        await AHandler().HandleAsync(ATwoGinOrder(method: PaymentMethod.Cash), CancellationToken.None);
+
+        Assert.Null(_orders.Added!.KdsId);
+    }
+
+    // Still checked, so nobody walks to the till for a drink no bar has.
+    [Fact]
+    public async Task HandleAsync_WhenPaidInCashAndNoBarHasItAll_RejectsAndNamesTheDrink()
+    {
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, bars: new Bars())
+            .HandleAsync(ATwoGinOrder(method: PaymentMethod.Cash), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Null(_orders.Added);
+    }
+
     /// <summary>
     /// How far the order gets is the strategy's call, not the handler's.
     /// </summary>
@@ -441,7 +462,7 @@ public class ConfirmOrderHandlerTests
     {
         public PaymentMethod Method => PaymentMethod.Digital;
 
-        public void Settle(Order order) => order.Pay(now, Method);
+        public void Settle(Order order, Guid kdsId) => order.Pay(now, Method, kdsId);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
@@ -549,6 +570,9 @@ public class ConfirmOrderHandlerTests
             throw new NotSupportedException("Confirming saves through AddAsync.");
 
         public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("Confirming saves through AddAsync.");
+
+        public Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken) =>
             throw new NotSupportedException("Confirming saves through AddAsync.");
     }
 

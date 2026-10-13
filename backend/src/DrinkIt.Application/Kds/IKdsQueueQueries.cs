@@ -25,14 +25,15 @@ public sealed record KdsQueueOrder(
     IReadOnlyList<KdsQueueOrderItem> OrderItems);
 
 /// <summary>
-/// The bar's queue: every order still on its way, oldest paid first (US-15).
+/// The bar's queue: every order still on its way to this bar, oldest paid
+/// first (US-15). Another bar's orders are not on it (US-36).
 /// </summary>
 /// <remarks>
 /// A query and not a repository, per CLAUDE.md: nothing here changes anything,
-/// so it goes straight to EF Core with a projection. It takes no venue — the
-/// station's own token resolved one before this ran, and the global query
-/// filter is what actually scopes it; a parameter here would be a second way
-/// to ask for somebody else's queue that the filter did not close off.
+/// so it goes straight to EF Core with a projection. It takes no venue and no
+/// bar — the station's own token resolved both before this ran; a parameter
+/// here would be a second way to ask for somebody else's queue that the token
+/// did not close off.
 /// </remarks>
 public interface IKdsQueueQueries
 {

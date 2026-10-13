@@ -8,6 +8,7 @@ import type { StaffRole } from '../../../core/staff/staff-roles';
 import { PasswordEye } from '../../../shared/password-eye/password-eye';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { NewStaffUserStore } from '../new-staff-user.store';
+import { DISPLAY_NAME_MAX_LENGTH } from '../staff-users.service';
 
 /** Kept in step with StaffPasswordPolicy.MinLength on the server. */
 const PASSWORD_MIN_LENGTH = 8;
@@ -47,11 +48,16 @@ export class NewStaffUserPage {
 
   protected readonly roles = STAFF_ROLE_DESCRIPTIONS;
 
+  protected readonly displayNameMaxLength = DISPLAY_NAME_MAX_LENGTH;
+
   protected readonly form = new FormGroup({
     username: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, trimmedMinLength(USERNAME_MIN_LENGTH)],
     }),
+    // Optional (US-36): what people read instead of the username. A KDS goes
+    // by its bar's name, on its board and on the customer's tracking.
+    displayName: new FormControl('', { nonNullable: true }),
     password: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required, trimmedMinLength(PASSWORD_MIN_LENGTH)],
@@ -131,12 +137,18 @@ export class NewStaffUserPage {
 
     if (this.form.invalid || this.store.isSending()) return;
 
-    const { username, password, role } = this.form.getRawValue();
+    const { username, displayName, password, role } = this.form.getRawValue();
 
     // Validators.required already rejected a null role above; this is only
     // what the compiler needs to see.
     if (role === null) return;
 
-    this.store.submit(this.venueSlug(), { username: username.trim(), password, role });
+    this.store.submit(this.venueSlug(), {
+      username: username.trim(),
+      // Blank is no name, and the screens fall back to the username.
+      displayName: displayName.trim() || null,
+      password,
+      role,
+    });
   }
 }

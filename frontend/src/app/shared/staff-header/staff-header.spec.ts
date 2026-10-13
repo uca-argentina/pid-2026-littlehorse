@@ -20,6 +20,7 @@ async function openTheTillsHeader() {
     token: 'un-token',
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
     username: 'laura.caja',
+    displayName: null,
     role: 'Cashier',
   });
   await rendered.fixture.whenStable();

@@ -1,5 +1,6 @@
 using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Orders;
 using DrinkIt.Application.Tests.Kds;
 using DrinkIt.Domain.Orders;
 
@@ -15,21 +16,27 @@ public class CollectCashHandlerTests
 
     private static readonly DateTimeOffset Tonight = new(2026, 9, 28, 1, 12, 0, TimeSpan.Zero);
 
-    private static Order AnOrderWaitingForCash(string code = "K-4821")
+    private static readonly Guid TheNight = Guid.CreateVersion7();
+
+    private static readonly Guid GinTonic = Guid.CreateVersion7();
+
+    private static readonly BarSupply MainBar = new(Guid.CreateVersion7(), 0, new Dictionary<Guid, int> { [GinTonic] = 10 });
+
+    private static Order AnOrderWaitingForCash(string code = "K-4821", int gins = 1)
     {
         Order order = Order.Place(
             TheVenue,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
+            TheNight,
             "María Quadro",
             OrderCode.Parse(code),
-            [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
+            [new NewOrderItem(GinTonic, "Gin Tonic", 4500m, gins, null)]);
         order.AwaitPayment(PaymentMethod.Cash);
 
         return order;
     }
 
-    private static CollectCashHandler AHandlerOver(KdsOrdersInMemory orders) =>
-        new(orders, new FixedClock(Tonight), new TheCashierIs("laura.caja"));
+    private static CollectCashHandler AHandlerOver(KdsOrdersInMemory orders, IBarsForOrdering? bars = null) =>
+        new(orders, bars ?? new Bars(MainBar), new FixedClock(Tonight), new TheCashierIs("laura.caja"));
 
     // Criterion 2: paid now, not when the customer confirmed on the phone —
     // the bar counts its age from here — and straight into the bar's queue.
@@ -45,7 +52,54 @@ public class CollectCashHandlerTests
         Assert.Equal(OrderStatus.Queued, order.Status);
         Assert.Equal(Tonight, order.PaidAt);
         Assert.Equal("laura.caja", order.CollectedBy);
-        Assert.Equal(1, orders.Saves);
+        Assert.Equal(1, orders.Collections);
+    }
+
+    // US-36: the bar is chosen now, when the money is in, and not when the
+    // customer confirmed: the work each bar has changed in between.
+    [Fact]
+    public async Task HandleAsync_WhenTwoBarsHaveItAll_SendsItToTheOneWithLessWork()
+    {
+        Order order = AnOrderWaitingForCash();
+        BarSupply busy = new(Guid.CreateVersion7(), 4, new Dictionary<Guid, int> { [GinTonic] = 10 });
+        BarSupply quiet = new(Guid.CreateVersion7(), 1, new Dictionary<Guid, int> { [GinTonic] = 10 });
+        Bars bars = new(busy, quiet);
+
+        await AHandlerOver(new KdsOrdersInMemory(order), bars).HandleAsync("K-4821", CancellationToken.None);
+
+        Assert.Equal(quiet.KdsId, order.KdsId);
+        Assert.Equal(TheNight, bars.AskedFor);
+    }
+
+    // US-36: cash takes no stock until it is collected, so what was there at
+    // confirmation may be gone. The till hears it before taking the money,
+    // and the order keeps waiting, so the customer can change it or cancel.
+    [Fact]
+    public async Task HandleAsync_WhenNoBarHasItAll_RefusesWithoutCollectingAndNamesTheDrink()
+    {
+        Order order = AnOrderWaitingForCash(gins: 11);
+        KdsOrdersInMemory orders = new(order);
+
+        Result<OrderStatus> result = await AHandlerOver(orders).HandleAsync("K-4821", CancellationToken.None);
+
+        Assert.Equal(CashierErrors.SoldOut.Code, result.Error!.Code);
+        Assert.Equal("Gin Tonic", result.Error.Subject);
+        Assert.Equal(OrderStatus.AwaitingPayment, order.Status);
+        Assert.Equal(0, orders.Collections);
+    }
+
+    // Somebody ordered the last gin from the phone between the read and the
+    // write: the till does not hear about the race, only about running out.
+    [Fact]
+    public async Task HandleAsync_WhenTheStockMovedUnderneath_TriesAgainAndCollects()
+    {
+        KdsOrdersInMemory orders = new(AnOrderWaitingForCash());
+        orders.LosesTheNextCollectionToASale(reloadedAs: AnOrderWaitingForCash());
+
+        Result<OrderStatus> result = await AHandlerOver(orders).HandleAsync("K-4821", CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, orders.Collections);
     }
 
     // Criterion 3, and the double tap of the wireframe: collecting twice is
@@ -60,7 +114,7 @@ public class CollectCashHandlerTests
         Result<OrderStatus> again = await AHandlerOver(orders).HandleAsync("K-4821", CancellationToken.None);
 
         Assert.Equal(CashierErrors.AlreadyPaid, again.Error);
-        Assert.Equal(1, orders.Saves);
+        Assert.Equal(1, orders.Collections);
     }
 
     // Two tills collected it in the same instant and the other one got there
@@ -91,6 +145,20 @@ public class CollectCashHandlerTests
     private sealed class TheCashierIs(string username) : ICurrentStaffUser
     {
         public string? Username => username;
+
+        public Guid? Id => null;
+    }
+
+    private sealed class Bars(params BarSupply[] bars) : IBarsForOrdering
+    {
+        public Guid? AskedFor { get; private set; }
+
+        public Task<IReadOnlyList<BarSupply>> GetAsync(Guid nightId, IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)
+        {
+            AskedFor = nightId;
+
+            return Task.FromResult<IReadOnlyList<BarSupply>>(bars);
+        }
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

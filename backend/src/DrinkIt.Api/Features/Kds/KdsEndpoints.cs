@@ -183,18 +183,19 @@ internal static class KdsEndpoints
     }
 
     /// <summary>
-    /// A code that is no order of this venue is a 404. Another tablet moving
+    /// A code that is no order of this bar is a 404. Another tablet moving
     /// the order in the same instant is a conflict: the order is there, it
     /// just is not where this tablet thought, and the board reloads with it.
+    /// So is a scan of another bar's order (US-36): it exists, somewhere else.
     /// </summary>
     private static ProblemHttpResult Rejected(Error error)
     {
-        bool changedMeanwhile = error.Code == OrderErrors.ChangedMeanwhile.Code;
+        bool conflict = error.Code == OrderErrors.ChangedMeanwhile.Code || error.Code == KdsErrors.AtAnotherBar.Code;
 
         return TypedResults.Problem(
-            title: changedMeanwhile ? "Conflict" : "Not found",
+            title: conflict ? "Conflict" : "Not found",
             detail: error.Message,
-            statusCode: changedMeanwhile ? StatusCodes.Status409Conflict : StatusCodes.Status404NotFound,
+            statusCode: conflict ? StatusCodes.Status409Conflict : StatusCodes.Status404NotFound,
             type: ProblemTypes.For(error.Code));
     }
 

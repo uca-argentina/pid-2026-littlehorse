@@ -11,9 +11,30 @@ import { StaffUsersPage } from './staff-users.page';
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
 
 const theTeam: StaffUser[] = [
-  { id: 'id-1', username: 'euge.q', role: 'Administrator', isActive: true, audit: noAudit },
-  { id: 'id-2', username: 'martin.p', role: 'Waiter', isActive: true, audit: noAudit },
-  { id: 'id-3', username: 'pablo.l', role: 'Kds', isActive: false, audit: noAudit },
+  {
+    id: 'id-1',
+    username: 'euge.q',
+    displayName: null,
+    role: 'Administrator',
+    isActive: true,
+    audit: noAudit,
+  },
+  {
+    id: 'id-2',
+    username: 'martin.p',
+    displayName: null,
+    role: 'Waiter',
+    isActive: true,
+    audit: noAudit,
+  },
+  {
+    id: 'id-3',
+    username: 'pablo.l',
+    displayName: null,
+    role: 'Kds',
+    isActive: false,
+    audit: noAudit,
+  },
 ];
 
 async function openScreen() {

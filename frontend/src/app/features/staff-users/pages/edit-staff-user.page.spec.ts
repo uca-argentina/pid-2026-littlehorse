@@ -15,17 +15,26 @@ const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastMo
 const martin: StaffUser = {
   id: 'id-2',
   username: 'martin.p',
+  displayName: null,
   role: 'Waiter',
   isActive: true,
   audit: noAudit,
 };
 
 const theTeam: StaffUser[] = [
-  { id: 'id-1', username: 'euge.q', role: 'Administrator', isActive: true, audit: noAudit },
+  {
+    id: 'id-1',
+    username: 'euge.q',
+    displayName: null,
+    role: 'Administrator',
+    isActive: true,
+    audit: noAudit,
+  },
   martin,
   {
     id: 'id-3',
     username: 'pablo.l',
+    displayName: null,
     role: 'Kds',
     isActive: false,
     audit: {
@@ -43,6 +52,7 @@ const rejectedWith = (status: number, type: string) =>
 async function openScreenFor(id: string, overrides: Record<string, unknown> = {}) {
   const staffUsers = {
     changeRole: vi.fn().mockReturnValue(of(martin)),
+    rename: vi.fn().mockReturnValue(of({ ...martin, displayName: 'Barra Pista' })),
     resetPassword: vi.fn().mockReturnValue(of(martin)),
     deactivate: vi.fn().mockReturnValue(of({ ...martin, isActive: false })),
     reactivate: vi.fn().mockReturnValue(of({ ...martin, isActive: true })),
@@ -219,6 +229,45 @@ describe('EditStaffUserPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByText(/rol guardado/i)).not.toBeNull();
+  });
+
+  // US-36: a KDS goes by its bar's name.
+  it('sends the new name, without the spaces around it', async () => {
+    const { rendered, staffUsers } = await openScreenFor('id-2');
+
+    fireEvent.input(screen.getByLabelText(/nombre visible/i, { selector: 'input' }), {
+      target: { value: '  Barra Pista ' },
+    });
+    await rendered.fixture.whenStable();
+    press(/guardar el nombre/i);
+
+    expect(staffUsers['rename']).toHaveBeenCalledWith('id-2', 'Barra Pista');
+  });
+
+  // Emptied, the name goes away and the screens show the username again.
+  it('sends no name when the field is emptied', async () => {
+    const { rendered, staffUsers } = await openScreenFor('id-2');
+
+    fireEvent.input(screen.getByLabelText(/nombre visible/i, { selector: 'input' }), {
+      target: { value: '   ' },
+    });
+    await rendered.fixture.whenStable();
+    press(/guardar el nombre/i);
+
+    expect(staffUsers['rename']).toHaveBeenCalledWith('id-2', null);
+  });
+
+  it('confirms the name was saved', async () => {
+    const { rendered } = await openScreenFor('id-2');
+
+    fireEvent.input(screen.getByLabelText(/nombre visible/i, { selector: 'input' }), {
+      target: { value: 'Barra Pista' },
+    });
+    await rendered.fixture.whenStable();
+    press(/guardar el nombre/i);
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByText(/nombre guardado/i)).not.toBeNull();
   });
 
   // US-04, criterion 3.

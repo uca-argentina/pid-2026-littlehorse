@@ -14,9 +14,30 @@ import { NightPage } from './night.page';
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
 
 const theTeam: StaffUser[] = [
-  { id: 'main-bar', username: 'main-bar', role: 'Kds', isActive: true, audit: noAudit },
-  { id: 'till-1', username: 'till-1', role: 'Cashier', isActive: true, audit: noAudit },
-  { id: 'martin', username: 'martin', role: 'Waiter', isActive: true, audit: noAudit },
+  {
+    id: 'main-bar',
+    username: 'main-bar',
+    displayName: null,
+    role: 'Kds',
+    isActive: true,
+    audit: noAudit,
+  },
+  {
+    id: 'till-1',
+    username: 'till-1',
+    displayName: null,
+    role: 'Cashier',
+    isActive: true,
+    audit: noAudit,
+  },
+  {
+    id: 'martin',
+    username: 'martin',
+    displayName: null,
+    role: 'Waiter',
+    isActive: true,
+    audit: noAudit,
+  },
 ];
 
 const saturday: Night = {

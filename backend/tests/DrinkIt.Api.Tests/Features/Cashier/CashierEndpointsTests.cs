@@ -11,6 +11,8 @@ namespace DrinkIt.Api.Tests.Features.Cashier;
 /// <summary>US-26: looking an order up at the till and collecting it, as the till's screen calls them.</summary>
 public class CashierEndpointsTests
 {
+    private static readonly Guid Gin = Guid.CreateVersion7();
+
     private const string Path = "/cashier/orders/K-4821";
 
     [Fact]
@@ -50,6 +52,22 @@ public class CashierEndpointsTests
         Assert.Equal("urn:drinkit:problem:cashier:already-paid", response.Text("type"));
     }
 
+    // US-36: by the time the money is in, no bar has the drinks any more. The
+    // till names the one missing, and nothing was charged.
+    [Fact]
+    public async Task CollectAsync_WhenNoBarHasTheDrinks_RespondsWithConflictNamingTheDrink()
+    {
+        CollectCashHandler collector = new(new Fake.Orders(AnOrderWaitingForCash()), new Fake.Bars(units: 0), TimeProvider.System, new Fake.Cashier());
+
+        IResult result = await CashierEndpoints.CollectAsync("K-4821", collector, CancellationToken.None);
+
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path + "/collect", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:cashier:sold-out", response.Text("type"));
+        Assert.Equal("Gin Tonic", response.Text("productName"));
+    }
+
     // US-23: the customer left without paying, and the till cancels it.
     [Fact]
     public async Task CancelAsync_WhenTheOrderAwaitsCash_RespondsWithNoContent()
@@ -81,7 +99,7 @@ public class CashierEndpointsTests
     public async Task CancelAsync_WhenTheOrderWasAlreadyPaid_RespondsWithConflict()
     {
         Order order = AnOrderWaitingForCash();
-        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+        order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", Guid.CreateVersion7());
 
         IResult result = await CashierEndpoints.CancelAsync("K-4821", new CancelAtTillHandler(new Fake.Orders(order)), CancellationToken.None);
 
@@ -164,16 +182,13 @@ public class CashierEndpointsTests
         [new CashierOrderItem("Gin Tonic", 2, "sin hielo", 4500m)]);
 
     private static CollectCashHandler ACollector(params Order[] stored) =>
-        new(new Fake.Orders(stored), TimeProvider.System, new Fake.Cashier());
+        new(new Fake.Orders(stored), new Fake.Bars(units: 10), TimeProvider.System, new Fake.Cashier());
 
     private static Order AnOrderWaitingForCash()
     {
-        Order order = Order.Place(
-            Guid.CreateVersion7(),
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(Guid.CreateVersion7(), Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse("K-4821"),
-            [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
+            [new NewOrderItem(Gin, "Gin Tonic", 4500m, 1, null)]);
         order.AwaitPayment(PaymentMethod.Cash);
 
         return order;
@@ -195,6 +210,9 @@ public class CashierEndpointsTests
             public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
                 Task.FromResult<Result<Order>>(order);
 
+            public Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken) =>
+                Task.FromResult<Result<Order>>(order);
+
             public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The till never places an order.");
 
@@ -202,9 +220,19 @@ public class CashierEndpointsTests
                 throw new NotSupportedException("The till never places an order.");
         }
 
+        /// <summary>One bar of the night, holding that many of every drink.</summary>
+        public sealed class Bars(int units) : IBarsForOrdering
+        {
+            public Task<IReadOnlyList<BarSupply>> GetAsync(Guid nightId, IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<BarSupply>>(
+                    [new BarSupply(Guid.CreateVersion7(), 0, productIds.ToDictionary(id => id, _ => units))]);
+        }
+
         public sealed class Cashier : ICurrentStaffUser
         {
             public string? Username => "laura.caja";
+
+            public Guid? Id => null;
         }
 
         public sealed class Queries(params CashierOrder[] stored) : ICashierQueries

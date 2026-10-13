@@ -20,6 +20,7 @@ public sealed record TrackedOrder(
     OrderStatus Status,
     decimal Total,
     DateTimeOffset? PaidAt,
+    string? BarName,
     IReadOnlyList<TrackedOrderItem> Items);
 
 /// <summary>

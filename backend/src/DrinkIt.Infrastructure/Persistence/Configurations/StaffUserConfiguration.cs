@@ -14,6 +14,7 @@ internal sealed class StaffUserConfiguration : IEntityTypeConfiguration<StaffUse
         builder.HasKey(user => user.Id);
 
         builder.Property(user => user.Username).HasMaxLength(50).IsRequired();
+        builder.Property(user => user.DisplayName).HasMaxLength(StaffUser.DisplayNameMaxLength);
         builder.Property(user => user.PasswordHash).HasMaxLength(256).IsRequired();
         builder.Property(user => user.Role).IsRequired();
         builder.Property(user => user.IsActive).IsRequired();

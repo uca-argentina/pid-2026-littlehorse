@@ -22,7 +22,7 @@ public class OrderTests
         new(Fernet, "Fernet con Coca", 4000m, quantity, null);
 
     private static Order AnOrder(params NewOrderItem[] items) =>
-        Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), items.Length == 0 ? [AGinTonic()] : items);
+        Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), items.Length == 0 ? [AGinTonic()] : items);
 
     [Fact]
     public void Place_WhenValid_StartsAsACartThatNobodyHasPaid()
@@ -62,7 +62,7 @@ public class OrderTests
 
         Assert.False(order.IsFinished);
 
-        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, MainBar);
         order.Enqueue();
 
         Assert.False(order.IsFinished);
@@ -114,20 +114,12 @@ public class OrderTests
         Assert.Equal(ANight, AnOrder().NightId);
     }
 
-    // US-37: the order is taken from one bar's stock, so it goes to that bar.
+    // US-36: the bar is chosen when the order is paid, not when it is placed,
+    // so a cash order waiting at the till holds no bar.
     [Fact]
-    public void Place_WhenValid_KeepsTheBarItGoesTo()
+    public void Place_WhenValid_GoesToNoBarYet()
     {
-        Assert.Equal(MainBar, AnOrder().KdsId);
-    }
-
-    [Fact]
-    public void Place_WhenKdsIdIsEmpty_ThrowsKdsRequired()
-    {
-        DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, Guid.Empty, "María Quadro", OrderCode.First, [AGinTonic()]));
-
-        Assert.Equal(Order.ErrorCodes.KdsRequired, error.Code);
+        Assert.Null(AnOrder().KdsId);
     }
 
     // The handler only places an order inside a night; one without it is a bug.
@@ -135,7 +127,7 @@ public class OrderTests
     public void Place_WhenNightIdIsEmpty_ThrowsNightRequired()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, Guid.Empty, Guid.CreateVersion7(), "María Quadro", OrderCode.First, [AGinTonic()]));
+            () => Order.Place(AVenue, Guid.Empty, "María Quadro", OrderCode.First, [AGinTonic()]));
 
         Assert.Equal(Order.ErrorCodes.NightRequired, error.Code);
     }
@@ -144,7 +136,7 @@ public class OrderTests
     public void Place_WhenVenueIdIsEmpty_ThrowsVenueRequired()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(Guid.Empty, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.First, [AGinTonic()]));
+            () => Order.Place(Guid.Empty, ANight, "María Quadro", OrderCode.First, [AGinTonic()]));
 
         Assert.Equal(Order.ErrorCodes.VenueRequired, error.Code);
     }
@@ -157,7 +149,7 @@ public class OrderTests
     public void Place_WhenThereIsNoName_ThrowsNameRequired(string name)
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, Guid.CreateVersion7(), name, OrderCode.First, [AGinTonic()]));
+            () => Order.Place(AVenue, ANight, name, OrderCode.First, [AGinTonic()]));
 
         Assert.Equal(Order.ErrorCodes.NameRequired, error.Code);
     }
@@ -166,7 +158,7 @@ public class OrderTests
     public void Place_WhenTheNameIsLongerThanATicketFits_ThrowsNameLength()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, Guid.CreateVersion7(), new string('a', Order.CustomerNameMaxLength + 1), OrderCode.First, [AGinTonic()]));
+            () => Order.Place(AVenue, ANight, new string('a', Order.CustomerNameMaxLength + 1), OrderCode.First, [AGinTonic()]));
 
         Assert.Equal(Order.ErrorCodes.NameLength, error.Code);
     }
@@ -175,7 +167,7 @@ public class OrderTests
     public void Place_WhenThereAreNoItems_ThrowsEmpty()
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.First, []));
+            () => Order.Place(AVenue, ANight, "María Quadro", OrderCode.First, []));
 
         Assert.Equal(Order.ErrorCodes.Empty, error.Code);
     }
@@ -217,7 +209,7 @@ public class OrderTests
     public void Place_WhenAPriceIsNotPositive_ThrowsPriceNotPositive(decimal price)
     {
         DomainException error = Assert.Throws<DomainException>(
-            () => Order.Place(AVenue, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.First, [new NewOrderItem(GinTonic, "Gin Tonic", price, 1, null)]));
+            () => Order.Place(AVenue, ANight, "María Quadro", OrderCode.First, [new NewOrderItem(GinTonic, "Gin Tonic", price, 1, null)]));
 
         Assert.Equal(Order.ErrorCodes.PriceNotPositive, error.Code);
     }
@@ -225,14 +217,14 @@ public class OrderTests
     public class Paying
     {
         private static Order ACartOf(string name = "María Quadro") =>
-            Order.Place(AVenue, ANight, Guid.CreateVersion7(), name, OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order.Place(AVenue, ANight, name, OrderCode.Parse("K-4821"), [AGinTonic()]);
 
         [Fact]
         public void Pay_WhenItIsACart_MarksItPaidAndStampsTheMoment()
         {
             Order order = ACartOf();
 
-            order.Pay(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), PaymentMethod.Digital);
+            order.Pay(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), PaymentMethod.Digital, MainBar);
 
             Assert.Equal(OrderStatus.Paid, order.Status);
             Assert.Equal(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), order.PaidAt);
@@ -246,9 +238,31 @@ public class OrderTests
         {
             Order order = ACartOf();
 
-            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.VipBalance);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.VipBalance, MainBar);
 
             Assert.Equal(PaymentMethod.VipBalance, order.Method);
+        }
+
+        // US-36: paid is when it goes to a bar.
+        [Fact]
+        public void Pay_WhenItIsACart_GoesToTheBarGiven()
+        {
+            Order order = ACartOf();
+
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, MainBar);
+
+            Assert.Equal(MainBar, order.KdsId);
+        }
+
+        [Fact]
+        public void Pay_WhenKdsIdIsEmpty_ThrowsKdsRequired()
+        {
+            Order order = ACartOf();
+
+            DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, Guid.Empty));
+
+            Assert.Equal(Order.ErrorCodes.KdsRequired, error.Code);
+            Assert.Equal(OrderStatus.Cart, order.Status);
         }
 
         // Criterion 6 is answered before this, by the idempotency key; this is
@@ -257,9 +271,9 @@ public class OrderTests
         public void Pay_WhenItWasAlreadyPaid_ThrowsInvalidTransition()
         {
             Order order = ACartOf();
-            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, MainBar);
 
-            DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital));
+            DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, MainBar));
 
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
@@ -270,7 +284,7 @@ public class OrderTests
         public void Enqueue_WhenItIsPaid_PutsItInTheQueue()
         {
             Order order = ACartOf();
-            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, MainBar);
 
             order.Enqueue();
 
@@ -294,7 +308,7 @@ public class OrderTests
         public void Enqueue_WhenItIsPaid_RaisesOrderQueued()
         {
             Order order = ACartOf();
-            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, MainBar);
 
             order.Enqueue();
 
@@ -306,7 +320,7 @@ public class OrderTests
         public void Enqueue_WhenItIsAlreadyQueued_ThrowsInvalidTransition()
         {
             Order order = ACartOf();
-            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital, MainBar);
             order.Enqueue();
 
             DomainException error = Assert.Throws<DomainException>(order.Enqueue);
@@ -354,7 +368,7 @@ public class OrderTests
             Order order = ACartOf();
             order.AwaitPayment(PaymentMethod.Cash);
 
-            order.CollectCash(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), "laura.caja");
+            order.CollectCash(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), "laura.caja", MainBar);
 
             Assert.Equal(OrderStatus.Queued, order.Status);
             Assert.Equal(new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero), order.PaidAt);
@@ -367,12 +381,38 @@ public class OrderTests
                 raised => Assert.Equal(AVenue, Assert.IsType<OrderCollected>(raised).VenueId));
         }
 
+        // US-36: waiting at the till it held no bar; collected, it goes to one.
+        [Fact]
+        public void CollectCash_WhenItAwaitsPayment_GoesToTheBarGiven()
+        {
+            Order order = ACartOf();
+            order.AwaitPayment(PaymentMethod.Cash);
+
+            Assert.Null(order.KdsId);
+
+            order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", MainBar);
+
+            Assert.Equal(MainBar, order.KdsId);
+        }
+
+        [Fact]
+        public void CollectCash_WhenKdsIdIsEmpty_ThrowsKdsRequired()
+        {
+            Order order = ACartOf();
+            order.AwaitPayment(PaymentMethod.Cash);
+
+            DomainException error = Assert.Throws<DomainException>(() => order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", Guid.Empty));
+
+            Assert.Equal(Order.ErrorCodes.KdsRequired, error.Code);
+            Assert.Equal(OrderStatus.AwaitingPayment, order.Status);
+        }
+
         [Fact]
         public void CollectCash_WhenItIsNotWaitingForCash_ThrowsInvalidTransition()
         {
             Order order = ACartOf();
 
-            DomainException error = Assert.Throws<DomainException>(() => order.CollectCash(DateTimeOffset.UtcNow, "laura.caja"));
+            DomainException error = Assert.Throws<DomainException>(() => order.CollectCash(DateTimeOffset.UtcNow, "laura.caja", MainBar));
 
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
@@ -385,7 +425,7 @@ public class OrderTests
             Order order = ACartOf();
             order.AwaitPayment(PaymentMethod.Cash);
 
-            DomainException error = Assert.Throws<DomainException>(() => order.CollectCash(DateTimeOffset.UtcNow, cashier));
+            DomainException error = Assert.Throws<DomainException>(() => order.CollectCash(DateTimeOffset.UtcNow, cashier, MainBar));
 
             Assert.Equal(Order.ErrorCodes.CollectorRequired, error.Code);
         }
@@ -397,7 +437,7 @@ public class OrderTests
             Order order = ACartOf();
             order.AwaitPayment(PaymentMethod.Cash);
 
-            DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Cash));
+            DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Cash, MainBar));
 
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
@@ -409,8 +449,8 @@ public class OrderTests
 
         private static Order APaidOrder()
         {
-            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
-            order.Pay(PaidAt, PaymentMethod.Digital);
+            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.Pay(PaidAt, PaymentMethod.Digital, MainBar);
 
             return order;
         }
@@ -427,7 +467,7 @@ public class OrderTests
         private static Order AnOrderInPreparation()
         {
             Order order = AQueuedOrder();
-            order.StartPreparing();
+            order.StartPreparing(DateTimeOffset.UtcNow);
             order.ClearDomainEvents();
 
             return order;
@@ -439,9 +479,44 @@ public class OrderTests
         {
             Order order = AQueuedOrder();
 
-            order.StartPreparing();
+            order.StartPreparing(DateTimeOffset.UtcNow);
 
             Assert.Equal(OrderStatus.InPreparation, order.Status);
+        }
+
+        // US-36, for US-47: the metrics measure how long the bar took, and can
+        // only measure what was stamped when it happened.
+        [Fact]
+        public void StartPreparing_WhenQueued_StampsWhenThePreparationStarted()
+        {
+            Order order = AQueuedOrder();
+
+            order.StartPreparing(PaidAt.AddMinutes(3));
+
+            Assert.Equal(PaidAt.AddMinutes(3), order.PreparationStartedAt);
+        }
+
+        // A double tap a minute later did not start it again.
+        [Fact]
+        public void StartPreparing_WhenAlreadyInPreparation_KeepsWhenItFirstStarted()
+        {
+            Order order = AQueuedOrder();
+            order.StartPreparing(PaidAt.AddMinutes(3));
+
+            order.StartPreparing(PaidAt.AddMinutes(4));
+
+            Assert.Equal(PaidAt.AddMinutes(3), order.PreparationStartedAt);
+        }
+
+        // Taken by mistake: nobody was preparing it, so neither is the stamp.
+        [Fact]
+        public void ReturnToQueue_WhenInPreparation_ForgetsWhenThePreparationStarted()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.ReturnToQueue();
+
+            Assert.Null(order.PreparationStartedAt);
         }
 
         [Fact]
@@ -449,7 +524,7 @@ public class OrderTests
         {
             Order order = AQueuedOrder();
 
-            order.StartPreparing();
+            order.StartPreparing(DateTimeOffset.UtcNow);
 
             OrderPreparationStarted raised = Assert.IsType<OrderPreparationStarted>(Assert.Single(order.DomainEvents));
             Assert.Equal(AVenue, raised.VenueId);
@@ -463,7 +538,7 @@ public class OrderTests
         {
             Order order = AnOrderInPreparation();
 
-            order.StartPreparing();
+            order.StartPreparing(DateTimeOffset.UtcNow);
 
             Assert.Equal(OrderStatus.InPreparation, order.Status);
             Assert.Empty(order.DomainEvents);
@@ -474,7 +549,7 @@ public class OrderTests
         {
             Order order = APaidOrder();
 
-            DomainException error = Assert.Throws<DomainException>(order.StartPreparing);
+            DomainException error = Assert.Throws<DomainException>(() => order.StartPreparing(DateTimeOffset.UtcNow));
 
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
@@ -543,10 +618,10 @@ public class OrderTests
 
         private static Order AnOrderInPreparation()
         {
-            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
-            order.Pay(PaidAt, PaymentMethod.Digital);
+            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.Pay(PaidAt, PaymentMethod.Digital, MainBar);
             order.Enqueue();
-            order.StartPreparing();
+            order.StartPreparing(DateTimeOffset.UtcNow);
             order.ClearDomainEvents();
 
             return order;
@@ -555,7 +630,7 @@ public class OrderTests
         private static Order AReadyOrder()
         {
             Order order = AnOrderInPreparation();
-            order.MarkReady();
+            order.MarkReady(DateTimeOffset.UtcNow);
             order.ClearDomainEvents();
 
             return order;
@@ -570,16 +645,48 @@ public class OrderTests
             return order;
         }
 
-        // US-18, criterion 1. When it happened is the audit stamp's to write,
-        // on save: the domain only moves the order.
+        // US-18, criterion 1.
         [Fact]
         public void MarkReady_WhenInPreparation_MovesItToReady()
         {
             Order order = AnOrderInPreparation();
 
-            order.MarkReady();
+            order.MarkReady(DateTimeOffset.UtcNow);
 
             Assert.Equal(OrderStatus.Ready, order.Status);
+        }
+
+        // US-36, for US-47: when the drink was made, stamped once.
+        [Fact]
+        public void MarkReady_WhenInPreparation_StampsWhenItBecameReady()
+        {
+            Order order = AnOrderInPreparation();
+
+            order.MarkReady(PaidAt.AddMinutes(7));
+
+            Assert.Equal(PaidAt.AddMinutes(7), order.ReadyAt);
+        }
+
+        [Fact]
+        public void MarkReady_WhenAlreadyReady_KeepsWhenItFirstBecameReady()
+        {
+            Order order = AnOrderInPreparation();
+            order.MarkReady(PaidAt.AddMinutes(7));
+
+            order.MarkReady(PaidAt.AddMinutes(8));
+
+            Assert.Equal(PaidAt.AddMinutes(7), order.ReadyAt);
+        }
+
+        // Marked ready by mistake: it was not, and the stamp goes with it.
+        [Fact]
+        public void ReturnToPreparation_WhenReady_ForgetsWhenItBecameReady()
+        {
+            Order order = AReadyOrder();
+
+            order.ReturnToPreparation();
+
+            Assert.Null(order.ReadyAt);
         }
 
         // The event US-21's push will hang off, so it names the order.
@@ -588,7 +695,7 @@ public class OrderTests
         {
             Order order = AnOrderInPreparation();
 
-            order.MarkReady();
+            order.MarkReady(DateTimeOffset.UtcNow);
 
             OrderReady raised = Assert.IsType<OrderReady>(Assert.Single(order.DomainEvents));
             Assert.Equal(AVenue, raised.VenueId);
@@ -602,7 +709,7 @@ public class OrderTests
         {
             Order order = AReadyOrder();
 
-            order.MarkReady();
+            order.MarkReady(DateTimeOffset.UtcNow);
 
             Assert.Equal(OrderStatus.Ready, order.Status);
             Assert.Empty(order.DomainEvents);
@@ -612,11 +719,11 @@ public class OrderTests
         [Fact]
         public void MarkReady_WhenStillQueued_ThrowsInvalidTransition()
         {
-            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
-            order.Pay(PaidAt, PaymentMethod.Digital);
+            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.Pay(PaidAt, PaymentMethod.Digital, MainBar);
             order.Enqueue();
 
-            DomainException error = Assert.Throws<DomainException>(order.MarkReady);
+            DomainException error = Assert.Throws<DomainException>(() => order.MarkReady(DateTimeOffset.UtcNow));
 
             Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
         }
@@ -723,7 +830,7 @@ public class OrderTests
     {
         private static Order AnOrderAwaitingPayment()
         {
-            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
             order.AwaitPayment(PaymentMethod.Cash);
             order.ClearDomainEvents();
 
@@ -769,8 +876,8 @@ public class OrderTests
         [Fact]
         public void Cancel_WhenPaidDigitally_ThrowsInvalidTransition()
         {
-            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
-            order.Pay(new DateTimeOffset(2026, 9, 30, 1, 0, 0, TimeSpan.Zero), PaymentMethod.Digital);
+            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            order.Pay(new DateTimeOffset(2026, 9, 30, 1, 0, 0, TimeSpan.Zero), PaymentMethod.Digital, MainBar);
             order.Enqueue();
 
             DomainException error = Assert.Throws<DomainException>(order.Cancel);
@@ -783,7 +890,7 @@ public class OrderTests
         public void Cancel_WhenTheTillAlreadyCollectedIt_ThrowsInvalidTransition()
         {
             Order order = AnOrderAwaitingPayment();
-            order.CollectCash(new DateTimeOffset(2026, 9, 30, 1, 0, 0, TimeSpan.Zero), "laura.caja");
+            order.CollectCash(new DateTimeOffset(2026, 9, 30, 1, 0, 0, TimeSpan.Zero), "laura.caja", MainBar);
 
             DomainException error = Assert.Throws<DomainException>(order.Cancel);
 
@@ -794,7 +901,7 @@ public class OrderTests
         [Fact]
         public void Cancel_WhileStillACart_ThrowsInvalidTransition()
         {
-            Order order = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order order = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
 
             DomainException error = Assert.Throws<DomainException>(order.Cancel);
 
@@ -811,23 +918,23 @@ public class OrderTests
         /// <summary>Every move an order can make — paid in cash, digitally, or canceled — with who raised each one.</summary>
         private static List<(Order Order, IDomainEvent Raised)> EveryMove()
         {
-            Order cash = Order.Place(AVenue, ANight, MainBar, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
+            Order cash = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4821"), [AGinTonic()]);
             cash.AwaitPayment(PaymentMethod.Cash);
-            cash.CollectCash(At, "laura.caja");
+            cash.CollectCash(At, "laura.caja", MainBar);
 
-            Order digital = Order.Place(AVenue, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.Parse("K-4822"), [AGinTonic()]);
-            digital.Pay(At, PaymentMethod.Digital);
+            Order digital = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4822"), [AGinTonic()]);
+            digital.Pay(At, PaymentMethod.Digital, MainBar);
             digital.Enqueue();
-            digital.StartPreparing();
+            digital.StartPreparing(DateTimeOffset.UtcNow);
             digital.ReturnToQueue();
-            digital.StartPreparing();
-            digital.MarkReady();
+            digital.StartPreparing(DateTimeOffset.UtcNow);
+            digital.MarkReady(DateTimeOffset.UtcNow);
             digital.ReturnToPreparation();
-            digital.MarkReady();
+            digital.MarkReady(DateTimeOffset.UtcNow);
             digital.Deliver(At);
             digital.UndoDelivery(At);
 
-            Order canceled = Order.Place(AVenue, ANight, Guid.CreateVersion7(), "María Quadro", OrderCode.Parse("K-4823"), [AGinTonic()]);
+            Order canceled = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4823"), [AGinTonic()]);
             canceled.AwaitPayment(PaymentMethod.Cash);
             canceled.Cancel();
 

@@ -1,6 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { problemTypeOf } from '../../core/api/problem-type-of';
+import { ProblemTypes } from '../../core/api/problem-types';
 import { KdsOrdersService } from './kds-orders.service';
 import type { ScanOutcome } from './kds-orders.service';
 
@@ -31,6 +33,8 @@ export type ScanResult = { readonly id: number } & (
     }
   /** Nothing of this venue's: another venue's QR, a stranger's, not ours at all. */
   | { readonly kind: 'unknown'; readonly at: number }
+  /** US-36: an order of this venue that went to another bar. Nothing was handed over. */
+  | { readonly kind: 'atAnotherBar'; readonly at: number }
   /** It never reached the API, so nothing was handed over. */
   | { readonly kind: 'failed'; readonly at: number }
 );
@@ -94,16 +98,24 @@ export class KdsScanStore {
             at: Date.now(),
           })),
         error: (error: unknown) => {
-          const unknown = error instanceof HttpErrorResponse && error.status === 404;
+          const kind = this.kindOf(error);
 
           // Nothing happened on the API's side, so the same QR may go again now.
-          if (!unknown) this.last = null;
+          if (kind === 'failed') this.last = null;
 
-          this.record((id) => ({ id, kind: unknown ? 'unknown' : 'failed', at: Date.now() }));
+          this.record((id) => ({ id, kind, at: Date.now() }));
         },
       });
 
     return true;
+  }
+
+  /** A definite answer about the code, or a scan whose answer never arrived. */
+  private kindOf(error: unknown): 'unknown' | 'atAnotherBar' | 'failed' {
+    if (problemTypeOf(error) === ProblemTypes.kdsAtAnotherBar) return 'atAnotherBar';
+    if (error instanceof HttpErrorResponse && error.status === 404) return 'unknown';
+
+    return 'failed';
   }
 
   private isRepeat(read: string): boolean {

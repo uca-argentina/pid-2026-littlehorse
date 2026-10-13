@@ -130,13 +130,18 @@ internal static class CashierEndpoints
 
     private static ProblemHttpResult Rejected(Error error)
     {
-        bool alreadyPaid = error.Code == CashierErrors.AlreadyPaid.Code;
+        bool conflict = error.Code == CashierErrors.AlreadyPaid.Code || error.Code == CashierErrors.SoldOut.Code;
 
+        // The drink that ran out (US-36), under the same name confirming an
+        // order uses, so the till can say which one.
         return TypedResults.Problem(
-            title: alreadyPaid ? "Conflict" : "Not found",
+            title: conflict ? "Conflict" : "Not found",
             detail: error.Message,
-            statusCode: alreadyPaid ? StatusCodes.Status409Conflict : StatusCodes.Status404NotFound,
-            type: ProblemTypes.For(error.Code));
+            statusCode: conflict ? StatusCodes.Status409Conflict : StatusCodes.Status404NotFound,
+            type: ProblemTypes.For(error.Code),
+            extensions: error.Subject is null
+                ? null
+                : new Dictionary<string, object?> { ["productName"] = error.Subject });
     }
 
     private static CashierOrderResponse ToResponse(CashierOrder order) => new(

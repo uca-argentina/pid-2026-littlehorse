@@ -39,6 +39,11 @@ const SAYS: Partial<Record<CustomerOrderStatus, string>> = {
   Ready: '¡Está listo! Retiralo en la barra',
 };
 
+/** US-36: ready, at the bar that has it — when the API says which. */
+function readyAt(barName: string): string {
+  return `¡Está listo! Retiralo en ${barName}`;
+}
+
 /** Said when the status could not be asked: the order is fine, the wifi is not. */
 const UNKNOWN = 'Tocá para ver cómo va';
 
@@ -156,7 +161,10 @@ export class OrdersInProgress {
           token,
           link,
           status: order.status,
-          says: SAYS[order.status] ?? UNKNOWN,
+          says:
+            order.status === 'Ready' && order.barName
+              ? readyAt(order.barName)
+              : (SAYS[order.status] ?? UNKNOWN),
           isReady: order.status === 'Ready',
         };
       }),
