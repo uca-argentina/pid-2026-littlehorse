@@ -42,7 +42,7 @@ export async function joinTonight(
 }
 
 /** The listing is the latest first: the first one that started is tonight's. */
-async function tonightsNight(
+export async function tonightsNight(
   request: APIRequestContext,
   headers: Record<string, string>,
 ): Promise<NightBody> {

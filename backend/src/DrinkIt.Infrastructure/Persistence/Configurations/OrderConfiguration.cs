@@ -31,6 +31,9 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // as with OrderItem.ProductId: nights are never deleted, and the
         // metrics read orders by it.
         builder.Property(order => order.NightId);
+        // The bar it goes to (US-37). Null on orders from before bars kept
+        // stock; no foreign key, for the same reason as the night.
+        builder.Property(order => order.KdsId);
         builder.Property(order => order.PaidAt);
         builder.Property(order => order.Method);
         builder.Property(order => order.DeliveredAt);
@@ -69,6 +72,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(order => new { order.VenueId, order.TrackingToken }).IsUnique();
         // Every metric of a night (US-47 to US-49) starts by reading its orders.
         builder.HasIndex(order => new { order.VenueId, order.NightId });
+        // "Less work" when choosing a bar: its orders waiting or being prepared.
+        builder.HasIndex(order => new { order.VenueId, order.KdsId, order.Status });
         // The till's "cobros de tu turno": one cashier's collections, by time.
         builder.HasIndex(order => new { order.VenueId, order.CollectedBy, order.PaidAt });
 

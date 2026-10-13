@@ -10,7 +10,14 @@ import type { NewNight, Night } from './nights.service';
 
 /** One value rather than a set of booleans, so two of them cannot be true at once. */
 export type SaveNightStatus =
-  'idle' | 'sending' | 'overlaps' | 'crewChanged' | 'over' | 'startLocked' | 'unreachable';
+  | 'idle'
+  | 'sending'
+  | 'overlaps'
+  | 'crewChanged'
+  | 'over'
+  | 'startLocked'
+  | 'barHoldsStock'
+  | 'unreachable';
 
 /**
  * Saving a night, new or edited: the same answers either way. Provided by the
@@ -30,15 +37,26 @@ export class SaveNightStore {
 
   readonly isSending = computed(() => this.state() === 'sending');
 
+  /**
+   * Opens the new night once it exists: setting it up goes on with loading
+   * what each KDS will have that night (US-37), which lives in its screen.
+   */
   create(venueSlug: string, night: NewNight): void {
-    this.send(venueSlug, () => this.nights.create(night));
+    this.send(
+      () => this.nights.create(night),
+      (saved) => [venueSlug, 'staff', 'nights', saved.id],
+    );
   }
 
+  /** Straight back to the listing, where US-35 says the night shows up. */
   update(venueSlug: string, id: string, night: NewNight): void {
-    this.send(venueSlug, () => this.nights.update(id, night));
+    this.send(
+      () => this.nights.update(id, night),
+      () => [venueSlug, 'staff', 'nights'],
+    );
   }
 
-  private send(venueSlug: string, request: () => Observable<Night>): void {
+  private send(request: () => Observable<Night>, next: (saved: Night) => string[]): void {
     if (this.isSending()) return;
 
     this.state.set('sending');
@@ -46,16 +64,15 @@ export class SaveNightStore {
     request()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.showTheListing(venueSlug),
+        next: (saved) => this.go(next(saved)),
         error: (error: unknown) => this.state.set(reasonFor(error)),
       });
   }
 
-  /** Straight back to the listing, where US-35 says the night shows up. */
-  private showTheListing(venueSlug: string): void {
+  private go(path: string[]): void {
     this.state.set('idle');
 
-    this.router.navigate([venueSlug, 'staff', 'nights']).then(
+    this.router.navigate(path).then(
       (navigated) => {
         if (!navigated) this.state.set('unreachable');
       },
@@ -69,6 +86,7 @@ const REASONS = new Map<string, SaveNightStatus>([
   [ProblemTypes.nightCrewMemberNotFound, 'crewChanged'],
   [ProblemTypes.nightOver, 'over'],
   [ProblemTypes.nightStartLocked, 'startLocked'],
+  [ProblemTypes.nightBarHoldsStock, 'barHoldsStock'],
 ]);
 
 /**
@@ -87,6 +105,8 @@ const REFUSALS: Partial<Record<SaveNightStatus, string>> = {
     'Una de las cuentas elegidas ya no está en el boliche. Recargá la pantalla y elegí de nuevo.',
   over: 'La noche terminó mientras la editabas, y una noche terminada ya no se cambia.',
   startLocked: 'La noche empezó mientras la editabas: el inicio ya no se puede mover.',
+  barHoldsStock:
+    'Una de las KDS que sacaste todavía tiene stock en esta noche. Devolvé su stock al depósito desde el stock de la noche y después sacala.',
   unreachable: 'No pudimos guardarla. Fijate la señal y probá de nuevo.',
 };
 

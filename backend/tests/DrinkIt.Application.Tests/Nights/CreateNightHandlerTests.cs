@@ -48,6 +48,20 @@ public class CreateNightHandlerTests
         Assert.Equal([MainBar.Id, Till.Id], result.Value.CrewIds);
     }
 
+    // US-37: a new night is saved with the storeroom split among its KDS,
+    // both or neither. Only the KDS of its crew, and the server's clock
+    // decides what the storeroom has; how much each gets is the night's rule.
+    [Fact]
+    public async Task HandleAsync_WhenTheNightIsCreated_AddsItWithItsKdsAndTheServerClock()
+    {
+        NightsInMemory nights = new();
+
+        await HandlerOver(nights).HandleAsync(ACommand(MainBar.Id, Till.Id, Martin.Id), CancellationToken.None);
+
+        Assert.Equal([MainBar.Id], nights.AddedBars!.Select(bar => bar.Id));
+        Assert.Equal(Now, nights.AddedAt);
+    }
+
     // Criterion 1: two nights of the same venue cannot share a single minute,
     // or an order confirmed in it would not know which one it belongs to.
     [Fact]
@@ -82,8 +96,15 @@ public class CreateNightHandlerTests
     private static CreateNightCommand ACommand(params Guid[] crewIds) =>
         new("Saturday 10/10", Opening, Closing, crewIds);
 
+    private static readonly DateTimeOffset Now = Opening.AddHours(-5);
+
     private static CreateNightHandler HandlerOver(NightsInMemory nights) =>
-        new(nights, new StaffUsersInMemory(MainBar, Till, Martin), new TheCurrentVenue());
+        new(nights, new StaffUsersInMemory(MainBar, Till, Martin), new TheCurrentVenue(), new FixedClock(Now));
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now.ToUniversalTime();
+    }
 
     private sealed class TheCurrentVenue : ICurrentVenue
     {

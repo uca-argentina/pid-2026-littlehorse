@@ -334,6 +334,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
                 dispatcher ?? new SpyDispatcher(),
                 logger ?? NullLogger<OrderRepository>.Instance),
             new ProductsForOrdering(context),
+            new BarsForOrdering(context),
             new OrderCodeSequence(context, current),
             [new DigitalPaymentStrategy(new FixedClock(Tonight))],
             current,
@@ -362,7 +363,14 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         seed.Categories.Add(category);
         seed.Products.Add(product);
         seed.StaffUsers.AddRange(crew);
-        if (withNight) seed.Nights.Add(Night.Create(venue.Id, "Tonight", Tonight.AddHours(-3), Tonight.AddHours(4), crew));
+        if (withNight)
+        {
+            Night tonight = Night.Create(venue.Id, "Tonight", Tonight.AddHours(-3), Tonight.AddHours(4), crew);
+            seed.Nights.Add(tonight);
+            // US-37: all of it loaded into tonight's main bar, so the storeroom is empty.
+            seed.BarStocks.Add(new BarStock { VenueId = venue.Id, NightId = tonight.Id, KdsId = crew[0].Id, ProductId = product.Id, Units = stock });
+        }
+
         await seed.SaveChangesAsync();
 
         return (venue, product);

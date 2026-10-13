@@ -295,7 +295,7 @@ public class ProductsEndpointsTests
     public async Task AdjustStockAsync_WhenTheChangeIsValid_RespondsWithTheProductAndItsNewStock()
     {
         Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, TheCategory);
-        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
+        AdjustProductStockHandler handler = new(new Fake.Repository(null, product), TimeProvider.System);
 
         IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(12), handler, CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
@@ -309,7 +309,7 @@ public class ProductsEndpointsTests
     public async Task AdjustStockAsync_WhenTheProductIsNotInThisVenue_RespondsWithNotFound()
     {
         Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 0, TheCategory);
-        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
+        AdjustProductStockHandler handler = new(new Fake.Repository(null, product), TimeProvider.System);
 
         IResult result = await ProductsEndpoints.AdjustStockAsync(Guid.CreateVersion7(), new AdjustProductStockRequest(12), handler, CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{Guid.CreateVersion7()}/adjust-stock", HttpMethods.Post);
@@ -324,7 +324,7 @@ public class ProductsEndpointsTests
     public async Task AdjustStockAsync_WhenSalesMeanwhileLeftTooLittle_RespondsWithConflict()
     {
         Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 5, TheCategory);
-        AdjustProductStockHandler handler = new(new Fake.Repository(null, product, adjustmentApplies: false));
+        AdjustProductStockHandler handler = new(new Fake.Repository(null, product, adjustmentApplies: false), TimeProvider.System);
 
         IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(-5), handler, CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
@@ -339,7 +339,7 @@ public class ProductsEndpointsTests
     public async Task AdjustStockAsync_WhenWhatIsLeftIsLessThanItTakesAway_RespondsWithConflict()
     {
         Product product = Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, 2, TheCategory);
-        AdjustProductStockHandler handler = new(new Fake.Repository(null, product));
+        AdjustProductStockHandler handler = new(new Fake.Repository(null, product), TimeProvider.System);
 
         IResult result = await ProductsEndpoints.AdjustStockAsync(product.Id, new AdjustProductStockRequest(-5), handler, CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{product.Id}/adjust-stock", HttpMethods.Post);
@@ -442,7 +442,7 @@ public class ProductsEndpointsTests
 
         public sealed class Repository(string? taken, Product? stored = null, bool adjustmentApplies = true) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, DateTimeOffset now, CancellationToken cancellationToken) =>
                 Task.FromResult(adjustmentApplies);
 
             public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>
@@ -467,7 +467,7 @@ public class ProductsEndpointsTests
             public Task<IReadOnlyList<ProductListItem>> ListAsync(CancellationToken cancellationToken) =>
                 Task.FromResult<IReadOnlyList<ProductListItem>>(stored);
 
-            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
+            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? nightId, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The administration listing never reads the customer's menu.");
         }
     }

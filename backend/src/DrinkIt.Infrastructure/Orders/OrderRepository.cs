@@ -31,9 +31,9 @@ internal sealed partial class OrderRepository(
     /// outcome this must never produce.
     /// </summary>
     /// <remarks>
-    /// The stock comes down with one conditional statement per drink — "take
-    /// two off, but only if there are two" — rather than by writing back a
-    /// number that was read seconds ago. That is what settles two customers
+    /// The stock comes down from the order's bar with one conditional
+    /// statement per drink — "take two off, but only if there are two" —
+    /// rather than by writing back a number that was read seconds ago. That is what settles two customers
     /// reaching for the last one: exactly one of the two statements matches a
     /// row. It is also why Stock is not a concurrency token; making it one put
     /// it in the WHERE of every edit of a product, and uploading a photo while
@@ -47,19 +47,37 @@ internal sealed partial class OrderRepository(
         await using IDbContextTransaction transaction =
             await context.Database.BeginTransactionAsync(cancellationToken);
 
+        (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
+
+        // The products first, then the bars, the same order a load into a bar
+        // takes them in: two writers that lock in opposite orders can each
+        // end up waiting on the other.
+        await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
+
         foreach (OrderItem item in order.Items)
         {
             int quantity = item.Quantity;
 
-            // The venue filter applies to this too, so no order can take stock
-            // off a product that is not its venue's.
-            int sold = await context.Products
-                .Where(product => product.Id == item.ProductId && product.Stock >= quantity)
+            // Taken from what the bar the order goes to holds for its night
+            // (US-37). The venue filter applies to this too, so no order can
+            // take stock off a product or a bar that is not its venue's.
+            int sold = await context.BarStocks
+                .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == item.ProductId && stock.Units >= quantity)
                 .ExecuteUpdateAsync(
-                    row => row.SetProperty(product => product.Stock, product => product.Stock - quantity),
+                    row => row.SetProperty(stock => stock.Units, stock => stock.Units - quantity),
                     cancellationToken);
 
-            if (sold == 1) continue;
+            if (sold == 1)
+            {
+                // The bar's units are part of the general stock: it follows.
+                await context.Products
+                    .Where(product => product.Id == item.ProductId)
+                    .ExecuteUpdateAsync(
+                        row => row.SetProperty(product => product.Stock, product => product.Stock - quantity),
+                        cancellationToken);
+
+                continue;
+            }
 
             // Somebody else got there in the seconds this order took to price.
             // Nothing is written, and the caller may try the whole thing again
@@ -152,12 +170,28 @@ internal sealed partial class OrderRepository(
             return OrderErrors.ChangedMeanwhile;
         }
 
+        (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
+
+        // Products before bars, as everywhere else that writes both.
+        await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
+
         foreach (OrderItem item in order.Items)
         {
             int quantity = item.Quantity;
 
-            // The venue filter applies here too, and a product deleted since
-            // simply matches no row: there is no shelf to put it back on.
+            // Back to the bar and night it was taken from (US-37), and the
+            // general stock with it. The venue filter applies here too. An
+            // order from before bars kept stock has none to go back to but the
+            // general stock.
+            if (bar is not null)
+            {
+                await context.BarStocks
+                    .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == item.ProductId)
+                    .ExecuteUpdateAsync(
+                        row => row.SetProperty(stock => stock.Units, stock => stock.Units + quantity),
+                        cancellationToken);
+            }
+
             await context.Products
                 .Where(product => product.Id == item.ProductId)
                 .ExecuteUpdateAsync(

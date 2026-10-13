@@ -44,6 +44,7 @@ public sealed record ConfirmedOrder(
 public sealed class ConfirmOrderHandler(
     IOrderRepository orders,
     IProductsForOrdering products,
+    IBarsForOrdering bars,
     IOrderCodeSequence codes,
     IEnumerable<IPaymentStrategy> paymentStrategies,
     ICurrentVenue currentVenue,
@@ -162,7 +163,21 @@ public sealed class ConfirmOrderHandler(
 
         if (!items.IsSuccess) return items.Error!;
 
-        Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
+        // US-37: each bar keeps a stock of its own, and the order is taken from
+        // one of them. Like the menu above, a few seconds old by the write: the
+        // conditional statement in the repository is what settles a race.
+        OrderLine[] lines = [.. command.Lines.Select(line => new OrderLine(line.ProductId, line.Quantity))];
+        IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, wanted, cancellationToken);
+        BarSupply? bar = BarChooser.Choose(nightsBars, lines);
+
+        if (bar is null)
+        {
+            Guid missing = BarChooser.Missing(nightsBars, lines);
+
+            return OutOfStock(menu.First(product => product.Id == missing));
+        }
+
+        Order order = Order.Place(currentVenue.Id, night, bar.KdsId, customerName, code, items.Value);
 
         // How far this goes is the payment method's call, not this handler's:
         // digital settles and queues, cash stops at the till.
@@ -183,11 +198,8 @@ public sealed class ConfirmOrderHandler(
     /// because nobody should pay for an order they will not get in full.
     /// </summary>
     /// <remarks>
-    /// The stock read here is a few seconds old by the time anything is
-    /// written, which is what makes this a message and not a guarantee: it
-    /// exists so the customer is told which drink ran out, in a sentence. What
-    /// actually stops one drink being sold twice is the conditional update in
-    /// the repository.
+    /// Whether there are enough is not asked here but of the bars (US-37):
+    /// each keeps its own stock.
     /// </remarks>
     private static Result<List<NewOrderItem>> Price(
         IReadOnlyCollection<OrderLineRequest> lines,
@@ -203,7 +215,6 @@ public sealed class ConfirmOrderHandler(
             // all: the customer is told the same thing, because from where they
             // are standing it is the same thing.
             if (product is not { IsActive: true, IsAvailable: true }) return NotOnTheMenuFor(product);
-            if (product.Stock < line.Quantity) return OutOfStock(product);
 
             items.Add(new NewOrderItem(product.Id, product.Name, product.Price, line.Quantity, line.Note));
         }

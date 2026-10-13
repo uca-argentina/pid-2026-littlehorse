@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
+import { loadIntoTonight } from './stock';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 import { categoryIdNamed } from './categories';
 
@@ -34,6 +35,7 @@ async function loadProduct(request: APIRequestContext, name: string, stock: numb
   });
 
   expect(created.status()).toBe(201);
+  await loadIntoTonight(request, token, ((await created.json()) as { id: string }).id, stock);
 }
 
 /** Puts one drink in the order and opens the payment screen. */

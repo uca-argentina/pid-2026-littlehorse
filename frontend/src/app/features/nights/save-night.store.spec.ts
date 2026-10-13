@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { ProblemTypes } from '../../core/api/problem-types';
-import { SaveNightStore } from './save-night.store';
+import { SaveNightStore, refusalFor } from './save-night.store';
 import { NightsService } from './nights.service';
 import type { NewNight, Night } from './nights.service';
 
@@ -53,14 +53,15 @@ describe('SaveNightStore', () => {
     expect(create).toHaveBeenCalledTimes(1);
   });
 
-  // Criterion 1: the night "queda en el listado".
-  it('goes back to the listing once the night exists', () => {
+  // US-37: setting up a night goes on with loading what each KDS will have
+  // that night, which lives in the new night's own screen.
+  it('opens the new night once it exists, to load the stock of each KDS', () => {
     create.mockReturnValue(of(created));
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     store.create('bar-alfa', aNewNight);
 
-    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'nights']);
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'nights', 'night-1']);
     expect(store.status()).toBe('idle');
   });
 
@@ -129,5 +130,16 @@ describe('SaveNightStore', () => {
     store.update('bar-alfa', 'night-1', aNewNight);
 
     expect(store.status()).toBe('startLocked');
+  });
+
+  // US-37: the KDS taken out still holds stock in the night, and would leave
+  // it stuck. The form says to give it back first.
+  it('says a KDS with stock cannot leave the night when the API refuses it for that', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.nightBarHoldsStock)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('barHoldsStock');
+    expect(refusalFor(store.status())).toMatch(/devolvé su stock al depósito/i);
   });
 });

@@ -294,6 +294,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/nights/{id}/stock': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The night's stock, bar by bar: what was loaded of each product, sold and is left, and what the storeroom still has. */
+    get: operations['GetNightStock'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}/stock/{kdsId}/{productId}/adjust': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Moves units of a product from the storeroom into one bar of a night that has not ended, or back. */
+    post: operations['AdjustNightStock'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/categories': {
     parameters: {
       query?: never;
@@ -610,6 +644,16 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     /**
+     * @description How much a product's stock moves in one bar for the night: positive when
+     *     units go in from the storeroom, negative when they go back to it. A change,
+     *     never the new total, so a sale made while the screen was open is not
+     *     overwritten.
+     */
+    AdjustNightStockRequest: {
+      /** Format: int32 */
+      change: number;
+    };
+    /**
      * @description How much the stock moves: positive when units arrived, negative when it was
      *     loaded wrong. A change, never the new total.
      */
@@ -793,6 +837,36 @@ export interface components {
       endsAt: string;
       crewIds: string[];
       audit: components['schemas']['AuditResponse'];
+    };
+    /** @description One bar of the night: a KDS of its crew, with its own stock. */
+    NightStockBarResponse: {
+      /** Format: uuid */
+      kdsId: string;
+      name: string;
+      lines: components['schemas']['NightStockLineResponse'][];
+    };
+    /**
+     * @description One product in one bar for the night. Every night's bars start empty, so
+     *     Loaded is all that came in. InStoreroom is the product's, the same in every
+     *     bar: what is left to load.
+     */
+    NightStockLineResponse: {
+      /** Format: uuid */
+      productId: string;
+      productName: string;
+      /** Format: int32 */
+      loaded: number;
+      /** Format: int32 */
+      sold: number;
+      /** Format: int32 */
+      left: number;
+      /** Format: int32 */
+      inStoreroom: number;
+    };
+    NightStockResponse: {
+      /** Format: uuid */
+      nightId: string;
+      bars: components['schemas']['NightStockBarResponse'][];
     };
     /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
@@ -1566,6 +1640,92 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['NightResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetNightStock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightStockResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  AdjustNightStock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        kdsId: string;
+        productId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AdjustNightStockRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightStockResponse'];
         };
       };
       /** @description Bad Request */

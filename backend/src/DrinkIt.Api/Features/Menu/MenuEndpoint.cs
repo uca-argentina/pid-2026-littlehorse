@@ -73,9 +73,10 @@ internal static class MenuEndpoint
         // finished setting up, and they read nothing alike on a phone.
         if (venue.Identity is null) return NoSuchVenue(venueSlug);
 
-        IReadOnlyList<MenuItem> menu = await products.ListForMenuAsync(cancellationToken);
-        IReadOnlyList<CategoryListItem> tabs = await categories.ListAsync(cancellationToken);
+        // The cards say what tonight's bars can serve (US-37).
         Guid? tonight = await nights.FindIdAsync(clock.GetUtcNow(), cancellationToken);
+        IReadOnlyList<MenuItem> menu = await products.ListForMenuAsync(tonight, cancellationToken);
+        IReadOnlyList<CategoryListItem> tabs = await categories.ListAsync(cancellationToken);
 
         return TypedResults.Ok(new MenuResponse(
             venue.Identity.Name,

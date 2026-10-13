@@ -1,4 +1,5 @@
 using DrinkIt.Domain.Common;
+using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Domain.Nights;
@@ -27,6 +28,10 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         public const string CrewMemberFromAnotherVenue = "night.crew_member_from_another_venue";
         public const string StartLocked = "night.start_locked";
         public const string NightOver = "night.over";
+        public const string ProductFromAnotherVenue = "night.product_from_another_venue";
+        public const string BarRequired = "night.bar_required";
+        public const string BarNotInNight = "night.bar_not_in_night";
+        public const string StockChangeZero = "night.stock_change_zero";
     }
 
     public const int NameMaxLength = 60;
@@ -79,7 +84,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
     /// </summary>
     public void Update(string name, DateTimeOffset startsAt, DateTimeOffset endsAt, IEnumerable<StaffUser> crew, DateTimeOffset now)
     {
-        if (now >= EndsAt) throw new DomainException(ErrorCodes.NightOver, "The night is over and can no longer change.");
+        if (HasEndedAt(now)) throw new DomainException(ErrorCodes.NightOver, "The night is over and can no longer change.");
 
         bool underway = IsUnderwayAt(now);
 
@@ -101,6 +106,60 @@ public sealed class Night : AuditStamps, IBelongsToVenue
     public bool IsUnderwayAt(DateTimeOffset moment) => StartsAt <= moment && moment < EndsAt;
 
     public bool IsWorkedBy(Guid staffUserId) => _crewIds.Contains(staffUserId);
+
+    /// <summary>From its end on the night is over: it takes no orders and its stock is only read.</summary>
+    public bool HasEndedAt(DateTimeOffset moment) => moment >= EndsAt;
+
+    /// <summary>
+    /// US-37: units of a product moved from the storeroom into one bar for the
+    /// night, or back. A bar is a KDS of the night's crew, and keeps a stock of
+    /// its own for each night, starting empty: what a customer orders is taken
+    /// from the bar the order goes to.
+    /// </summary>
+    /// <remarks>
+    /// Only the record: the bar's units move in the database with a
+    /// conditional statement, so a sale made meanwhile is kept. A night that
+    /// ended is read-only, since what it loaded and sold is its record. Whether
+    /// the storeroom has enough argues with the venue's other nights, so it is
+    /// the repository's.
+    /// </remarks>
+    public NightStockAdjustment AdjustStock(StaffUser bar, Product product, int change, DateTimeOffset now)
+    {
+        if (HasEndedAt(now)) throw new DomainException(ErrorCodes.NightOver, "The night is over and its stock can no longer change.");
+        if (product.VenueId != VenueId) throw new DomainException(ErrorCodes.ProductFromAnotherVenue, "Only the venue's own products can be loaded into its night.");
+        if (bar.Role != StaffRole.Kds) throw new DomainException(ErrorCodes.BarRequired, "Stock is loaded into a bar, and a bar is a KDS.");
+        if (!IsWorkedBy(bar.Id)) throw new DomainException(ErrorCodes.BarNotInNight, $"'{bar.Username}' does not work this night.");
+        if (change == 0) throw new DomainException(ErrorCodes.StockChangeZero, "The stock has to change by at least one unit.");
+
+        return new NightStockAdjustment(VenueId, Id, bar.Id, product.Id, change);
+    }
+
+    /// <summary>
+    /// US-37: what the night's bars start with by default, when it is created:
+    /// each product's storeroom split evenly among them. What does not split
+    /// evenly stays in the storeroom, and a night set up already over takes
+    /// nothing. The administrator changes it from there, one
+    /// <see cref="AdjustStock"/> at a time.
+    /// </summary>
+    /// <param name="bars">The KDS of the night's crew.</param>
+    /// <param name="storeroom">What the storeroom has of each product right now.</param>
+    /// <param name="now">When it is loaded: a night that ended takes nothing.</param>
+    public IReadOnlyList<NightStockAdjustment> LoadOpeningStock(
+        IReadOnlyList<StaffUser> bars,
+        IEnumerable<(Product Product, int InStoreroom)> storeroom,
+        DateTimeOffset now)
+    {
+        if (bars.Count == 0 || HasEndedAt(now)) return [];
+
+        return
+        [
+            .. from line in storeroom
+               let share = line.InStoreroom / bars.Count
+               where share > 0
+               from bar in bars
+               select AdjustStock(bar, line.Product, share, now),
+        ];
+    }
 
     private static string CleanName(string name)
     {

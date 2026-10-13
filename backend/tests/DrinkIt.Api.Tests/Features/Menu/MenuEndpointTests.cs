@@ -112,6 +112,25 @@ public class MenuEndpointTests
         Assert.Equal(1, response.Body.GetProperty("items").GetArrayLength());
     }
 
+    // The cards say what tonight's bars can serve: each KDS has its own stock
+    // for the night, and the venue's general stock is not something a
+    // customer can order from (US-37).
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetAsync_Always_ReadsTheMenuAgainstTonightsBars(bool nightIsOn)
+    {
+        Fake.Tonight tonight = new(nightIsOn);
+        Fake.Menu menu = new(GinTonic);
+        CurrentVenue venue = new();
+        venue.Resolve(new VenueIdentity(Guid.CreateVersion7(), "Bar Alfa", "bar-alfa"));
+
+        await MenuEndpoint.GetAsync("bar-alfa", venue, menu, new FakeCategoryQueries(), tonight, TimeProvider.System, CancellationToken.None);
+
+        Assert.True(menu.WasRead);
+        Assert.Equal(tonight.Id, menu.ReadForNight);
+    }
+
     // Nothing about how many are left leaves the building.
     [Fact]
     public async Task GetAsync_WhenTheVenueSellsSomething_SendsNoStockCount()
@@ -142,17 +161,28 @@ public class MenuEndpointTests
     {
         public sealed class Tonight(bool isOn) : IUnderwayNightLookup
         {
+            public Guid? Id { get; } = isOn ? Guid.CreateVersion7() : null;
+
             public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken) =>
-                Task.FromResult(isOn ? Guid.CreateVersion7() : (Guid?)null);
+                Task.FromResult(Id);
         }
 
         public sealed class Menu(params MenuItem[] items) : IProductQueries
         {
+            public bool WasRead { get; private set; }
+
+            public Guid? ReadForNight { get; private set; }
+
             public Task<IReadOnlyList<ProductListItem>> ListAsync(CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The customer's menu never reads the administration listing.");
 
-            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
-                Task.FromResult<IReadOnlyList<MenuItem>>(items);
+            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? nightId, CancellationToken cancellationToken)
+            {
+                WasRead = true;
+                ReadForNight = nightId;
+
+                return Task.FromResult<IReadOnlyList<MenuItem>>(items);
+            }
         }
     }
 }

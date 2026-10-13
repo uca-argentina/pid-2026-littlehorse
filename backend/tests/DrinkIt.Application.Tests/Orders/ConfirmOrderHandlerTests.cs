@@ -243,6 +243,49 @@ public class ConfirmOrderHandlerTests
         Assert.Null(_orders.Added);
     }
 
+    // US-37: the order is taken from one bar's stock, the one with less work
+    // among those that have all of it, and it goes to that bar.
+    [Fact]
+    public async Task HandleAsync_WhenTwoBarsHaveItAll_SendsTheOrderToTheOneWithLessWork()
+    {
+        BarSupply busy = new(Guid.CreateVersion7(), 4, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 });
+        BarSupply quiet = new(Guid.CreateVersion7(), 1, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 });
+        Bars bars = new(busy, quiet);
+
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, bars: bars).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(quiet.KdsId, _orders.Added!.KdsId);
+        Assert.Equal(TheNight, bars.AskedFor);
+    }
+
+    // The gins are in one bar and the fernet in the other: an order is not split
+    // between two bars, so nobody would have it all.
+    [Fact]
+    public async Task HandleAsync_WhenNoBarHasItAll_RejectsTheWholeOrderAndNamesADrink()
+    {
+        Bars bars = new(
+            new BarSupply(Guid.CreateVersion7(), 0, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 }),
+            new BarSupply(Guid.CreateVersion7(), 0, new Dictionary<Guid, int> { [_menu.Fernet.Id] = 10 }));
+
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, bars: bars).HandleAsync(
+            AnOrderOf(Two(_menu.Gin), One(_menu.Fernet)), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Equal("Fernet con Coca", result.Error.Subject);
+        Assert.Null(_orders.Added);
+    }
+
+    // A night whose bars have nothing loaded sells nothing.
+    [Fact]
+    public async Task HandleAsync_WhenTheNightHasNoBarWithStock_RejectsAndNamesTheDrink()
+    {
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, bars: new Bars()).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Equal("Gin Tonic", result.Error.Subject);
+    }
+
     [Fact]
     public async Task HandleAsync_WhenTheDrinkIsNotOnTheMenuAnyMore_RejectsTheWholeOrder()
     {
@@ -373,15 +416,17 @@ public class ConfirmOrderHandlerTests
     private ConfirmOrderHandler AHandlerPaidBy(IPaymentStrategy payment) =>
         new(_orders,
             _menu,
+            _menu,
             new SequenceThatAnswers("K-4821"),
             [payment],
             new TheVenueIsFixed(TheVenue),
             _nights,
             new FixedClock(Tonight));
 
-    private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null) =>
+    private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null, IBarsForOrdering? bars = null) =>
         new(_orders,
             menu,
+            bars ?? menu,
             codes ?? new SequenceThatAnswers("K-4821"),
             [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
             new TheVenueIsFixed(TheVenue),
@@ -512,8 +557,10 @@ public class ConfirmOrderHandlerTests
     /// products, so the ids the tests ask for are the ones the domain generated
     /// and nothing here has to invent one.
     /// </summary>
-    private sealed class Catalog(int gin, int fernet) : IProductsForOrdering
+    private sealed class Catalog(int gin, int fernet) : IProductsForOrdering, IBarsForOrdering
     {
+        public Guid MainBar { get; } = Guid.CreateVersion7();
+
         public Product Gin { get; } = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, gin, Guid.CreateVersion7());
 
         public Product Fernet { get; } = Product.Create(TheVenue, "Fernet con Coca", null, null, 4000m, fernet, Guid.CreateVersion7());
@@ -534,5 +581,23 @@ public class ConfirmOrderHandlerTests
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Product>>(
                 [.. new[] { Gin, Fernet }.Where(product => ids.Contains(product.Id))]);
+
+        /// <summary>One bar holding the whole stock: what the tests that are not about bars need.</summary>
+        public Task<IReadOnlyList<BarSupply>> GetAsync(Guid nightId, IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<BarSupply>>(
+                [new BarSupply(MainBar, 0, new Dictionary<Guid, int> { [Gin.Id] = gin, [Fernet.Id] = fernet })]);
+    }
+
+    /// <summary>The night's bars, as the tests about choosing one lay them out.</summary>
+    private sealed class Bars(params BarSupply[] bars) : IBarsForOrdering
+    {
+        public Guid? AskedFor { get; private set; }
+
+        public Task<IReadOnlyList<BarSupply>> GetAsync(Guid nightId, IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)
+        {
+            AskedFor = nightId;
+
+            return Task.FromResult<IReadOnlyList<BarSupply>>(bars);
+        }
     }
 }

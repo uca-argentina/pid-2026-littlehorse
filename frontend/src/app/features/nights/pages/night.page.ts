@@ -7,6 +7,7 @@ import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { STAFF_USERS_URL } from '../../staff-users/staff-users.service';
 import type { StaffUser } from '../../staff-users/staff-users.service';
 import { NightForm } from '../components/night-form/night-form';
+import { NightStock } from '../components/night-stock/night-stock';
 import { nightHours, phaseOf } from '../night-calendar';
 import type { NightPhase } from '../night-calendar';
 import { NIGHTS_URL } from '../nights.service';
@@ -24,12 +25,12 @@ type LoadFailure = 'none' | 'notFound' | 'unreachable';
 
 /**
  * A night's own screen (US-35), reached from the listing: editable while it
- * has not ended, read-only after. The API holds the same rules; this only
+ * has not ended, read-only after. Its stock (US-37) goes under the form. The API holds the same rules; this only
  * avoids offering what it would refuse.
  */
 @Component({
   selector: 'drinkit-night-page',
-  imports: [AdminHeader, NightForm, RouterLink],
+  imports: [AdminHeader, NightForm, NightStock, RouterLink],
   providers: [SaveNightStore],
   styleUrl: './night-pages.scss',
   templateUrl: './night.page.html',

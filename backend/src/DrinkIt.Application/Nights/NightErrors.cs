@@ -35,4 +35,30 @@ public static class NightErrors
     /// </summary>
     public static readonly Error CrewMemberNotFound =
         new("night.crew_member_not_found", "One of the chosen accounts is not part of this venue.");
+
+    /// <summary>US-37, criterion 3: a night that ended keeps the stock it had, to be looked at.</summary>
+    public static readonly Error StockClosed =
+        new("night.stock_closed", "The night is over: its stock can only be looked at.");
+
+    /// <summary>
+    /// US-37: loading a bar takes from the storeroom, the general stock minus
+    /// what the bars of nights not yet over hold, and there is less than that.
+    /// </summary>
+    public static readonly Error StoreroomShort =
+        new("night.storeroom_short", "There are not that many left in the storeroom to load.");
+
+    /// <summary>
+    /// US-37: a KDS's stock that night is only sold, shown and given back
+    /// while it works the night, so it cannot leave it holding any.
+    /// </summary>
+    public static readonly Error BarHoldsStock =
+        new("night.bar_holds_stock", "A KDS still holds stock in this night. Give it back to the storeroom before taking it out.");
+
+    /// <summary>US-37: no KDS of this venue has that id. Another venue's reads the same.</summary>
+    public static readonly Error BarNotFound =
+        new("night.bar_not_found", "This venue has no bar with that id.");
+
+    /// <summary>US-37: the bar was taken out of the night's crew while its stock was open.</summary>
+    public static readonly Error BarNotInNight =
+        new("night.bar_not_in_night", "That bar does not work this night any more.");
 }

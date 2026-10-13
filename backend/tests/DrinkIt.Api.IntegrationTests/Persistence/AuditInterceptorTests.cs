@@ -1,9 +1,11 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Menu;
+using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -96,7 +98,7 @@ public sealed class AuditInterceptorTests(SqlServerFixture sql)
         Venue venue = Venue.Create("Bar Audit", $"bar-{Guid.NewGuid():N}");
         Category category = SeedCategory.For(venue.Id);
         Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20, category.Id);
-        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "Maria", OrderCode.First, [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 1, null)]);
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), Guid.CreateVersion7(), "Maria", OrderCode.First, [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 1, null)]);
 
         await using DrinkItDbContext context = ContextFor(venue, "euge", Evening);
         context.Venues.Add(venue);
@@ -159,22 +161,66 @@ public sealed class AuditInterceptorTests(SqlServerFixture sql)
         Assert.Equal("euge", stored.CreatedBy);
     }
 
-    // The sale takes stock with a statement of its own, not through SaveChanges:
-    // a drink being sold is not somebody editing the product, so the mark stays.
+    // The stock moves with a statement of its own, not through SaveChanges: a
+    // delivery arriving is not somebody editing the product, so the mark stays.
     [Fact]
     public async Task SaveStockAdjustmentAsync_WhenTheStockMoves_DoesNotCountAsAnEdit()
     {
         Venue venue = await SeedVenue();
         Product product = await SeedProduct(venue, "euge", Evening);
 
-        await using DrinkItDbContext context = ContextFor(venue, "pablo", Evening.AddHours(3));
-        Product tracked = await context.Products.SingleAsync(row => row.Id == product.Id);
-        await new ProductRepository(context).SaveStockAdjustmentAsync(tracked, -1, CancellationToken.None);
+        await using (DrinkItDbContext context = ContextFor(venue, "pablo", Evening.AddHours(3)))
+        {
+            Product tracked = await context.Products.SingleAsync(row => row.Id == product.Id);
+            await new ProductRepository(context).SaveStockAdjustmentAsync(tracked, -1, Evening.AddHours(3), CancellationToken.None);
+        }
 
         Product stored = await Stored(venue, product.Id);
 
         Assert.Equal(19, stored.Stock);
         Assert.Null(stored.LastModifiedAt);
+    }
+
+    // Loading a bar moves units out of the storeroom: the general stock and
+    // the product's mark stay as they were. Who loaded it is on the
+    // adjustment (US-37).
+    [Fact]
+    public async Task SaveAdjustmentAsync_WhenABarIsLoaded_StampsTheAdjustmentAndNotTheProduct()
+    {
+        Venue venue = await SeedVenue();
+        Product product = await SeedProduct(venue, "euge", Evening);
+        (Night night, StaffUser bar) = await SeedNight(venue);
+
+        await using (DrinkItDbContext context = ContextFor(venue, "pablo", Evening.AddHours(3)))
+        {
+            Product tracked = await context.Products.SingleAsync(row => row.Id == product.Id);
+            Night trackedNight = await context.Nights.SingleAsync(row => row.Id == night.Id);
+            NightStockAdjustment adjustment = trackedNight.AdjustStock(bar, tracked, 1, Evening.AddHours(3));
+            await new NightStockRepository(context).SaveAdjustmentAsync(adjustment, Evening.AddHours(3), CancellationToken.None);
+        }
+
+        Product stored = await Stored(venue, product.Id);
+
+        Assert.Equal(20, stored.Stock);
+        Assert.Null(stored.LastModifiedAt);
+
+        await using DrinkItDbContext fresh = sql.CreateContext(venue.Id);
+        NightStockAdjustment recorded = await fresh.NightStockAdjustments.SingleAsync();
+        Assert.Equal("pablo", recorded.CreatedBy);
+        Assert.Equal(Evening.AddHours(3), recorded.CreatedAt);
+    }
+
+    private async Task<(Night Night, StaffUser Bar)> SeedNight(Venue venue)
+    {
+        StaffUser[] crew = [StaffUser.Create(venue.Id, "main-bar", "hash", StaffRole.Kds), StaffUser.Create(venue.Id, "till-1", "hash", StaffRole.Cashier)];
+        Night night = Night.Create(venue.Id, "Saturday", Evening, Evening.AddHours(7), crew);
+
+        await using DrinkItDbContext context = sql.CreateContext(venue.Id);
+        context.StaffUsers.AddRange(crew);
+        context.Nights.Add(night);
+        await context.SaveChangesAsync();
+
+        return (night, crew[0]);
     }
 
     private DrinkItDbContext ContextFor(Venue venue, string? username, DateTimeOffset now) =>

@@ -7,6 +7,10 @@ namespace DrinkIt.Application.Tests.Menu;
 
 public class AdjustProductStockHandlerTests
 {
+    private static readonly DateTimeOffset Now = new(2026, 10, 10, 23, 30, 0, TimeSpan.FromHours(-3));
+
+    private static AdjustProductStockHandler Handler(Fake.Products products) => new(products, new Fake.FixedClock(Now));
+
     private static Product AGinTonicWith(int stock) =>
         Product.Create(Guid.CreateVersion7(), "Gin Tonic", null, null, 4500m, stock, Guid.CreateVersion7());
 
@@ -17,7 +21,7 @@ public class AdjustProductStockHandlerTests
         Product product = AGinTonicWith(200);
         Fake.Products products = new(product);
 
-        Result<ProductSummary> result = await new AdjustProductStockHandler(products)
+        Result<ProductSummary> result = await Handler(products)
             .HandleAsync(new AdjustProductStockCommand(product.Id, -180), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -31,7 +35,7 @@ public class AdjustProductStockHandlerTests
     {
         Fake.Products products = new(AGinTonicWith(0));
 
-        Result<ProductSummary> result = await new AdjustProductStockHandler(products)
+        Result<ProductSummary> result = await Handler(products)
             .HandleAsync(new AdjustProductStockCommand(Guid.CreateVersion7(), 12), CancellationToken.None);
 
         Assert.Equal(ProductErrors.NotFound, result.Error);
@@ -48,7 +52,7 @@ public class AdjustProductStockHandlerTests
         Product product = AGinTonicWith(2);
         Fake.Products products = new(product);
 
-        Result<ProductSummary> result = await new AdjustProductStockHandler(products)
+        Result<ProductSummary> result = await Handler(products)
             .HandleAsync(new AdjustProductStockCommand(product.Id, -5), CancellationToken.None);
 
         Assert.Equal(ProductErrors.StockMoved, result.Error);
@@ -64,22 +68,36 @@ public class AdjustProductStockHandlerTests
         Product product = AGinTonicWith(5);
         Fake.Products products = new(product);
 
-        DomainException error = await Assert.ThrowsAsync<DomainException>(() => new AdjustProductStockHandler(products)
+        DomainException error = await Assert.ThrowsAsync<DomainException>(() => Handler(products)
             .HandleAsync(new AdjustProductStockCommand(product.Id, 0), CancellationToken.None));
 
         Assert.Equal(Product.ErrorCodes.StockChangeZero, error.Code);
         Assert.Null(products.SavedChange);
     }
 
-    // The bar sold some between the screen opening and this arriving, and what
-    // is left is less than the change takes away. Nothing is written.
+    // Adding is always allowed; what can be taken away is what is in the
+    // storeroom, which depends on which nights have ended. The server's clock.
+    [Fact]
+    public async Task HandleAsync_WhenItSaves_TellsTheRepositoryWhenNowIs()
+    {
+        Product product = AGinTonicWith(5);
+        Fake.Products products = new(product);
+
+        await Handler(products).HandleAsync(new AdjustProductStockCommand(product.Id, 10), CancellationToken.None);
+
+        Assert.Equal(Now, products.SavedAt);
+    }
+
+    // The bar sold some between the screen opening and this arriving, or the
+    // units are loaded into a bar of a night not yet over, and what is left in
+    // the storeroom is less than the change takes away. Nothing is written.
     [Fact]
     public async Task HandleAsync_WhenSalesMeanwhileLeftTooLittle_FailsWithStockMoved()
     {
         Product product = AGinTonicWith(5);
         Fake.Products products = new(product, adjustmentApplies: false);
 
-        Result<ProductSummary> result = await new AdjustProductStockHandler(products)
+        Result<ProductSummary> result = await Handler(products)
             .HandleAsync(new AdjustProductStockCommand(product.Id, -5), CancellationToken.None);
 
         Assert.Equal(ProductErrors.StockMoved, result.Error);
@@ -87,9 +105,16 @@ public class AdjustProductStockHandlerTests
 
     private static class Fake
     {
+        public sealed class FixedClock(DateTimeOffset now) : TimeProvider
+        {
+            public override DateTimeOffset GetUtcNow() => now.ToUniversalTime();
+        }
+
         public sealed class Products(Product stored, bool adjustmentApplies = true) : IProductRepository
         {
             public int? SavedChange { get; private set; }
+
+            public DateTimeOffset? SavedAt { get; private set; }
 
             public bool SavedEverything { get; private set; }
 
@@ -108,9 +133,10 @@ public class AdjustProductStockHandlerTests
                 return Task.CompletedTask;
             }
 
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken)
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, DateTimeOffset now, CancellationToken cancellationToken)
             {
                 SavedChange = change;
+                SavedAt = now;
 
                 return Task.FromResult(adjustmentApplies);
             }

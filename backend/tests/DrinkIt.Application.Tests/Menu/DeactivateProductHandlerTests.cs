@@ -41,7 +41,7 @@ public class DeactivateProductHandlerTests
     {
         public sealed class Products(Product stored) : IProductRepository
         {
-            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, CancellationToken cancellationToken) =>
+            public Task<bool> SaveStockAdjustmentAsync(Product product, int change, DateTimeOffset now, CancellationToken cancellationToken) =>
                 Task.FromResult(true);
 
             public bool Saved { get; private set; }

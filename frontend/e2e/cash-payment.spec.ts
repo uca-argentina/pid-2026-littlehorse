@@ -1,6 +1,7 @@
 import { devices, expect, test } from '@playwright/test';
 import type { APIRequestContext, Browser, BrowserContext, Page } from '@playwright/test';
 import { categoryIdNamed } from './categories';
+import { loadIntoTonight } from './stock';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 import { joinTonight } from './nights';
 
@@ -52,7 +53,8 @@ async function anAccount(request: APIRequestContext, role: 'Kds' | 'Cashier'): P
   return username;
 }
 
-async function aProduct(request: APIRequestContext): Promise<string> {
+/** A drink loaded into tonight: into that KDS when its board has to see the order. */
+async function aProduct(request: APIRequestContext, kdsUsername?: string): Promise<string> {
   const name = `E2E ${unique()}`;
   const token = await adminToken(request);
 
@@ -68,6 +70,13 @@ async function aProduct(request: APIRequestContext): Promise<string> {
   });
 
   expect(created.status()).toBe(201);
+  await loadIntoTonight(
+    request,
+    token,
+    ((await created.json()) as { id: string }).id,
+    20,
+    kdsUsername,
+  );
 
   return name;
 }
@@ -96,11 +105,12 @@ test.describe('paying in cash at the till', () => {
   }) => {
     const phone = await browser.newContext({ ...devices['iPhone 13'], baseURL });
     const customer = await phone.newPage();
-    const [drink, cashierName, kdsName] = await Promise.all([
-      aProduct(request),
+    const [cashierName, kdsName] = await Promise.all([
       anAccount(request, 'Cashier'),
       anAccount(request, 'Kds'),
     ]);
+    // Into this spec's KDS, so the order reaches its board (US-36, US-37).
+    const drink = await aProduct(request, kdsName);
     const customerName = aFullName();
 
     // The till is already open, as it would be on a night: nobody reloads it.

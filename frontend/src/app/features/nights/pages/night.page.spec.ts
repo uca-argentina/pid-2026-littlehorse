@@ -8,7 +8,7 @@ import { ProblemTypes } from '../../../core/api/problem-types';
 import { STAFF_USERS_URL } from '../../staff-users/staff-users.service';
 import type { StaffUser } from '../../staff-users/staff-users.service';
 import { NIGHTS_URL, NightsService } from '../nights.service';
-import type { Night } from '../nights.service';
+import type { Night, NightStock } from '../nights.service';
 import { NightPage } from './night.page';
 
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
@@ -26,6 +26,26 @@ const saturday: Night = {
   endsAt: new Date(2026, 9, 11, 6, 0).toISOString(),
   crewIds: ['main-bar', 'till-1'],
   audit: noAudit,
+};
+
+const itsStock: NightStock = {
+  nightId: 'night-1',
+  bars: [
+    {
+      kdsId: 'main-bar',
+      name: 'main-bar',
+      lines: [
+        {
+          productId: 'gin',
+          productName: 'Gin Tonic',
+          loaded: 12,
+          sold: 7,
+          left: 5,
+          inStoreroom: 18,
+        },
+      ],
+    },
+  ],
 };
 
 const beforeItStarts = new Date(2026, 9, 10, 20, 0);
@@ -48,6 +68,16 @@ async function openScreen(now: Date, update = vi.fn().mockReturnValue(of(saturda
   return { rendered, update, http: TestBed.inject(HttpTestingController) };
 }
 
+/**
+ * The stock (US-37) is asked for by its own component, which only exists
+ * once the night arrived and was drawn: let that happen, then answer it.
+ */
+async function flushTheStock(http: HttpTestingController): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve));
+  TestBed.tick();
+  http.expectOne(`${NIGHTS_URL}/night-1/stock`).flush(itsStock);
+}
+
 async function openScreenShowing(
   night: Night,
   now: Date,
@@ -57,6 +87,7 @@ async function openScreenShowing(
 
   opened.http.expectOne(`${NIGHTS_URL}/night-1`).flush(night);
   opened.http.expectOne(STAFF_USERS_URL).flush(theTeam);
+  await flushTheStock(opened.http);
   await opened.rendered.fixture.whenStable();
 
   return opened;
@@ -102,10 +133,26 @@ describe('NightPage', () => {
     await openScreenShowing(saturday, afterItEnded);
 
     expect(screen.getByText('Terminada')).not.toBeNull();
-    expect(screen.getByText('main-bar')).not.toBeNull();
+    // The crew, not the stock's section of the same bar further down.
+    expect(screen.getByText('main-bar', { selector: 'dd' })).not.toBeNull();
     expect(screen.getByText('till-1')).not.toBeNull();
     expect(screen.queryByRole('button', { name: /guardar/i })).toBeNull();
     expect(screen.queryByLabelText(/nombre/i)).toBeNull();
+  });
+
+  // US-37: the night's stock lives in its own screen, editable or not.
+  it("shows the night's stock under its form", async () => {
+    await openScreenShowing(saturday, beforeItStarts);
+
+    expect(screen.getByRole('heading', { name: /stock de la noche/i })).not.toBeNull();
+    expect(screen.getByRole('button', { name: /cargar/i })).not.toBeNull();
+  });
+
+  it("shows a finished night's stock without offering to change it", async () => {
+    await openScreenShowing(saturday, afterItEnded);
+
+    expect(screen.getByText(/se cargaron 12/i)).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /cargar/i })).toBeNull();
   });
 
   it('says so when the venue has no such night', async () => {
@@ -131,6 +178,7 @@ describe('NightPage', () => {
     screen.getByRole('button', { name: /reintentar/i }).click();
     TestBed.tick();
     http.expectOne(`${NIGHTS_URL}/night-1`).flush(saturday);
+    await flushTheStock(http);
     await rendered.fixture.whenStable();
 
     expect((screen.getByLabelText(/nombre/i) as HTMLInputElement).value).toBe('Saturday');

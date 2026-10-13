@@ -11,10 +11,15 @@ public sealed record CreateNightCommand(string Name, DateTimeOffset StartsAt, Da
 /// US-35: the administrator sets up a night of their own venue. The venue
 /// comes from <see cref="ICurrentVenue"/>, which reads the token claim.
 /// </summary>
+/// <remarks>
+/// US-37: each KDS of the new night starts with an equal share of the
+/// storeroom, which the administrator changes from the night's screen.
+/// </remarks>
 public sealed class CreateNightHandler(
     INightRepository nights,
     IStaffUserRepository staffUsers,
-    ICurrentVenue currentVenue)
+    ICurrentVenue currentVenue,
+    TimeProvider clock)
 {
     public async Task<Result<NightSummary>> HandleAsync(CreateNightCommand command, CancellationToken cancellationToken)
     {
@@ -34,7 +39,9 @@ public sealed class CreateNightHandler(
             command.EndsAt,
             crewIds.Select(id => crew.First(member => member.Id == id)));
 
-        await nights.AddAsync(night, cancellationToken);
+        StaffUser[] bars = [.. crewIds.Select(id => crew.First(member => member.Id == id)).Where(member => member.Role == StaffRole.Kds)];
+
+        await nights.AddAsync(night, bars, clock.GetUtcNow(), cancellationToken);
 
         return NightSummary.Of(night);
     }

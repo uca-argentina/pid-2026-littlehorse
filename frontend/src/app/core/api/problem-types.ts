@@ -27,7 +27,7 @@ export const ProblemTypes = {
 
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
-  /** Sales left less stock than an adjustment takes away. */
+  /** Sales left less stock than an adjustment of the night's stock takes away (US-37). */
   productStockMoved: 'urn:drinkit:problem:product:stock-moved',
 
   // US-11. The three that mean the menu moved while somebody was ordering, as
@@ -70,4 +70,16 @@ export const ProblemTypes = {
 
   /** No such night in this venue: a stale link, or another venue's id. */
   nightNotFound: 'urn:drinkit:problem:night:not-found',
+
+  /** US-37: the night ended while its stock was open, and a finished night's stock is only read. */
+  nightStockClosed: 'urn:drinkit:problem:night:stock-closed',
+
+  /** US-37: loading a bar takes from the storeroom, and it has fewer than that. */
+  nightStoreroomShort: 'urn:drinkit:problem:night:storeroom-short',
+
+  /** US-37: a KDS still holding stock in the night cannot be taken out of its crew. */
+  nightBarHoldsStock: 'urn:drinkit:problem:night:bar-holds-stock',
+
+  /** US-37: the bar was taken out of the night's crew while its stock was open. */
+  nightBarNotInNight: 'urn:drinkit:problem:night:bar-not-in-night',
 } as const;

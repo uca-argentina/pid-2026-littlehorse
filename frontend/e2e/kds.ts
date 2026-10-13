@@ -2,6 +2,7 @@ import { expect } from '@playwright/test';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { categoryIdNamed } from './categories';
 import { joinTonight } from './nights';
+import { loadIntoTonight } from './stock';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 
 /**
@@ -77,7 +78,11 @@ export async function aKdsAccountOffTonight(request: APIRequestContext): Promise
   return username;
 }
 
-async function loadProduct(request: APIRequestContext, name: string): Promise<void> {
+async function loadProduct(
+  request: APIRequestContext,
+  name: string,
+  kdsUsername?: string,
+): Promise<void> {
   const token = await adminToken(request);
 
   const created = await request.post('/api/staff/products', {
@@ -92,6 +97,13 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
   });
 
   expect(created.status()).toBe(201);
+  await loadIntoTonight(
+    request,
+    token,
+    ((await created.json()) as { id: string }).id,
+    20,
+    kdsUsername,
+  );
 }
 
 export async function logIn(page: Page, username: string, password: string): Promise<void> {
@@ -101,14 +113,18 @@ export async function logIn(page: Page, username: string, password: string): Pro
   await page.getByRole('button', { name: /entrar/i }).click();
 }
 
-/** Places and pays for one drink as a customer, digital — the only method there is today. */
+/**
+ * Places and pays for one drink as a customer, digital — the only method there
+ * is today. The drink is loaded into that KDS alone, so the order goes to it.
+ */
 export async function anOrderPaidBy(
   page: Page,
   request: APIRequestContext,
   customerName: string,
+  kdsUsername: string,
 ): Promise<string> {
   const drinkName = aNewProduct();
-  await loadProduct(request, drinkName);
+  await loadProduct(request, drinkName, kdsUsername);
 
   await page.goto(menuPath);
   await page.getByRole('searchbox', { name: /buscar trago/i }).fill(drinkName);
