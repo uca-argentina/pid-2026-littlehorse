@@ -118,6 +118,7 @@ app.MapOrderTracking();
 app.MapStaffUsers();
 app.MapNights();
 app.MapCategories();
+app.MapTables();
 app.MapProducts();
 app.MapKds();
 // The hubs carry their role in [Authorize]; the policy adds the night's crew
