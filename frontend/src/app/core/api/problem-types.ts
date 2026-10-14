@@ -27,6 +27,9 @@ export const ProblemTypes = {
 
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
+  /** US-39: the number belongs to a table of the venue, put away or not. */
+  tableNumberTaken: 'urn:drinkit:problem:table:number-taken',
+
   /** Sales left less stock than an adjustment of the night's stock takes away (US-37). */
   productStockMoved: 'urn:drinkit:problem:product:stock-moved',
 

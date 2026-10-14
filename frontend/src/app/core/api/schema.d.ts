@@ -380,6 +380,58 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/tables': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists the venue's VIP tables by number, the ones put away included. */
+    get: operations['ListTables'];
+    put?: never;
+    /** Adds a VIP table with its number. */
+    post: operations['CreateTable'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/tables/{id}/deactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Puts a table away without deleting it. */
+    post: operations['DeactivateTable'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/tables/{id}/reactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Brings back a table that was put away. */
+    post: operations['ReactivateTable'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/products': {
     parameters: {
       query?: never;
@@ -801,6 +853,11 @@ export interface components {
       role: components['schemas']['StaffRoleName'];
       displayName?: null | string;
     };
+    /** @description What the administration screen posts to add a table. */
+    CreateTableRequest: {
+      /** Format: int32 */
+      number: number;
+    };
     /**
      * @description Where an order is, as the customer's phone reads it.
      * @enum {string}
@@ -987,6 +1044,14 @@ export interface components {
       username: string;
       displayName: null | string;
       role: components['schemas']['StaffRoleName'];
+      isActive: boolean;
+      audit: components['schemas']['AuditResponse'];
+    };
+    TableResponse: {
+      /** Format: uuid */
+      id: string;
+      /** Format: int32 */
+      number: number;
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
     };
@@ -1923,6 +1988,130 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListTables: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'][];
+        };
+      };
+    };
+  };
+  CreateTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTableRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  DeactivateTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReactivateTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

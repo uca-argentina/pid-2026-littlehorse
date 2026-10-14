@@ -1,0 +1,81 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <section class="body" [attr.aria-busy]="tables.isLoading()">
+    <div class="bar">
+      <h1 class="title">Mesas VIP</h1>
+      <a class="cta" [routerLink]="['/', venueSlug(), 'staff', 'tables', 'new']">Nueva mesa</a>
+    </div>
+
+    @if (tables.isLoading()) {
+      <p class="note" role="status">
+        Cargando las mesas…
+        @if (isSlow()) {
+          Está tardando más de lo normal, seguimos buscando.
+        }
+      </p>
+    }
+
+    @if (failure() === 'forbidden') {
+      <p class="note note-bad" role="alert">
+        Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que te
+        la vuelva a dar.
+      </p>
+    } @else if (failure() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos traer las mesas. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    @if (changeFailed()) {
+      <p class="note note-bad" role="alert">
+        No pudimos hacer el cambio. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    @if (isEmpty()) {
+      <p class="note" role="status">
+        Todavía no hay mesas cargadas. Agregalas con "Nueva mesa" para poder abrirles cuenta.
+      </p>
+    }
+
+    @if (rows().length > 0) {
+      <ul class="rows" aria-label="Mesas VIP">
+        @for (table of rows(); track table.id) {
+          <li class="row" [class.row-off]="!table.isActive">
+            <span class="number">Mesa {{ table.number }}</span>
+            @if (!table.isActive) {
+              <span class="chip chip-off">Dado de baja</span>
+            }
+            @if (table.isActive) {
+              <button
+                class="change"
+                type="button"
+                [disabled]="changing() !== null"
+                [attr.aria-label]="'Dar de baja la mesa ' + table.number"
+                (click)="putAway(table)"
+              >
+                Dar de baja
+              </button>
+            } @else {
+              <button
+                class="change"
+                type="button"
+                [disabled]="changing() !== null"
+                [attr.aria-label]="'Reactivar la mesa ' + table.number"
+                (click)="bringBack(table)"
+              >
+                Reactivar
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+
+    <p class="hint">
+      Una mesa que ya no se usa se da de baja, no se borra: los pedidos que salieron de ella siguen
+      diciendo su número, y ese número queda ocupado hasta que la reactives.
+    </p>
+  </section>
+</div>

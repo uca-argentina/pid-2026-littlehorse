@@ -1,0 +1,55 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <form class="body" [formGroup]="form" (ngSubmit)="submit()">
+    <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'tables']">Volver al listado</a>
+    <h1 class="title">Nueva mesa</h1>
+
+    @if (store.status() === 'numberTaken') {
+      <p class="note note-bad" role="alert">
+        Ya hay una mesa con ese número en este boliche. Si estaba dada de baja, reactivala desde el
+        listado.
+      </p>
+    }
+
+    @if (store.status() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos guardarla. Fijate la señal y probá de nuevo.
+      </p>
+    }
+
+    <div class="field">
+      <label class="label" for="number">Número</label>
+      <input
+        id="number"
+        class="input"
+        [class.input-bad]="numberError() !== null"
+        [attr.aria-invalid]="numberError() !== null ? 'true' : null"
+        [attr.aria-describedby]="numberError() !== null ? 'number-error' : 'number-help'"
+        formControlName="number"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="5"
+      />
+      @if (numberError() !== null) {
+        <p id="number-error" class="bad">{{ numberError() }}</p>
+      } @else {
+        <p id="number-help" class="help">
+          Es el que lee el mozo y el que ve el cliente: "Mesa 5". Único en este boliche, entre 1 y
+          {{ numberMax }}.
+        </p>
+      }
+    </div>
+
+    <button class="cta" type="submit" [disabled]="store.isSending()">
+      @if (store.isSending()) {
+        Creando
+      } @else {
+        Crear mesa
+      }
+    </button>
+
+    <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'tables']">Cancelar</a>
+  </form>
+</div>
