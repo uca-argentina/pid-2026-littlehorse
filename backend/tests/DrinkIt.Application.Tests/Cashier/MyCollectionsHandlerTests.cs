@@ -50,6 +50,8 @@ public class MyCollectionsHandlerTests
     private sealed class TheCashierIs(string username) : ICurrentStaffUser
     {
         public string? Username => username;
+
+        public Guid? Id => null;
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

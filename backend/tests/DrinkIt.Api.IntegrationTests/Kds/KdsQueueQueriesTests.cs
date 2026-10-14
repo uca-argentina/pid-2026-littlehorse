@@ -1,4 +1,5 @@
 using DrinkIt.Api.IntegrationTests.Persistence;
+using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
@@ -11,11 +12,14 @@ namespace DrinkIt.Api.IntegrationTests.Kds;
 
 /// <summary>
 /// US-15: what the bar's tablet reads, and the one invariant that matters more
-/// than any of it — a boliche never sees another's queue.
+/// than any of it — a boliche never sees another's queue. Since US-36, a bar
+/// never sees another bar's either.
 /// </summary>
 [Collection(nameof(SqlServerCollection))]
 public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
 {
+    private static readonly Guid TheBar = Guid.CreateVersion7();
+
     private static readonly Guid Gin = Guid.CreateVersion7();
 
     [Fact]
@@ -112,6 +116,35 @@ public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
         Assert.Empty(await Queries(mine).GetQueueAsync(CancellationToken.None));
     }
 
+    // US-36, criterion 1: two bars on the same night, and each order on the
+    // board of the one it went to only. The bar is the tablet's token's.
+    [Fact]
+    public async Task GetQueueAsync_WhenAnotherBarHasOrdersPending_ExcludesThem()
+    {
+        Venue venue = await ASeededVenue();
+        Guid otherBar = Guid.CreateVersion7();
+        Order mine = await AnOrderQueuedAt(venue, "Euge", DateTimeOffset.UtcNow);
+        Order theirs = await AnOrderQueuedAt(venue, "Nico", DateTimeOffset.UtcNow, bar: otherBar);
+
+        IReadOnlyList<KdsQueueOrder> myQueue = await Queries(venue).GetQueueAsync(CancellationToken.None);
+        IReadOnlyList<KdsQueueOrder> theirQueue = await Queries(venue, otherBar).GetQueueAsync(CancellationToken.None);
+
+        Assert.Equal(mine.Code.Value, Assert.Single(myQueue).Code);
+        Assert.Equal(theirs.Code.Value, Assert.Single(theirQueue).Code);
+    }
+
+    // A request with no signed-in tablet is nobody's bar, and sees nothing.
+    [Fact]
+    public async Task GetQueueAsync_WhenNoTabletIsSignedIn_ReturnsEmpty()
+    {
+        Venue venue = await ASeededVenue();
+        await AnOrderQueuedAt(venue, "Euge", DateTimeOffset.UtcNow);
+
+        KdsQueueQueries nobody = new(sql.CreateContext(venue.Id), new TheKdsIs(null));
+
+        Assert.Empty(await nobody.GetQueueAsync(CancellationToken.None));
+    }
+
     // Each column's clock counts from the order's last change, so the queue carries it.
     [Fact]
     public async Task GetQueueAsync_WhenAnOrderMoved_CarriesWhenItLastChanged()
@@ -142,7 +175,7 @@ public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
         Assert.Empty(await Queries(venue).GetQueueAsync(CancellationToken.None));
     }
 
-    private KdsQueueQueries Queries(Venue venue) => new(sql.CreateContext(venue.Id));
+    private KdsQueueQueries Queries(Venue venue, Guid? bar = null) => new(sql.CreateContext(venue.Id), new TheKdsIs(bar ?? TheBar));
 
     private async Task MoveTo(Venue venue, Order order, OrderStatus status)
     {
@@ -174,17 +207,15 @@ public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
         DateTimeOffset paidAt,
         int quantity = 1,
         string? note = null,
-        PaymentMethod method = PaymentMethod.Digital)
+        PaymentMethod method = PaymentMethod.Digital,
+        Guid? bar = null)
     {
-        Order order = Order.Place(
-            venue.Id,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            customer,
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), customer,
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Gin, "Gin Tonic", 4500m, quantity, note)]);
 
         order.Pay(paidAt, method);
-        order.Enqueue();
+        order.Enqueue(bar ?? TheBar);
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Orders.Add(order);
@@ -192,5 +223,12 @@ public sealed class KdsQueueQueriesTests(SqlServerFixture sql)
         await seed.SaveChangesAsync();
 
         return order;
+    }
+
+    private sealed class TheKdsIs(Guid? id) : ICurrentStaffUser
+    {
+        public string? Username => "barra.pista";
+
+        public Guid? Id => id;
     }
 }

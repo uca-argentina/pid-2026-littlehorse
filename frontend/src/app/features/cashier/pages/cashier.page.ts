@@ -17,6 +17,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
+import { problemProductNameOf } from '../../../core/api/problem-product-name-of';
 import { formatPrice } from '../../../shared/money/price';
 import { QrCamera } from '../../../shared/qr-camera/qr-camera';
 import { StaffHeader } from '../../../shared/staff-header/staff-header';
@@ -39,6 +40,12 @@ type Outcome =
   | { readonly kind: 'alreadyPaid'; readonly code: string; readonly paidAt: string | null }
   | { readonly kind: 'searchFailed' }
   | { readonly kind: 'collectFailed' }
+  /** US-36: no bar has one of its drinks any more, so it cannot be collected. */
+  | { readonly kind: 'soldOut'; readonly productName: string | null }
+  /** Every attempt lost the race for a drink: the order still waits, so try again. */
+  | { readonly kind: 'stockMoved' }
+  /** The order's night is over: nothing to collect it against. */
+  | { readonly kind: 'nightOver' }
   | { readonly kind: 'cancelFailed' };
 
 /** What the customer's QR carries: the order's tracking token. Codes have a dash. */
@@ -127,6 +134,13 @@ export class CashierPage {
     return outcome !== null && 'code' in outcome ? outcome.code : '';
   });
 
+  /** The drink that ran out, or a generic one when the API did not name it. */
+  protected readonly soldOutDrink = computed(() => {
+    const outcome = this.outcome();
+
+    return outcome?.kind === 'soldOut' ? (outcome.productName ?? 'uno de los productos') : '';
+  });
+
   /** " desde las 01:15", or nothing when the API refused a second collection without saying when. */
   protected readonly paidSince = computed(() => {
     const outcome = this.outcome();
@@ -203,8 +217,8 @@ export class CashierPage {
   }
 
   /**
-   * US-23: the customer left without paying. The drinks go back on the shelf
-   * and the order leaves "Por cobrar"; the customer's own screen says so.
+   * US-23: the customer left without paying. The order leaves "Por cobrar";
+   * the customer's own screen says so. It took no drinks while it waited (US-36).
    */
   protected cancelOrder(): void {
     const order = this.selected();
@@ -282,7 +296,15 @@ export class CashierPage {
             this.reloadTheLists();
           }
 
-          if (problem === ProblemTypes.cashierAlreadyPaid) {
+          if (problem === ProblemTypes.cashierSoldOut) {
+            // Still waiting for money, and it stays on screen: the till
+            // cancels it, or the customer goes and orders something else.
+            this.outcome.set({ kind: 'soldOut', productName: problemProductNameOf(error) });
+          } else if (problem === ProblemTypes.orderStockMoved) {
+            this.outcome.set({ kind: 'stockMoved' });
+          } else if (problem === ProblemTypes.cashierNightOver) {
+            this.outcome.set({ kind: 'nightOver' });
+          } else if (problem === ProblemTypes.cashierAlreadyPaid) {
             this.outcome.set({ kind: 'alreadyPaid', code: order.code, paidAt: null });
           } else if (isNotFound(error)) {
             this.outcome.set({ kind: 'notFound', code: order.code });

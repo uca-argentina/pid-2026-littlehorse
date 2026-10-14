@@ -12,4 +12,5 @@ public sealed record StaffCredentials(
     string Username,
     string PasswordHash,
     StaffRole Role,
-    bool IsActive);
+    bool IsActive,
+    string? DisplayName);

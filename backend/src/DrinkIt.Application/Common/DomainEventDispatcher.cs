@@ -26,7 +26,9 @@ public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotif
     {
         foreach (IDomainEvent domainEvent in events)
         {
-            if (VenueWhoseBoardChanged(domainEvent) is Guid venueId) await kdsBoard.NotifyBoardChangedAsync(venueId, cancellationToken);
+            // Only the board of the order's own bar (US-36): every other bar's
+            // shows none of its orders, so it has nothing new to draw.
+            if (domainEvent is IBoardChanged { KdsId: Guid kdsId } moved) await kdsBoard.NotifyBoardChangedAsync(moved.VenueId, kdsId, cancellationToken);
 
             if (VenueWhoseTillChanged(domainEvent) is Guid tillVenueId) await till.NotifyTillChangedAsync(tillVenueId, cancellationToken);
         }
@@ -50,19 +52,6 @@ public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotif
         OrderAwaitingPayment waiting => waiting.VenueId,
         OrderCollected collected => collected.VenueId,
         OrderCanceled canceled => canceled.VenueId,
-        _ => null,
-    };
-
-    /// <summary>The venue whose KDS board has to redraw, or null when this event moves no card.</summary>
-    private static Guid? VenueWhoseBoardChanged(IDomainEvent domainEvent) => domainEvent switch
-    {
-        OrderQueued queued => queued.VenueId,
-        OrderPreparationStarted taken => taken.VenueId,
-        OrderRequeued requeued => requeued.VenueId,
-        OrderReady ready => ready.VenueId,
-        OrderReturnedToPreparation returned => returned.VenueId,
-        OrderDelivered delivered => delivered.VenueId,
-        OrderDeliveryUndone undone => undone.VenueId,
         _ => null,
     };
 }

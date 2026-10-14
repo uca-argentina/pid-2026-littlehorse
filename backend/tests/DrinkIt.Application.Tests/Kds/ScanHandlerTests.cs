@@ -18,14 +18,11 @@ public class ScanHandlerTests
 
     private static Order AQueuedOrder()
     {
-        Order order = Order.Place(
-            TheVenue,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(TheVenue, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse("K-4821"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
         order.Pay(Now.AddMinutes(-10), PaymentMethod.Digital);
-        order.Enqueue();
+        order.Enqueue(TestBars.Main);
 
         return order;
     }
@@ -33,7 +30,7 @@ public class ScanHandlerTests
     private static Order AnOrderInPreparation()
     {
         Order order = AQueuedOrder();
-        order.StartPreparing();
+        order.StartPreparing(DateTimeOffset.UtcNow);
 
         return order;
     }
@@ -41,12 +38,12 @@ public class ScanHandlerTests
     private static Order AReadyOrder()
     {
         Order order = AnOrderInPreparation();
-        order.MarkReady();
+        order.MarkReady(DateTimeOffset.UtcNow);
 
         return order;
     }
 
-    private static ScanHandler HandlerOver(KdsOrdersInMemory orders) => new(orders, new FixedClock(Now));
+    private static ScanHandler HandlerOver(KdsOrdersInMemory orders) => new(orders, new FixedClock(Now), TheKdsIs.Main);
 
     [Fact]
     public async Task HandleAsync_WhenTheOrderIsReady_DeliversItAndSavesIt()
@@ -61,6 +58,38 @@ public class ScanHandlerTests
         Assert.Equal(OrderStatus.Delivered, order.Status);
         Assert.Equal(Now, order.DeliveredAt);
         Assert.Equal(1, orders.Saves);
+    }
+
+    // US-36: cash waiting at the till goes to no bar yet, so it is not "at
+    // another bar" — it is not ready, because nobody has paid for it.
+    [Fact]
+    public async Task HandleAsync_WhenTheOrderStillWaitsForCash_SaysItIsNotReadyYet()
+    {
+        Order order = Order.Place(TheVenue, Guid.CreateVersion7(), "María Quadro", OrderCode.Parse("K-4821"), [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
+        order.AwaitPayment(PaymentMethod.Cash);
+        KdsOrdersInMemory orders = new(order);
+
+        Result<ScannedOrder> result = await HandlerOver(orders).HandleAsync(order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Equal(ScanOutcome.NotReadyYet, result.Value.Outcome);
+        Assert.Equal(0, orders.Saves);
+    }
+
+    // US-36: the customer went to the wrong bar. Not "unknown": the order is
+    // real, and the bar has to send them to the right one, without handing
+    // over a drink another bar is making.
+    [Fact]
+    public async Task HandleAsync_WhenTheOrderWentToAnotherBar_SaysSoWithoutDeliveringIt()
+    {
+        Order order = AReadyOrder();
+        KdsOrdersInMemory orders = new(order);
+
+        Result<ScannedOrder> result = await new ScanHandler(orders, new FixedClock(Now), new TheKdsIs(TestBars.Other))
+            .HandleAsync(order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Equal(KdsErrors.AtAnotherBar, result.Error);
+        Assert.Equal(OrderStatus.Ready, order.Status);
+        Assert.Equal(0, orders.Saves);
     }
 
     /// <summary>

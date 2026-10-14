@@ -13,20 +13,20 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace DrinkIt.Api.IntegrationTests.Orders;
 
 /// <summary>
-/// US-23: an order waiting for cash is canceled, and the drinks it took off
-/// the shelf when it was confirmed go back on it — in the same unit of work,
-/// or not at all.
+/// US-23: an order waiting for cash is canceled. Since US-36 cash takes its
+/// drinks when it is collected, so one still waiting took none, and canceling
+/// it puts none back.
 /// </summary>
 [Collection(nameof(SqlServerCollection))]
 public sealed class OrderCancellationTests(SqlServerFixture sql)
 {
-    /// <summary>What is left on the shelf once the order below took its three.</summary>
-    private const int LeftAfterTheOrder = 17;
+    private static readonly Guid TheBar = Guid.CreateVersion7();
 
-    private const int TakenByTheOrder = 3;
+    /// <summary>The gin's stock, which the order waiting for cash has not touched.</summary>
+    private const int OnTheShelf = 20;
 
     [Fact]
-    public async Task SaveCancellationAsync_WhenTheOrderAwaitsPayment_CancelsItAndPutsItsDrinksBack()
+    public async Task SaveCancellationAsync_WhenTheOrderAwaitsPayment_CancelsItWithoutMovingStock()
     {
         (Venue venue, Product gin, Order waiting) = await AnOrderWaitingForCash();
         SpyDispatcher spy = new();
@@ -42,7 +42,7 @@ public sealed class OrderCancellationTests(SqlServerFixture sql)
 
         await using DrinkItDbContext check = sql.CreateContext(venue.Id);
         Assert.Equal(OrderStatus.Canceled, (await check.Orders.SingleAsync(row => row.Id == waiting.Id)).Status);
-        Assert.Equal(LeftAfterTheOrder + TakenByTheOrder, (await check.Products.SingleAsync(row => row.Id == gin.Id)).Stock);
+        Assert.Equal(OnTheShelf, (await check.Products.SingleAsync(row => row.Id == gin.Id)).Stock);
         Assert.IsType<OrderCanceled>(Assert.Single(spy.Received));
     }
 
@@ -62,6 +62,7 @@ public sealed class OrderCancellationTests(SqlServerFixture sql)
         Order collecting = (await till.GetForUpdateAsync(waiting.Code, CancellationToken.None))!;
         Order canceling = (await phone.GetForUpdateAsync(waiting.Code, CancellationToken.None))!;
         collecting.CollectCash(DateTimeOffset.UtcNow, "laura.caja");
+        collecting.Enqueue(TheBar);
         canceling.Cancel();
 
         Assert.True((await till.SaveAsync(collecting, CancellationToken.None)).IsSuccess);
@@ -72,28 +73,22 @@ public sealed class OrderCancellationTests(SqlServerFixture sql)
 
         await using DrinkItDbContext check = sql.CreateContext(venue.Id);
         Assert.Equal(OrderStatus.Queued, (await check.Orders.SingleAsync(row => row.Id == waiting.Id)).Status);
-        Assert.Equal(LeftAfterTheOrder, (await check.Products.SingleAsync(row => row.Id == gin.Id)).Stock);
+        Assert.Equal(OnTheShelf, (await check.Products.SingleAsync(row => row.Id == gin.Id)).Stock);
     }
 
     private static OrderRepository Repository(DrinkItDbContext context, SpyDispatcher spy) =>
         new(context, spy, NullLogger<OrderRepository>.Instance);
 
-    /// <summary>
-    /// A venue with a gin whose stock already has this order's three taken
-    /// off, as confirming the order left it.
-    /// </summary>
+    /// <summary>A venue with a gin, and an order of three waiting for cash that took none yet.</summary>
     private async Task<(Venue Venue, Product Gin, Order Order)> AnOrderWaitingForCash()
     {
         Venue venue = Venue.Create("Bar de prueba", $"bar-{Guid.NewGuid():N}");
         Category category = SeedCategory.For(venue.Id);
-        Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, LeftAfterTheOrder, category.Id);
+        Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, OnTheShelf, category.Id);
 
-        Order order = Order.Place(
-            venue.Id,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
-            [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, TakenByTheOrder, null)]);
+            [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 3, null)]);
         order.AwaitPayment(PaymentMethod.Cash);
         order.ClearDomainEvents();
 

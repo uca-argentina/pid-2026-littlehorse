@@ -31,11 +31,15 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // as with OrderItem.ProductId: nights are never deleted, and the
         // metrics read orders by it.
         builder.Property(order => order.NightId);
-        // The bar it goes to (US-37). Null on orders from before bars kept
-        // stock; no foreign key, for the same reason as the night.
+        // The bar it goes to, chosen when it is paid (US-36). Null while it
+        // waits for cash and on orders from before bars kept stock; no foreign
+        // key, for the same reason as the night.
         builder.Property(order => order.KdsId);
         builder.Property(order => order.PaidAt);
         builder.Property(order => order.Method);
+        // For the metrics of US-47; null on every order from before US-36.
+        builder.Property(order => order.PreparationStartedAt);
+        builder.Property(order => order.ReadyAt);
         builder.Property(order => order.DeliveredAt);
         // Same length as a username: it is one (US-26).
         builder.Property(order => order.CollectedBy).HasMaxLength(50);

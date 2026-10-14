@@ -59,6 +59,16 @@
       <p class="code" data-testid="order-code">{{ store.order()!.code }}</p>
 
       <!--
+        US-36: with more than one bar, which one has it. Only once paid: waiting
+        for the till it has none, the bar is chosen when the money is in.
+      -->
+      @if (store.order()!.barName; as bar) {
+        <p class="where">
+          Retiralo en <strong>{{ bar }}</strong>
+        </p>
+      }
+
+      <!--
         US-20. Only the token goes in it, and not the tracking link: a phone
         that happens to point its camera at it opens nothing, and a reader that
         types like a keyboard cannot garble a ':' or a '/' on the way. It is not

@@ -33,7 +33,7 @@ public sealed record ScannedOrder(string Code, string CustomerName, ScanOutcome 
 /// changes nothing says why: it is how the bar finds out two people are
 /// claiming the same order.
 /// </remarks>
-public sealed class ScanHandler(IOrderRepository orders, TimeProvider clock)
+public sealed class ScanHandler(IOrderRepository orders, TimeProvider clock, ICurrentStaffUser kds)
 {
     public async Task<Result<ScannedOrder>> HandleAsync(string? read, CancellationToken cancellationToken)
     {
@@ -43,6 +43,9 @@ public sealed class ScanHandler(IOrderRepository orders, TimeProvider clock)
         Order? order = await orders.GetForUpdateAsync(token!, cancellationToken);
 
         if (order is null) return KdsErrors.UnknownCode;
+        // Another bar's order (US-36). One with no bar yet — cash waiting at the
+        // till — is not another bar's: it is not ready, which the switch says.
+        if (order.KdsId is not null && order.KdsId != kds.Id) return KdsErrors.AtAnotherBar;
 
         ScanOutcome outcome = order.Status switch
         {

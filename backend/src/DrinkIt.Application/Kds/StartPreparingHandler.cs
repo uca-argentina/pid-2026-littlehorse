@@ -9,8 +9,8 @@ namespace DrinkIt.Application.Kds;
 /// taken together are several calls to this, one per order, so each one is
 /// taken on its own and one that fails leaves the rest taken.
 /// </summary>
-public sealed class StartPreparingHandler(IOrderRepository orders)
+public sealed class StartPreparingHandler(IOrderRepository orders, TimeProvider clock, ICurrentStaffUser kds)
 {
     public Task<Result<OrderStatus>> HandleAsync(string code, CancellationToken cancellationToken) =>
-        KdsOrderMove.ApplyAsync(orders, code, order => order.StartPreparing(), cancellationToken);
+        KdsOrderMove.ApplyAsync(orders, kds, code, order => order.StartPreparing(clock.GetUtcNow()), cancellationToken);
 }

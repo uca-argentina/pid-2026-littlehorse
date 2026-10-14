@@ -253,6 +253,9 @@ public class OrdersEndpointsTests
 
             public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("Confirming saves through AddAsync.");
+
+            public Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("Confirming saves through AddAsync.");
         }
 
         /// <summary>The menu, and one bar holding every product's stock (US-37).</summary>

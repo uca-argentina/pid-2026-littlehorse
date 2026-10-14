@@ -94,6 +94,38 @@
         </button>
       </section>
 
+      <!-- US-36: a KDS goes by its bar's name, on its board and on the customer's tracking. -->
+      <section class="card">
+        <h2 class="card-title">Nombre visible</h2>
+
+        @if (store.nameStatus() === 'saved') {
+          <p class="note note-good" role="status">Nombre guardado.</p>
+        }
+        @if (store.nameStatus() === 'unreachable') {
+          <p class="note note-bad" role="alert">No pudimos guardarlo. Probá de nuevo.</p>
+        }
+
+        <label class="label" for="display-name">Nombre visible</label>
+        <input
+          id="display-name"
+          class="input"
+          aria-describedby="display-name-help"
+          [formControl]="displayName"
+          type="text"
+          autocomplete="off"
+          [maxLength]="displayNameMaxLength"
+          placeholder="Barra Pista"
+        />
+        <p id="display-name-help" class="help">
+          Lo que se lee en lugar del usuario. Para una KDS, el nombre de la barra. Vacío, se usa el
+          usuario.
+        </p>
+
+        <button class="cta" type="button" [disabled]="store.isBusy()" (click)="saveName()">
+          Guardar el nombre
+        </button>
+      </section>
+
       <section class="card">
         <h2 class="card-title">Contraseña</h2>
 

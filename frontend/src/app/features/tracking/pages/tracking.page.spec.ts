@@ -17,13 +17,14 @@ const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
 
 const url = trackingUrl('bar-alfa', 'K-4821', token);
 
-function anOrder(status: CustomerOrderStatus): TrackedOrder {
+function anOrder(status: CustomerOrderStatus, barName: string | null = null): TrackedOrder {
   return {
     code: 'K-4821',
     customerName: 'María Quadro',
     status,
     total: 9000,
     paidAt: '2026-09-17T02:30:00Z',
+    barName,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo' }],
   };
 }
@@ -37,7 +38,7 @@ function aQuietChannel(): Pick<TrackingChannel, 'state' | 'follow' | 'disconnect
   };
 }
 
-async function openScreenShowing(status: CustomerOrderStatus) {
+async function openScreenShowing(status: CustomerOrderStatus, barName: string | null = null) {
   const rendered = await render(TrackingPage, {
     inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
     providers: [
@@ -51,7 +52,7 @@ async function openScreenShowing(status: CustomerOrderStatus) {
   });
 
   const http = TestBed.inject(HttpTestingController);
-  http.expectOne(url).flush(anOrder(status));
+  http.expectOne(url).flush(anOrder(status, barName));
   await rendered.fixture.whenStable();
 
   // The store belongs to the component, not to the TestBed: a test that needs a
@@ -115,6 +116,24 @@ describe('TrackingPage', () => {
       );
     },
   );
+
+  // US-36, criterion 3: with more than one bar, the customer has to know
+  // which one to go to — from the moment one has it, not only once it is ready.
+  it.each<CustomerOrderStatus>(['Queued', 'InPreparation', 'Ready'])(
+    'says which bar to pick a %s order up at',
+    async (status) => {
+      await openScreenShowing(status, 'Barra Pista');
+
+      expect(screen.getByText(/retiralo en/i).textContent).toContain('Barra Pista');
+    },
+  );
+
+  // Waiting for the till it has no bar yet: one is chosen when the money is in.
+  it('names no bar while the order waits to be paid at the till', async () => {
+    await openScreenShowing('AwaitingPayment');
+
+    expect(screen.queryByText(/retiralo en/i)).toBeNull();
+  });
 
   it('says it is waiting while nobody has taken it', async () => {
     await openScreenShowing('Queued');

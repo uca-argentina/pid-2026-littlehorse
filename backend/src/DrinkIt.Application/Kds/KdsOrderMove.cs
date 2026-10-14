@@ -13,12 +13,14 @@ internal static class KdsOrderMove
 {
     /// <summary>
     /// The order's new status, or <see cref="KdsErrors.OrderNotFound"/> for a
-    /// code that is not one of this venue's orders — malformed ones included —
+    /// code that is not one of this bar's orders (US-36) — another bar's,
+    /// another venue's and malformed ones alike —
     /// or <see cref="OrderErrors.ChangedMeanwhile"/> when another tablet moved
     /// it first. A move the order cannot make throws from the domain, as ever.
     /// </summary>
     public static async Task<Result<OrderStatus>> ApplyAsync(
         IOrderRepository orders,
+        ICurrentStaffUser kds,
         string code,
         Action<Order> move,
         CancellationToken cancellationToken)
@@ -27,7 +29,9 @@ internal static class KdsOrderMove
 
         Order? order = await orders.GetForUpdateAsync(parsed!, cancellationToken);
 
-        if (order is null) return KdsErrors.OrderNotFound;
+        // The bar comes from the tablet's token, never from the request: a
+        // tablet cannot move another bar's order by typing its code.
+        if (order is null || order.KdsId != kds.Id) return KdsErrors.OrderNotFound;
 
         move(order);
 

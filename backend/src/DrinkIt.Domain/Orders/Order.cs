@@ -49,12 +49,11 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// parameter, so a constructor that asked for them would make the aggregate
     /// unloadable.
     /// </summary>
-    private Order(Guid id, Guid venueId, Guid? nightId, Guid? kdsId, string customerName, OrderCode code, TrackingToken trackingToken)
+    private Order(Guid id, Guid venueId, Guid? nightId, string customerName, OrderCode code, TrackingToken trackingToken)
     {
         Id = id;
         VenueId = venueId;
         NightId = nightId;
-        KdsId = kdsId;
         CustomerName = customerName;
         Code = code;
         TrackingToken = trackingToken;
@@ -73,11 +72,12 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     public Guid? NightId { get; }
 
     /// <summary>
-    /// The bar it goes to (US-37): the KDS whose stock it was taken from,
-    /// chosen when it was confirmed. Null only on orders from before bars kept
+    /// The bar it goes to (US-36): the KDS whose stock it is taken from (US-37),
+    /// chosen when it is paid. Null while nobody has paid — a cash order
+    /// waiting at the till holds no bar — and on orders from before bars kept
     /// a stock of their own, for the same reason as <see cref="NightId"/>.
     /// </summary>
-    public Guid? KdsId { get; }
+    public Guid? KdsId { get; private set; }
 
     /// <summary>Who the bar calls for it.</summary>
     public string CustomerName { get; }
@@ -104,6 +104,15 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// spends settling the order.
     /// </summary>
     public PaymentMethod? Method { get; private set; }
+
+    /// <summary>
+    /// When the bar took it (US-36, for the metrics of US-47), or null while
+    /// nobody is preparing it. Handing it back forgets it.
+    /// </summary>
+    public DateTimeOffset? PreparationStartedAt { get; private set; }
+
+    /// <summary>When the drink was made, or null while it is not. Undoing it forgets it.</summary>
+    public DateTimeOffset? ReadyAt { get; private set; }
 
     /// <summary>When it was handed over, or null while nobody has picked it up.</summary>
     public DateTimeOffset? DeliveredAt { get; private set; }
@@ -139,14 +148,12 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     public static Order Place(
         Guid venueId,
         Guid nightId,
-        Guid kdsId,
         string customerName,
         OrderCode code,
         IReadOnlyCollection<NewOrderItem> items)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Orders must belong to a venue.");
         if (nightId == Guid.Empty) throw new DomainException(ErrorCodes.NightRequired, "Orders are placed during a night of the venue.");
-        if (kdsId == Guid.Empty) throw new DomainException(ErrorCodes.KdsRequired, "Orders go to a bar, whose stock they are taken from.");
         if (string.IsNullOrWhiteSpace(customerName)) throw new DomainException(ErrorCodes.NameRequired, "The order needs a name to be called for.");
 
         string cleanName = customerName.Trim();
@@ -155,7 +162,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         if (items.Count == 0) throw new DomainException(ErrorCodes.Empty, "An order with nothing in it cannot be placed.");
         if (items.Select(item => item.ProductId).Distinct().Count() != items.Count) throw new DomainException(ErrorCodes.DuplicateItem, "Each drink goes on one line, with a quantity beside it.");
 
-        Order order = new(Guid.CreateVersion7(), venueId, nightId, kdsId, cleanName, code, TrackingToken.New());
+        Order order = new(Guid.CreateVersion7(), venueId, nightId, cleanName, code, TrackingToken.New());
 
         order._items.AddRange(items.Select(ToItem));
 
@@ -165,6 +172,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// <summary>
     /// Paid from the phone, straight from the cart — the gateway is simulated,
     /// as the brief allows. Cash goes through <see cref="CollectCash"/> instead.
+    /// Either way, what follows is <see cref="Enqueue"/> into a bar.
     /// </summary>
     public void Pay(DateTimeOffset at, PaymentMethod method)
     {
@@ -191,8 +199,9 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     }
 
     /// <summary>
-    /// The till took the money (US-26): paid now, remembering who took it, and
-    /// straight to the bar. The only way out of waiting for cash.
+    /// The till took the money (US-26): paid now, remembering who took it. The
+    /// only way out of waiting for cash; into a bar's queue next, like every
+    /// paid order, with the bar chosen now and not when it was confirmed (US-36).
     /// </summary>
     public void CollectCash(DateTimeOffset at, string cashier)
     {
@@ -203,17 +212,22 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         Status = OrderStatus.Paid;
         PaidAt = at;
         CollectedBy = cashier;
-        Enqueue();
         _domainEvents.Add(new OrderCollected(VenueId, TrackingToken));
     }
 
-    /// <summary>Handed to the bar. Nothing takes it from here until the KDS exists.</summary>
-    public void Enqueue()
+    /// <summary>
+    /// Into the queue of one bar (US-36): the flow every way of paying
+    /// converges on once the money is in. A queued order always has its bar.
+    /// </summary>
+    public void Enqueue(Guid kdsId)
     {
         EnsureItIs(OrderStatus.Paid);
 
+        if (kdsId == Guid.Empty) throw new DomainException(ErrorCodes.KdsRequired, "A paid order goes to a bar, whose stock it is taken from.");
+
         Status = OrderStatus.Queued;
-        _domainEvents.Add(new OrderQueued(VenueId, TrackingToken));
+        KdsId = kdsId;
+        _domainEvents.Add(new OrderQueued(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -221,14 +235,15 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// comes out. Asking again for what already happened changes nothing: a
     /// double tap, or a retry over a bad signal, is not a second order taken.
     /// </summary>
-    public void StartPreparing()
+    public void StartPreparing(DateTimeOffset at)
     {
         if (Status == OrderStatus.InPreparation) return;
 
         EnsureItIs(OrderStatus.Queued);
 
         Status = OrderStatus.InPreparation;
-        _domainEvents.Add(new OrderPreparationStarted(VenueId, TrackingToken));
+        PreparationStartedAt = at;
+        _domainEvents.Add(new OrderPreparationStarted(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -244,7 +259,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.InPreparation);
 
         Status = OrderStatus.Queued;
-        _domainEvents.Add(new OrderRequeued(VenueId, TrackingToken));
+        PreparationStartedAt = null;
+        _domainEvents.Add(new OrderRequeued(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -253,14 +269,15 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// nothing, so nothing is saved and the board's clock — the audit stamp of
     /// the last change — keeps counting from when it really became ready.
     /// </summary>
-    public void MarkReady()
+    public void MarkReady(DateTimeOffset at)
     {
         if (Status == OrderStatus.Ready) return;
 
         EnsureItIs(OrderStatus.InPreparation);
 
         Status = OrderStatus.Ready;
-        _domainEvents.Add(new OrderReady(VenueId, Id, TrackingToken));
+        ReadyAt = at;
+        _domainEvents.Add(new OrderReady(VenueId, KdsId, Id, TrackingToken));
     }
 
     /// <summary>Marked ready by mistake: back to the bar, as if it never was.</summary>
@@ -271,7 +288,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         EnsureItIs(OrderStatus.Ready);
 
         Status = OrderStatus.InPreparation;
-        _domainEvents.Add(new OrderReturnedToPreparation(VenueId, TrackingToken));
+        ReadyAt = null;
+        _domainEvents.Add(new OrderReturnedToPreparation(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -286,7 +304,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.Delivered;
         DeliveredAt = at;
-        _domainEvents.Add(new OrderDelivered(VenueId, TrackingToken));
+        _domainEvents.Add(new OrderDelivered(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>
@@ -304,7 +322,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.Ready;
         DeliveredAt = null;
-        _domainEvents.Add(new OrderDeliveryUndone(VenueId, TrackingToken));
+        _domainEvents.Add(new OrderDeliveryUndone(VenueId, KdsId, TrackingToken));
     }
 
     /// <summary>

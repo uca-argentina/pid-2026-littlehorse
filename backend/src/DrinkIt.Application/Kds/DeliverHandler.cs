@@ -5,8 +5,8 @@ using DrinkIt.Domain.Orders;
 namespace DrinkIt.Application.Kds;
 
 /// <summary>US-18: "Entregado" by hand, for when the order cannot be scanned.</summary>
-public sealed class DeliverHandler(IOrderRepository orders, TimeProvider clock)
+public sealed class DeliverHandler(IOrderRepository orders, TimeProvider clock, ICurrentStaffUser kds)
 {
     public Task<Result<OrderStatus>> HandleAsync(string code, CancellationToken cancellationToken) =>
-        KdsOrderMove.ApplyAsync(orders, code, order => order.Deliver(clock.GetUtcNow()), cancellationToken);
+        KdsOrderMove.ApplyAsync(orders, kds, code, order => order.Deliver(clock.GetUtcNow()), cancellationToken);
 }

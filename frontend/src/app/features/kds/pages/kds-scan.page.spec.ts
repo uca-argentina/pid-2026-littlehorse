@@ -231,6 +231,23 @@ describe('KdsScanPage', () => {
     expect(lastScan().textContent).toMatch(/no reconocemos/i);
   });
 
+  // US-36: the order is real, it is just some other bar's. Sent on, not handed over.
+  it('sends the customer to their own bar when the order went to another', async () => {
+    const { rendered, http } = await openScreenWith();
+
+    theReaderTypes(token);
+    http
+      .expectOne(SCAN_URL)
+      .flush(
+        { type: 'urn:drinkit:problem:kds:at-another-bar' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await rendered.fixture.whenStable();
+
+    expect(lastScan().textContent).toMatch(/otra barra/i);
+    expect(lastScan().textContent).toMatch(/no lo entregues/i);
+  });
+
   it('lists the last scans, newest first', async () => {
     const { rendered, http } = await openScreenWith();
 

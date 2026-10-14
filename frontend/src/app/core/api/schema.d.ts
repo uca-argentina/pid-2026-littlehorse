@@ -118,6 +118,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/kds/station': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Which bar this tablet is, by the name it goes by now. */
+    get: operations['GetKdsStation'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/kds/scan': {
     parameters: {
       query?: never;
@@ -200,6 +217,23 @@ export interface paths {
     get?: never;
     /** Corrects the role somebody was given. */
     put: operations['ChangeStaffUserRole'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/users/{id}/display-name': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Gives somebody the name people read instead of their username. */
+    put: operations['RenameStaffUser'];
     post?: never;
     delete?: never;
     options?: never;
@@ -757,11 +791,15 @@ export interface components {
       /** Format: uuid */
       categoryId: string;
     };
-    /** @description What the administration screen posts. The role travels as its name. */
+    /**
+     * @description What the administration screen posts. The role travels as its name; the
+     *     display name is optional, and a KDS shows it as its bar's.
+     */
     CreateStaffUserRequest: {
       username: string;
       password: string;
       role: components['schemas']['StaffRoleName'];
+      displayName?: null | string;
     };
     /**
      * @description Where an order is, as the customer's phone reads it.
@@ -795,6 +833,10 @@ export interface components {
       isForTable: boolean;
       orderItems: components['schemas']['KdsQueueOrderItemResponse'][];
     };
+    /** @description Which bar this tablet is, by the name it goes by now. */
+    KdsStationResponse: {
+      name: string;
+    };
     /** @description The credentials a staff member signs in with. */
     LoginRequest: {
       username: string;
@@ -806,6 +848,7 @@ export interface components {
       expiresAt: string;
       username: string;
       role: components['schemas']['StaffRoleName'];
+      displayName: null | string;
     };
     /** @description One card of the menu, as the customer's phone receives it. */
     MenuItemResponse: {
@@ -910,6 +953,10 @@ export interface components {
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
     };
+    /** @description What it sends to give somebody the name people read. Blank takes it away. */
+    RenameStaffUserRequest: {
+      displayName: null | string;
+    };
     /** @description What it sends to hand somebody a new password. */
     ResetStaffUserPasswordRequest: {
       password: string;
@@ -938,6 +985,7 @@ export interface components {
       /** Format: uuid */
       id: string;
       username: string;
+      displayName: null | string;
       role: components['schemas']['StaffRoleName'];
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
@@ -949,7 +997,7 @@ export interface components {
       quantity: number;
       note: null | string;
     };
-    /** @description Where an order is. */
+    /** @description Where an order is, and which bar to pick it up at. */
     TrackedOrderResponse: {
       code: string;
       customerName: string;
@@ -958,6 +1006,7 @@ export interface components {
       total: number;
       /** Format: date-time */
       paidAt: null | string;
+      barName: null | string;
       items: components['schemas']['TrackedOrderItemResponse'][];
     };
     /** @description What the night's own screen saves: the whole form, as on creation. */
@@ -1200,6 +1249,26 @@ export interface operations {
       };
     };
   };
+  GetKdsStation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['KdsStationResponse'];
+        };
+      };
+    };
+  };
   ScanOrder: {
     parameters: {
       query?: never;
@@ -1401,6 +1470,50 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RenameStaffUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RenameStaffUserRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StaffUserResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

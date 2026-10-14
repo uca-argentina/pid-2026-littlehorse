@@ -11,6 +11,7 @@ const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastMo
 const martin: StaffUser = {
   id: 'id-1',
   username: 'martin.p',
+  displayName: null,
   role: 'Waiter',
   isActive: true,
   audit: noAudit,
@@ -26,6 +27,7 @@ describe('EditStaffUserStore', () => {
   function open(overrides: Record<string, ReturnType<typeof vi.fn>> = {}) {
     staffUsers = {
       changeRole: vi.fn().mockReturnValue(of(martin)),
+      rename: vi.fn().mockReturnValue(of({ ...martin, displayName: 'Barra Pista' })),
       resetPassword: vi.fn().mockReturnValue(of(martin)),
       deactivate: vi.fn().mockReturnValue(of({ ...martin, isActive: false })),
       reactivate: vi.fn().mockReturnValue(of(martin)),
@@ -82,6 +84,26 @@ describe('EditStaffUserStore', () => {
       store.changeRole('id-1', 'Kds');
 
       expect(store.roleStatus()).toBe('unreachable');
+    });
+  });
+
+  // US-36: the name a KDS goes by, on its board and on the customer's tracking.
+  describe('renaming', () => {
+    it('sends the name that was typed', () => {
+      open();
+
+      store.rename('id-1', 'Barra Pista');
+
+      expect(staffUsers['rename']).toHaveBeenCalledWith('id-1', 'Barra Pista');
+    });
+
+    it('says it worked, and hands back the account with its new name', () => {
+      open();
+
+      store.rename('id-1', 'Barra Pista');
+
+      expect(store.nameStatus()).toBe('saved');
+      expect(store.updated()?.displayName).toBe('Barra Pista');
     });
   });
 

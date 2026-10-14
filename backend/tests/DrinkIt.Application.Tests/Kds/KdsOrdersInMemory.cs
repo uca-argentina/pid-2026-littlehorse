@@ -60,6 +60,39 @@ internal sealed class KdsOrdersInMemory(params Order[] stored) : IOrderRepositor
         return Task.FromResult<Result<Order>>(order);
     }
 
+    /// <summary>How many collections at the till were committed, stock taken included.</summary>
+    public int Collections { get; private set; }
+
+    private Order? _reloadedAfterLosingASale;
+
+    /// <summary>
+    /// Loses the next collection to a sale of the same drink, the way the real
+    /// one refuses a conditional write. Nothing was written, so the order is
+    /// found again as it was before: <paramref name="reloadedAs"/>.
+    /// </summary>
+    public void LosesTheNextCollectionToASale(Order reloadedAs) => _reloadedAfterLosingASale = reloadedAs;
+
+    public Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken)
+    {
+        if (_reloadedAfterLosingASale is Order reloaded)
+        {
+            _reloadedAfterLosingASale = null;
+            _stored[_stored.IndexOf(order)] = reloaded;
+
+            return Task.FromResult<Result<Order>>(OrderErrors.StockMoved);
+        }
+
+        if (_refusesTheNextSave)
+        {
+            _refusesTheNextSave = false;
+
+            return Task.FromResult<Result<Order>>(OrderErrors.ChangedMeanwhile);
+        }
+
+        Collections += 1;
+        return Task.FromResult<Result<Order>>(order);
+    }
+
     public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
         throw new NotSupportedException("The bar never places an order.");
 

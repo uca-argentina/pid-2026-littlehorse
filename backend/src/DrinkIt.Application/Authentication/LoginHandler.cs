@@ -9,8 +9,9 @@ public sealed record LoginCommand(string Username, string Password);
 /// <summary>
 /// What the PWA needs after logging in. The role travels outside the token too:
 /// the client should not have to decode a JWT to decide which screen to show.
+/// So does the name the account goes by (US-36): a KDS's board shows it as its bar's.
 /// </summary>
-public sealed record StaffSession(string Token, DateTimeOffset ExpiresAt, string Username, StaffRole Role);
+public sealed record StaffSession(string Token, DateTimeOffset ExpiresAt, string Username, StaffRole Role, string? DisplayName);
 
 public sealed class LoginHandler(
     IStaffCredentialsQuery credentials,
@@ -41,7 +42,7 @@ public sealed class LoginHandler(
 
         AccessToken token = tokenIssuer.Issue(staff.StaffUserId, staff.VenueId, staff.Username, staff.Role);
 
-        return new StaffSession(token.Value, token.ExpiresAt, staff.Username, staff.Role);
+        return new StaffSession(token.Value, token.ExpiresAt, staff.Username, staff.Role, staff.DisplayName);
     }
 
     /// <summary>

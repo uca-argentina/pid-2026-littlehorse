@@ -56,6 +56,35 @@ test.describe('KDS board', () => {
     await expect(card).toContainText(drinkName);
   });
 
+  // US-36: two bars on the same night. The order is on the board of the one it
+  // went to, not on the other's, and the customer is told which one to go to.
+  test('puts a paid order on the board of its bar only, and tells the customer which', async ({
+    page,
+    browser,
+    request,
+  }) => {
+    const barName = `Barra ${Date.now().toString(36)}`;
+    const itsBar = await aKdsAccount(request, barName);
+    const anotherBar = await aKdsAccount(request);
+    const customerName = aFullName();
+
+    const customer = await browser.newPage();
+    await anOrderPaidBy(customer, request, customerName, itsBar);
+    await expect(customer.getByText(/retiralo en/i)).toContainText(barName);
+    await customer.close();
+
+    await logIn(page, itsBar, aNewPassword);
+    await expect(page.getByRole('banner')).toContainText(barName);
+    await expect(page.getByRole('article').filter({ hasText: customerName })).toBeVisible();
+
+    const other = await browser.newPage();
+    await logIn(other, anotherBar, aNewPassword);
+    await expect(other.getByRole('banner')).toContainText(anotherBar);
+    // A bar nobody sent anything to: its queue arrives, and it is empty.
+    await expect(other.getByText(/la cola está vacía/i)).toBeVisible();
+    await other.close();
+  });
+
   // US-35, criterion 4: the station signs in, and its board says why it is
   // empty instead of showing a queue that is not its own to see.
   test('tells a station that is not in tonight’s night, without showing the queue', async ({

@@ -11,6 +11,8 @@ namespace DrinkIt.Api.Tests.Features.Kds;
 /// <summary>US-16: taking an order off Nuevos and handing it back, as the bar's tablet calls them.</summary>
 public class KdsEndpointsTests
 {
+    private static readonly Guid TheBar = Guid.CreateVersion7();
+
     private const string Path = "/kds/orders/K-4821";
 
     [Fact]
@@ -18,7 +20,7 @@ public class KdsEndpointsTests
     {
         IResult result = await KdsEndpoints.StartPreparingAsync(
             "K-4821",
-            new StartPreparingHandler(new Fake.Orders(AQueuedOrder())),
+            new StartPreparingHandler(new Fake.Orders(AQueuedOrder()), TimeProvider.System, Fake.Station),
             CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Post);
@@ -33,7 +35,7 @@ public class KdsEndpointsTests
     {
         IResult result = await KdsEndpoints.StartPreparingAsync(
             "K-9999",
-            new StartPreparingHandler(new Fake.Orders(AQueuedOrder())),
+            new StartPreparingHandler(new Fake.Orders(AQueuedOrder()), TimeProvider.System, Fake.Station),
             CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Post);
@@ -46,11 +48,11 @@ public class KdsEndpointsTests
     public async Task ReturnToQueueAsync_WhenTheOrderIsInPreparation_RespondsWithNoContent()
     {
         Order order = AQueuedOrder();
-        order.StartPreparing();
+        order.StartPreparing(DateTimeOffset.UtcNow);
 
         IResult result = await KdsEndpoints.ReturnToQueueAsync(
             "K-4821",
-            new ReturnToQueueHandler(new Fake.Orders(order)),
+            new ReturnToQueueHandler(new Fake.Orders(order), Fake.Station),
             CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Post);
@@ -63,7 +65,7 @@ public class KdsEndpointsTests
     {
         IResult result = await KdsEndpoints.ReturnToQueueAsync(
             "K-9999",
-            new ReturnToQueueHandler(new Fake.Orders()),
+            new ReturnToQueueHandler(new Fake.Orders(), Fake.Station),
             CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Post);
@@ -80,11 +82,11 @@ public class KdsEndpointsTests
     public async Task MarkReadyAsync_WhenInPreparation_RespondsWithNoContent()
     {
         Order order = AQueuedOrder();
-        order.StartPreparing();
+        order.StartPreparing(DateTimeOffset.UtcNow);
 
         IResult result = await KdsEndpoints.MarkReadyAsync(
             "K-4821",
-            new MarkReadyHandler(new Fake.Orders(order)),
+            new MarkReadyHandler(new Fake.Orders(order), TimeProvider.System, Fake.Station),
             CancellationToken.None);
 
         Assert.Equal(StatusCodes.Status204NoContent, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
@@ -98,7 +100,7 @@ public class KdsEndpointsTests
 
         IResult result = await KdsEndpoints.ReturnToPreparationAsync(
             "K-4821",
-            new ReturnToPreparationHandler(new Fake.Orders(order)),
+            new ReturnToPreparationHandler(new Fake.Orders(order), Fake.Station),
             CancellationToken.None);
 
         Assert.Equal(StatusCodes.Status204NoContent, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
@@ -112,7 +114,7 @@ public class KdsEndpointsTests
 
         IResult result = await KdsEndpoints.DeliverAsync(
             "K-4821",
-            new DeliverHandler(new Fake.Orders(order), new FixedClock(Now)),
+            new DeliverHandler(new Fake.Orders(order), new FixedClock(Now), Fake.Station),
             CancellationToken.None);
 
         Assert.Equal(StatusCodes.Status204NoContent, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
@@ -127,7 +129,7 @@ public class KdsEndpointsTests
 
         IResult result = await KdsEndpoints.UndoDeliveryAsync(
             "K-4821",
-            new UndoDeliveryHandler(new Fake.Orders(order), new FixedClock(Now.AddSeconds(5))),
+            new UndoDeliveryHandler(new Fake.Orders(order), new FixedClock(Now.AddSeconds(5)), Fake.Station),
             CancellationToken.None);
 
         Assert.Equal(StatusCodes.Status204NoContent, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
@@ -139,7 +141,7 @@ public class KdsEndpointsTests
     {
         IResult result = await KdsEndpoints.DeliverAsync(
             "K-9999",
-            new DeliverHandler(new Fake.Orders(), new FixedClock(Now)),
+            new DeliverHandler(new Fake.Orders(), new FixedClock(Now), Fake.Station),
             CancellationToken.None);
 
         Assert.Equal(StatusCodes.Status404NotFound, (await EndpointResponse.Execute(result, Path, HttpMethods.Post)).StatusCode);
@@ -148,8 +150,8 @@ public class KdsEndpointsTests
     private static Order AReadyOrder()
     {
         Order order = AQueuedOrder();
-        order.StartPreparing();
-        order.MarkReady();
+        order.StartPreparing(DateTimeOffset.UtcNow);
+        order.MarkReady(DateTimeOffset.UtcNow);
 
         return order;
     }
@@ -165,7 +167,7 @@ public class KdsEndpointsTests
     {
         IResult result = await KdsEndpoints.StartPreparingAsync(
             "K-4821",
-            new StartPreparingHandler(new Fake.Orders(AQueuedOrder()) { LosesTheRace = true }),
+            new StartPreparingHandler(new Fake.Orders(AQueuedOrder()) { LosesTheRace = true }, TimeProvider.System, Fake.Station),
             CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Post);
@@ -178,12 +180,12 @@ public class KdsEndpointsTests
     public async Task ScanAsync_WhenAnotherTabletHandedItOverAtTheSameTime_RespondsWithConflict()
     {
         Order order = AQueuedOrder();
-        order.StartPreparing();
-        order.MarkReady();
+        order.StartPreparing(DateTimeOffset.UtcNow);
+        order.MarkReady(DateTimeOffset.UtcNow);
 
         IResult result = await KdsEndpoints.ScanAsync(
             new ScanRequest(order.TrackingToken.Value),
-            new ScanHandler(new Fake.Orders(order) { LosesTheRace = true }, new FixedClock(Now)),
+            new ScanHandler(new Fake.Orders(order) { LosesTheRace = true }, new FixedClock(Now), Fake.Station),
             CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, "/kds/scan", HttpMethods.Post);
@@ -192,22 +194,55 @@ public class KdsEndpointsTests
         Assert.Equal("urn:drinkit:problem:order:changed-meanwhile", response.Text("type"));
     }
 
+    // US-36: the order exists, it is just picked up somewhere else. A conflict
+    // with its own type, so the screen can send the customer on.
+    [Fact]
+    public async Task ScanAsync_WhenTheOrderWentToAnotherBar_RespondsWithConflictAtAnotherBar()
+    {
+        Order order = AReadyOrder();
+        ICurrentStaffUser anotherBar = new AnotherBar();
+
+        IResult result = await KdsEndpoints.ScanAsync(
+            new ScanRequest(order.TrackingToken.Value),
+            new ScanHandler(new Fake.Orders(order), new FixedClock(Now), anotherBar),
+            CancellationToken.None);
+
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, "/kds/scan", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:kds:at-another-bar", response.Text("type"));
+    }
+
+    private sealed class AnotherBar : ICurrentStaffUser
+    {
+        public string? Username => "barra.vip";
+
+        public Guid? Id => Guid.CreateVersion7();
+    }
+
     private static Order AQueuedOrder()
     {
-        Order order = Order.Place(
-            Guid.CreateVersion7(),
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(Guid.CreateVersion7(), Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse("K-4821"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
         order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
-        order.Enqueue();
+        order.Enqueue(TheBar);
 
         return order;
     }
 
     private static class Fake
     {
+        /// <summary>The tablet of the bar every order here went to.</summary>
+        public static readonly ICurrentStaffUser Station = new TheKds();
+
+        private sealed class TheKds : ICurrentStaffUser
+        {
+            public string? Username => "barra.pista";
+
+            public Guid? Id => TheBar;
+        }
+
         public sealed class Orders(params Order[] stored) : IOrderRepository
         {
             public Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken) =>
@@ -224,6 +259,9 @@ public class KdsEndpointsTests
 
             public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The bar never cancels an order.");
+
+            public Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken) =>
+                throw new NotSupportedException("The bar never collects cash.");
 
             public Task<Order?> FindByIdempotencyKeyAsync(string key, CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The bar never places an order.");

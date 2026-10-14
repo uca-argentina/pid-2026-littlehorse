@@ -4,7 +4,7 @@ using DrinkIt.Domain.Staff;
 namespace DrinkIt.Application.Staff;
 
 /// <summary>What the administration listing shows about one person.</summary>
-public sealed record StaffUserListItem(Guid Id, string Username, StaffRole Role, bool IsActive, AuditInfo Audit);
+public sealed record StaffUserListItem(Guid Id, string Username, string? DisplayName, StaffRole Role, bool IsActive, AuditInfo Audit);
 
 /// <summary>
 /// The read side. No repository here: reads have no invariant to protect, so

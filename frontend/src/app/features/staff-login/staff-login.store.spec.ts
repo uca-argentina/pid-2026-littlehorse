@@ -16,6 +16,7 @@ const aSession: StaffSession = {
   token: 'un-token',
   expiresAt: new Date(Date.now() + 60_000).toISOString(),
   username: 'euge',
+  displayName: null,
   role: 'Administrator',
 };
 
@@ -41,7 +42,7 @@ describe('StaffLoginStore', () => {
     router = TestBed.inject(Router);
   });
 
-  const credentials = { username: 'euge', password: 'a-password' };
+  const credentials = { username: 'euge', displayName: null, password: 'a-password' };
 
   // Two taps on a slow connection must not place two logins.
   it('does not send twice while a request is in flight', () => {

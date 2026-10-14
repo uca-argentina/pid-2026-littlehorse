@@ -21,6 +21,8 @@ namespace DrinkIt.Api.IntegrationTests.Orders;
 [Collection(nameof(SqlServerCollection))]
 public sealed class OrderConcurrencyTests(SqlServerFixture sql)
 {
+    private static readonly Guid TheBar = Guid.CreateVersion7();
+
     private static readonly Guid Gin = Guid.CreateVersion7();
 
     private static readonly DateTimeOffset Tonight = new(2026, 9, 30, 1, 12, 0, TimeSpan.Zero);
@@ -41,7 +43,9 @@ public sealed class OrderConcurrencyTests(SqlServerFixture sql)
         Order atTheFirstTill = (await firstTill.GetForUpdateAsync(waiting.Code, CancellationToken.None))!;
         Order atTheSecondTill = (await secondTill.GetForUpdateAsync(waiting.Code, CancellationToken.None))!;
         atTheFirstTill.CollectCash(Tonight, "caja.uno");
+        atTheFirstTill.Enqueue(TheBar);
         atTheSecondTill.CollectCash(Tonight.AddSeconds(1), "caja.dos");
+        atTheSecondTill.Enqueue(TheBar);
 
         Result<Order> won = await firstTill.SaveAsync(atTheFirstTill, CancellationToken.None);
         Result<Order> lost = await secondTill.SaveAsync(atTheSecondTill, CancellationToken.None);
@@ -70,7 +74,7 @@ public sealed class OrderConcurrencyTests(SqlServerFixture sql)
 
         Order onTheFirst = (await firstTablet.GetForUpdateAsync(taken.Code, CancellationToken.None))!;
         Order onTheSecond = (await secondTablet.GetForUpdateAsync(taken.Code, CancellationToken.None))!;
-        onTheFirst.MarkReady();
+        onTheFirst.MarkReady(DateTimeOffset.UtcNow);
         onTheSecond.ReturnToQueue();
 
         Assert.True((await firstTablet.SaveAsync(onTheFirst, CancellationToken.None)).IsSuccess);
@@ -93,7 +97,7 @@ public sealed class OrderConcurrencyTests(SqlServerFixture sql)
             OrderRepository tablet = Repository(context, new SpyDispatcher());
             Order order = (await tablet.GetForUpdateAsync(taken.Code, CancellationToken.None))!;
 
-            if (round == 0) order.MarkReady();
+            if (round == 0) order.MarkReady(DateTimeOffset.UtcNow);
             else order.ReturnToPreparation();
 
             Assert.True((await tablet.SaveAsync(order, CancellationToken.None)).IsSuccess);
@@ -124,16 +128,13 @@ public sealed class OrderConcurrencyTests(SqlServerFixture sql)
         Stored(venue, order =>
         {
             order.Pay(Tonight, PaymentMethod.Digital);
-            order.Enqueue();
-            order.StartPreparing();
+            order.Enqueue(TheBar);
+            order.StartPreparing(DateTimeOffset.UtcNow);
         });
 
     private async Task<Order> Stored(Venue venue, Action<Order> prepare)
     {
-        Order order = Order.Place(
-            venue.Id,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Gin, "Gin Tonic", 4500m, 1, null)]);
         prepare(order);

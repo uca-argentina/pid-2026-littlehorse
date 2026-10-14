@@ -11,7 +11,7 @@ namespace DrinkIt.Api.Features.Orders;
 public sealed record TrackedOrderItemResponse(string ProductName, int Quantity, string? Note);
 
 /// <summary>
-/// Where an order is.
+/// Where an order is, and which bar to pick it up at.
 /// </summary>
 /// <remarks>
 /// The tracking token is not in here. The screen already holds it — it is in
@@ -24,6 +24,7 @@ public sealed record TrackedOrderResponse(
     CustomerOrderStatus Status,
     decimal Total,
     DateTimeOffset? PaidAt,
+    string? BarName,
     IReadOnlyList<TrackedOrderItemResponse> Items);
 
 internal static class OrderTrackingEndpoint
@@ -88,6 +89,7 @@ internal static class OrderTrackingEndpoint
             found.Status.ToCustomerStatus(),
             found.Total,
             found.PaidAt,
+            found.BarName,
             [.. found.Items.Select(item =>
                 new TrackedOrderItemResponse(item.ProductName, item.Quantity, item.Note))]));
     }

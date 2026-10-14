@@ -100,16 +100,81 @@ public sealed class KdsScanOverHttpTests(SqlServerFixture sql) : IAsyncDisposabl
         Assert.Equal(OrderStatus.Ready, await StatusOf(venue, order));
     }
 
+    // US-36, criterion 1, end to end: two bars of the same night, and the
+    // bar a tablet is comes from its token's subject, never from the request.
+    [Fact]
+    public async Task Queue_WhenTheOrderWentToAnotherBarOfTheNight_IsNotOnThisBarsBoard()
+    {
+        Venue venue = await ASeededVenue();
+        Guid otherBar = await SeedTonight.AnotherAccountWorkingTonight(sql, venue.Id, StaffRole.Kds);
+        Order order = await AReadyOrder(venue);
+
+        using HttpClient mine = ClientFor(venue, _barOf[venue.Id], StaffRole.Kds);
+        using HttpClient theirs = ClientFor(venue, otherBar, StaffRole.Kds);
+
+        string myBoard = await mine.GetStringAsync("/kds/queue");
+        string theirBoard = await theirs.GetStringAsync("/kds/queue");
+
+        Assert.Contains(order.Code.Value, myBoard);
+        Assert.DoesNotContain(order.Code.Value, theirBoard);
+    }
+
+    // US-36: the customer is at the wrong bar. The order is real, so it is not
+    // "unknown", and it is not handed over by a bar that did not make it.
+    [Fact]
+    public async Task Scan_WhenTheOrderWentToAnotherBarOfTheNight_RespondsConflictWithoutDelivering()
+    {
+        Venue venue = await ASeededVenue();
+        Guid otherBar = await SeedTonight.AnotherAccountWorkingTonight(sql, venue.Id, StaffRole.Kds);
+        Order order = await AReadyOrder(venue);
+
+        using HttpClient theirs = ClientFor(venue, otherBar, StaffRole.Kds);
+        using HttpResponseMessage response = await theirs.PostAsync(
+            "/kds/scan",
+            new StringContent($$"""{"read":"{{order.TrackingToken.Value}}"}""", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("at-another-bar", await response.Content.ReadAsStringAsync());
+        Assert.Equal(OrderStatus.Ready, await StatusOf(venue, order));
+    }
+
+    // US-36: the board names its bar in the header, by the name it goes by
+    // now — so a rename reaches a tablet that signed in before it.
+    [Fact]
+    public async Task Station_Always_AnswersTheNameTheBarGoesByNow()
+    {
+        Venue venue = await ASeededVenue();
+        using HttpClient tablet = ClientFor(venue, _barOf[venue.Id], StaffRole.Kds);
+
+        await using (DrinkItDbContext renaming = sql.CreateContext(venue.Id))
+        {
+            StaffUser bar = await renaming.StaffUsers.SingleAsync(user => user.Id == _barOf[venue.Id]);
+            bar.Rename("Barra Pista");
+            await renaming.SaveChangesAsync();
+        }
+
+        string station = await tablet.GetStringAsync("/kds/station");
+
+        Assert.Contains("\"name\":\"Barra Pista\"", station);
+    }
+
     private async Task<HttpResponseMessage> ScanAs(Venue venue, StaffRole role, string body)
     {
         Guid account = role == StaffRole.Kds ? _barOf[venue.Id] : Guid.CreateVersion7();
+        using HttpClient client = ClientFor(venue, account, role);
+
+        return await client.PostAsync("/kds/scan", new StringContent(body, Encoding.UTF8, "application/json"));
+    }
+
+    private HttpClient ClientFor(Venue venue, Guid account, StaffRole role)
+    {
         AccessToken token = _factory.Services.GetRequiredService<ITokenIssuer>()
             .Issue(account, venue.Id, "barra.demo", role);
 
-        using HttpClient client = _factory.CreateClient();
+        HttpClient client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Value);
 
-        return await client.PostAsync("/kds/scan", new StringContent(body, Encoding.UTF8, "application/json"));
+        return client;
     }
 
     private async Task<OrderStatus> StatusOf(Venue venue, Order order)
@@ -136,16 +201,13 @@ public sealed class KdsScanOverHttpTests(SqlServerFixture sql) : IAsyncDisposabl
 
     private async Task<Order> AReadyOrder(Venue venue)
     {
-        Order order = Order.Place(
-            venue.Id,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            "María Quadro",
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse($"K-{Random.Shared.Next(1000, 9999)}"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
         order.Pay(DateTimeOffset.UtcNow.AddMinutes(-10), PaymentMethod.Digital);
-        order.Enqueue();
-        order.StartPreparing();
-        order.MarkReady();
+        order.Enqueue(_barOf[venue.Id]);
+        order.StartPreparing(DateTimeOffset.UtcNow);
+        order.MarkReady(DateTimeOffset.UtcNow);
         order.ClearDomainEvents();
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);

@@ -17,8 +17,22 @@ import { NewNightPage } from './new-night.page';
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
 
 const theTeam: StaffUser[] = [
-  { id: 'main-bar', username: 'main-bar', role: 'Kds', isActive: true, audit: noAudit },
-  { id: 'till-1', username: 'till-1', role: 'Cashier', isActive: true, audit: noAudit },
+  {
+    id: 'main-bar',
+    username: 'main-bar',
+    displayName: null,
+    role: 'Kds',
+    isActive: true,
+    audit: noAudit,
+  },
+  {
+    id: 'till-1',
+    username: 'till-1',
+    displayName: null,
+    role: 'Cashier',
+    isActive: true,
+    audit: noAudit,
+  },
 ];
 
 const created: Night = {

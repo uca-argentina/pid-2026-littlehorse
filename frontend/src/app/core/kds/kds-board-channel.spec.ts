@@ -195,6 +195,7 @@ describe('KdsBoardChannel', () => {
         token: 'un-token',
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
         username: 'barra.demo',
+        displayName: null,
         role: 'Kds',
       });
     });

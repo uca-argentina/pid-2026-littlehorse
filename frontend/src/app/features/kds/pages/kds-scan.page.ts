@@ -240,6 +240,14 @@ export class KdsScanPage {
         note: 'No es un pedido de este local.',
       };
 
+    if (scan.kind === 'atAnotherBar')
+      return {
+        tag: 'Se retira en otra barra',
+        tone: 'warn',
+        who: null,
+        note: 'No lo entregues. Mandalo a la barra que figura en su pantalla.',
+      };
+
     // The answer was lost, not necessarily the scan: the order may be
     // delivered already, and the next scan would then say so.
     if (scan.kind === 'failed')

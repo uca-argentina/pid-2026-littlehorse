@@ -12,4 +12,11 @@ public interface ICurrentStaffUser
     /// there — a made-up user would fill the column with a lie.
     /// </summary>
     string? Username { get; }
+
+    /// <summary>
+    /// The account's id, or null on the same requests as <see cref="Username"/>.
+    /// What tells one KDS from another (US-36): a tablet only ever sees and
+    /// moves the orders of the bar it is signed in as.
+    /// </summary>
+    Guid? Id { get; }
 }

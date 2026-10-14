@@ -2,6 +2,7 @@ using DrinkIt.Api.IntegrationTests.Persistence;
 using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
@@ -34,6 +35,31 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
         Assert.Equal(9000m, found.Total);
         Assert.Equal("Gin Tonic", found.Items.Single().ProductName);
         Assert.Equal(2, found.Items.Single().Quantity);
+    }
+
+    // US-36, criterion 3: the customer knows which bar to go to, by the name
+    // the bar goes by and not by the username its tablet signs in with.
+    [Fact]
+    public async Task FindAsync_WhenTheOrderWentToABar_SaysWhichByItsName()
+    {
+        (Venue venue, Order order) = await AVenueWithAnOrderFor("María Quadro", barName: "Barra Pista");
+
+        TrackedOrder? found = await Tracking(venue)
+            .FindAsync(order.Code.Value, order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Equal("Barra Pista", found?.BarName);
+    }
+
+    // Nobody named the bar: its username is still better than nothing.
+    [Fact]
+    public async Task FindAsync_WhenTheBarHasNoName_SaysItsUsername()
+    {
+        (Venue venue, Order order) = await AVenueWithAnOrderFor("María Quadro", barName: null);
+
+        TrackedOrder? found = await Tracking(venue)
+            .FindAsync(order.Code.Value, order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Equal("barra.pista", found?.BarName);
     }
 
     // Criterion 5: the codes run in order, so the one next door is this one
@@ -171,26 +197,25 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
 
     private OrderTrackingQueries Tracking(Venue venue) => new(sql.CreateContext(venue.Id));
 
-    private async Task<(Venue Venue, Order Order)> AVenueWithAnOrderFor(string customer)
+    private async Task<(Venue Venue, Order Order)> AVenueWithAnOrderFor(string customer, string? barName = "Barra Pista")
     {
         Venue venue = Venue.Create("Bar de prueba", $"bar-{Guid.NewGuid():N}");
         Category category = SeedCategory.For(venue.Id);
         Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20, category.Id);
+        StaffUser bar = StaffUser.Create(venue.Id, "barra.pista", "hash", StaffRole.Kds, barName);
 
-        Order order = Order.Place(
-            venue.Id,
-            Guid.CreateVersion7(), Guid.CreateVersion7(),
-            customer,
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), customer,
             OrderCode.First,
             [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 2, "sin hielo")]);
 
         order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
-        order.Enqueue();
+        order.Enqueue(bar.Id);
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Venues.Add(venue);
         seed.Categories.Add(category);
         seed.Products.Add(gin);
+        seed.StaffUsers.Add(bar);
         seed.Orders.Add(order);
         seed.Entry(order).Property("IdempotencyKey").CurrentValue = Guid.NewGuid().ToString();
         await seed.SaveChangesAsync();

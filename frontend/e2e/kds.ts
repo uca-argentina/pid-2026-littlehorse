@@ -48,14 +48,20 @@ async function adminToken(request: APIRequestContext): Promise<string> {
   return ((await login.json()) as { token: string }).token;
 }
 
-/** A fresh Kds account, the way an administrator would create one, working tonight. */
-export async function aKdsAccount(request: APIRequestContext): Promise<string> {
+/**
+ * A fresh Kds account, the way an administrator would create one, working
+ * tonight. With the name of its bar when one is given (US-36).
+ */
+export async function aKdsAccount(
+  request: APIRequestContext,
+  displayName: string | null = null,
+): Promise<string> {
   const username = aNewUsername();
 
   const token = await adminToken(request);
   const created = await request.post('/api/staff/users', {
     headers: { Authorization: `Bearer ${token}` },
-    data: { username, password: aNewPassword, role: 'Kds' },
+    data: { username, password: aNewPassword, role: 'Kds', displayName },
   });
 
   expect(created.status()).toBe(201);

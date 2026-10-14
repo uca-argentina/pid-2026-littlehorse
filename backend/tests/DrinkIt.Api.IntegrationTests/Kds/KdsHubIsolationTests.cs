@@ -43,7 +43,7 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         theirsConnection.On(KdsHub.BoardChanged, () => theirsNotified.TrySetResult());
 
         IKdsBoardNotifier notifier = _factory.Services.GetRequiredService<IKdsBoardNotifier>();
-        await UntilHeard(() => notifier.NotifyBoardChangedAsync(mine, CancellationToken.None), mineNotified.Task);
+        await UntilHeard(() => notifier.NotifyBoardChangedAsync(mine, mineAccount, CancellationToken.None), mineNotified.Task);
 
         // A generous window for the wrong message to arrive before declaring
         // the silence meaningful — the failure mode of a race is a flaky pass,
@@ -64,7 +64,31 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         connection.On(KdsHub.BoardChanged, () => notified.TrySetResult());
 
         IKdsBoardNotifier notifier = _factory.Services.GetRequiredService<IKdsBoardNotifier>();
-        await UntilHeard(() => notifier.NotifyBoardChangedAsync(venueId, CancellationToken.None), notified.Task);
+        await UntilHeard(() => notifier.NotifyBoardChangedAsync(venueId, account, CancellationToken.None), notified.Task);
+    }
+
+    // US-36: each bar's board shows only its own orders, so a move redraws the
+    // board of that bar and no other of the same venue.
+    [Fact]
+    public async Task BoardChanged_WhenAnotherBarsQueueChanges_IsNeverReceived()
+    {
+        (Guid venueId, Guid itsBar) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
+        Guid anotherBar = await SeedTonight.AnotherAccountWorkingTonight(sql, venueId, StaffRole.Kds);
+
+        await using HubConnection itsConnection = await ConnectedAsKds(venueId, itsBar);
+        await using HubConnection anotherConnection = await ConnectedAsKds(venueId, anotherBar);
+
+        TaskCompletionSource itsNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource anotherNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        itsConnection.On(KdsHub.BoardChanged, () => itsNotified.TrySetResult());
+        anotherConnection.On(KdsHub.BoardChanged, () => anotherNotified.TrySetResult());
+
+        IKdsBoardNotifier notifier = _factory.Services.GetRequiredService<IKdsBoardNotifier>();
+        await UntilHeard(() => notifier.NotifyBoardChangedAsync(venueId, itsBar, CancellationToken.None), itsNotified.Task);
+
+        await Task.WhenAny(anotherNotified.Task, Task.Delay(TimeSpan.FromSeconds(1)));
+
+        Assert.False(anotherNotified.Task.IsCompleted);
     }
 
     // Refused at the door since US-35: no venue means no night, and so no crew

@@ -1,6 +1,7 @@
 using DrinkIt.Api.Common;
 using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Orders;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -128,15 +129,31 @@ internal static class CashierEndpoints
         return result.IsSuccess ? TypedResults.NoContent() : Rejected(result.Error!);
     }
 
+    private static readonly HashSet<string> ConflictCodes = new(StringComparer.Ordinal)
+    {
+        CashierErrors.AlreadyPaid.Code,
+        CashierErrors.SoldOut.Code,
+        CashierErrors.NightOver.Code,
+        OrderErrors.StockMoved.Code,
+    };
+
     private static ProblemHttpResult Rejected(Error error)
     {
-        bool alreadyPaid = error.Code == CashierErrors.AlreadyPaid.Code;
+        // Everything but a code nobody has argues with the order's state: paid
+        // already, a drink gone, a race lost for it — try again —, or a night
+        // that is over (US-36).
+        bool conflict = ConflictCodes.Contains(error.Code);
 
+        // The drink that ran out (US-36), under the same name confirming an
+        // order uses, so the till can say which one.
         return TypedResults.Problem(
-            title: alreadyPaid ? "Conflict" : "Not found",
+            title: conflict ? "Conflict" : "Not found",
             detail: error.Message,
-            statusCode: alreadyPaid ? StatusCodes.Status409Conflict : StatusCodes.Status404NotFound,
-            type: ProblemTypes.For(error.Code));
+            statusCode: conflict ? StatusCodes.Status409Conflict : StatusCodes.Status404NotFound,
+            type: ProblemTypes.For(error.Code),
+            extensions: error.Subject is null
+                ? null
+                : new Dictionary<string, object?> { ["productName"] = error.Subject });
     }
 
     private static CashierOrderResponse ToResponse(CashierOrder order) => new(

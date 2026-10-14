@@ -2,6 +2,7 @@ using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace DrinkIt.Api.IntegrationTests.Persistence;
 
@@ -43,6 +44,24 @@ internal static class SeedTonight
         await using DrinkItDbContext seed = sql.CreateContext(venueId);
         seed.StaffUsers.AddRange(account, companion);
         seed.Nights.Add(Night.Create(venueId, "Tonight", now.AddHours(-1), now.AddHours(11), [account, companion]));
+        await seed.SaveChangesAsync();
+
+        return account.Id;
+    }
+
+    /// <summary>
+    /// One more account of that role in the venue's night on now (US-36): a
+    /// second bar of the same night, with the night's own crew kept.
+    /// </summary>
+    public static async Task<Guid> AnotherAccountWorkingTonight(SqlServerFixture sql, Guid venueId, StaffRole role)
+    {
+        StaffUser account = StaffUser.Create(venueId, $"{role.ToString().ToLowerInvariant()}-{Guid.NewGuid():N}"[..20], "hash", role);
+
+        await using DrinkItDbContext seed = sql.CreateContext(venueId);
+        Night tonight = await seed.Nights.OrderByDescending(night => night.StartsAt).FirstAsync();
+        List<StaffUser> crew = await seed.StaffUsers.Where(user => tonight.CrewIds.Contains(user.Id)).ToListAsync();
+        seed.StaffUsers.Add(account);
+        tonight.Update(tonight.Name, tonight.StartsAt, tonight.EndsAt, [.. crew, account], DateTimeOffset.UtcNow);
         await seed.SaveChangesAsync();
 
         return account.Id;

@@ -215,6 +215,22 @@ una KDS.
   explicar y de probar; se cambia si en la demo no alcanza.
 - **El pedido se asigna al pagarse**, no al confirmarse: un pedido en efectivo no ocupa a
   ninguna barra mientras espera la caja.
+- **El stock del efectivo se descuenta al cobrar** (decidido el 2026-10-12). Como cada KDS
+  tiene su stock (US-37), asignar al pagar obliga a descontar recién ahí. Confirmar en efectivo
+  sólo chequea que alguna barra tenga todo, sin descontar; al cobrar se elige la barra con
+  menos trabajo y se descuenta de ella. Si para entonces ninguna tiene todo, la caja ve qué
+  producto falta **antes** de cobrar y el pedido sigue esperando, para cancelarlo o armar otro.
+  Cancelar un pedido en efectivo ya no devuelve nada, porque no se había llevado nada. El pago
+  digital no cambia: confirma y paga en el mismo paso.
+- **Escanear en la barra equivocada** responde "se retira en otra barra" y no entrega: el
+  pedido existe, sólo que es de otra KDS.
+- **Cobrar sólo dentro de la noche del pedido** (decidido el 2026-10-13). Si la noche en que se
+  confirmó ya terminó, la caja no cobra: sus barras y su stock ya no corren, y una KDS de esa
+  noche puede no estar en la de hoy. El pedido se cancela y el cliente pide de nuevo.
+- **Desplegar sin pedidos abiertos** (decidido el 2026-10-13). Los pedidos de antes de este
+  cambio no tienen barra: uno pagado no aparece en ningún tablero, y uno en efectivo no se
+  puede cobrar. Por eso este cambio se despliega con el local cerrado, sin pedidos en curso, y
+  no se escribe código para convivir con ellos.
 - **Multi-tenancy:** la KDS sale **del claim del token**, igual que el local. Nunca de la URL:
   una tablet no puede pedir la cola de otra cambiando la ruta. Necesita su test de aislamiento
   entre KDS, además del de locales.
@@ -223,7 +239,8 @@ una KDS.
   pedido.
 - **Diseño:** el seguimiento suma una línea, "Retiralo en Barra Pista", y el tablero muestra el
   nombre de su KDS en el header. Para que eso se lea, la cuenta de KDS necesita un nombre visible
-  ("Barra Pista"), no sólo su usuario.
+  ("Barra Pista"), no sólo su usuario. En el código es `StaffUser.DisplayName`: opcional, se
+  carga en el alta o en la ficha de la cuenta, y si falta se muestra el usuario.
 - **Las marcas de tiempo del pedido van acá** (`PreparationStartedAt`, `ReadyAt`), aunque
   ningún criterio las pida. Es la primera story que migra `Orders`, y las métricas (US-47) sólo
   pueden medir los pedidos hechos después: cuanto antes entren, más datos hay para la demo. Es
@@ -243,6 +260,16 @@ una KDS.
    se cierra, **entonces** esos pedidos pasan a otra KDS de la noche conservando su antigüedad.
 3. **Dado** que todas las KDS de la noche están desconectadas, **cuando** se paga un pedido,
    **entonces** queda en espera y entra en la primera que vuelva, sin perderse.
+
+**Decidido el 2026-10-12** (reemplaza lo que contradiga en las notas de abajo):
+
+- **Un pedido no cambia de barra.** Una vez asignado al pagarse, se queda en esa KDS. Su stock
+  salió de ahí (US-37), y moverlo obligaría a mover unidades entre barras.
+- **Una KDS no "se cierra"** en medio de la noche. El criterio 2 sale de la story.
+- **"Desconectada" se guarda en la base como latido.** La API corre hasta dos réplicas y escala
+  a cero (ADR-0007), así que lo que SignalR sabe en memoria no alcanza. El tablero manda un
+  latido por el hub cada ~20 segundos y se guarda el último de cada KDS; está conectada si
+  latió en el último minuto. Se mira al pagar, sin proceso de fondo.
 
 **Notas**
 

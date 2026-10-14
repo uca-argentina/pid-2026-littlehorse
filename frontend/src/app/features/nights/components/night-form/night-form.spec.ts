@@ -6,7 +6,7 @@ import { NightForm } from './night-form';
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
 
 function account(id: string, role: StaffUser['role'], isActive = true): StaffUser {
-  return { id, username: id, role, isActive, audit: noAudit };
+  return { id, username: id, displayName: null, role, isActive, audit: noAudit };
 }
 
 const theTeam: StaffUser[] = [
