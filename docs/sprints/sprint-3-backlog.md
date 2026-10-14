@@ -281,6 +281,26 @@ una KDS.
 - **El latido sale apenas se abre el tablero** y después cada 20 segundos. Se guarda en
   `KdsBeats`, una fila por KDS.
 
+**Decidido el 2026-10-14, sin implementar** (criterio 4):
+
+4. **Dado** una KDS que lleva 5 minutos sin latido y tiene pedidos asignados, **cuando** se
+   cumplen esos 5 minutos, **entonces** sus pedidos se reasignan a otra KDS de la noche.
+
+- **Queda como decisión, no se construye en este sprint.** Hasta que se implemente, vale lo de
+  arriba: un pedido asignado espera en su tablet hasta que vuelva.
+- **Por qué 5 minutos y no el minuto de "desconectada":** un minuto alcanza para no mandarle
+  pedidos nuevos, pero mover los que ya tiene es más caro. Con 5 minutos, un corte corto de red
+  o un reinicio de la tablet no los mueve.
+- **Lo que hay que resolver al implementarlo** (y que hoy frena "un pedido no cambia de barra"):
+  - **El stock:** el pedido descontó de la barra apagada. Reasignarlo obliga a devolver esas
+    unidades y a descontarlas de la barra nueva, que tiene que tener todo el pedido.
+  - **Qué pedidos se mueven:** los que todavía no se tomaron (`Queued`) seguro. Los que están en
+    preparación, a definir: el trago puede estar a medio hacer en esa barra.
+  - **Quién lo dispara:** hoy el latido se mira sólo al pagar, sin proceso de fondo. Reasignar a
+    los 5 minutos necesita algo que lo revise solo, aunque nadie pague.
+  - **La antigüedad:** el pedido llega a la barra nueva conservando su `PaidAt`.
+  - **El cliente:** la línea "Retiralo en…" de US-36 se actualiza sola (mecanismo de US-22).
+
 **Notas**
 
 - **Depende de** US-36.
