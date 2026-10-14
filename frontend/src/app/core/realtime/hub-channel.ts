@@ -11,6 +11,13 @@ import { SessionStorage } from '../auth/session-storage';
 export const HUB_RETRY_MS = 5_000;
 
 /**
+ * How often a screen that beats says it is still there (US-38). The server
+ * counts it gone after a minute without one, so two can go missing to a bad
+ * signal before it does.
+ */
+export const HUB_BEAT_MS = 20_000;
+
+/**
  * The hub said the token is no good any more — the shift outlived it. Asking
  * again with the same token can only get the same answer (US-32).
  */
@@ -84,6 +91,13 @@ export abstract class HubChannel {
   /** The one message that hub sends, as the backend names it. */
   protected abstract readonly message: string;
 
+  /**
+   * The hub method to call every HUB_BEAT_MS while connected, for a hub that
+   * needs to know the screen is still open (US-38, the bar's tablet). None by
+   * default.
+   */
+  protected readonly beat: string | null = null;
+
   private readonly sessions = inject(SessionStorage);
 
   private readonly apiBaseUrl = inject(API_BASE_URL);
@@ -97,6 +111,8 @@ export abstract class HubChannel {
   private connection: HubConnectionLike | null = null;
 
   private retry: ReturnType<typeof setTimeout> | null = null;
+
+  private beating: ReturnType<typeof setInterval> | null = null;
 
   /**
    * Idempotent: a screen reopened while the last one's teardown is still in
@@ -131,6 +147,7 @@ export abstract class HubChannel {
 
     this.connection = connection;
     this.current.set('connecting');
+    this.startBeating(connection);
 
     void this.start(connection, onChanged, false);
   }
@@ -142,6 +159,8 @@ export abstract class HubChannel {
     this.connection = null;
     if (this.retry !== null) clearTimeout(this.retry);
     this.retry = null;
+    if (this.beating !== null) clearInterval(this.beating);
+    this.beating = null;
 
     void connection?.stop();
   }
@@ -201,6 +220,23 @@ export abstract class HubChannel {
    */
   private sessionIsOver(): void {
     this.sessions.forget('expired');
+  }
+
+  /**
+   * On a clock of its own rather than tied to each reconnection: it only
+   * beats while connected, so a link that drops and comes back needs nothing
+   * restarted. A beat that fails is dropped; the next one goes out on time.
+   */
+  private startBeating(connection: HubConnectionLike): void {
+    const beat = this.beat;
+
+    if (beat === null) return;
+
+    this.beating = setInterval(() => {
+      if (this.current() !== 'connected') return;
+
+      connection.invoke(beat).catch(() => undefined);
+    }, HUB_BEAT_MS);
   }
 
   private startLater(connection: HubConnectionLike, onChanged: () => void): void {

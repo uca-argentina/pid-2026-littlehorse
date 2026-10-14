@@ -153,7 +153,7 @@ public sealed class ConfirmOrderHandler(
         // the repository is what settles a race.
         OrderLine[] lines = [.. command.Lines.Select(line => new OrderLine(line.ProductId, line.Quantity))];
         IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, wanted, cancellationToken);
-        BarSupply? bar = BarChooser.Choose(nightsBars, lines);
+        BarSupply? bar = BarChooser.Choose(nightsBars, lines, clock.GetUtcNow());
 
         if (bar is null)
         {

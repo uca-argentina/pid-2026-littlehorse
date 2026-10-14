@@ -88,6 +88,7 @@ public static class InfrastructureServices
         // notifier only holds IHubContext, which is itself a singleton — no
         // DbContext, no per-request state.
         services.AddSignalR();
+        services.AddScoped<KdsBeats>();
         services.AddSingleton<IKdsBoardNotifier, KdsBoardNotifier>();
         services.AddSingleton<ITillNotifier, TillNotifier>();
         services.AddSingleton<IOrderFollowers, OrderFollowers>();

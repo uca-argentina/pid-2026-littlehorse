@@ -271,6 +271,17 @@ una KDS.
   latido por el hub cada ~20 segundos y se guarda el último de cada KDS; está conectada si
   latió en el último minuto. Se mira al pagar, sin proceso de fondo.
 
+**Decidido el 2026-10-14** (criterio 3):
+
+- **Si ninguna barra conectada puede tomar el pedido, se elige como antes**, entre todas: la de
+  menos trabajo que tenga todo. Se descuenta su stock y el pedido espera en esa tablet hasta
+  que vuelva. No entra "en la primera que vuelva", porque eso obligaría a mover unidades entre
+  barras o a dejar un pedido pago sin barra ni stock. Vale igual cuando hay barras conectadas
+  pero sólo una desconectada tiene los tragos: el pedido no se rechaza por una tablet que el
+  cliente no ve.
+- **El latido sale apenas se abre el tablero** y después cada 20 segundos. Se guarda en
+  `KdsBeats`, una fila por KDS.
+
 **Notas**
 
 - **Depende de** US-36.
