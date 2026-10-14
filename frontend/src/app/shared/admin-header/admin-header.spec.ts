@@ -72,6 +72,9 @@ describe('AdminHeader', () => {
     expect(screen.getByRole('link', { name: /noches/i }).getAttribute('href')).toBe(
       '/bar-alfa/staff/nights',
     );
+    expect(screen.getByRole('link', { name: /reportes/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/reports',
+    );
   });
 
   // Marked for a screen reader as well as by colour: the tab you are on is

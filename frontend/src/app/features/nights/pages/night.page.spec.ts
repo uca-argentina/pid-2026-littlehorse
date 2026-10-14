@@ -176,6 +176,28 @@ describe('NightPage', () => {
     expect(screen.queryByRole('button', { name: /cargar/i })).toBeNull();
   });
 
+  // The way into the night's report (US-47 to US-49), once it has orders.
+  it('links to the report of a night that is on', async () => {
+    await openScreenShowing(saturday, whileItIsOn);
+
+    expect(
+      screen.getByRole('link', { name: /ver reporte de la noche/i }).getAttribute('href'),
+    ).toBe('/bar-alfa/staff/reports/night-1');
+  });
+
+  it('links to the report of a finished night', async () => {
+    await openScreenShowing(saturday, afterItEnded);
+
+    expect(screen.getByRole('link', { name: /ver reporte de la noche/i })).not.toBeNull();
+  });
+
+  // Nothing has been ordered yet, so there is nothing to report.
+  it('offers no report before the night starts', async () => {
+    await openScreenShowing(saturday, beforeItStarts);
+
+    expect(screen.queryByRole('link', { name: /ver reporte/i })).toBeNull();
+  });
+
   it('says so when the venue has no such night', async () => {
     const { rendered, http } = await openScreen(beforeItStarts);
 

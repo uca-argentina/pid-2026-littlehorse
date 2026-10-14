@@ -131,3 +131,23 @@
 .ghost:hover {
   color: var(--dk-text);
 }
+
+// The way into the night's report (US-47 to US-49): the one bronze action on
+// this screen while it is read-only, and above the form while it is on.
+.report {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 15.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.report:hover {
+  background: var(--dk-accent-hover);
+}
