@@ -396,6 +396,43 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.ToTable("StaffUsers", (string)null);
                 });
 
+            modelBuilder.Entity("DrinkIt.Domain.Tables.Table", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("Tables", (string)null);
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Venues.Venue", b =>
                 {
                     b.Property<Guid>("Id")
@@ -548,6 +585,15 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Tables.Table", b =>
                 {
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
