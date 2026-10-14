@@ -311,6 +311,23 @@ una KDS.
 - **Diseño: no está dibujado.** Es el ABM más chico del sistema.
 - **Borde:** dar de baja una mesa con una cuenta abierta (US-40) se rechaza.
 
+**Construida el 2026-10-14.** Decidido ese día:
+
+- **El número sigue ocupado aunque la mesa esté de baja.** Para volver a usarlo se la
+  reactiva; crear otra con ese número se rechaza (409). Si se liberara, dos mesas distintas
+  dirían "Mesa 5" en los pedidos viejos y no habría cómo distinguirlas. El índice único
+  `(VenueId, Number)` vale para las activas y las de baja.
+- **El número va de 1 a 999.** Tres cifras alcanzan para la etiqueta que lee el mozo, y el
+  dominio lo valida igual que la pantalla.
+- **La baja es lógica y reversible**: `POST /staff/tables/{id}/deactivate` y `/reactivate`.
+  La fila no se borra porque los pedidos que salieron de esa mesa la siguen apuntando.
+- **El criterio 2 se completa en US-40.** Hoy el listado muestra las mesas de baja marcadas,
+  para poder reactivarlas; "deja de aparecer para abrirle cuenta" es filtrar `IsActive` en la
+  pantalla de apertura, que todavía no existe. Lo mismo el borde de arriba: el rechazo de la
+  baja con una cuenta abierta va en `DeactivateTableHandler` cuando exista la cuenta.
+- **El alta y el listado son páginas separadas** (`/staff/tables` y `/staff/tables/new`), con
+  la pestaña "Mesas" en el header de administración.
+
 ### US-40 · Abrir la cuenta de una mesa con su saldo
 
 > **Como** administrador
