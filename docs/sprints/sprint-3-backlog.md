@@ -25,8 +25,7 @@ Lo que este sprint encuentra hecho y no hay que rehacer:
 - **El stock** existe, **uno por producto** (`Product.Stock`), y confirmar ya rechaza un pedido
   sin unidades. No se parte por barra: lo que cambia es que pasa a ser **el stock de la noche**.
 - **Los colores de espera del tablero** (ámbar a los 5 minutos, rojo a los 10) ya existen en
-  el KDS. La alerta de este sprint es otra cosa: que se entere alguien que no está mirando la
-  tablet.
+  el KDS. El 2026-10-14 se decidió que **eso cumple la alerta de la consigna** (US-46).
 
 Lo que **no existe** y este sprint crea: KDS simultáneas que reciben pedidos distintos, la
 noche (evento), `Table`, `VipAccount`, el tipo de entrega en el pedido y cualquier pantalla de
@@ -91,7 +90,7 @@ una KDS.
 
 | ID    | Story                                   | Depende de |
 | ----- | --------------------------------------- | ---------- |
-| US-46 | Que me avise un pedido que espera mucho | US-36      |
+| US-46 | Que me avise un pedido que espera mucho | **Cumplida** con los colores y timers del tablero |
 | US-47 | Ver los tiempos de una noche            | US-35      |
 | US-48 | Ver lo vendido en una noche             | US-35      |
 | US-49 | Ver los productos más pedidos           | US-35      |
@@ -520,6 +519,11 @@ una KDS.
 
 ### US-46 · Que me avise un pedido que espera mucho
 
+> **Cumplida, decidido el 2026-10-14.** La consigna pide "alertar pedidos con espera
+> excesiva", y el tablero del KDS ya lo hace: cada pedido muestra hace cuánto espera y se pinta
+> ámbar a los 5 minutos y rojo a los 10 (US-15). No se construye la pantalla de alertas del
+> administrador que describe esta story; queda abajo como referencia por si se retoma.
+
 > **Como** encargado de la noche
 > **quiero** ver en un solo lugar los pedidos que están esperando demasiado, de cualquier barra
 > **para** reaccionar antes de que el cliente venga a reclamar.
@@ -642,7 +646,7 @@ ir. US-35 y US-39 no dependen de nada y pueden arrancar en paralelo.
 **Después: el VIP y el mozo (US-39 a US-44).** Es el recorrido nuevo que se ve en la demo, y
 casi todo está dibujado.
 
-**Al final: alertas y métricas (US-46 a US-49).** Son queries sobre datos que ya existen para
+**Al final: métricas (US-47 a US-49).** US-46 se dio por cumplida con el tablero. Son queries sobre datos que ya existen para
 entonces. Lo único que no puede esperar al final son las columnas de tiempo, y por eso entran
 con US-36.
 
@@ -654,10 +658,10 @@ US-47 (los tiempos por KDS). Ninguno deja un punto de la consigna sin cumplir.
 
 1. ~~**El nombre de "noche" en el código.**~~ Decidido el 2026-10-07: **`Night`**. Ya está en
    el glosario de `CLAUDE.md`, junto con **alerta** (`Alert`) y **métricas** (`Metrics`).
-2. **Los umbrales de la alerta** (US-46): 10 minutos en la cola o en preparación, 15 listo sin
-   retirar y 5 una mesa sin mozo. Proponemos fijos, no configurables.
+2. ~~**Los umbrales de la alerta** (US-46).~~ No hacen falta: US-46 se cumple con los colores
+   del tablero (decidido el 2026-10-14).
 3. **Diseño.** Están dibujados el mozo, la caja VIP, el seguimiento de mesa y el pago con saldo.
-   **Falta dibujar**: la noche (con su stock), las mesas, la apertura de cuenta VIP, las alertas
+   **Falta dibujar**: la noche (con su stock), las mesas, la apertura de cuenta VIP
    y las métricas. Son pantallas de administración y pueden usar la piel que ya tiene, pero las
    métricas sí necesitan un dibujo antes de construirlas.
 
