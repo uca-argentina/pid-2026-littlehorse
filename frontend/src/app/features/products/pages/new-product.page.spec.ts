@@ -83,11 +83,13 @@ function choosePhoto(file: File): void {
 // jsdom has no object URLs. The preview is whatever the browser hands back
 // for the file, and this is the closest a test can get to checking that.
 beforeEach(() => {
-  vi.stubGlobal('URL', {
-    ...URL,
-    createObjectURL: vi.fn((file: File) => `blob:preview/${file.name}`),
-    revokeObjectURL: vi.fn(),
-  });
+  // A subclass and not a plain object: the router builds URLs with `new URL`.
+  class UrlWithObjectUrls extends URL {
+    static override createObjectURL = vi.fn((file: File) => `blob:preview/${file.name}`);
+    static override revokeObjectURL = vi.fn();
+  }
+
+  vi.stubGlobal('URL', UrlWithObjectUrls);
 });
 
 afterEach(() => vi.unstubAllGlobals());
