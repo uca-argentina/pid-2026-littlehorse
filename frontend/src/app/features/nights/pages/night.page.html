@@ -18,6 +18,12 @@
         <span>{{ hours() }}</span>
       </p>
 
+      @if (phase() === 'underway' || phase() === 'over') {
+        <a class="report" [routerLink]="['/', venueSlug(), 'staff', 'reports', id()]">
+          Ver reporte de la noche
+        </a>
+      }
+
       @if (phase() === 'over') {
         <dl class="facts">
           <div class="fact">

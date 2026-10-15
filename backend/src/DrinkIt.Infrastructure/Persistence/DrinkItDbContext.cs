@@ -31,6 +31,9 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
     /// <summary>What each bar holds of each product (US-37). Not a domain aggregate.</summary>
     internal DbSet<BarStock> BarStocks => Set<BarStock>();
 
+    /// <summary>When each bar's tablet last beat (US-38). Not a domain aggregate.</summary>
+    internal DbSet<KdsBeat> KdsBeats => Set<KdsBeat>();
+
     /// <summary>Where each venue's order codes are up to. Not a domain aggregate.</summary>
     internal DbSet<OrderCodeCounter> OrderCodeCounters => Set<OrderCodeCounter>();
 
@@ -55,6 +58,7 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
         modelBuilder.Entity<Night>().HasQueryFilter(night => night.VenueId == CurrentVenueId);
         modelBuilder.Entity<NightStockAdjustment>().HasQueryFilter(adjustment => adjustment.VenueId == CurrentVenueId);
         modelBuilder.Entity<BarStock>().HasQueryFilter(stock => stock.VenueId == CurrentVenueId);
+        modelBuilder.Entity<KdsBeat>().HasQueryFilter(beat => beat.VenueId == CurrentVenueId);
 
         base.OnModelCreating(modelBuilder);
     }

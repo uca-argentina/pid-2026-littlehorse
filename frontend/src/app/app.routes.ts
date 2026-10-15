@@ -34,6 +34,11 @@ export const routes: Routes = [
     loadChildren: () => import('./features/nights/nights.routes').then((m) => m.nightsRoutes),
   },
   {
+    path: ':venueSlug/staff/reports',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/reports/reports.routes').then((m) => m.reportsRoutes),
+  },
+  {
     path: ':venueSlug/staff/products',
     canActivate: [rememberVenueGuard],
     loadChildren: () => import('./features/products/products.routes').then((m) => m.productsRoutes),

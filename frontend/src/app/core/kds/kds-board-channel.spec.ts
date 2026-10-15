@@ -3,6 +3,8 @@ import { HttpError } from '@microsoft/signalr';
 import { SessionStorage } from '../auth/session-storage';
 import type { KdsHubConnection } from './kds-board-channel';
 import {
+  BEAT_MESSAGE,
+  KDS_BEAT_MS,
   KDS_HUB_CONNECTION,
   KDS_RETRY_MS,
   KdsBoardChannel,
@@ -30,6 +32,10 @@ class FakeHubConnection implements KdsHubConnection {
   starts = 0;
 
   stopped = false;
+
+  readonly invoked: string[] = [];
+
+  failsInvokes = false;
 
   private readonly handlers = new Map<string, () => void>();
 
@@ -74,8 +80,10 @@ class FakeHubConnection implements KdsHubConnection {
     return Promise.resolve();
   }
 
-  invoke(): Promise<unknown> {
-    return Promise.resolve();
+  invoke(method: string): Promise<unknown> {
+    this.invoked.push(method);
+
+    return this.failsInvokes ? Promise.reject(new Error('The link dropped.')) : Promise.resolve();
   }
 
   losesTheLink(): void {
@@ -228,6 +236,51 @@ describe('KdsBoardChannel', () => {
 
       expect(sessions.expired()).toBe(true);
       expect(connection.starts).toBe(1);
+    });
+  });
+
+  // US-38: the tablet says it is still there, so paying does not send orders
+  // to a bar whose tablet went off. The server counts it gone after a minute.
+  describe('beat', () => {
+    it('beats every twenty seconds while connected', async () => {
+      channel.connect(reload);
+      await vi.advanceTimersByTimeAsync(0);
+
+      await vi.advanceTimersByTimeAsync(KDS_BEAT_MS * 2);
+
+      expect(connection.invoked).toEqual([BEAT_MESSAGE, BEAT_MESSAGE]);
+    });
+
+    it('does not beat while the link is down', async () => {
+      channel.connect(reload);
+      await vi.advanceTimersByTimeAsync(0);
+
+      connection.losesTheLink();
+      await vi.advanceTimersByTimeAsync(KDS_BEAT_MS);
+
+      expect(connection.invoked).toEqual([]);
+    });
+
+    // A beat lost to a bad signal is not the end of the night: the next one
+    // goes out on time, and none of it reaches the person at the bar.
+    it('keeps beating after a beat fails', async () => {
+      connection.failsInvokes = true;
+      channel.connect(reload);
+      await vi.advanceTimersByTimeAsync(0);
+
+      await vi.advanceTimersByTimeAsync(KDS_BEAT_MS * 2);
+
+      expect(connection.invoked).toEqual([BEAT_MESSAGE, BEAT_MESSAGE]);
+    });
+
+    it('stops beating once the screen closes', async () => {
+      channel.connect(reload);
+      await vi.advanceTimersByTimeAsync(0);
+
+      channel.disconnect();
+      await vi.advanceTimersByTimeAsync(KDS_BEAT_MS * 2);
+
+      expect(connection.invoked).toEqual([]);
     });
   });
 

@@ -259,6 +259,19 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(TheNight, bars.AskedFor);
     }
 
+    // US-38: a bar whose tablet stopped beating two minutes ago, by the
+    // server's clock, gets nothing however little work it has.
+    [Fact]
+    public async Task HandleAsync_WhenTheQuieterBarIsDisconnected_SendsTheOrderToTheConnectedOne()
+    {
+        BarSupply busy = new(Guid.CreateVersion7(), 4, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 }, Tonight.AddSeconds(-20));
+        BarSupply quiet = new(Guid.CreateVersion7(), 1, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 }, Tonight.AddMinutes(-2));
+
+        await AHandlerOver(_menu, bars: new Bars(quiet, busy)).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(busy.KdsId, _orders.Added!.KdsId);
+    }
+
     // The gins are in one bar and the fernet in the other: an order is not split
     // between two bars, so nobody would have it all.
     [Fact]

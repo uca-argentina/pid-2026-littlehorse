@@ -47,7 +47,7 @@ public sealed class CollectCashHandler(
 
         OrderLine[] lines = [.. order.Items.Select(item => new OrderLine(item.ProductId, item.Quantity))];
         IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, [.. lines.Select(line => line.ProductId)], cancellationToken);
-        BarSupply? bar = BarChooser.Choose(nightsBars, lines);
+        BarSupply? bar = BarChooser.Choose(nightsBars, lines, now);
 
         if (bar is null) return SoldOut(order, BarChooser.Missing(nightsBars, lines));
 

@@ -16,6 +16,7 @@ using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Orders;
+using Microsoft.AspNetCore.SignalR;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -36,6 +37,8 @@ builder.Services.AddTableHandlers();
 builder.Services.AddScoped<CurrentVenue>();
 builder.Services.AddScoped<ICurrentVenue>(services => services.GetRequiredService<CurrentVenue>());
 builder.Services.AddHttpContextAccessor();
+// The same, for each hub call: it runs in a scope no middleware saw.
+builder.Services.Configure<HubOptions>(options => options.AddFilter<VenueResolutionHubFilter>());
 builder.Services.AddScoped<ICurrentStaffUser, CurrentStaffUser>();
 
 JwtOptions jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();

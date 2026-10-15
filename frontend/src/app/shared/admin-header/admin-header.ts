@@ -8,6 +8,7 @@ const ADMINISTRATION: readonly StaffSection[] = [
   { label: 'Staff', path: 'users' },
   { label: 'Noches', path: 'nights' },
   { label: 'Mesas', path: 'tables' },
+  { label: 'Reportes', path: 'reports' },
 ];
 
 /** The staff header as every administration screen draws it. */

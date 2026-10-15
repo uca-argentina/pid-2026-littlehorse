@@ -1,0 +1,390 @@
+// A night's report (US-47 to US-49): read at a desk, so wider than the other
+// administration screens, and folding to one column on a phone.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 1200px;
+  padding: var(--dk-space-5);
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+}
+
+.picker {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.hours {
+  color: var(--dk-text-muted);
+  font-size: 15px;
+}
+
+.chip {
+  padding: 5px 11px;
+  border: 1.5px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  color: var(--dk-text-muted);
+  font-size: var(--dk-text-min);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chip-live {
+  border-color: var(--dk-done);
+  color: var(--dk-done);
+}
+
+.chip-out {
+  border-color: var(--dk-age-warn);
+  color: var(--dk-age-warn);
+}
+
+.ghost,
+.primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border-radius: var(--dk-radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.ghost {
+  margin-left: auto;
+  border: 1px solid var(--dk-border);
+  color: var(--dk-text);
+}
+
+.primary {
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-weight: 700;
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.failed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.retry {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  align-items: center;
+  padding: var(--dk-space-6) var(--dk-space-4);
+  border: 1px dashed var(--dk-border);
+  border-radius: var(--dk-radius-lg);
+  text-align: center;
+}
+
+.empty-title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.empty-text {
+  max-width: 52ch;
+  margin: 0;
+  color: var(--dk-text-muted);
+}
+
+// Four numbers first: the summary before the detail.
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--dk-space-3);
+}
+
+.kpi,
+.panel,
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-lg);
+  background: var(--dk-surface);
+}
+
+.kpi {
+  gap: 6px;
+  padding: var(--dk-space-4);
+}
+
+.label {
+  color: var(--dk-text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.value {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail {
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.slow {
+  color: var(--dk-age-warn);
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: var(--dk-space-3);
+}
+
+.panel {
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-4) var(--dk-space-5);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+// One bar for the night's money, each method its share of it.
+.stack {
+  display: flex;
+  height: 14px;
+  overflow: hidden;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-surface-raised);
+}
+
+.segment {
+  height: 100%;
+}
+
+.segment-cash,
+.dot-cash {
+  background: var(--dk-accent);
+}
+
+.segment-digital,
+.dot-digital {
+  background: var(--dk-text);
+}
+
+.segment-vip,
+.dot-vip {
+  background: var(--dk-text-faint);
+}
+
+.rows,
+.ranking {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.row,
+.product {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  padding: 11px 0;
+  border-top: 1px solid var(--dk-border-subtle);
+}
+
+.row:first-child,
+.product:first-child {
+  border-top: 0;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.grow {
+  flex: 1;
+}
+
+.muted {
+  color: var(--dk-text-muted);
+}
+
+.number {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.foot {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+}
+
+.stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--dk-space-3);
+}
+
+.stage {
+  gap: 6px;
+  padding: var(--dk-space-3) var(--dk-space-4);
+  background: var(--dk-ink);
+}
+
+.stage-value {
+  font-size: 24px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-value small {
+  color: var(--dk-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bars {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.bars th {
+  padding-bottom: 6px;
+  color: var(--dk-text-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.bars th.number {
+  text-align: right;
+}
+
+.bars td {
+  padding: 10px 0;
+  border-top: 1px solid var(--dk-border-subtle);
+}
+
+.rank {
+  width: 24px;
+  color: var(--dk-text-faint);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+// The drink's name in the venue's serif, like the menu: it is the name of
+// something chosen. Every number beside it stays in the sans.
+.drink {
+  min-width: 160px;
+  font-family: var(--dk-font-serif);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.units {
+  display: flex;
+  flex: 1;
+  gap: var(--dk-space-3);
+  align-items: center;
+  min-width: 160px;
+}
+
+.meter {
+  flex: 1;
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-surface-raised);
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-accent);
+}
+
+.loaded {
+  min-width: 120px;
+  text-align: right;
+}

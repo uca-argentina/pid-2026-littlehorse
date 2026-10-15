@@ -3,6 +3,7 @@ using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Metrics;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Security;
@@ -13,6 +14,7 @@ using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Menu;
+using DrinkIt.Infrastructure.Metrics;
 using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
@@ -79,6 +81,7 @@ public static class InfrastructureServices
         services.AddScoped<INightRepository, NightRepository>();
         services.AddScoped<INightQueries, NightQueries>();
         services.AddScoped<INightStockQueries, NightStockQueries>();
+        services.AddScoped<INightMetricsQueries, NightMetricsQueries>();
         services.AddScoped<INightStockRepository, NightStockRepository>();
         services.AddScoped<IBarsForOrdering, BarsForOrdering>();
         services.AddScoped<IUnderwayNightLookup, UnderwayNightLookup>();
@@ -92,6 +95,7 @@ public static class InfrastructureServices
         // notifier only holds IHubContext, which is itself a singleton — no
         // DbContext, no per-request state.
         services.AddSignalR();
+        services.AddScoped<KdsBeats>();
         services.AddSingleton<IKdsBoardNotifier, KdsBoardNotifier>();
         services.AddSingleton<ITillNotifier, TillNotifier>();
         services.AddSingleton<IOrderFollowers, OrderFollowers>();
