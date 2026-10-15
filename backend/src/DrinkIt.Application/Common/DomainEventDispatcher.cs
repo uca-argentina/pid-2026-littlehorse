@@ -35,7 +35,14 @@ public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotif
 
             // What the waiters see (US-43): only table orders raise it, so a bar
             // order moving about never wakes a waiter's phone.
-            if (domainEvent is TableOrderChanged tableMoved) await waiters.NotifyBoardChangedAsync(tableMoved.VenueId, cancellationToken);
+            if (domainEvent is TableOrderChanged tableMoved)
+            {
+                await waiters.NotifyBoardChangedAsync(tableMoved.VenueId, cancellationToken);
+
+                // The till has the same list (US-45), and reloads it on the
+                // message it already listens to.
+                await till.NotifyTillChangedAsync(tableMoved.VenueId, cancellationToken);
+            }
         }
 
         // Once per order, not once per event: one move can raise several

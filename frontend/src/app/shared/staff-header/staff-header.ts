@@ -62,6 +62,25 @@ export class StaffHeader {
     this.navigationOpen.set(false);
   }
 
+  /**
+   * Where a tab goes, one segment per part of its path: handed over whole,
+   * "cashier/vip" would be encoded as a single segment and lead nowhere.
+   */
+  protected linkTo(section: StaffSection): string[] {
+    return ['/', this.venueSlug(), 'staff', ...section.path.split('/')];
+  }
+
+  /**
+   * A tab is only active on its exact address when another tab hangs below
+   * it ("cashier" and "cashier/vip"): otherwise both would light up on the
+   * deeper one. The others stay active on their nested screens, as they were.
+   */
+  protected isExact(section: StaffSection): boolean {
+    return this.sections().some(
+      (other) => other.path !== section.path && other.path.startsWith(`${section.path}/`),
+    );
+  }
+
   protected toggleNavigation(): void {
     this.navigationOpen.update((open) => !open);
     this.accountOpen.set(false);

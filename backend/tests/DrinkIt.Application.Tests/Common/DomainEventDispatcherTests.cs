@@ -187,6 +187,20 @@ public class DomainEventDispatcherTests
         Assert.Empty(followers.Notified);
     }
 
+    // US-45: the till has a list of the tables ready to carry, and it moves
+    // when they do, on its own.
+    [Fact]
+    public async Task DispatchAsync_WhenATableOrderChanges_NotifiesTheTillOfTheVenue()
+    {
+        Guid venueId = Guid.CreateVersion7();
+        SpyTill till = new();
+        DomainEventDispatcher dispatcher = new(new SpyNotifier(), till, new SpyFollowers(), new SpyWaiters());
+
+        await dispatcher.DispatchAsync([new TableOrderChanged(venueId, AToken)], CancellationToken.None);
+
+        Assert.Equal(venueId, Assert.Single(till.NotifiedVenues));
+    }
+
     // US-43: what the waiters see changed, and every waiter of the venue redraws.
     [Fact]
     public async Task DispatchAsync_WhenATableOrderChanges_NotifiesTheWaitersOfTheVenue()

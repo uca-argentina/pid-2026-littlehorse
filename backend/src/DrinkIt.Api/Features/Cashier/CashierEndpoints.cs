@@ -1,7 +1,9 @@
 using DrinkIt.Api.Common;
+using DrinkIt.Api.Features.Waiter;
 using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Waiter;
 using DrinkIt.Domain.Orders;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -20,11 +22,45 @@ public sealed record CashierOrderResponse(
     DateTimeOffset? PaidAt,
     IReadOnlyList<CashierOrderItemResponse> Items);
 
+/// <summary>
+/// One table's order that is ready to be carried, as the till sees it: who has
+/// it, if anybody, and since when. The till only looks: coordinating is done
+/// out loud.
+/// </summary>
+public sealed record CashierVipDeliveryResponse(
+    Guid OrderId,
+    int TableNumber,
+    string CustomerName,
+    DateTimeOffset? ReadyAt,
+    string? TakenByName,
+    DateTimeOffset? TakenAt,
+    IReadOnlyList<WaiterOrderItemResponse> Items);
+
 /// <summary>What a reader or the camera read off the customer's phone.</summary>
 public sealed record CashierScanRequest(string? Read);
 
 internal static class CashierEndpoints
 {
+    /// <summary>
+    /// The tables ready to be carried, the one that has waited longest first.
+    /// The same list the waiters read, minus the waiter's id: the till only
+    /// needs to know who has it, to say it out loud.
+    /// </summary>
+    internal static async Task<IResult> GetVipDeliveriesAsync(IWaiterQueries tables, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<WaiterTableOrder> ready = await tables.ListAsync(cancellationToken);
+
+        return TypedResults.Ok<IReadOnlyList<CashierVipDeliveryResponse>>(
+            [.. ready.Select(order => new CashierVipDeliveryResponse(
+                order.OrderId,
+                order.TableNumber,
+                order.CustomerName,
+                order.ReadyAt,
+                order.WaiterName,
+                order.TakenAt,
+                [.. order.Items.Select(item => new WaiterOrderItemResponse(item.ProductName, item.Quantity, item.Note))]))]);
+    }
+
     internal static async Task<IResult> ScanAsync(CashierScanRequest request, ICashierQueries queries, CancellationToken cancellationToken) =>
         await queries.FindByTokenAsync(request.Read ?? string.Empty, cancellationToken) is CashierOrder order
             ? TypedResults.Ok(ToResponse(order))
@@ -93,6 +129,14 @@ internal static class CashierEndpoints
             .WithName("GetMyCollections")
             .WithSummary("What the signed-in cashier collected during the shift, the latest first.")
             .Produces<IReadOnlyList<CashierOrderResponse>>();
+
+        endpoints
+            .MapGet("/cashier/vip-deliveries", GetVipDeliveriesAsync)
+            .RequireAuthorization(Policies.Cashier)
+            .WithTags("Cashier")
+            .WithName("GetVipDeliveries")
+            .WithSummary("The VIP tables that are ready and who is carrying each, the one that has waited longest first.")
+            .Produces<IReadOnlyList<CashierVipDeliveryResponse>>();
 
         return endpoints;
     }

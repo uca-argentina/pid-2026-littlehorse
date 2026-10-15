@@ -4,6 +4,7 @@ using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Waiter;
 using DrinkIt.Domain.Orders;
 using Microsoft.AspNetCore.Http;
 
@@ -26,6 +27,28 @@ public class CashierEndpointsTests
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path + "/collect", HttpMethods.Post);
 
         Assert.Equal(StatusCodes.Status204NoContent, response.StatusCode);
+    }
+
+    // US-45, criterion 1: what is waiting for a waiter, and what one already has.
+    [Fact]
+    public async Task GetVipDeliveriesAsync_WhenTablesAreReady_ListsThemWithWhoHasThemAndNoWaiterId()
+    {
+        DateTimeOffset ready = new(2026, 10, 15, 3, 0, 0, TimeSpan.Zero);
+        Tests.Features.Waiter.FakeWaiterQueries queries = new(
+            new WaiterTableOrder(Guid.CreateVersion7(), 12, "Sofi", ready, null, null, null, [new WaiterOrderItem("Aperol Spritz", 1, null)]),
+            new WaiterTableOrder(Guid.CreateVersion7(), 5, "Nico", ready, Guid.CreateVersion7(), "Martín", ready.AddSeconds(40), []));
+
+        IResult result = await CashierEndpoints.GetVipDeliveriesAsync(queries, CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, "/cashier/vip-deliveries", HttpMethods.Get);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Equal(12, response.Body[0].GetProperty("tableNumber").GetInt32());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, response.Body[0].GetProperty("takenByName").ValueKind);
+        Assert.Equal("Aperol Spritz", response.Body[0].GetProperty("items")[0].GetProperty("productName").GetString());
+        Assert.Equal("Martín", response.Body[1].GetProperty("takenByName").GetString());
+        Assert.Equal(ready.AddSeconds(40), response.Body[1].GetProperty("takenAt").GetDateTimeOffset());
+        // The till watches; it never learns which account a waiter is.
+        Assert.False(response.Body[1].TryGetProperty("waiterId", out _));
     }
 
     [Fact]

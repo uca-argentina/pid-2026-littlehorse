@@ -12,6 +12,12 @@ export const CASHIER_SCAN_URL = '/api/cashier/scan';
 /** "Cobros de tu turno": what the signed-in cashier took during the shift. */
 export const MY_COLLECTIONS_URL = '/api/cashier/collections';
 
+/** US-45: the VIP tables that are ready, and who is carrying each. The till only looks. */
+export const CASHIER_VIP_DELIVERIES_URL = '/api/cashier/vip-deliveries';
+
+/** Taken from the generated contract, so nothing here can drift from the API. */
+export type VipDelivery = components['schemas']['CashierVipDeliveryResponse'];
+
 export function cashierOrderUrl(code: string): string {
   return `${CASHIER_ORDERS_URL}/${encodeURIComponent(code)}`;
 }
