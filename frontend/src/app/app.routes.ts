@@ -50,6 +50,11 @@ export const routes: Routes = [
       import('./features/categories/categories.routes').then((m) => m.categoriesRoutes),
   },
   {
+    path: ':venueSlug/staff/waiter',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/waiter/waiter.routes').then((m) => m.waiterRoutes),
+  },
+  {
     path: ':venueSlug/staff/kds',
     canActivate: [rememberVenueGuard],
     loadChildren: () => import('./features/kds/kds.routes').then((m) => m.kdsRoutes),

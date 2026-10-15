@@ -517,6 +517,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/waiter/tables': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The venue's table orders that are ready, the one that has waited longest first. */
+    get: operations['ListWaiterTables'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/waiter/tables/{orderId}/take': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Takes a table's ready order to carry it. Taking it again changes nothing. */
+    post: operations['TakeTableOrder'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/products': {
     parameters: {
       query?: never;
@@ -1228,6 +1262,16 @@ export interface components {
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
     };
+    /** @description What the phone gets back once the order is the waiter's. */
+    TakenTableResponse: {
+      /** Format: uuid */
+      orderId: string;
+      /** Format: int32 */
+      tableNumber: number;
+      waiterName: string;
+      /** Format: date-time */
+      takenAt: string;
+    };
     /**
      * @description One of the most ordered products, with the name and what it billed as it
      *     was ordered, beside what its bars were loaded with that night.
@@ -1264,6 +1308,7 @@ export interface components {
       items: components['schemas']['TrackedOrderItemResponse'][];
       /** Format: int32 */
       tableNumber: null | number;
+      waiterName: null | string;
     };
     /** @description What the night's own screen saves: the whole form, as on creation. */
     UpdateNightRequest: {
@@ -1299,6 +1344,31 @@ export interface components {
       tableNumber: number;
       /** Format: double */
       balance: number;
+    };
+    /** @description One drink on a table's order, as the waiter's phone reads it. */
+    WaiterOrderItemResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+    };
+    /**
+     * @description One table's order that is ready to be carried. `TakenByName` is null
+     *     while nobody has it; `TakenByMe` says whether it is the caller.
+     */
+    WaiterTableResponse: {
+      /** Format: uuid */
+      orderId: string;
+      /** Format: int32 */
+      tableNumber: number;
+      customerName: string;
+      /** Format: date-time */
+      readyAt: null | string;
+      takenByName: null | string;
+      takenByMe: boolean;
+      /** Format: date-time */
+      takenAt: null | string;
+      items: components['schemas']['WaiterOrderItemResponse'][];
     };
   };
   responses: never;
@@ -2505,6 +2575,75 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListWaiterTables: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WaiterTableResponse'][];
+        };
+      };
+    };
+  };
+  TakeTableOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        orderId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TakenTableResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
