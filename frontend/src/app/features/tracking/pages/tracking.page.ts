@@ -114,6 +114,9 @@ export class TrackingPage {
   /** US-41: the VIP table it is carried to, or null when it is picked up at the bar. */
   protected readonly tableNumber = computed(() => this.store.order()?.tableNumber ?? null);
 
+  /** US-43: the waiter carrying it to the table, once one took it. */
+  protected readonly waiterName = computed(() => this.store.order()?.waiterName ?? null);
+
   /** "Cancelar pedido" was tapped once: it asks before doing it. */
   protected readonly confirmingCancel = signal(false);
 
@@ -121,8 +124,18 @@ export class TrackingPage {
     const status = this.status();
 
     if (status === null) return '';
-    if (status === 'Ready' && this.tableNumber() !== null)
-      return '¡Está listo! Ya sale para tu mesa.';
+
+    // US-44: the waiter left it at the table, so there is no bar to have picked it up at.
+    if (status === 'Delivered' && this.tableNumber() !== null)
+      return 'En tu mesa. ¡Que lo disfrutes!';
+
+    if (status === 'Ready' && this.tableNumber() !== null) {
+      const waiter = this.waiterName();
+
+      return waiter === null
+        ? '¡Está listo! Ya sale para tu mesa.'
+        : `¡Está listo! ${waiter} lo está llevando a tu mesa.`;
+    }
 
     return WHAT_IS_HAPPENING[status] ?? '';
   });
