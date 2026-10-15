@@ -52,6 +52,23 @@ public sealed class NightMetricsQueriesTests(SqlServerFixture sql)
             delivered.DeliveredAt), order);
     }
 
+    // US-48, criterion 2 (US-42): what the table's balance gave travels with
+    // the order, so the report can split it from what the phone paid.
+    [Fact]
+    public async Task GetAsync_ForATableOrder_CarriesWhatTheBalanceGave()
+    {
+        Seeded seeded = await Seed();
+        Order order = Order.Place(seeded.Venue.Id, seeded.Saturday.Id, "María Quadro", NextCode(), [Gin(seeded, 2)]);
+        order.PayFromBalance(seeded.Saturday.StartsAt.AddHours(1), 5000m);
+        order.Enqueue(seeded.Pista.Id);
+        await Save(seeded, order);
+
+        NightSales sales = await SalesOf(seeded, seeded.Saturday);
+
+        PaidOrder paid = Assert.Single(sales.Orders);
+        Assert.Equal((PaymentMethod.VipBalance, 9000m, 5000m), (paid.Method, paid.Total, paid.BalanceAmount));
+    }
+
     // US-49: by units, with the name and price each line was ordered at.
     [Fact]
     public async Task GetAsync_Always_SumsEachProductAcrossThePaidOrders()

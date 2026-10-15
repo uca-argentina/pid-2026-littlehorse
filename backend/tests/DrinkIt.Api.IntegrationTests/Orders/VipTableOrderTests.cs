@@ -21,9 +21,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace DrinkIt.Api.IntegrationTests.Orders;
 
 /// <summary>
-/// US-41 against a real database: an order paid from a VIP table's balance is
-/// written with the balance it spent, and two phones of the same table cannot
-/// spend the same money twice.
+/// US-41 and US-42 against a real database: an order paid from a VIP table's
+/// balance is written with the balance it spent, the difference is paid on
+/// top, and two phones of the same table cannot spend the same money twice.
 /// </summary>
 [Collection(nameof(SqlServerCollection))]
 public sealed class VipTableOrderTests(SqlServerFixture sql)
@@ -50,7 +50,8 @@ public sealed class VipTableOrderTests(SqlServerFixture sql)
     }
 
     // US-41, criterion 3: the balance covers one of the two orders. One is
-    // paid; the other sees it does not cover it, and nothing is taken twice.
+    // paid; the other sees the balance changed (US-42: it would now have a
+    // difference to pay), and nothing is taken twice.
     [Fact]
     public async Task Confirm_WhenTwoPhonesOfTheTableConfirmAtOnce_OnlyOneIsPaid()
     {
@@ -61,9 +62,45 @@ public sealed class VipTableOrderTests(SqlServerFixture sql)
         await using DrinkItDbContext check = sql.CreateContext(seeded.Venue.Id);
 
         Assert.Single(results, result => result.IsSuccess);
-        Assert.Single(results, result => result.Error == VipAccountErrors.BalanceShort);
+        Assert.Single(results, result => result.Error == VipAccountErrors.BalanceChanged);
         Assert.Single(await check.Orders.ToListAsync());
         Assert.Equal(9_000m, (await check.VipAccounts.SingleAsync()).Spent);
+    }
+
+    // US-42, criterion 2: the balance gives what it has, the phone pays the
+    // rest, and the order goes into the queue with the balance at zero.
+    [Fact]
+    public async Task Confirm_WhenTheDifferenceIsPaid_EmptiesTheBalanceAndQueuesTheOrder()
+    {
+        Seeded seeded = await AVenueWithATable(budget: 5_000m);
+
+        Result<ConfirmedOrder> result = await Confirm(seeded, "phone-1", digitalAmount: 4_000m);
+
+        await using DrinkItDbContext check = sql.CreateContext(seeded.Venue.Id);
+        Order stored = await check.Orders.SingleAsync();
+        VipAccount account = await check.VipAccounts.SingleAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(OrderStatus.Queued, stored.Status);
+        Assert.Equal(5, stored.TableNumber);
+        Assert.Equal(5_000m, stored.BalanceAmount);
+        Assert.Equal(0m, account.Balance);
+    }
+
+    // US-42, criterion 3: a difference that no longer adds up is refused before
+    // anything is charged. No order, and the balance as it was.
+    [Fact]
+    public async Task Confirm_WhenTheAgreedDifferenceIsStale_StoresNothingAndKeepsTheBalance()
+    {
+        Seeded seeded = await AVenueWithATable(budget: 5_000m);
+
+        Result<ConfirmedOrder> result = await Confirm(seeded, "phone-1", digitalAmount: 2_000m);
+
+        await using DrinkItDbContext check = sql.CreateContext(seeded.Venue.Id);
+
+        Assert.Equal(VipAccountErrors.BalanceChanged, result.Error);
+        Assert.Empty(await check.Orders.ToListAsync());
+        Assert.Equal(0m, (await check.VipAccounts.SingleAsync()).Spent);
     }
 
     // The code of a table next door finds nothing here, the same as one invented.
@@ -135,7 +172,7 @@ public sealed class VipTableOrderTests(SqlServerFixture sql)
     private sealed record Seeded(Venue Venue, Product Gin, string AccessCode);
 
     /// <summary>Two gin tonics at 4500 from the table: 9000.</summary>
-    private async Task<Result<ConfirmedOrder>> Confirm(Seeded seeded, string key)
+    private async Task<Result<ConfirmedOrder>> Confirm(Seeded seeded, string key, decimal? digitalAmount = null)
     {
         await using DrinkItDbContext context = sql.CreateContext(seeded.Venue.Id);
         FixedVenue current = new(seeded.Venue.Id);
@@ -152,7 +189,7 @@ public sealed class VipTableOrderTests(SqlServerFixture sql)
             clock);
 
         return await handler.HandleAsync(
-            new ConfirmOrderCommand("María Quadro", PaymentMethod.VipBalance, key, [new OrderLineRequest(seeded.Gin.Id, 2, null)], seeded.AccessCode),
+            new ConfirmOrderCommand("María Quadro", PaymentMethod.VipBalance, key, [new OrderLineRequest(seeded.Gin.Id, 2, null)], seeded.AccessCode, digitalAmount),
             CancellationToken.None);
     }
 

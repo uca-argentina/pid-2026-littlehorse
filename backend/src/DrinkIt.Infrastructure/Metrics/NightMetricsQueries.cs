@@ -46,7 +46,8 @@ internal sealed class NightMetricsQueries(DrinkItDbContext context) : INightMetr
                 order.Status,
                 order.PaidAt!.Value,
                 order.ReadyAt,
-                order.DeliveredAt))
+                order.DeliveredAt,
+                order.BalanceAmount))
             .ToListAsync(cancellationToken);
 
         // From the order lines, not the menu: the name and price each was

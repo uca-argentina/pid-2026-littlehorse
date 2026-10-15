@@ -71,11 +71,31 @@ public sealed record NightMetrics(
             loaded.Values.Count(RanOut));
     }
 
+    /// <summary>
+    /// What entered by one method, and how many orders it entered for. A
+    /// table's order that paid a difference (US-42) is in two rows, each with
+    /// its own part, so the rows add up to what was sold but their orders may
+    /// add up to more.
+    /// </summary>
     private static SalesByMethod SalesOf(IReadOnlyList<PaidOrder> orders, PaymentMethod method)
     {
-        PaidOrder[] paid = [.. orders.Where(order => order.Method == method)];
+        decimal[] parts = [.. orders.Select(order => PartOf(order, method)).Where(part => part > 0)];
 
-        return new SalesByMethod(method, paid.Length, paid.Sum(order => order.Total));
+        return new SalesByMethod(method, parts.Length, parts.Sum());
+    }
+
+    private static decimal PartOf(PaidOrder order, PaymentMethod method)
+    {
+        if (order.Method != PaymentMethod.VipBalance) return order.Method == method ? order.Total : 0m;
+
+        decimal fromBalance = order.BalanceAmount ?? order.Total;
+
+        return method switch
+        {
+            PaymentMethod.VipBalance => fromBalance,
+            PaymentMethod.Digital => order.Total - fromBalance,
+            _ => 0m,
+        };
     }
 
     private static TimeSpan? PaidToReadyOf(PaidOrder order) => order.ReadyAt - order.PaidAt;

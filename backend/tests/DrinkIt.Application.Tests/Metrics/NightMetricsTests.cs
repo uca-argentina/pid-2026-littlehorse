@@ -64,6 +64,34 @@ public class NightMetricsTests
         Assert.Equal(new SalesByMethod(PaymentMethod.Digital, 1, 500m), metrics.ByMethod.Single(row => row.Method == PaymentMethod.Digital));
     }
 
+    // US-48, criterion 2 (US-42): a table's order that paid part from its
+    // balance and the rest from the phone adds each part to its own row, and
+    // counts as an order in both.
+    [Fact]
+    public void Build_WhenATableOrderPaidADifference_AddsEachPartToItsMethod()
+    {
+        NightMetrics metrics = Build(
+        [
+            Paid(PaymentMethod.Digital, 500m),
+            Paid(PaymentMethod.VipBalance, 9000m) with { BalanceAmount = 5000m },
+            Paid(PaymentMethod.VipBalance, 2000m) with { BalanceAmount = 2000m },
+        ]);
+
+        Assert.Equal(11500m, metrics.Sold);
+        Assert.Equal(new SalesByMethod(PaymentMethod.Digital, 2, 4500m), metrics.ByMethod.Single(row => row.Method == PaymentMethod.Digital));
+        Assert.Equal(new SalesByMethod(PaymentMethod.VipBalance, 2, 7000m), metrics.ByMethod.Single(row => row.Method == PaymentMethod.VipBalance));
+    }
+
+    // A balance at zero paid nothing: the whole order is digital, not a VIP sale of 0.
+    [Fact]
+    public void Build_WhenATableOrderGotNothingFromTheBalance_CountsOnlyAsDigital()
+    {
+        NightMetrics metrics = Build([Paid(PaymentMethod.VipBalance, 9000m) with { BalanceAmount = 0m }]);
+
+        Assert.Equal(new SalesByMethod(PaymentMethod.Digital, 1, 9000m), metrics.ByMethod.Single(row => row.Method == PaymentMethod.Digital));
+        Assert.Equal(new SalesByMethod(PaymentMethod.VipBalance, 0, 0m), metrics.ByMethod.Single(row => row.Method == PaymentMethod.VipBalance));
+    }
+
     // The screen draws the same three rows every night, so a method that sold
     // nothing is a zero and not a missing row.
     [Fact]

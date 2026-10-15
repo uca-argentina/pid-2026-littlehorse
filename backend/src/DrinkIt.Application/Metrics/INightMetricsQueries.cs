@@ -29,7 +29,9 @@ public sealed record NightBar(Guid KdsId, string Name);
 /// <summary>
 /// One paid order of the night with its stamps. <see cref="ReadyAt"/> and
 /// <see cref="DeliveredAt"/> are null until it gets there, and also on orders
-/// from before they were kept.
+/// from before they were kept. <see cref="BalanceAmount"/> is what a VIP
+/// table's balance gave (US-41); the rest of a table's order was paid from the
+/// phone (US-42). Null on every other order.
 /// </summary>
 public sealed record PaidOrder(
     Guid? KdsId,
@@ -38,7 +40,8 @@ public sealed record PaidOrder(
     OrderStatus Status,
     DateTimeOffset PaidAt,
     DateTimeOffset? ReadyAt,
-    DateTimeOffset? DeliveredAt);
+    DateTimeOffset? DeliveredAt,
+    decimal? BalanceAmount = null);
 
 /// <summary>
 /// One product across the night's paid orders. Name and price come from the

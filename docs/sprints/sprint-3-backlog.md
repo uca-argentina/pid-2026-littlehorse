@@ -547,6 +547,28 @@ describe:
   cliente ve la nueva diferencia y vuelve a pagar por ese importe.
 - **Borde:** saldo en cero. No es un caso aparte: la diferencia es el total.
 
+**Construida el 2026-10-15:**
+
+- **El saldo da todo lo que tiene y el celular paga el resto.** La pantalla de pago muestra
+  "Cubre el saldo de la mesa $ …" y "Te falta pagar $ …", y el botón dice "Pagar la diferencia"
+  con ese importe. Ya no hace falta sacar nada del pedido.
+- **El celular manda la diferencia que mostró** (`digitalAmount` en `POST /{venueSlug}/orders`),
+  redondeada al centavo. El servidor la compara con la que calcula él; si no coincide (otro
+  celular de la mesa gastó en el medio, o el administrador subió el presupuesto), responde
+  `vip_account.balance_changed` (409) **sin cobrar ni descontar nada**, y la pantalla vuelve a
+  pedir el saldo y muestra la diferencia nueva. Ese error reemplaza a
+  `vip_account.balance_short`, que dejó de existir: un saldo que no alcanza ya no impide pedir.
+- **Criterio 3 sin devoluciones:** el pago digital es simulado y se resuelve en el mismo pedido,
+  así que el débito del saldo y el pedido se guardan juntos o no se guarda nada. Cuando entre
+  Mercado Pago (US-24), que es asíncrono, el débito tiene que esperar a la confirmación del pago;
+  eso queda para esa story.
+- **El desglose no suma columnas.** El pedido sigue con método `VipBalance` (es de la mesa y se
+  lleva a la mesa) y `BalanceAmount` dice cuánto dio el saldo; lo digital es el total menos eso.
+  Con saldo en cero, `BalanceAmount` es 0. Sin migración.
+- **US-48, criterio 2:** en los reportes, cada parte suma en su medio, y un pedido dividido
+  cuenta como pedido en los dos. Las filas suman lo vendido; la cantidad de pedidos de las filas
+  puede sumar más que el total de pedidos.
+
 ---
 
 ## El mozo

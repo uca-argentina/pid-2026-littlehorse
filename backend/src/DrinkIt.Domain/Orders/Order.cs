@@ -230,13 +230,14 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     }
 
     /// <summary>
-    /// US-41: paid from the table's balance, with what the balance gave. The
-    /// whole order for now; US-42 lets the balance give less and another method
-    /// pay the rest.
+    /// US-41: paid from the table's balance, with what the balance gave. When
+    /// it gave less than the total, the phone paid the rest (US-42), which is
+    /// <see cref="Total"/> minus <see cref="BalanceAmount"/> and is not stored
+    /// apart. Zero is a table whose balance ran out: still the table's order.
     /// </summary>
     public void PayFromBalance(DateTimeOffset at, decimal amount)
     {
-        if (amount <= 0 || amount > Total) throw new DomainException(ErrorCodes.BalanceAmountOutOfRange, "What the balance pays has to be more than 0 and at most the order's total.");
+        if (amount < 0 || amount > Total) throw new DomainException(ErrorCodes.BalanceAmountOutOfRange, "What the balance pays has to be at least 0 and at most the order's total.");
 
         MarkPaid(at, PaymentMethod.VipBalance);
         BalanceAmount = amount;

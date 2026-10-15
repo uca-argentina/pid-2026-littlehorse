@@ -83,12 +83,17 @@ export class CheckoutStore {
     return fresh;
   }
 
-  /** tableCode: the VIP table this phone orders for (US-41), or null at the bar. */
+  /**
+   * tableCode: the VIP table this phone orders for (US-41), or null at the bar.
+   * digitalAmount: what the phone pays on top of the table's balance (US-42),
+   * or null when the balance covers it.
+   */
   pay(
     venueSlug: string,
     customerName: string,
     method: PaymentMethod,
     tableCode: string | null = null,
+    digitalAmount: number | null = null,
   ): void {
     if (this.isPaying()) return;
 
@@ -109,6 +114,7 @@ export class CheckoutStore {
           note: line.note,
         })),
         tableCode,
+        digitalAmount,
       }),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
