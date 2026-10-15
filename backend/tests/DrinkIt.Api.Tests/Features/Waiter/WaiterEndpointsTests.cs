@@ -146,6 +146,63 @@ public class WaiterEndpointsTests
         Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
     }
 
+    // US-44, criterion 1: delivered, and the phone reloads the list.
+    [Fact]
+    public async Task DeliverAsync_WhenTheWaiterCarriesIt_RespondsNoContent()
+    {
+        Order order = AReadyTableOrder();
+        order.TakeToTable(Martin, "Martín", Midnight);
+
+        IResult result = await WaiterEndpoints.DeliverAsync(order.Id, DeliverHandlerFor(order), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{order.Id}/deliver", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status204NoContent, response.StatusCode);
+        Assert.Equal(OrderStatus.Delivered, order.Status);
+    }
+
+    // Criterion 2: not theirs to hand over.
+    [Fact]
+    public async Task DeliverAsync_WhenAnotherWaiterCarriesIt_RespondsWithConflict()
+    {
+        Order order = AReadyTableOrder();
+        order.TakeToTable(Sofia, "Sofía", Midnight);
+
+        IResult result = await WaiterEndpoints.DeliverAsync(order.Id, DeliverHandlerFor(order), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{order.Id}/deliver", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:waiter:not-yours", response.Text("type"));
+        Assert.Equal(OrderStatus.Ready, order.Status);
+    }
+
+    [Fact]
+    public async Task DeliverAsync_WhenThereIsNoSuchOrder_RespondsNotFound()
+    {
+        Guid id = Guid.CreateVersion7();
+
+        IResult result = await WaiterEndpoints.DeliverAsync(id, DeliverHandlerFor(null), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{id}/deliver", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:waiter:order-not-found", response.Text("type"));
+    }
+
+    [Fact]
+    public async Task DeliverAsync_WhenAnotherScreenSavesFirst_RespondsWithConflict()
+    {
+        Order order = AReadyTableOrder();
+        order.TakeToTable(Martin, "Martín", Midnight);
+
+        IResult result = await WaiterEndpoints.DeliverAsync(order.Id, DeliverHandlerFor(order, losesTheRace: true), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{order.Id}/deliver", HttpMethods.Post);
+
+        Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:order:changed-meanwhile", response.Text("type"));
+    }
+
+    private static DeliverTableOrderHandler DeliverHandlerFor(Order? order, bool losesTheRace = false) =>
+        new(new Fake.Orders(order, losesTheRace), new Fake.TheWaiterIs(Martin), TimeProvider.System);
+
     private static TakeTableOrderHandler HandlerFor(Order? order = null, bool losesTheRace = false) =>
         new(new Fake.Orders(order, losesTheRace), new FakeWaiterQueries(), new Fake.TheWaiterIs(Martin), TimeProvider.System);
 

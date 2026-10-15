@@ -55,6 +55,15 @@ internal static class WaiterEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
+        group
+            .MapPost("/{orderId:guid}/deliver", DeliverAsync)
+            .WithName("DeliverTableOrder")
+            .WithSummary("Hands over, at its table, an order the caller took. Delivering it again changes nothing.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         return endpoints;
     }
 
@@ -89,6 +98,15 @@ internal static class WaiterEndpoints
         return TypedResults.Ok(new TakenTableResponse(taken.OrderId, taken.TableNumber, taken.WaiterName, taken.TakenAt));
     }
 
+    internal static async Task<IResult> DeliverAsync(Guid orderId, DeliverTableOrderHandler handler, CancellationToken cancellationToken)
+    {
+        // An order that is no longer ready throws from the domain and the global
+        // handler turns it into a 400, as ever.
+        Result<DeliveredTableOrder> result = await handler.HandleAsync(orderId, cancellationToken);
+
+        return result.IsSuccess ? TypedResults.NoContent() : Rejected(result.Error!);
+    }
+
     /// <summary>
     /// An order that is no table's of this venue is a 404. Another waiter
     /// having it, or having saved it first, is a conflict: the order is there,
@@ -96,7 +114,9 @@ internal static class WaiterEndpoints
     /// </summary>
     private static ProblemHttpResult Rejected(Error error)
     {
-        bool conflict = error.Code == WaiterErrors.AlreadyTaken.Code || error.Code == OrderErrors.ChangedMeanwhile.Code;
+        bool conflict = error.Code == WaiterErrors.AlreadyTaken.Code
+            || error.Code == WaiterErrors.NotYours.Code
+            || error.Code == OrderErrors.ChangedMeanwhile.Code;
 
         return TypedResults.Problem(
             title: conflict ? "Conflict" : "Not found",

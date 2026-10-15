@@ -166,3 +166,32 @@
   color: var(--dk-text-muted);
   font-size: 13.5px;
 }
+
+// "Entregado" asks before it does it: a phone in one hand and a tray in the
+// other makes a stray tap cheap, and closing the order is not undone.
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  margin: 0;
+}
+
+.confirm-ask {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.ghost {
+  min-height: 52px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: none;
+  color: var(--dk-text-muted);
+  font-family: inherit;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.ghost:hover {
+  color: var(--dk-text);
+}

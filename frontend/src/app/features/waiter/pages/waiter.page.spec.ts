@@ -65,7 +65,7 @@ async function settle(fixture: { detectChanges: () => void }): Promise<void> {
 
 async function openThePhone(
   tables: WaiterTable[] | 'fails' | 'notTonight' = [],
-  service: Partial<Record<'take', unknown>> = {},
+  service: Partial<Record<'take' | 'deliver', unknown>> = {},
 ) {
   vi.setSystemTime(now);
 
@@ -265,5 +265,102 @@ describe('WaiterPage', () => {
     rendered.fixture.destroy();
 
     expect(channel.disconnected).toBe(true);
+  });
+
+  describe('handing a table over (US-44)', () => {
+    const mine = aTable({
+      takenByMe: true,
+      takenByName: 'Martín',
+      takenAt: '2026-10-15T03:09:20Z',
+    });
+
+    // Criterion 2: only the ones this waiter carries can be handed over.
+    it('offers "Entregado" only on the tables the waiter took', async () => {
+      await openThePhone([
+        mine,
+        aTable({ orderId: 'free', tableNumber: 3 }),
+        aTable({ orderId: 'other', tableNumber: 8, takenByName: 'Sofía' }),
+      ]);
+
+      expect(screen.getAllByRole('button', { name: /entregado/i })).toHaveLength(1);
+    });
+
+    // A phone in one hand and a tray in the other: a stray tap must not close it.
+    it('asks to confirm before handing it over, and does nothing yet', async () => {
+      const deliver = vi.fn().mockReturnValue(of(undefined));
+      const { rendered } = await openThePhone([mine], { deliver });
+
+      screen.getByRole('button', { name: /entregado/i }).click();
+      await settle(rendered.fixture);
+
+      expect(deliver).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /sí, la dejé en la mesa/i })).not.toBeNull();
+    });
+
+    // Criterion 1: confirmed, it is handed over and leaves the list.
+    it('hands it over once confirmed and shows the list without it', async () => {
+      const deliver = vi.fn().mockReturnValue(of(undefined));
+      const { rendered, http } = await openThePhone([mine], { deliver });
+
+      screen.getByRole('button', { name: /entregado/i }).click();
+      await settle(rendered.fixture);
+      screen.getByRole('button', { name: /sí, la dejé en la mesa/i }).click();
+      await settle(rendered.fixture);
+      http.expectOne(WAITER_TABLES_URL).flush([]);
+      await settle(rendered.fixture);
+
+      expect(deliver).toHaveBeenCalledWith('order-1');
+      expect(screen.queryByText('Mesa 12')).toBeNull();
+    });
+
+    it('goes back to the card without handing anything over when it is not confirmed', async () => {
+      const deliver = vi.fn().mockReturnValue(of(undefined));
+      const { rendered } = await openThePhone([mine], { deliver });
+
+      screen.getByRole('button', { name: /entregado/i }).click();
+      await settle(rendered.fixture);
+      screen.getByRole('button', { name: /^no, todavía/i }).click();
+      await settle(rendered.fixture);
+
+      expect(deliver).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: /entregado/i })).not.toBeNull();
+    });
+
+    it('says it is no longer the waiter’s when the order changed under them', async () => {
+      const deliver = vi
+        .fn()
+        .mockReturnValue(
+          throwError(
+            () =>
+              new HttpErrorResponse({ status: 409, error: { type: ProblemTypes.waiterNotYours } }),
+          ),
+        );
+      const { rendered, http } = await openThePhone([mine], { deliver });
+
+      screen.getByRole('button', { name: /entregado/i }).click();
+      await settle(rendered.fixture);
+      screen.getByRole('button', { name: /sí, la dejé en la mesa/i }).click();
+      await settle(rendered.fixture);
+      // Reloaded with another table on it, so the empty-list note is not
+      // also a status next to the one under test.
+      http.expectOne(WAITER_TABLES_URL).flush([aTable({ orderId: 'other', tableNumber: 3 })]);
+      await settle(rendered.fixture);
+
+      expect(screen.getByRole('status').textContent).toContain('ya no es tuya');
+    });
+
+    it('says so when it could not be handed over', async () => {
+      const deliver = vi
+        .fn()
+        .mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+      const { rendered } = await openThePhone([mine], { deliver });
+
+      screen.getByRole('button', { name: /entregado/i }).click();
+      await settle(rendered.fixture);
+      screen.getByRole('button', { name: /sí, la dejé en la mesa/i }).click();
+      await settle(rendered.fixture);
+
+      expect(screen.getByRole('alert').textContent).toContain('No pudimos');
+    });
   });
 });

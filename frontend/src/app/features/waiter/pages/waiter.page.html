@@ -11,9 +11,13 @@
     <p class="note note-warn" role="status">
       Esa mesa ya la tomó otro mozo. Abajo ves quién la lleva.
     </p>
+  } @else if (outcome() === 'notYours') {
+    <p class="note note-warn" role="status">
+      Esa mesa ya no es tuya: cambió mientras la tenías. Abajo ves cómo quedó.
+    </p>
   } @else if (outcome() === 'failed') {
     <p class="note note-bad" role="alert">
-      No pudimos tomar la mesa. Fijate la señal y probá de nuevo.
+      No pudimos hacer el cambio. Fijate la señal y probá de nuevo.
     </p>
   }
 
@@ -57,6 +61,29 @@
                 }
               }
             </p>
+            @if (confirming() === table.orderId) {
+              <p
+                class="confirm"
+                role="group"
+                aria-label="Confirmar entrega, mesa {{ table.tableNumber }}"
+              >
+                <span class="confirm-ask">¿La dejaste en la mesa?</span>
+                <button class="take" type="button" (click)="deliver(table)">
+                  Sí, la dejé en la mesa
+                </button>
+                <button class="ghost" type="button" (click)="keepCarrying()">No, todavía</button>
+              </p>
+            } @else {
+              <button
+                class="take"
+                type="button"
+                [disabled]="taking() !== null"
+                [attr.aria-label]="'Entregado, mesa ' + table.tableNumber"
+                (click)="askToDeliver(table)"
+              >
+                Entregado
+              </button>
+            }
           </li>
         }
       </ul>

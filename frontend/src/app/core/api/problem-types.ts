@@ -53,6 +53,9 @@ export const ProblemTypes = {
   /** US-43: another waiter took the table first; the list reloads with whose it is. */
   waiterAlreadyTaken: 'urn:drinkit:problem:waiter:already-taken',
 
+  /** US-44: only the waiter carrying a table hands it over. */
+  waiterNotYours: 'urn:drinkit:problem:waiter:not-yours',
+
   /** US-23: only an order waiting to be paid at the till can be canceled. */
   orderNotCancelable: 'urn:drinkit:problem:order:not-cancelable',
 

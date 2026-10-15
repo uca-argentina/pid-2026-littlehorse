@@ -19,4 +19,11 @@ public static class WaiterErrors
     /// </summary>
     public static readonly Error AlreadyTaken =
         new("waiter.already_taken", "Another waiter is already carrying that order.");
+
+    /// <summary>
+    /// Only the waiter carrying a table's order hands it over (US-44, criterion
+    /// 2): another waiter's, or one nobody took, is not theirs to deliver.
+    /// </summary>
+    public static readonly Error NotYours =
+        new("waiter.not_yours", "That order is not the one you are carrying.");
 }

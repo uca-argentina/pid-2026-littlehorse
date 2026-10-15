@@ -6,5 +6,6 @@ namespace DrinkIt.Api.Features.Waiter;
 internal static class WaiterHandlers
 {
     public static IServiceCollection AddWaiterHandlers(this IServiceCollection services) => services
-        .AddScoped<TakeTableOrderHandler>();
+        .AddScoped<TakeTableOrderHandler>()
+        .AddScoped<DeliverTableOrderHandler>();
 }

@@ -4,12 +4,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { StaffHeader } from '../../../shared/staff-header/staff-header';
+import { elapsedSince } from '../../../shared/time/elapsed-since';
 import { WaiterChannel } from '../waiter-channel';
 import { WAITER_TABLES_URL, WaiterService } from '../waiter.service';
 import type { WaiterTable } from '../waiter.service';
 
-/** What the last tap on "La llevo yo" came to, when it did not simply work. */
-type TapOutcome = 'none' | 'beatenToIt' | 'failed';
+/** What the last tap on "La llevo yo" or "Entregado" came to, when it did not simply work. */
+type TapOutcome = 'none' | 'beatenToIt' | 'notYours' | 'failed';
 
 /** How often the "hace cuánto" figures are recomputed, in milliseconds. */
 const CLOCK_MS = 15_000;
@@ -77,6 +78,13 @@ export class WaiterPage {
 
   protected readonly outcome = signal<TapOutcome>('none');
 
+  /**
+   * The order whose "Entregado" is waiting for its confirmation (US-44). Asked
+   * before doing it rather than undone after: the phone is in one hand and
+   * the tray in the other, and a stray tap would take it off everybody's list.
+   */
+  protected readonly confirming = signal<string | null>(null);
+
   /** What "hace cuánto" is measured against. A signal, so the figures keep moving. */
   private readonly now = signal(Date.now());
 
@@ -115,14 +123,57 @@ export class WaiterPage {
       });
   }
 
+  protected askToDeliver(table: WaiterTable): void {
+    this.confirming.set(table.orderId);
+  }
+
+  protected keepCarrying(): void {
+    this.confirming.set(null);
+  }
+
+  /** US-44: "Entregado", once confirmed. Only the waiter who took it can. */
+  protected deliver(table: WaiterTable): void {
+    if (this.taking() !== null) return;
+
+    this.taking.set(table.orderId);
+    this.outcome.set('none');
+    this.confirming.set(null);
+
+    this.service
+      .deliver(table.orderId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.taking.set(null);
+          this.tables.reload();
+        },
+        error: (error: unknown) => {
+          this.taking.set(null);
+
+          const changed = isNoLongerYours(error);
+
+          this.outcome.set(changed ? 'notYours' : 'failed');
+
+          // It moved under them — another screen, or the bar sent it back: the
+          // list says where it is now.
+          if (changed) this.tables.reload();
+        },
+      });
+  }
+
   /** "9 min", or "40 seg" under a minute: how long ago something happened. */
   protected since(moment: string | null): string {
-    if (moment === null) return '';
-
-    const seconds = Math.max(0, Math.floor((this.now() - Date.parse(moment)) / 1000));
-
-    return seconds < 60 ? `${seconds} seg` : `${Math.floor(seconds / 60)} min`;
+    return elapsedSince(this.now(), moment);
   }
+}
+
+/** What a stale "Entregado" finds: not theirs any more, or somebody saved in the same instant. */
+function isNoLongerYours(error: unknown): boolean {
+  if (!(error instanceof HttpErrorResponse)) return false;
+
+  const type = problemTypeOf(error);
+
+  return type === ProblemTypes.waiterNotYours || type === ProblemTypes.orderChangedMeanwhile;
 }
 
 /** The order is there and somebody has it: another waiter, or another save in the same instant. */
