@@ -8,6 +8,8 @@ export type VipTable = components['schemas']['TableResponse'];
 
 export type NewVipTable = components['schemas']['CreateTableRequest'];
 
+export type VipTableDescription = components['schemas']['UpdateTableRequest'];
+
 /**
  * No venue in the path: everything here is done with a token, and the token
  * carries the venue. Putting it in the URL would offer a knob that must never
@@ -30,6 +32,11 @@ export class TablesService {
 
   create(table: NewVipTable): Observable<VipTable> {
     return this.http.post<VipTable>(TABLES_URL, table);
+  }
+
+  /** People and location only: the number is what the orders placed from it say. */
+  update(id: string, description: VipTableDescription): Observable<VipTable> {
+    return this.http.put<VipTable>(`${TABLES_URL}/${id}`, description);
   }
 
   /**

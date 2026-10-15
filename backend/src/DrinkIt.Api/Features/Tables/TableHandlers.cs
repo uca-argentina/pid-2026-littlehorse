@@ -7,6 +7,7 @@ internal static class TableHandlers
 {
     public static IServiceCollection AddTableHandlers(this IServiceCollection services) => services
         .AddScoped<CreateTableHandler>()
+        .AddScoped<UpdateTableHandler>()
         .AddScoped<DeactivateTableHandler>()
         .AddScoped<ReactivateTableHandler>();
 }

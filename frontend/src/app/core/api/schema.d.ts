@@ -415,6 +415,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/tables/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Changes how many people a table seats and where it is. The number stays. */
+    put: operations['UpdateTable'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/tables/{id}/deactivate': {
     parameters: {
       query?: never;
@@ -1181,6 +1198,12 @@ export interface components {
       price: number;
       /** Format: uuid */
       categoryId: string;
+    };
+    /** @description What the edit screen puts. No number: it is what the orders placed from the table say. */
+    UpdateTableRequest: {
+      /** Format: int32 */
+      capacity: number;
+      location: null | string;
     };
   };
   responses: never;
@@ -2168,6 +2191,50 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UpdateTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateTableRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

@@ -1,0 +1,94 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <form class="body" [formGroup]="form" (ngSubmit)="submit()">
+    <a class="back" [routerLink]="['/', venueSlug(), 'staff', 'tables']">Volver al listado</a>
+
+    @if (loadFailure() === 'forbidden' || store.status() === 'forbidden') {
+      <p class="note note-bad" role="alert">
+        Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que te
+        la vuelva a dar.
+      </p>
+    } @else if (loadFailure() === 'unreachable') {
+      <p class="note note-bad" role="alert">
+        No pudimos traer la mesa. Fijate la señal y probá de nuevo.
+      </p>
+    } @else if (isUnknown() || store.status() === 'gone') {
+      <p class="note note-bad" role="alert">
+        No encontramos esa mesa en este boliche. Volvé al listado y elegila de nuevo.
+      </p>
+    }
+
+    @if (table(); as table) {
+      <h1 class="title">Mesa {{ table.number }}</h1>
+
+      @if (store.status() === 'unreachable') {
+        <p class="note note-bad" role="alert">
+          No pudimos guardar el cambio. Fijate la señal y probá de nuevo.
+        </p>
+      }
+
+      <div class="field">
+        <label class="label" for="capacity">Personas</label>
+        <input
+          id="capacity"
+          class="input"
+          [class.input-bad]="capacityError() !== null"
+          [attr.aria-invalid]="capacityError() !== null ? 'true' : null"
+          [attr.aria-describedby]="capacityError() !== null ? 'capacity-error' : 'capacity-help'"
+          formControlName="capacity"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+        />
+        @if (capacityError() !== null) {
+          <p id="capacity-error" class="bad">{{ capacityError() }}</p>
+        } @else {
+          <p id="capacity-help" class="help">
+            Para cuántas personas se vende el paquete, entre 1 y {{ capacityMax }}.
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label class="label" for="location"
+          >Ubicación <span class="optional">(opcional)</span></label
+        >
+        <input
+          id="location"
+          class="input"
+          [class.input-bad]="locationError() !== null"
+          [attr.aria-invalid]="locationError() !== null ? 'true' : null"
+          [attr.aria-describedby]="locationError() !== null ? 'location-error' : 'location-help'"
+          formControlName="location"
+          type="text"
+          autocomplete="off"
+          placeholder="Al lado de la cabina"
+        />
+        @if (locationError() !== null) {
+          <p id="location-error" class="bad">{{ locationError() }}</p>
+        } @else {
+          <p id="location-help" class="help">
+            Para que el mozo la encuentre rápido. Hasta {{ locationMaxLength }} caracteres.
+          </p>
+        }
+      </div>
+
+      <p class="help">
+        El número no se cambia: es el que dicen los pedidos que salieron de esta mesa.
+      </p>
+
+      <button class="cta" type="submit" [disabled]="store.isSending()">
+        @if (store.isSending()) {
+          Guardando
+        } @else {
+          Guardar cambios
+        }
+      </button>
+
+      <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'tables']">Cancelar</a>
+    } @else if (tables.isLoading()) {
+      <p class="note" role="status">Cargando la mesa…</p>
+    }
+  </form>
+</div>

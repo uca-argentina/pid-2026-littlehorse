@@ -48,6 +48,13 @@
             @if (!table.isActive) {
               <span class="chip chip-off">Dada de baja</span>
             }
+            <a
+              class="change"
+              [routerLink]="['/', venueSlug(), 'staff', 'tables', table.id]"
+              [attr.aria-label]="'Editar la mesa ' + table.number"
+            >
+              Editar
+            </a>
             @if (table.isActive) {
               <button
                 class="change"

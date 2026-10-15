@@ -1,35 +1,17 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import type { AbstractControl, ValidationErrors } from '@angular/forms';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { NewTableStore } from '../new-table.store';
+import {
+  CAPACITY_ERROR,
+  LOCATION_ERROR,
+  describedAs,
+  locationFits,
+  wholeBetweenOneAnd,
+} from '../table-fields';
 import { TABLE_CAPACITY_MAX, TABLE_LOCATION_MAX_LENGTH, TABLE_NUMBER_MAX } from '../tables.service';
-
-/**
- * Whole digits only, between 1 and the domain's limit. Judged on the trimmed
- * text and not through Number(): "5.5", "1e2" and "0x10" all parse, and none of
- * them is a table number or a head count.
- */
-function wholeBetweenOneAnd(max: number) {
-  return (control: AbstractControl): ValidationErrors | null => {
-    const text = typeof control.value === 'string' ? control.value.trim() : '';
-
-    if (!/^\d+$/.test(text)) return { notANumber: true };
-
-    const value = Number(text);
-
-    return value >= 1 && value <= max ? null : { outOfRange: true };
-  };
-}
-
-/** Counted on the trimmed text, which is what the domain keeps. */
-function locationFits(control: AbstractControl): ValidationErrors | null {
-  const text = typeof control.value === 'string' ? control.value.trim() : '';
-
-  return Validators.maxLength(TABLE_LOCATION_MAX_LENGTH)({ value: text } as AbstractControl);
-}
 
 @Component({
   selector: 'drinkit-new-table-page',
@@ -38,7 +20,7 @@ function locationFits(control: AbstractControl): ValidationErrors | null {
   // and kept, so a store provided there would carry a rejected attempt into
   // the next visit. A component's providers die with the component.
   providers: [NewTableStore],
-  styleUrl: './new-table.page.scss',
+  styleUrl: './table-form.scss',
   templateUrl: './new-table.page.html',
 })
 export class NewTablePage {
@@ -95,9 +77,7 @@ export class NewTablePage {
 
     if (!this.attempted() || this.store.isSending()) return null;
 
-    return this.form.controls.capacity.invalid
-      ? `Tiene que ser un número entero, entre 1 y ${TABLE_CAPACITY_MAX} personas.`
-      : null;
+    return this.form.controls.capacity.invalid ? CAPACITY_ERROR : null;
   });
 
   protected readonly locationError = computed(() => {
@@ -105,9 +85,7 @@ export class NewTablePage {
 
     if (!this.attempted() || this.store.isSending()) return null;
 
-    return this.form.controls.location.invalid
-      ? `La ubicación puede tener hasta ${TABLE_LOCATION_MAX_LENGTH} caracteres.`
-      : null;
+    return this.form.controls.location.invalid ? LOCATION_ERROR : null;
   });
 
   constructor() {
@@ -128,8 +106,7 @@ export class NewTablePage {
 
     this.store.submit(this.venueSlug(), {
       number: Number(number.trim()),
-      capacity: Number(capacity.trim()),
-      location: location.trim() === '' ? null : location.trim(),
+      ...describedAs(capacity, location),
     });
   }
 }

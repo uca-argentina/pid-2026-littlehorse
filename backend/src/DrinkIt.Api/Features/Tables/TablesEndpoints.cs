@@ -8,6 +8,9 @@ namespace DrinkIt.Api.Features.Tables;
 /// <summary>What the administration screen posts to add a table.</summary>
 public sealed record CreateTableRequest(int Number, int Capacity, string? Location);
 
+/// <summary>What the edit screen puts. No number: it is what the orders placed from the table say.</summary>
+public sealed record UpdateTableRequest(int Capacity, string? Location);
+
 public sealed record TableResponse(Guid Id, int Number, int Capacity, string? Location, bool IsActive, AuditResponse Audit);
 
 internal static class TablesEndpoints
@@ -35,6 +38,14 @@ internal static class TablesEndpoints
             .Produces<TableResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
+            .MapPut("/{id:guid}", UpdateAsync)
+            .WithName("UpdateTable")
+            .WithSummary("Changes how many people a table seats and where it is. The number stays.")
+            .Produces<TableResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         // POST and not DELETE: nothing is deleted. The row stays so the orders
         // placed from that table keep saying "Mesa 5", and it comes back with
@@ -79,6 +90,13 @@ internal static class TablesEndpoints
         // identifies.
         return TypedResults.Created((string?)null, Respond(result.Value));
     }
+
+    internal static async Task<IResult> UpdateAsync(
+        Guid id,
+        UpdateTableRequest request,
+        UpdateTableHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(new UpdateTableCommand(id, request.Capacity, request.Location), cancellationToken));
 
     internal static async Task<IResult> DeactivateAsync(
         Guid id,

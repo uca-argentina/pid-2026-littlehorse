@@ -123,6 +123,42 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Update_WhenTheAdministratorCorrectsATable_TheListingShowsTheChange()
+    {
+        Venue venue = await SeedVenue();
+        using HttpClient admin = ClientFor(venue, StaffRole.Administrator);
+        JsonElement table = await (await admin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8, location = "Upstairs" }))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        string id = table.GetProperty("id").GetString()!;
+
+        using HttpResponseMessage response = await admin.PutAsJsonAsync($"/staff/tables/{id}", new { capacity = 12, location = "Next to the DJ booth" });
+        JsonElement listed = (await admin.GetFromJsonAsync<JsonElement>("/staff/tables"))[0];
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(5, listed.GetProperty("number").GetInt32());
+        Assert.Equal(12, listed.GetProperty("capacity").GetInt32());
+        Assert.Equal("Next to the DJ booth", listed.GetProperty("location").GetString());
+    }
+
+    [Fact]
+    public async Task Update_WhenTheTableBelongsToAnotherVenue_RespondsNotFound()
+    {
+        Venue mine = await SeedVenue();
+        Venue theirs = await SeedVenue();
+        using HttpClient myAdmin = ClientFor(mine, StaffRole.Administrator);
+        using HttpClient theirAdmin = ClientFor(theirs, StaffRole.Administrator);
+        JsonElement table = await (await theirAdmin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 }))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        string id = table.GetProperty("id").GetString()!;
+
+        using HttpResponseMessage response = await myAdmin.PutAsJsonAsync($"/staff/tables/{id}", new { capacity = 12 });
+        JsonElement theirsListed = (await theirAdmin.GetFromJsonAsync<JsonElement>("/staff/tables"))[0];
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(8, theirsListed.GetProperty("capacity").GetInt32());
+    }
+
     // The venue comes from the token and nothing else: an administrator of the
     // venue next door finds neither the listing nor the id.
     [Fact]

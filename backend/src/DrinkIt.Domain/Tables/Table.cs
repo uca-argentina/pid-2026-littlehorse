@@ -54,11 +54,8 @@ public sealed class Table : AuditStamps, IBelongsToVenue
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Tables must belong to a venue.");
         if (number is < 1 or > NumberMaxValue) throw new DomainException(ErrorCodes.NumberOutOfRange, $"The table number has to be between 1 and {NumberMaxValue}.");
-        if (capacity is < 1 or > CapacityMaxValue) throw new DomainException(ErrorCodes.CapacityOutOfRange, $"A table seats between 1 and {CapacityMaxValue} people.");
 
-        string? cleanLocation = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
-
-        if (cleanLocation?.Length > LocationMaxLength) throw new DomainException(ErrorCodes.LocationLength, $"The location cannot be longer than {LocationMaxLength} characters.");
+        string? cleanLocation = CheckDescription(capacity, location);
 
         return new Table(Guid.CreateVersion7(), venueId, number, capacity, cleanLocation)
         {
@@ -73,4 +70,25 @@ public sealed class Table : AuditStamps, IBelongsToVenue
     public void Deactivate() => IsActive = false;
 
     public void Activate() => IsActive = true;
+
+    /// <summary>How many people it seats and where it is. The number never changes: orders say it.</summary>
+    public void Describe(int capacity, string? location)
+    {
+        string? cleanLocation = CheckDescription(capacity, location);
+
+        Capacity = capacity;
+        Location = cleanLocation;
+    }
+
+    /// <summary>The rules Create and Describe share, checked before anything changes. Returns the location as kept.</summary>
+    private static string? CheckDescription(int capacity, string? location)
+    {
+        if (capacity is < 1 or > CapacityMaxValue) throw new DomainException(ErrorCodes.CapacityOutOfRange, $"A table seats between 1 and {CapacityMaxValue} people.");
+
+        string? cleanLocation = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
+
+        if (cleanLocation?.Length > LocationMaxLength) throw new DomainException(ErrorCodes.LocationLength, $"The location cannot be longer than {LocationMaxLength} characters.");
+
+        return cleanLocation;
+    }
 }

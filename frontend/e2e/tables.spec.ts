@@ -85,6 +85,16 @@ test.describe('VIP tables', () => {
     await expect(page).toHaveURL(new RegExp(`${tablesPath}$`));
     await expect(rowOf(page, number)).toContainText('10 personas · Al lado de la cabina');
 
+    // Editing keeps the number and changes what describes the table.
+    await page.getByRole('link', { name: new RegExp(`editar la mesa ${number}$`, 'i') }).click();
+    const people = page.getByRole('textbox', { name: /^personas/i });
+    await expect(people).toHaveValue('10');
+    await people.fill('12');
+    await page.getByRole('textbox', { name: /^ubicación/i }).fill('Arriba');
+    await page.getByRole('button', { name: /guardar cambios/i }).click();
+    await expect(page).toHaveURL(new RegExp(`${tablesPath}$`));
+    await expect(rowOf(page, number)).toContainText('12 personas · Arriba');
+
     await page
       .getByRole('button', { name: new RegExp(`dar de baja la mesa ${number}$`, 'i') })
       .click();

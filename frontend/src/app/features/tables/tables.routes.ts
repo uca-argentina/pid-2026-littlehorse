@@ -21,6 +21,11 @@ export const tablesRoutes: Routes = [
         path: 'new',
         loadComponent: () => import('./pages/new-table.page').then((m) => m.NewTablePage),
       },
+      // After 'new', which would otherwise be read as a table's id.
+      {
+        path: ':id',
+        loadComponent: () => import('./pages/edit-table.page').then((m) => m.EditTablePage),
+      },
     ],
   },
 ];

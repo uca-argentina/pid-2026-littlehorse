@@ -134,6 +134,17 @@ describe('TablesPage', () => {
     expect(screen.getByRole('listitem').textContent).not.toContain('Dada de baja');
   });
 
+  it('offers to edit each table', async () => {
+    await openScreenShowing([tableTwo, tableSeven]);
+
+    expect(screen.getByRole('link', { name: /editar la mesa 2/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/tables/two',
+    );
+    expect(screen.getByRole('link', { name: /editar la mesa 7/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/tables/seven',
+    );
+  });
+
   it('offers only the change that makes sense for each table', async () => {
     await openScreenShowing([tableTwo, tableSeven]);
 

@@ -104,6 +104,50 @@ public class TableTests
         Assert.Equal(capacity, TableFive(capacity: capacity).Capacity);
     }
 
+    [Fact]
+    public void Describe_WhenValid_ChangesThePeopleAndTheLocationButNotTheNumber()
+    {
+        Table table = TableFive(capacity: 8, location: "Upstairs");
+
+        table.Describe(12, "  Next to the DJ booth  ");
+
+        Assert.Equal(5, table.Number);
+        Assert.Equal(12, table.Capacity);
+        Assert.Equal("Next to the DJ booth", table.Location);
+    }
+
+    [Fact]
+    public void Describe_WhenLocationIsBlank_ClearsIt()
+    {
+        Table table = TableFive(location: "Upstairs");
+
+        table.Describe(8, "  ");
+
+        Assert.Null(table.Location);
+    }
+
+    // Same rules as Create: a table that could not be created cannot be edited into existence.
+    [Fact]
+    public void Describe_WhenCapacityIsOutOfRange_ThrowsAndKeepsWhatItHad()
+    {
+        Table table = TableFive(capacity: 8, location: "Upstairs");
+
+        DomainException error = Assert.Throws<DomainException>(() => table.Describe(0, "Elsewhere"));
+
+        Assert.Equal(Table.ErrorCodes.CapacityOutOfRange, error.Code);
+        Assert.Equal(8, table.Capacity);
+        Assert.Equal("Upstairs", table.Location);
+    }
+
+    [Fact]
+    public void Describe_WhenLocationIsTooLong_ThrowsLocationLength()
+    {
+        DomainException error = Assert.Throws<DomainException>(
+            () => TableFive().Describe(8, new string('a', Table.LocationMaxLength + 1)));
+
+        Assert.Equal(Table.ErrorCodes.LocationLength, error.Code);
+    }
+
     // The row stays: orders already placed from it keep saying "Mesa 5".
     [Fact]
     public void Deactivate_WhenActive_LeavesItInactiveWithItsNumber()
