@@ -45,6 +45,7 @@ public sealed class VipTableOrderTests(SqlServerFixture sql)
         Assert.Equal(OrderStatus.Queued, stored.Status);
         Assert.Equal(PaymentMethod.VipBalance, stored.Method);
         Assert.Equal(5, stored.TableNumber);
+        Assert.Equal(9_000m, stored.BalanceAmount);
         Assert.Equal(9_000m, account.Spent);
     }
 
@@ -78,6 +79,57 @@ public sealed class VipTableOrderTests(SqlServerFixture sql)
 
         Assert.Equal(VipAccountErrors.NotFound, result.Error);
         Assert.Empty(await check.Orders.ToListAsync());
+    }
+
+    // Found in review: losing the stock race left the account tracked with the
+    // spend of the failed attempt, and the retry spent it again on top.
+    [Fact]
+    public async Task AddAsync_WhenTheStockMovedAfterTheTableSpent_ForgetsTheSpendSoTheRetryStartsClean()
+    {
+        Seeded seeded = await AVenueWithATable(budget: 20_000m);
+        await using DrinkItDbContext context = sql.CreateContext(seeded.Venue.Id);
+        VipAccountRepository accounts = new(context);
+        VipAccount account = (await accounts.FindByAccessCodeAsync(seeded.AccessCode, CancellationToken.None))!;
+        Night tonight = await context.Nights.SingleAsync();
+        Order order = Order.Place(seeded.Venue.Id, tonight.Id, "María Quadro", OrderCode.Parse("K-0001"), [new NewOrderItem(seeded.Gin.Id, "Gin Tonic", 4500m, 2, null)]);
+        account.Spend(order.Total);
+        order.PayFromBalance(Tonight, order.Total);
+        // A bar with none of it: the conditional statement matches no row.
+        order.Enqueue(Guid.CreateVersion7());
+
+        Result<Order> written = await new OrderRepository(context, new NoEvents(), NullLogger<OrderRepository>.Instance)
+            .AddAsync(order, "a-key", CancellationToken.None);
+        VipAccount again = (await accounts.FindByAccessCodeAsync(seeded.AccessCode, CancellationToken.None))!;
+
+        Assert.Equal(OrderErrors.StockMoved, written.Error);
+        Assert.Equal(0m, again.Spent);
+    }
+
+    // Found in review: the night's form saved over a balance a phone had just
+    // spent from, and the token's refusal came out as a 500.
+    [Fact]
+    public async Task NightSaveChanges_WhenAPhoneOfTheTableSpentMeanwhile_RefusesAndWritesNothing()
+    {
+        Seeded seeded = await AVenueWithATable(budget: 20_000m);
+        await using DrinkItDbContext admin = sql.CreateContext(seeded.Venue.Id);
+        Night tonight = await admin.Nights.SingleAsync();
+        VipAccount onTheForm = (await new VipAccountRepository(admin).ListForNightAsync(tonight.Id, CancellationToken.None)).Single();
+
+        await using (DrinkItDbContext phone = sql.CreateContext(seeded.Venue.Id))
+        {
+            VipAccount spending = (await new VipAccountRepository(phone).FindByAccessCodeAsync(seeded.AccessCode, CancellationToken.None))!;
+            spending.Spend(9_000m);
+            await phone.SaveChangesAsync();
+        }
+
+        onTheForm.ChangeBudget(tonight, 30_000m, Tonight);
+        bool saved = await new NightRepository(admin).SaveChangesAsync(CancellationToken.None);
+
+        await using DrinkItDbContext check = sql.CreateContext(seeded.Venue.Id);
+        VipAccount stored = await check.VipAccounts.SingleAsync();
+
+        Assert.False(saved);
+        Assert.Equal((20_000m, 9_000m), (stored.Budget, stored.Spent));
     }
 
     private sealed record Seeded(Venue Venue, Product Gin, string AccessCode);

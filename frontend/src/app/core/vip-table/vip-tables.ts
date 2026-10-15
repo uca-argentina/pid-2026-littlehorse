@@ -1,5 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
-import type { Signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import type { components } from '../api/schema';
 import { BrowserStore } from '../storage/browser-store';
 
@@ -10,7 +9,9 @@ export const VIP_TABLE_KEY_PREFIX = 'drinkit.vip-table.';
 
 /** Where the menu and the checkout ask which table a code opens tonight. */
 export function vipTableUrl(venueSlug: string, code: string): string {
-  return `/api/${venueSlug}/vip-accounts/${code}`;
+  // Encoded: the code comes from a QR anybody can tamper with, and must stay
+  // one segment of the path whatever it says.
+  return `/api/${venueSlug}/vip-accounts/${encodeURIComponent(code)}`;
 }
 
 /**
@@ -26,14 +27,16 @@ export class VipTables {
   /** Bumped on every change, so whoever reads a code hears about it. */
   private readonly changes = signal(0);
 
-  codeFor(venueSlug: string): Signal<string | null> {
-    return computed(() => {
-      this.changes();
+  /**
+   * The code this phone holds for the venue, or null. Read inside a computed
+   * or a resource, it is read again whenever a code is remembered or forgotten.
+   */
+  codeOf(venueSlug: string): string | null {
+    this.changes();
 
-      const code = this.store.read(VIP_TABLE_KEY_PREFIX + venueSlug);
+    const code = this.store.read(VIP_TABLE_KEY_PREFIX + venueSlug);
 
-      return code === null || code === '' ? null : code;
-    });
+    return code === null || code === '' ? null : code;
   }
 
   remember(venueSlug: string, code: string): void {

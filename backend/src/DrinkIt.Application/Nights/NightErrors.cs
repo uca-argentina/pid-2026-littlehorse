@@ -22,6 +22,13 @@ public static class NightErrors
     public static readonly Error TableNotFound =
         new("night.table_not_found", "One of the chosen tables is not part of this venue.");
 
+    /// <summary>
+    /// US-41: a phone of one of the night's tables spent while the form was
+    /// open. Nothing was written; the screen loads the night again.
+    /// </summary>
+    public static readonly Error TablesMoved =
+        new("night.tables_moved", "A table of the night spent from its balance meanwhile. Load the night again.");
+
     /// <summary>US-40: the night does not sell that table. Another venue's reads the same.</summary>
     public static readonly Error TableNotInNight =
         new("night.table_not_in_night", "The night does not sell that table.");

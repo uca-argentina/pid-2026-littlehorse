@@ -37,7 +37,7 @@ describe('TableEntryPage', () => {
     http.expectOne(vipTableUrl('bar-alfa', CODE)).flush({ tableNumber: 5, balance: 150000 });
     await rendered.fixture.whenStable();
 
-    expect(tables.codeFor('bar-alfa')()).toBe(CODE);
+    expect(tables.codeOf('bar-alfa')).toBe(CODE);
     expect(TestBed.inject(Router).url).toBe('/bar-alfa/menu');
   });
 
@@ -52,7 +52,7 @@ describe('TableEntryPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('alert').textContent).toContain('Este código ya no sirve');
-    expect(tables.codeFor('bar-alfa')()).toBeNull();
+    expect(tables.codeOf('bar-alfa')).toBeNull();
 
     screen.getByRole('button', { name: /pedir para retirar en la barra/i }).click();
     await rendered.fixture.whenStable();

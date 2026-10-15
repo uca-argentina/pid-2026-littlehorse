@@ -243,6 +243,21 @@ public class UpdateNightHandlerTests
         Assert.Equal(Night.ErrorCodes.WaiterRequired, error.Code);
     }
 
+    // A phone of one of the tables spent while the form was open: the form's
+    // view of the balances is old, and nothing it says is written.
+    [Fact]
+    public async Task HandleAsync_WhenATablesBalanceMovedWhileSaving_FailsTablesMoved()
+    {
+        Night saturday = ASaturdayWithAWaiter();
+        VipAccountsInMemory accounts = new(VipAccount.Open(saturday, TableFive, 150_000m, Opening.AddHours(-3)));
+        NightsInMemory nights = new(saturday) { RefusesTheSave = true };
+
+        Result<NightSummary> result = await HandlerOver(nights, accounts: accounts).HandleAsync(
+            KeepingTheCrew(saturday, new NightTableRequest(TableFive.Id, 200_000m)), CancellationToken.None);
+
+        Assert.Equal(NightErrors.TablesMoved, result.Error);
+    }
+
     [Fact]
     public async Task HandleAsync_WhenATableIsNotThisVenues_FailsTableNotFoundWithoutSaving()
     {

@@ -509,8 +509,9 @@ describe:
   un test de integración con dos confirmaciones simultáneas.
 - **El pedido guarda `TableId` y `TableNumber`.** El KDS muestra "Mesa 5" y no ofrece
   "Entregado" en esas tarjetas; el seguimiento dice "Te lo llevamos a la Mesa 5" sin QR.
-- **Todavía no se guarda `BalanceAmount` aparte**: con un solo método por pedido, el importe es
-  el total. Lo suma US-42 cuando haya dos importes.
+- **El pedido guarda `BalanceAmount`**, lo que salió del saldo, aparte del método
+  (`Order.PayFromBalance`). Hoy es el total; US-42 lo baja y suma el importe digital, sin migrar
+  pedidos viejos.
 
 ### US-42 · Cubrir la diferencia si el saldo no alcanza
 

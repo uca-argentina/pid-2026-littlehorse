@@ -50,6 +50,7 @@ public class VipBalancePaymentStrategyTests
         Assert.Equal(OrderStatus.Paid, order.Status);
         Assert.Equal(PaymentMethod.VipBalance, order.Method);
         Assert.Equal((TableFive.Id, 5), (order.TableId, order.TableNumber));
+        Assert.Equal(9_000m, order.BalanceAmount);
         Assert.Equal(11_000m, account.Balance);
     }
 

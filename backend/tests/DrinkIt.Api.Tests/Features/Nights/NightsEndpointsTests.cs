@@ -418,7 +418,7 @@ public class NightsEndpointsTests
             public Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
                 Task.FromResult(stored?.Id == id ? stored : null);
 
-            public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+            public Task<bool> SaveChangesAsync(CancellationToken cancellationToken) => Task.FromResult(true);
 
             public Task<IReadOnlyCollection<Guid>> BarsHoldingStockAsync(Guid nightId, CancellationToken cancellationToken) =>
                 Task.FromResult<IReadOnlyCollection<Guid>>(barHoldingStock is Guid bar ? [bar] : []);

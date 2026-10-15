@@ -239,4 +239,31 @@ public class VipAccountTests
 
         Assert.Equal(VipAccount.ErrorCodes.AmountNotPositive, error.Code);
     }
+
+    // Found in review: the money already spent was sold. A budget below it
+    // would leave the table owing, with a negative balance on its menu.
+    [Fact]
+    public void ChangeBudget_WhenItIsLessThanWhatWasSpent_ThrowsBudgetBelowSpentAndKeepsTheBudget()
+    {
+        Night night = ANight();
+        VipAccount account = VipAccount.Open(night, ATable(), 20_000m, BeforeItStarts);
+        account.Spend(15_000m);
+
+        DomainException error = Assert.Throws<DomainException>(() => account.ChangeBudget(night, 10_000m, Opening));
+
+        Assert.Equal(VipAccount.ErrorCodes.BudgetBelowSpent, error.Code);
+        Assert.Equal(20_000m, account.Budget);
+    }
+
+    [Fact]
+    public void ChangeBudget_WhenItIsExactlyWhatWasSpent_LeavesNothingToSpend()
+    {
+        Night night = ANight();
+        VipAccount account = VipAccount.Open(night, ATable(), 20_000m, BeforeItStarts);
+        account.Spend(15_000m);
+
+        account.ChangeBudget(night, 15_000m, Opening);
+
+        Assert.Equal(0m, account.Balance);
+    }
 }

@@ -31,11 +31,16 @@ internal sealed class NightsInMemory(params Night[] stored) : INightRepository
     public Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_stored.Find(night => night.Id == id));
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken)
+    /// <summary>Answers the save as the database does when a table's balance moved meanwhile.</summary>
+    public bool RefusesTheSave { get; init; }
+
+    public Task<bool> SaveChangesAsync(CancellationToken cancellationToken)
     {
+        if (RefusesTheSave) return Task.FromResult(false);
+
         Saves++;
 
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 
     public Task<IReadOnlyCollection<Guid>> BarsHoldingStockAsync(Guid nightId, CancellationToken cancellationToken) =>

@@ -23,8 +23,24 @@ internal sealed class NightRepository(DrinkItDbContext context) : INightReposito
     public Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
         context.Nights.FirstOrDefaultAsync(night => night.Id == id, cancellationToken);
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken) =>
-        context.SaveChangesAsync(cancellationToken);
+    public async Task<bool> SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // The only rows with a concurrency token a night's save writes are
+            // its VIP accounts. SaveChanges runs in one transaction, so nothing
+            // of this attempt was written.
+            context.ChangeTracker.Clear();
+
+            return false;
+        }
+    }
 
     /// <summary>
     /// The night and its opening stock in one transaction. Every active

@@ -166,6 +166,16 @@ describe('SaveNightStore', () => {
     },
   );
 
+  // Found in review: a phone of a table spent while the form was open.
+  it('says a table spent meanwhile when the API refuses the save for that', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.nightTablesMoved)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('tablesMoved');
+    expect(refusalFor(store.status())).toMatch(/pidió mientras/i);
+  });
+
   it('says a table that already spent stays in the night', () => {
     update.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.vipAccountHasSpending)));
 

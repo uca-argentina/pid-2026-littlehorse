@@ -73,7 +73,7 @@ public sealed class UpdateNightHandler(
         // clash, and the tracked change dies with the request.
         if (await nights.OverlapsAsync(night.StartsAt, night.EndsAt, night.Id, cancellationToken)) return NightErrors.Overlaps;
 
-        await nights.SaveChangesAsync(cancellationToken);
+        if (!await nights.SaveChangesAsync(cancellationToken)) return NightErrors.TablesMoved;
 
         return NightSummary.Of(night);
     }

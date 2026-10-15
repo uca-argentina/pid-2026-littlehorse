@@ -41,6 +41,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // put away, so the foreign key always has a row to point at.
         builder.Property(order => order.TableId);
         builder.Property(order => order.TableNumber);
+        builder.Property(order => order.BalanceAmount).HasPrecision(10, 2);
         builder.HasOne<Table>().WithMany().HasForeignKey(order => order.TableId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(order => order.PaidAt);
         builder.Property(order => order.Method);

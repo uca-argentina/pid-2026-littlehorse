@@ -37,9 +37,13 @@ public sealed class VipBalancePaymentStrategy(
 
         IReadOnlyList<Table> table = await tables.ListByIdsAsync([account.TableId], cancellationToken);
 
+        // Tables are never deleted, so this is a row nobody expected to miss.
+        // It still answers as a code that opens nothing, not as a crash.
+        if (table.Count == 0) return VipAccountErrors.NotFound;
+
         account.Spend(order.Total);
         order.ServeAtTable(account.TableId, table[0].Number);
-        order.Pay(clock.GetUtcNow(), Method);
+        order.PayFromBalance(clock.GetUtcNow(), order.Total);
 
         return null;
     }

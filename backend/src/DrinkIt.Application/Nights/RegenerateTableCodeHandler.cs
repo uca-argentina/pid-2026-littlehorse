@@ -30,7 +30,7 @@ public sealed class RegenerateTableCodeHandler(
 
         account.RegenerateAccessCode(night, clock.GetUtcNow());
 
-        await nights.SaveChangesAsync(cancellationToken);
+        if (!await nights.SaveChangesAsync(cancellationToken)) return NightErrors.TablesMoved;
 
         return new NightTableCode(account.TableId, account.AccessCode);
     }

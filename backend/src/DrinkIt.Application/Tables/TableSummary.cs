@@ -21,17 +21,17 @@ public static class TableErrors
         new("table.not_found", "This venue has no table with that id.");
 
     /// <summary>
-    /// The number belongs to a table of this venue, active or not. A table that
-    /// was put away keeps its number, so what orders say ("Mesa 5") never ends up
-    /// pointing at another table: it comes back with reactivation.
-    /// </summary>
-    /// <summary>
     /// US-39's edge: somebody bought the table for a night that is still to
     /// come or underway, so it cannot be put away under them.
     /// </summary>
     public static readonly Error InANightNotOver =
         new("table.in_a_night_not_over", "The table is in a night that has not ended. Take it out of the night first.");
 
+    /// <summary>
+    /// The number belongs to a table of this venue, active or not. A table that
+    /// was put away keeps its number, so what orders say ("Mesa 5") never ends up
+    /// pointing at another table: it comes back with reactivation.
+    /// </summary>
     public static readonly Error NumberTaken =
         new("table.number_taken", "This venue already has a table with that number.");
 }

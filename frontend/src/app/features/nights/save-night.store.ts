@@ -20,6 +20,7 @@ export type SaveNightStatus =
   | 'waiterRequired'
   | 'tablesChanged'
   | 'tableSpent'
+  | 'tablesMoved'
   | 'unreachable';
 
 /**
@@ -94,6 +95,7 @@ const REASONS = new Map<string, SaveNightStatus>([
   [ProblemTypes.nightTableNotFound, 'tablesChanged'],
   [ProblemTypes.vipAccountTableInactive, 'tablesChanged'],
   [ProblemTypes.vipAccountHasSpending, 'tableSpent'],
+  [ProblemTypes.nightTablesMoved, 'tablesMoved'],
 ]);
 
 /**
@@ -118,6 +120,8 @@ const REFUSALS: Partial<Record<SaveNightStatus, string>> = {
   tablesChanged:
     'Una de las mesas elegidas se dio de baja o ya no está en el boliche. Recargá la pantalla y elegí de nuevo.',
   tableSpent: 'Una de las mesas que sacaste ya consumió en esta noche, así que queda en ella.',
+  tablesMoved:
+    'Una de las mesas pidió mientras guardabas y su saldo cambió. Recargá la pantalla y volvé a guardar.',
   unreachable: 'No pudimos guardarla. Fijate la señal y probá de nuevo.',
 };
 

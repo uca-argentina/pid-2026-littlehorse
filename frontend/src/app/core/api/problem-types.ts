@@ -98,6 +98,9 @@ export const ProblemTypes = {
   /** US-40: a night selling VIP tables needs at least one waiter in its crew. */
   nightWaiterRequired: 'urn:drinkit:problem:night:waiter-required',
 
+  /** US-41: a phone of one of the night's tables spent while its form was open. */
+  nightTablesMoved: 'urn:drinkit:problem:night:tables-moved',
+
   /** US-40: one of the chosen tables is not the venue's any more. */
   nightTableNotFound: 'urn:drinkit:problem:night:table-not-found',
 

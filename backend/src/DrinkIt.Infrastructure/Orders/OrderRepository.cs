@@ -54,8 +54,11 @@ internal sealed partial class OrderRepository(
         {
             // Somebody else got there in the seconds this order took to price.
             // Nothing is written, and the caller may try the whole thing again
-            // against the menu as it is now.
+            // against the menu as it is now. What the attempt changed in
+            // memory goes too: a VIP table's spend (US-41) left tracked would
+            // be spent again by the retry, on top of itself.
             await transaction.RollbackAsync(cancellationToken);
+            context.ChangeTracker.Clear();
 
             return OrderErrors.StockMoved;
         }

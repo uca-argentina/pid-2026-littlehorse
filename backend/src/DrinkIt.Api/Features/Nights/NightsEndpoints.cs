@@ -326,6 +326,7 @@ internal static class NightsEndpoints
         [NightErrors.NotFound.Code] = StatusCodes.Status404NotFound,
         [NightErrors.TableNotInNight.Code] = StatusCodes.Status404NotFound,
         [NightErrors.Overlaps.Code] = StatusCodes.Status409Conflict,
+        [NightErrors.TablesMoved.Code] = StatusCodes.Status409Conflict,
         [NightErrors.StockClosed.Code] = StatusCodes.Status409Conflict,
         [NightErrors.StoreroomShort.Code] = StatusCodes.Status409Conflict,
         [NightErrors.BarHoldsStock.Code] = StatusCodes.Status409Conflict,

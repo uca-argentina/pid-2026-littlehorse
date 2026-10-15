@@ -68,7 +68,7 @@ export class MenuPage {
   private readonly vipTables = inject(VipTables);
 
   /** US-41: the VIP table this phone orders for, when a waiter's QR opened one. */
-  private readonly tableCode = computed(() => this.vipTables.codeFor(this.venueSlug())());
+  private readonly tableCode = computed(() => this.vipTables.codeOf(this.venueSlug()));
 
   protected readonly table = httpResource<VipTableAccess>(() => {
     const code = this.tableCode();

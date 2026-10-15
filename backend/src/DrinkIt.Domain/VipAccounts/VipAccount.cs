@@ -26,6 +26,7 @@ public sealed class VipAccount : AuditStamps, IBelongsToVenue
         public const string HasSpending = "vip_account.has_spending";
         public const string BalanceShort = "vip_account.balance_short";
         public const string AmountNotPositive = "vip_account.amount_not_positive";
+        public const string BudgetBelowSpent = "vip_account.budget_below_spent";
     }
 
     /// <summary>What fits the money columns: ten digits, two of them cents.</summary>
@@ -89,6 +90,8 @@ public sealed class VipAccount : AuditStamps, IBelongsToVenue
         CheckSameNight(night);
         CheckOpen(night, now);
         CheckBudget(budget);
+
+        if (budget < Spent) throw new DomainException(ErrorCodes.BudgetBelowSpent, "The budget cannot be less than what the table already spent.");
 
         Budget = budget;
     }
