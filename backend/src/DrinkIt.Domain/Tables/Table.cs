@@ -45,7 +45,10 @@ public sealed class Table : AuditStamps, IBelongsToVenue
         };
     }
 
-    /// <summary>Takes the table out of use for good. The row stays: old orders keep pointing at it.</summary>
+    /// <summary>
+    /// Takes the table out of use until <see cref="Activate"/> brings it back. The
+    /// row stays: old orders keep pointing at it, and its number stays taken.
+    /// </summary>
     public void Deactivate() => IsActive = false;
 
     public void Activate() => IsActive = true;

@@ -19,8 +19,13 @@ public interface ITableRepository
     /// <summary>The table tracked for change, or null when this venue has none with that id.</summary>
     Task<Table?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Persists the new table. Saving is the repository's job, not the caller's.</summary>
-    Task AddAsync(Table table, CancellationToken cancellationToken);
+    /// <summary>
+    /// Persists the new table, or answers false when the venue's unique index
+    /// refused its number: another administrator saved it after the
+    /// <see cref="NumberExistsAsync"/> check. Saving is the repository's job,
+    /// not the caller's.
+    /// </summary>
+    Task<bool> TryAddAsync(Table table, CancellationToken cancellationToken);
 
     /// <summary>Persists what changed on a table obtained from <see cref="GetForUpdateAsync"/>.</summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);

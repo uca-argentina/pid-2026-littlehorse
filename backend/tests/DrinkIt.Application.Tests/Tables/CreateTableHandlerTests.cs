@@ -40,6 +40,19 @@ public class CreateTableHandlerTests
         Assert.Null(tables.Added);
     }
 
+    // Two administrators saving the same number at once both pass the check;
+    // the unique index refuses the second insert, and that is the same answer.
+    [Fact]
+    public async Task HandleAsync_WhenTheNumberIsTakenBetweenTheCheckAndTheInsert_FailsNumberTaken()
+    {
+        FakeTables tables = new(takenOnInsert: 5);
+
+        Result<TableSummary> result = await HandlerOver(tables).HandleAsync(
+            new CreateTableCommand(5), CancellationToken.None);
+
+        Assert.Equal(TableErrors.NumberTaken, result.Error);
+    }
+
     // A broken invariant is not an expected outcome: the domain throws, the API
     // turns it into a 400, and the handler does not restate the rules.
     [Fact]

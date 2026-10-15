@@ -12,7 +12,7 @@ internal sealed class FakeTables(int? taken = null, Table? existing = null) : IT
     public Task<Table?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(existing is not null && existing.Id == id ? existing : null);
 
-    public Task AddAsync(Table table, CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task<bool> TryAddAsync(Table table, CancellationToken cancellationToken) => Task.FromResult(true);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }

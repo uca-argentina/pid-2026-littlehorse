@@ -146,7 +146,7 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
 
     private async Task<Venue> SeedVenue()
     {
-        Venue venue = Venue.Create("Bar de prueba", $"bar-{Guid.NewGuid():N}");
+        Venue venue = Venue.Create("Test Bar", $"bar-{Guid.NewGuid():N}");
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Venues.Add(venue);

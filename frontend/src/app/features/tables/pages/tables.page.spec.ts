@@ -64,8 +64,8 @@ describe('TablesPage', () => {
 
     const [active, away] = screen.getAllByRole('listitem');
 
-    expect(active.textContent).not.toContain('Dado de baja');
-    expect(away.textContent).toContain('Dado de baja');
+    expect(active.textContent).not.toContain('Dada de baja');
+    expect(away.textContent).toContain('Dada de baja');
   });
 
   it('offers a way to add a table', async () => {
@@ -83,30 +83,31 @@ describe('TablesPage', () => {
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 
-  it('puts a table away and shows the listing again', async () => {
+  // The answer already is the updated table: asking for the whole listing again
+  // costs a request over the venue's crowded signal and flashes "Cargando".
+  it('puts a table away without loading the listing again', async () => {
     const deactivate = vi.fn().mockReturnValue(of({ ...tableTwo, isActive: false }));
     const { rendered, http } = await openScreenShowing([tableTwo], { deactivate });
 
     screen.getByRole('button', { name: /dar de baja la mesa 2/i }).click();
     await settleOnce(rendered.fixture);
-    http.expectOne(TABLES_URL).flush([{ ...tableTwo, isActive: false }]);
-    await settleOnce(rendered.fixture);
 
+    http.expectNone(TABLES_URL);
     expect(deactivate).toHaveBeenCalledWith('two');
-    expect(screen.getByRole('listitem').textContent).toContain('Dado de baja');
+    expect(screen.getByRole('listitem').textContent).toContain('Dada de baja');
   });
 
-  it('brings a table back and shows the listing again', async () => {
+  it('brings a table back without loading the listing again', async () => {
     const reactivate = vi.fn().mockReturnValue(of({ ...tableSeven, isActive: true }));
     const { rendered, http } = await openScreenShowing([tableSeven], { reactivate });
 
     screen.getByRole('button', { name: /reactivar la mesa 7/i }).click();
     await settleOnce(rendered.fixture);
-    http.expectOne(TABLES_URL).flush([{ ...tableSeven, isActive: true }]);
-    await settleOnce(rendered.fixture);
+
+    http.expectNone(TABLES_URL);
 
     expect(reactivate).toHaveBeenCalledWith('seven');
-    expect(screen.getByRole('listitem').textContent).not.toContain('Dado de baja');
+    expect(screen.getByRole('listitem').textContent).not.toContain('Dada de baja');
   });
 
   it('offers only the change that makes sense for each table', async () => {
@@ -126,6 +127,24 @@ describe('TablesPage', () => {
     await settleOnce(rendered.fixture);
 
     expect(screen.getByRole('alert').textContent).toContain('No pudimos');
+  });
+
+  // Retrying never fixes a role that was taken away; telling them to check the
+  // signal would have them tapping forever.
+  it('says the account is no longer an administrator when a change is refused', async () => {
+    const deactivate = vi
+      .fn()
+      .mockReturnValue(
+        throwError(
+          () => new HttpErrorResponse({ status: 403, error: { type: ProblemTypes.forbidden } }),
+        ),
+      );
+    const { rendered } = await openScreenShowing([tableTwo], { deactivate });
+
+    screen.getByRole('button', { name: /dar de baja la mesa 2/i }).click();
+    await settleOnce(rendered.fixture);
+
+    expect(screen.getByRole('alert').textContent).toContain('tu cuenta ya no lo es');
   });
 
   it('says so when the listing cannot be loaded', async () => {

@@ -51,30 +51,32 @@ public sealed class TableRepositoryTests(SqlServerFixture sql)
     }
 
     [Fact]
-    public async Task AddAsync_WhenAnotherVenueAlreadyHasThatNumber_StillCreatesTheTable()
+    public async Task TryAddAsync_WhenAnotherVenueAlreadyHasThatNumber_CreatesTheTable()
     {
         (Venue mine, _) = await SeedTwoVenues(mineNumber: 4, theirsNumber: 5);
 
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
         TableRepository repository = new(asMine);
 
-        await repository.AddAsync(Table.Create(mine.Id, 5, DateTimeOffset.UtcNow), CancellationToken.None);
-
+        Assert.True(await repository.TryAddAsync(Table.Create(mine.Id, 5, DateTimeOffset.UtcNow), CancellationToken.None));
         Assert.True(await repository.NumberExistsAsync(5, CancellationToken.None));
     }
 
     // The index is the last line of defence: two administrators saving the same
-    // new table at once both pass the check.
+    // new table at once both pass the check, and the second one has to hear
+    // "taken", not a 500.
     [Fact]
-    public async Task AddAsync_WhenThisVenueAlreadyHasThatNumber_IsRefusedByTheDatabase()
+    public async Task TryAddAsync_WhenThisVenueAlreadyHasThatNumber_ReturnsFalse()
     {
         (Venue mine, _) = await SeedTwoVenues(mineNumber: 5, theirsNumber: 6);
 
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => new TableRepository(asMine).AddAsync(
+        bool added = await new TableRepository(asMine).TryAddAsync(
             Table.Create(mine.Id, 5, DateTimeOffset.UtcNow),
-            CancellationToken.None));
+            CancellationToken.None);
+
+        Assert.False(added);
     }
 
     [Fact]

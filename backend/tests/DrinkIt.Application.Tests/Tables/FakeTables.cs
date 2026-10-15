@@ -7,7 +7,7 @@ namespace DrinkIt.Application.Tests.Tables;
 /// The table port for the tests that only need it to answer: which number is
 /// taken, which table it hands back, what was added and whether it saved.
 /// </summary>
-internal sealed class FakeTables(int? taken = null, Table? existing = null) : ITableRepository
+internal sealed class FakeTables(int? taken = null, Table? existing = null, int? takenOnInsert = null) : ITableRepository
 {
     public Table? Added { get; private set; }
 
@@ -19,11 +19,13 @@ internal sealed class FakeTables(int? taken = null, Table? existing = null) : IT
     public Task<Table?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(existing is not null && existing.Id == id ? existing : null);
 
-    public Task AddAsync(Table table, CancellationToken cancellationToken)
+    public Task<bool> TryAddAsync(Table table, CancellationToken cancellationToken)
     {
+        if (table.Number == takenOnInsert) return Task.FromResult(false);
+
         Added = table;
 
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken)

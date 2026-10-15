@@ -80,12 +80,12 @@ test.describe('VIP tables', () => {
     await page
       .getByRole('button', { name: new RegExp(`dar de baja la mesa ${number}$`, 'i') })
       .click();
-    await expect(rowOf(page, number)).toContainText('Dado de baja');
+    await expect(rowOf(page, number)).toContainText('Dada de baja');
 
     await page
       .getByRole('button', { name: new RegExp(`reactivar la mesa ${number}$`, 'i') })
       .click();
-    await expect(rowOf(page, number)).not.toContainText('Dado de baja');
+    await expect(rowOf(page, number)).not.toContainText('Dada de baja');
   });
 
   // The number of a table that is away is still taken: its old orders say
@@ -103,7 +103,7 @@ test.describe('VIP tables', () => {
     await page
       .getByRole('button', { name: new RegExp(`dar de baja la mesa ${number}$`, 'i') })
       .click();
-    await expect(rowOf(page, number)).toContainText('Dado de baja');
+    await expect(rowOf(page, number)).toContainText('Dada de baja');
 
     await addATable(page, number);
 

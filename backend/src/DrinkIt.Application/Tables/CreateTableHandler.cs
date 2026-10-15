@@ -20,7 +20,7 @@ public sealed class CreateTableHandler(ITableRepository tables, ICurrentVenue cu
         // The API turns that into a 400.
         Table table = Table.Create(currentVenue.Id, command.Number, clock.GetUtcNow());
 
-        await tables.AddAsync(table, cancellationToken);
+        if (!await tables.TryAddAsync(table, cancellationToken)) return TableErrors.NumberTaken;
 
         return TableSummary.Of(table);
     }

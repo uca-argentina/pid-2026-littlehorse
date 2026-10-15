@@ -16,7 +16,7 @@
       </p>
     }
 
-    @if (failure() === 'forbidden') {
+    @if (failure() === 'forbidden' || changeFailure() === 'forbidden') {
       <p class="note note-bad" role="alert">
         Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que te
         la vuelva a dar.
@@ -25,9 +25,7 @@
       <p class="note note-bad" role="alert">
         No pudimos traer las mesas. Fijate la señal y probá de nuevo.
       </p>
-    }
-
-    @if (changeFailed()) {
+    } @else if (changeFailure() === 'unreachable') {
       <p class="note note-bad" role="alert">
         No pudimos hacer el cambio. Fijate la señal y probá de nuevo.
       </p>
@@ -45,13 +43,13 @@
           <li class="row" [class.row-off]="!table.isActive">
             <span class="number">Mesa {{ table.number }}</span>
             @if (!table.isActive) {
-              <span class="chip chip-off">Dado de baja</span>
+              <span class="chip chip-off">Dada de baja</span>
             }
             @if (table.isActive) {
               <button
                 class="change"
                 type="button"
-                [disabled]="changing() !== null"
+                [disabled]="changing()"
                 [attr.aria-label]="'Dar de baja la mesa ' + table.number"
                 (click)="putAway(table)"
               >
@@ -61,7 +59,7 @@
               <button
                 class="change"
                 type="button"
-                [disabled]="changing() !== null"
+                [disabled]="changing()"
                 [attr.aria-label]="'Reactivar la mesa ' + table.number"
                 (click)="bringBack(table)"
               >
