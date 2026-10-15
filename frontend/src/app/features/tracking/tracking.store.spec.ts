@@ -25,6 +25,7 @@ function anOrder(status: CustomerOrderStatus): TrackedOrder {
     total: 9000,
     paidAt: '2026-09-17T02:30:00Z',
     barName: null,
+    tableNumber: null,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo' }],
   };
 }

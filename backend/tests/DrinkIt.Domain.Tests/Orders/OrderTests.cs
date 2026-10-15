@@ -980,4 +980,39 @@ public class OrderTests
                 EveryMove().Select(move => move.Raised.GetType().Name).Distinct().Order());
         }
     }
+
+    // US-41: an order from a VIP table is carried to it, and says which one
+    // ("Mesa 5") for as long as the order exists.
+    [Fact]
+    public void ServeAtTable_WhenInTheCart_KeepsTheTableAndItsNumber()
+    {
+        Order order = AnOrder();
+        Guid table = Guid.CreateVersion7();
+
+        order.ServeAtTable(table, 5);
+
+        Assert.Equal(table, order.TableId);
+        Assert.Equal(5, order.TableNumber);
+    }
+
+    [Fact]
+    public void ServeAtTable_WhenAlreadyPaid_ThrowsInvalidTransition()
+    {
+        Order order = AnOrder();
+        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+
+        DomainException error = Assert.Throws<DomainException>(() => order.ServeAtTable(Guid.CreateVersion7(), 5));
+
+        Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        Assert.Null(order.TableId);
+    }
+
+    [Fact]
+    public void Place_WhenNew_IsNotForAnyTable()
+    {
+        Order order = AnOrder();
+
+        Assert.Null(order.TableId);
+        Assert.Null(order.TableNumber);
+    }
 }

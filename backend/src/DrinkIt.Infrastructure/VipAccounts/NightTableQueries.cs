@@ -18,7 +18,7 @@ internal sealed class NightTableQueries(DrinkItDbContext context) : INightTableQ
             .Where(account => account.NightId == nightId)
             .Join(context.Tables, account => account.TableId, table => table.Id, (account, table) => new { account, table })
             .OrderBy(row => row.table.Number)
-            .Select(row => new NightTableLine(row.table.Id, row.table.Number, row.table.Capacity, row.table.Location, row.account.Budget, row.account.Spent))
+            .Select(row => new NightTableLine(row.table.Id, row.table.Number, row.table.Capacity, row.table.Location, row.account.Budget, row.account.Spent, row.account.AccessCode))
             .ToListAsync(cancellationToken);
     }
 }

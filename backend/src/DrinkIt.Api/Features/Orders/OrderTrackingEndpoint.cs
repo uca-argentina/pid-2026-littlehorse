@@ -25,7 +25,8 @@ public sealed record TrackedOrderResponse(
     decimal Total,
     DateTimeOffset? PaidAt,
     string? BarName,
-    IReadOnlyList<TrackedOrderItemResponse> Items);
+    IReadOnlyList<TrackedOrderItemResponse> Items,
+    int? TableNumber);
 
 internal static class OrderTrackingEndpoint
 {
@@ -91,7 +92,8 @@ internal static class OrderTrackingEndpoint
             found.PaidAt,
             found.BarName,
             [.. found.Items.Select(item =>
-                new TrackedOrderItemResponse(item.ProductName, item.Quantity, item.Note))]));
+                new TrackedOrderItemResponse(item.ProductName, item.Quantity, item.Note))],
+            found.TableNumber));
     }
 
     // US-23: 404 for every way of not getting in, like following it; 409 once

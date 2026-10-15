@@ -1,3 +1,4 @@
+using DrinkIt.Application.Common;
 using DrinkIt.Domain.Orders;
 
 namespace DrinkIt.Application.Orders;
@@ -21,8 +22,19 @@ public interface IPaymentStrategy
 {
     PaymentMethod Method { get; }
 
-    void Settle(Order order);
+    /// <summary>
+    /// Settles the money for the order, or answers why it could not: a refusal
+    /// the customer can act on, with nothing settled. Asynchronous because a
+    /// method may have to look something up — the table's balance does.
+    /// </summary>
+    Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// What a method may need beyond the order. Only the code of a VIP table so
+/// far (US-41); a method that needs nothing ignores it.
+/// </summary>
+public sealed record PaymentRequest(string? TableCode);
 
 /// <summary>
 /// Card or Mercado Pago. Simulated in Sprint 1, which the brief allows: there
@@ -39,7 +51,12 @@ public sealed class DigitalPaymentStrategy(TimeProvider clock) : IPaymentStrateg
     /// The money is settled on the spot: there is nothing left for anybody to
     /// do before the drinks go to a bar.
     /// </summary>
-    public void Settle(Order order) => order.Pay(clock.GetUtcNow(), Method);
+    public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken)
+    {
+        order.Pay(clock.GetUtcNow(), Method);
+
+        return Task.FromResult<Error?>(null);
+    }
 }
 
 /// <summary>
@@ -51,5 +68,10 @@ public sealed class CashPaymentStrategy : IPaymentStrategy
 {
     public PaymentMethod Method => PaymentMethod.Cash;
 
-    public void Settle(Order order) => order.AwaitPayment(Method);
+    public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken)
+    {
+        order.AwaitPayment(Method);
+
+        return Task.FromResult<Error?>(null);
+    }
 }

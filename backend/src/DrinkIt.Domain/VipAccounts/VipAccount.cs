@@ -24,6 +24,8 @@ public sealed class VipAccount : AuditStamps, IBelongsToVenue
         public const string BudgetOutOfRange = "vip_account.budget_out_of_range";
         public const string NightOver = "vip_account.night_over";
         public const string HasSpending = "vip_account.has_spending";
+        public const string BalanceShort = "vip_account.balance_short";
+        public const string AmountNotPositive = "vip_account.amount_not_positive";
     }
 
     /// <summary>What fits the money columns: ten digits, two of them cents.</summary>
@@ -102,6 +104,31 @@ public sealed class VipAccount : AuditStamps, IBelongsToVenue
         CheckOpen(night, now);
 
         if (Spent > 0) throw new DomainException(ErrorCodes.HasSpending, "The table already spent part of its budget.");
+    }
+
+    /// <summary>
+    /// US-41: an order from the table takes its total from the balance. Never
+    /// below zero; the token on the row is what settles two phones of the same
+    /// table spending at once.
+    /// </summary>
+    public void Spend(decimal amount)
+    {
+        if (amount <= 0) throw new DomainException(ErrorCodes.AmountNotPositive, "What is spent has to be more than 0.");
+        if (amount > Balance) throw new DomainException(ErrorCodes.BalanceShort, "The table's balance does not cover it.");
+
+        Spent += amount;
+    }
+
+    /// <summary>
+    /// US-40, criterion 4: the code leaked, so a new one replaces it. The old
+    /// one stops working at once; the budget and what was spent stay.
+    /// </summary>
+    public void RegenerateAccessCode(Night night, DateTimeOffset now)
+    {
+        CheckSameNight(night);
+        CheckOpen(night, now);
+
+        AccessCode = NewAccessCode();
     }
 
     private static void CheckOpen(Night night, DateTimeOffset now)

@@ -1,0 +1,71 @@
+@if (cards().length > 0) {
+  <section class="codes" aria-labelledby="night-table-codes-title">
+    <h2 class="label" id="night-table-codes-title">Códigos de las mesas</h2>
+    <p class="help">
+      El mozo le da el código a quien compró la mesa, en mano o por WhatsApp. No se pega en la mesa.
+    </p>
+
+    <ul class="cards">
+      @for (table of cards(); track table.tableId) {
+        <li class="card">
+          <h3 class="number">Mesa {{ table.number }}</h3>
+          <p class="left">{{ table.left }}</p>
+
+          <figure class="qr" [attr.aria-label]="'Código QR de la mesa ' + table.number">
+            <qrcode
+              [qrdata]="table.link"
+              [width]="200"
+              [margin]="4"
+              errorCorrectionLevel="M"
+              elementType="svg"
+              [colorDark]="qrInk"
+              [colorLight]="qrPaper"
+            />
+          </figure>
+
+          <div class="actions">
+            <button class="small" type="button" (click)="copy(table.link)">Copiar link</button>
+            @if (canShare) {
+              <button class="small" type="button" (click)="share(table.number, table.link)">
+                Compartir
+              </button>
+            }
+          </div>
+
+          @if (failedFor() === table.tableId) {
+            <p class="bad" role="alert">No pudimos generar otro código. Probá de nuevo.</p>
+          }
+
+          @if (confirming() === table.tableId) {
+            <div class="confirm">
+              <p class="help">
+                El código de ahora deja de servir, y quien lo tenga ya no puede pedir. El saldo
+                queda igual.
+              </p>
+              <div class="actions">
+                <button
+                  class="small small-danger"
+                  type="button"
+                  [disabled]="regenerating()"
+                  (click)="regenerate(table.tableId)"
+                >
+                  Sí, generar otro
+                </button>
+                <button class="small" type="button" (click)="cancel()">Mejor no</button>
+              </div>
+            </div>
+          } @else {
+            <button
+              class="link"
+              type="button"
+              [attr.aria-label]="'Código nuevo para la mesa ' + table.number"
+              (click)="ask(table.tableId)"
+            >
+              Se filtró el código: generar otro
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+}

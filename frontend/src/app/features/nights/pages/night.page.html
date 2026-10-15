@@ -63,6 +63,14 @@
       }
 
       @if (phase(); as phase) {
+        @if (nightTables.hasValue()) {
+          <drinkit-night-table-codes
+            [venueSlug]="venueSlug()"
+            [nightId]="id()"
+            [phase]="phase"
+            [tables]="nightTables.value()"
+          />
+        }
         <drinkit-night-stock [nightId]="id()" [phase]="phase" />
       }
     } @else {

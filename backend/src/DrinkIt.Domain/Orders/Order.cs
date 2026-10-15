@@ -79,6 +79,15 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// </summary>
     public Guid? KdsId { get; private set; }
 
+    /// <summary>The VIP table it is carried to (US-41), or null when it is picked up at the bar.</summary>
+    public Guid? TableId { get; private set; }
+
+    /// <summary>
+    /// The number of that table as it was when the order was placed: what the
+    /// bar, the waiter and the customer read ("Mesa 5"), for good.
+    /// </summary>
+    public int? TableNumber { get; private set; }
+
     /// <summary>Who the bar calls for it.</summary>
     public string CustomerName { get; }
 
@@ -167,6 +176,18 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         order._items.AddRange(items.Select(ToItem));
 
         return order;
+    }
+
+    /// <summary>
+    /// US-41: ordered with the code of a VIP table, so it is carried to it
+    /// instead of picked up at the bar. Decided before paying, in the cart.
+    /// </summary>
+    public void ServeAtTable(Guid tableId, int tableNumber)
+    {
+        EnsureItIs(OrderStatus.Cart);
+
+        TableId = tableId;
+        TableNumber = tableNumber;
     }
 
     /// <summary>

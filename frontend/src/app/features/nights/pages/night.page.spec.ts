@@ -118,6 +118,7 @@ const fiveTonight: NightTable = {
   location: 'Al lado de la cabina',
   budget: 150000,
   spent: 0,
+  accessCode: 'a'.repeat(32),
 };
 
 /** The venue's tables and the ones this night sells (US-40). */

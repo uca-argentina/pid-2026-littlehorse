@@ -17,6 +17,12 @@ public interface IVipAccountRepository
     /// <summary>The accounts of a night of the current venue, tracked so they can change.</summary>
     Task<IReadOnlyList<VipAccount>> ListForNightAsync(Guid nightId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The account a table's QR opens (US-41), tracked so it can be spent from.
+    /// The venue filter applies: another venue's code finds nothing.
+    /// </summary>
+    Task<VipAccount?> FindByAccessCodeAsync(string accessCode, CancellationToken cancellationToken);
+
     void Add(VipAccount account);
 
     void Remove(VipAccount account);

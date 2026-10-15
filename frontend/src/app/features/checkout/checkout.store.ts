@@ -83,7 +83,13 @@ export class CheckoutStore {
     return fresh;
   }
 
-  pay(venueSlug: string, customerName: string, method: PaymentMethod): void {
+  /** tableCode: the VIP table this phone orders for (US-41), or null at the bar. */
+  pay(
+    venueSlug: string,
+    customerName: string,
+    method: PaymentMethod,
+    tableCode: string | null = null,
+  ): void {
     if (this.isPaying()) return;
 
     this.state.set('paying');
@@ -102,6 +108,7 @@ export class CheckoutStore {
           quantity: line.quantity,
           note: line.note,
         })),
+        tableCode,
       }),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))

@@ -15,6 +15,10 @@ internal sealed class VipAccountRepository(DrinkItDbContext context) : IVipAccou
     public async Task<IReadOnlyList<VipAccount>> ListForNightAsync(Guid nightId, CancellationToken cancellationToken) =>
         await context.VipAccounts.Where(account => account.NightId == nightId).ToListAsync(cancellationToken);
 
+    /// <summary>No venue in the WHERE: the global query filter adds the one the slug resolved.</summary>
+    public Task<VipAccount?> FindByAccessCodeAsync(string accessCode, CancellationToken cancellationToken) =>
+        context.VipAccounts.FirstOrDefaultAsync(account => account.AccessCode == accessCode, cancellationToken);
+
     public void Add(VipAccount account) => context.VipAccounts.Add(account);
 
     public void Remove(VipAccount account) => context.VipAccounts.Remove(account);

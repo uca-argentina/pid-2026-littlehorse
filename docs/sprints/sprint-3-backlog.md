@@ -433,8 +433,9 @@ describe:
   setup del E2E extiende la noche así) no tiene que vaciarlas. Una lista vacía sí las saca todas.
 - **Se lee con `GET /nights/{id}/tables`**, aparte de la noche, como el stock. Una noche
   terminada las muestra con su presupuesto, sin formulario.
-- **Falta:** mostrar el código y su QR, y regenerarlo (criterios 1 y 4). El código ya se genera
-  y se guarda al abrir la cuenta, con índice único, para que US-41 lo busque.
+- **Completada el 2026-10-15:** la ficha de la noche muestra el QR de cada mesa con lo que le
+  queda de saldo, "Copiar link" y "Compartir" (WhatsApp desde el celular), y "Se filtró el
+  código: generar otro", que pide confirmación. Una noche terminada ya no muestra códigos.
 
 ### US-41 · Pedir desde la mesa VIP con el saldo
 
@@ -494,6 +495,22 @@ describe:
   saldo de lo demás más adelante.
 - **Pendiente:** sin US-43/44, un pedido de mesa queda en "Listo" para siempre (el KDS no lo
   entrega). Conviene que entren junto con esta story o enseguida después.
+
+**Construida el 2026-10-15:**
+
+- **El QR abre `/{venueSlug}/table/{code}`**, que valida el código y lo recuerda en el celular
+  (por boliche). La carta muestra "Mesa 5 · Saldo disponible $ …". Un código vencido, regenerado,
+  inventado o de otro local da la misma respuesta y ofrece "Pedir para retirar en la barra".
+- **Con mesa, el pago es sólo "Saldo de la mesa"**: no se elige método. Si el total supera el
+  saldo, la pantalla dice cuánto falta y no deja pagar (US-42 lo va a cubrir).
+- **Concurrencia (criterio 3):** el saldo se descuenta en el mismo guardado que el pedido, con el
+  `rowversion` de la cuenta. El celular que pierde la carrera reintenta con el saldo nuevo (igual
+  que con el stock); si ya no alcanza, ve el saldo actualizado y no se descuenta nada. Lo prueba
+  un test de integración con dos confirmaciones simultáneas.
+- **El pedido guarda `TableId` y `TableNumber`.** El KDS muestra "Mesa 5" y no ofrece
+  "Entregado" en esas tarjetas; el seguimiento dice "Te lo llevamos a la Mesa 5" sin QR.
+- **Todavía no se guarda `BalanceAmount` aparte**: con un solo método por pedido, el importe es
+  el total. Lo suma US-42 cuando haya dos importes.
 
 ### US-42 · Cubrir la diferencia si el saldo no alcanza
 

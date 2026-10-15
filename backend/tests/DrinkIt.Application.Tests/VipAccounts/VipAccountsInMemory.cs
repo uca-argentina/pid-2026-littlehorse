@@ -20,6 +20,9 @@ internal sealed class VipAccountsInMemory(params VipAccount[] stored) : IVipAcco
     public Task<IReadOnlyList<VipAccount>> ListForNightAsync(Guid nightId, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<VipAccount>>([.. _stored.Where(account => account.NightId == nightId)]);
 
+    public Task<VipAccount?> FindByAccessCodeAsync(string accessCode, CancellationToken cancellationToken) =>
+        Task.FromResult(_stored.Find(account => account.AccessCode == accessCode));
+
     public void Add(VipAccount account)
     {
         Added.Add(account);

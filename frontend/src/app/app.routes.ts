@@ -68,6 +68,12 @@ export const routes: Routes = [
   // the device, so there is nothing here a guard would protect.
   // Where an order lives once it is the venue's: code and token, which is the
   // link the customer keeps. It is also where paying lands.
+  // US-41: what a VIP table's QR points at. It opens that table's menu.
+  {
+    path: ':venueSlug/table',
+    loadChildren: () =>
+      import('./features/table-entry/table-entry.routes').then((m) => m.tableEntryRoutes),
+  },
   {
     path: ':venueSlug/orders',
     loadChildren: () => import('./features/tracking/tracking.routes').then((m) => m.trackingRoutes),

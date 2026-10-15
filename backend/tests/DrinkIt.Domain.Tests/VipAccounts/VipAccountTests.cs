@@ -164,4 +164,79 @@ public class VipAccountTests
 
         Assert.Equal(VipAccount.ErrorCodes.NightOver, error.Code);
     }
+
+    // US-40, criterion 4: a code that leaked stops working, and the money stays.
+    [Fact]
+    public void RegenerateAccessCode_WhenTheNightIsOn_ReplacesTheCodeAndKeepsTheBalance()
+    {
+        Night night = ANight();
+        VipAccount account = VipAccount.Open(night, ATable(), 1_000m, BeforeItStarts);
+        string leaked = account.AccessCode;
+
+        account.RegenerateAccessCode(night, Opening);
+
+        Assert.NotEqual(leaked, account.AccessCode);
+        Assert.Equal(VipAccount.AccessCodeLength, account.AccessCode.Length);
+        Assert.Equal(1_000m, account.Balance);
+    }
+
+    [Fact]
+    public void RegenerateAccessCode_WhenTheNightIsOver_ThrowsNightOverAndKeepsTheCode()
+    {
+        Night night = ANight();
+        VipAccount account = VipAccount.Open(night, ATable(), 1_000m, BeforeItStarts);
+        string code = account.AccessCode;
+
+        DomainException error = Assert.Throws<DomainException>(() => account.RegenerateAccessCode(night, Closing));
+
+        Assert.Equal(VipAccount.ErrorCodes.NightOver, error.Code);
+        Assert.Equal(code, account.AccessCode);
+    }
+
+    // US-41: an order from the table takes its total from the balance.
+    [Fact]
+    public void Spend_WhenTheBalanceCoversIt_TakesItFromTheBalance()
+    {
+        VipAccount account = VipAccount.Open(ANight(), ATable(), 1_000m, BeforeItStarts);
+
+        account.Spend(300m);
+
+        Assert.Equal(300m, account.Spent);
+        Assert.Equal(700m, account.Balance);
+    }
+
+    [Fact]
+    public void Spend_WhenItTakesTheWholeBalance_LeavesItAtZero()
+    {
+        VipAccount account = VipAccount.Open(ANight(), ATable(), 1_000m, BeforeItStarts);
+
+        account.Spend(1_000m);
+
+        Assert.Equal(0m, account.Balance);
+    }
+
+    // Never below zero: §8.1 and US-42 cover the difference with another
+    // method, they do not leave the table owing.
+    [Fact]
+    public void Spend_WhenTheBalanceFallsShort_ThrowsBalanceShortAndSpendsNothing()
+    {
+        VipAccount account = VipAccount.Open(ANight(), ATable(), 1_000m, BeforeItStarts);
+
+        DomainException error = Assert.Throws<DomainException>(() => account.Spend(1_000.01m));
+
+        Assert.Equal(VipAccount.ErrorCodes.BalanceShort, error.Code);
+        Assert.Equal(0m, account.Spent);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Spend_WhenTheAmountIsNotPositive_ThrowsAmountNotPositive(int amount)
+    {
+        VipAccount account = VipAccount.Open(ANight(), ATable(), 1_000m, BeforeItStarts);
+
+        DomainException error = Assert.Throws<DomainException>(() => account.Spend(amount));
+
+        Assert.Equal(VipAccount.ErrorCodes.AmountNotPositive, error.Code);
+    }
 }

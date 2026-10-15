@@ -11,6 +11,7 @@ import type { VipTable } from '../../tables/tables.service';
 import { formatPrice } from '../../../shared/money/price';
 import { NightForm } from '../components/night-form/night-form';
 import { NightStock } from '../components/night-stock/night-stock';
+import { NightTableCodes } from '../components/night-table-codes/night-table-codes';
 import { nightHours, phaseOf } from '../night-calendar';
 import type { NightPhase } from '../night-calendar';
 import { NIGHTS_URL } from '../nights.service';
@@ -33,7 +34,7 @@ type LoadFailure = 'none' | 'notFound' | 'unreachable';
  */
 @Component({
   selector: 'drinkit-night-page',
-  imports: [AdminHeader, NightForm, NightStock, RouterLink],
+  imports: [AdminHeader, NightForm, NightStock, NightTableCodes, RouterLink],
   providers: [SaveNightStore],
   styleUrl: './night-pages.scss',
   templateUrl: './night.page.html',

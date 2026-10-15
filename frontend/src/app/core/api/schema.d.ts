@@ -101,6 +101,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/{venueSlug}/vip-accounts/{code}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The VIP table a code opens tonight, with what it has left to spend. */
+    get: operations['FindVipTable'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/kds/queue': {
     parameters: {
       query?: never;
@@ -356,6 +373,23 @@ export interface paths {
     get: operations['GetNightTables'];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}/tables/{tableId}/access-code': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Gives a table of the night a new code for its QR. The old one stops working; the balance stays. */
+    post: operations['RegenerateNightTableCode'];
     delete?: never;
     options?: never;
     head?: never;
@@ -871,6 +905,7 @@ export interface components {
       method: components['schemas']['PaymentMethodName'];
       idempotencyKey: null | string;
       lines: null | components['schemas']['OrderLineRequestBody'][];
+      tableCode?: null | string;
     };
     /** @description What the administration screen posts to add a category. */
     CreateCategoryRequest: {
@@ -950,6 +985,8 @@ export interface components {
       lastModifiedAt: null | string;
       isForTable: boolean;
       orderItems: components['schemas']['KdsQueueOrderItemResponse'][];
+      /** Format: int32 */
+      tableNumber: null | number;
     };
     /** @description Which bar this tablet is, by the name it goes by now. */
     KdsStationResponse: {
@@ -1055,6 +1092,12 @@ export interface components {
       nightId: string;
       bars: components['schemas']['NightStockBarResponse'][];
     };
+    /** @description The new code of a table after the old one leaked. */
+    NightTableCodeResponse: {
+      /** Format: uuid */
+      tableId: string;
+      accessCode: string;
+    };
     /** @description What the administration screen posts to set up a night. */
     NightTableRequestBody: {
       /** Format: uuid */
@@ -1062,7 +1105,10 @@ export interface components {
       /** Format: double */
       budget: number;
     };
-    /** @description A table of the night with what was loaded onto it and what its orders took. */
+    /**
+     * @description A table of the night with what was loaded onto it, what its orders took,
+     *     and the code of its QR for the waiter to hand over.
+     */
     NightTableResponse: {
       /** Format: uuid */
       tableId: string;
@@ -1075,6 +1121,7 @@ export interface components {
       budget: number;
       /** Format: double */
       spent: number;
+      accessCode: string;
     };
     /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
@@ -1215,6 +1262,8 @@ export interface components {
       paidAt: null | string;
       barName: null | string;
       items: components['schemas']['TrackedOrderItemResponse'][];
+      /** Format: int32 */
+      tableNumber: null | number;
     };
     /** @description What the night's own screen saves: the whole form, as on creation. */
     UpdateNightRequest: {
@@ -1243,6 +1292,13 @@ export interface components {
       /** Format: int32 */
       capacity: number;
       location: null | string;
+    };
+    /** @description What the menu shows at the top for a VIP table: its number and what it has left to spend. */
+    VipTableAccessResponse: {
+      /** Format: int32 */
+      tableNumber: number;
+      /** Format: double */
+      balance: number;
     };
   };
   responses: never;
@@ -1434,6 +1490,38 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  FindVipTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        venueSlug: string;
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['VipTableAccessResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -2047,6 +2135,47 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['NightTableResponse'][];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RegenerateNightTableCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        tableId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightTableCodeResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
       /** @description Not Found */

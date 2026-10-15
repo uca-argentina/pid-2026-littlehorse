@@ -277,6 +277,12 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("TableId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("TableNumber")
+                        .HasColumnType("int");
+
                     b.Property<string>("TrackingToken")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -291,6 +297,8 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasColumnType("rowversion");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TableId");
 
                     b.HasIndex("IdempotencyKey", "VenueId")
                         .IsUnique();
@@ -657,6 +665,11 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DrinkIt.Domain.Orders.Order", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.Tables.Table", null)
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
                         .HasForeignKey("VenueId")

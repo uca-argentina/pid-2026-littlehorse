@@ -12,6 +12,7 @@ import { trackingUrl } from '../../tracking/tracking.service';
 import { OrdersInProgressChannel } from '../components/orders-in-progress-channel';
 import { menuUrl } from '../menu.service';
 import type { Menu } from '../menu.service';
+import { VIP_TABLE_KEY_PREFIX, vipTableUrl } from '../../../core/vip-table/vip-tables';
 import { MenuPage } from './menu.page';
 
 const carta: Menu = {
@@ -727,6 +728,51 @@ describe('MenuPage', () => {
 
       expect(counter('Gin Tonic')?.textContent?.trim()).toBe('2');
       expect(counter('Fernet con Coca')?.textContent?.trim()).toBe('1');
+    });
+  });
+
+  describe('from a VIP table', () => {
+    const CODE = 'a'.repeat(32);
+
+    // US-41, criterion 1: which table, and what it has left to spend.
+    it('says which table it orders for, with its balance', async () => {
+      store.write(VIP_TABLE_KEY_PREFIX + 'bar-alfa', CODE);
+      const { rendered, http } = await openScreen();
+
+      http.expectOne(menuUrl('bar-alfa')).flush(carta);
+      http.expectOne(vipTableUrl('bar-alfa', CODE)).flush({ tableNumber: 5, balance: 150000 });
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('status', { name: /tu mesa/i }).textContent).toContain('Mesa 5');
+      expect(screen.getByRole('status', { name: /tu mesa/i }).textContent).toContain(
+        '$ 150.000,00',
+      );
+    });
+
+    // Criterion 4: the code ran out with its night, or was replaced.
+    it("says the table's code no longer works, and offers to order for the bar", async () => {
+      store.write(VIP_TABLE_KEY_PREFIX + 'bar-alfa', CODE);
+      const { rendered, http } = await openScreen();
+
+      http.expectOne(menuUrl('bar-alfa')).flush(carta);
+      http
+        .expectOne(vipTableUrl('bar-alfa', CODE))
+        .flush({ type: ProblemTypes.vipAccountNotFound }, { status: 404, statusText: 'Not Found' });
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('El código de tu mesa ya no sirve');
+
+      screen.getByRole('button', { name: /pedir para retirar en la barra/i }).click();
+      await rendered.fixture.whenStable();
+
+      expect(store.read(VIP_TABLE_KEY_PREFIX + 'bar-alfa')).toBe('');
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it('says nothing about tables to whoever came without one', async () => {
+      await openScreenShowing(carta);
+
+      expect(screen.queryByRole('status', { name: /tu mesa/i })).toBeNull();
     });
   });
 });

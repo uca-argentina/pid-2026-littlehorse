@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Configurations;
@@ -73,6 +74,17 @@ internal sealed partial class OrderRepository(
             await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
 
             return order;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // US-41: the only tracked row with a concurrency token an order
+            // writes is the VIP table it spent from. Another phone of the same
+            // table spent first; nothing is written, and the order is built
+            // again against the balance as it is now.
+            await transaction.RollbackAsync(cancellationToken);
+            context.ChangeTracker.Clear();
+
+            return VipAccountErrors.BalanceMoved;
         }
         catch (DbUpdateException)
         {

@@ -294,6 +294,7 @@ describe('NightForm', () => {
             location: null,
             budget: 90000,
             spent: 0,
+            accessCode: 'a'.repeat(32),
           },
         ],
       });
@@ -307,7 +308,15 @@ describe('NightForm', () => {
       const { rendered, saved } = await openForm({
         initial: { ...saturday, crewIds: ['main-bar', 'till-1', 'martin'] },
         initialTables: [
-          { tableId: 't7', number: 7, capacity: 8, location: null, budget: 90000, spent: 0 },
+          {
+            tableId: 't7',
+            number: 7,
+            capacity: 8,
+            location: null,
+            budget: 90000,
+            spent: 0,
+            accessCode: 'a'.repeat(32),
+          },
         ],
       });
 

@@ -22,6 +22,10 @@ public static class NightErrors
     public static readonly Error TableNotFound =
         new("night.table_not_found", "One of the chosen tables is not part of this venue.");
 
+    /// <summary>US-40: the night does not sell that table. Another venue's reads the same.</summary>
+    public static readonly Error TableNotInNight =
+        new("night.table_not_in_night", "The night does not sell that table.");
+
     /// <summary>US-40: a table is in a night once, with one budget.</summary>
     public static readonly Error TableRepeated =
         new("night.table_repeated", "The same table was chosen twice.");

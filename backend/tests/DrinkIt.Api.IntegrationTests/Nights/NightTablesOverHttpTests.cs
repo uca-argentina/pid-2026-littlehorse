@@ -90,6 +90,41 @@ public sealed class NightTablesOverHttpTests(SqlServerFixture sql) : IAsyncDispo
         Assert.Equal(150_000m, Assert.Single(tables.EnumerateArray()).GetProperty("budget").GetDecimal());
     }
 
+    // US-40, criteria 1 and 4: the code the waiter hands over, and a new one
+    // when it leaked.
+    [Fact]
+    public async Task RegenerateCode_WhenTheNightSellsTheTable_TheTablesShowTheNewCode()
+    {
+        Venue venue = await SeedVenue();
+        Crew crew = await SeedCrew(venue);
+        (Table five, _) = await SeedTables(venue);
+        using HttpClient admin = AdminOf(venue);
+        string nightId = await CreateNight(admin, ANight(crew.WithWaiter, (five, 150_000m)));
+        string leaked = (await admin.GetFromJsonAsync<JsonElement>($"/nights/{nightId}/tables"))[0].GetProperty("accessCode").GetString()!;
+
+        using HttpResponseMessage regenerated = await admin.PostAsync($"/nights/{nightId}/tables/{five.Id}/access-code", content: null);
+        JsonElement table = (await admin.GetFromJsonAsync<JsonElement>($"/nights/{nightId}/tables"))[0];
+
+        Assert.Equal(HttpStatusCode.OK, regenerated.StatusCode);
+        Assert.Equal(32, leaked.Length);
+        Assert.NotEqual(leaked, table.GetProperty("accessCode").GetString());
+        Assert.Equal(150_000m, table.GetProperty("budget").GetDecimal());
+    }
+
+    [Fact]
+    public async Task RegenerateCode_WhenTheNightDoesNotSellTheTable_RespondsNotFound()
+    {
+        Venue venue = await SeedVenue();
+        Crew crew = await SeedCrew(venue);
+        (Table five, _) = await SeedTables(venue);
+        using HttpClient admin = AdminOf(venue);
+        string nightId = await CreateNight(admin, ANight(crew.WithWaiter));
+
+        using HttpResponseMessage response = await admin.PostAsync($"/nights/{nightId}/tables/{five.Id}/access-code", content: null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     [Fact]
     public async Task Create_WhenTablesAreChosenWithoutAWaiter_RespondsWithTheWaiterProblem()
     {

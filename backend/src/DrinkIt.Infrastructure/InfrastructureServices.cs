@@ -82,6 +82,7 @@ public static class InfrastructureServices
         services.AddScoped<ICashierQueries, CashierQueries>();
         services.AddScoped<INightRepository, NightRepository>();
         services.AddScoped<IVipAccountRepository, VipAccountRepository>();
+        services.AddScoped<IVipAccountQueries, VipAccountQueries>();
         services.AddScoped<INightTableQueries, NightTableQueries>();
         services.AddScoped<INightQueries, NightQueries>();
         services.AddScoped<INightStockQueries, NightStockQueries>();
@@ -109,6 +110,7 @@ public static class InfrastructureServices
         // adding a class here and touching nothing else.
         services.AddScoped<IPaymentStrategy, DigitalPaymentStrategy>();
         services.AddScoped<IPaymentStrategy, CashPaymentStrategy>();
+        services.AddScoped<IPaymentStrategy, VipBalancePaymentStrategy>();
 
         return services;
     }

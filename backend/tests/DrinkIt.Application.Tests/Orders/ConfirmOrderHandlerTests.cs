@@ -1,6 +1,7 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 
@@ -181,6 +182,40 @@ public class ConfirmOrderHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, _orders.TimesAdded);
+    }
+
+    // US-41, criterion 3: another phone of the same table spent at the same
+    // moment. Going round again reads the balance as it is now.
+    [Fact]
+    public async Task HandleAsync_WhenTheTablesBalanceMovedUnderneath_BuildsTheOrderAgainAndSucceeds()
+    {
+        _orders.RefusesTheFirst(VipAccountErrors.BalanceMoved);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, _orders.TimesAdded);
+    }
+
+    // What refuses the money is the method's call; the handler only passes it on.
+    [Fact]
+    public async Task HandleAsync_WhenThePaymentIsRefused_FailsWithItsReasonAndWritesNothing()
+    {
+        Result<ConfirmedOrder> result = await AHandlerPaidBy(new Refuses(VipAccountErrors.BalanceShort))
+            .HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(VipAccountErrors.BalanceShort, result.Error);
+        Assert.Null(_orders.Added);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenATableCodeIsSent_HandsItToThePayment()
+    {
+        PaysOnTheSpot payment = new(Tonight);
+
+        await AHandlerPaidBy(payment).HandleAsync(ATwoGinOrder() with { TableCode = "the-code" }, CancellationToken.None);
+
+        Assert.Equal("the-code", payment.Request!.TableCode);
     }
 
     // The same code, not a fresh one per attempt: asking again would leave a
@@ -471,7 +506,24 @@ public class ConfirmOrderHandlerTests
     {
         public PaymentMethod Method => PaymentMethod.Digital;
 
-        public void Settle(Order order) => order.Pay(now, Method);
+        public PaymentRequest? Request { get; private set; }
+
+        public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken)
+        {
+            Request = request;
+            order.Pay(now, Method);
+
+            return Task.FromResult<Error?>(null);
+        }
+    }
+
+    /// <summary>A method that says no, as the table's balance does when it falls short.</summary>
+    private sealed class Refuses(Error reason) : IPaymentStrategy
+    {
+        public PaymentMethod Method => PaymentMethod.Digital;
+
+        public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult<Error?>(reason);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

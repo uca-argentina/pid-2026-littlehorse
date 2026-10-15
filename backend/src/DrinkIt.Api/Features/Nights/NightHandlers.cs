@@ -10,5 +10,6 @@ internal static class NightHandlers
         .AddScoped<CreateNightHandler>()
         .AddScoped<UpdateNightHandler>()
         .AddScoped<AdjustNightStockHandler>()
+        .AddScoped<RegenerateTableCodeHandler>()
         .AddScoped<GetNightMetricsHandler>();
 }

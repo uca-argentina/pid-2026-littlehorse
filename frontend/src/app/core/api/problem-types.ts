@@ -89,6 +89,12 @@ export const ProblemTypes = {
   /** US-37: loading a bar takes from the storeroom, and it has fewer than that. */
   nightStoreroomShort: 'urn:drinkit:problem:night:storeroom-short',
 
+  /** US-41: the table's code opens nothing tonight — ran out, regenerated, invented or another venue's. */
+  vipAccountNotFound: 'urn:drinkit:problem:vip-account:not-found',
+
+  /** US-41: the table's balance does not cover the order. */
+  vipAccountBalanceShort: 'urn:drinkit:problem:vip-account:balance-short',
+
   /** US-40: a night selling VIP tables needs at least one waiter in its crew. */
   nightWaiterRequired: 'urn:drinkit:problem:night:waiter-required',
 
