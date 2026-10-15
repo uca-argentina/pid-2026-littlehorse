@@ -116,6 +116,12 @@ internal sealed partial class OrderRepository(
             .Include(order => order.Items)
             .FirstOrDefaultAsync(order => order.Code == code, cancellationToken);
 
+    /// <summary>By id, with the venue filter: another venue's order is null.</summary>
+    public Task<Order?> GetForUpdateAsync(Guid orderId, CancellationToken cancellationToken) =>
+        context.Orders
+            .Include(order => order.Items)
+            .FirstOrDefaultAsync(order => order.Id == orderId, cancellationToken);
+
     /// <summary>
     /// An equality in SQL rather than <see cref="TrackingToken.Matches"/>: the
     /// constant-time comparison guards a guess against one known order, and

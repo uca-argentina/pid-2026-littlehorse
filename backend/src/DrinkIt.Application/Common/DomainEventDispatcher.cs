@@ -1,6 +1,7 @@
 using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Kds;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Waiter;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Orders;
 
@@ -20,7 +21,7 @@ namespace DrinkIt.Application.Common;
 /// <see cref="DrinkIt.Application.Orders.DigitalPaymentStrategy"/> does: it has
 /// no external dependency of its own, only other Application ports.
 /// </remarks>
-public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotifier till, IOrderFollowers followers) : IDomainEventDispatcher
+public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotifier till, IOrderFollowers followers, IWaiterBoardNotifier waiters) : IDomainEventDispatcher
 {
     public async Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken cancellationToken)
     {
@@ -31,6 +32,10 @@ public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotif
             if (domainEvent is IBoardChanged { KdsId: Guid kdsId } moved) await kdsBoard.NotifyBoardChangedAsync(moved.VenueId, kdsId, cancellationToken);
 
             if (VenueWhoseTillChanged(domainEvent) is Guid tillVenueId) await till.NotifyTillChangedAsync(tillVenueId, cancellationToken);
+
+            // What the waiters see (US-43): only table orders raise it, so a bar
+            // order moving about never wakes a waiter's phone.
+            if (domainEvent is TableOrderChanged tableMoved) await waiters.NotifyBoardChangedAsync(tableMoved.VenueId, cancellationToken);
         }
 
         // Once per order, not once per event: one move can raise several

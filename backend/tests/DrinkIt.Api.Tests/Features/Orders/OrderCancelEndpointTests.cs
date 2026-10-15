@@ -100,6 +100,9 @@ public class OrderCancelEndpointTests
             public Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken) =>
                 Task.FromResult(stored.Code == code ? stored : null);
 
+            public Task<Order?> GetForUpdateAsync(Guid orderId, CancellationToken cancellationToken) =>
+                throw new NotSupportedException();
+
             public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
                 Task.FromResult(stored.TrackingToken == token ? stored : null);
 

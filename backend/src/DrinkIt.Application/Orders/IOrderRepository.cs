@@ -62,6 +62,13 @@ public interface IOrderRepository
     Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The same, found by its id (US-43): the waiter's list names the orders it
+    /// shows by id, and "La llevo yo" says which one. Another venue's order is
+    /// null here too.
+    /// </summary>
+    Task<Order?> GetForUpdateAsync(Guid orderId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Commits what the use case changed, and only then reacts to the events
     /// the order raised — so the board never hears about a change that did not
     /// make it to the database.

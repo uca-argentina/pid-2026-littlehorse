@@ -9,6 +9,11 @@ namespace DrinkIt.Infrastructure.Persistence.Configurations;
 internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
     /// <summary>
+    /// A display name (40) or, without one, a username: whichever is longer fits.
+    /// </summary>
+    private const int WaiterNameMaxLength = 64;
+
+    /// <summary>
     /// The column that tells one attempt at the same order from another. A
     /// shadow property because it is how the request arrived and not something
     /// true about the drinks: the domain never sees it. See IOrderRepository.
@@ -49,6 +54,12 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(order => order.PreparationStartedAt);
         builder.Property(order => order.ReadyAt);
         builder.Property(order => order.DeliveredAt);
+
+        // US-43: the waiter carrying a table's order. The name is kept as it was
+        // when they took it, like TableNumber: the others read it, for good.
+        builder.Property(order => order.WaiterId);
+        builder.Property(order => order.WaiterName).HasMaxLength(WaiterNameMaxLength);
+        builder.Property(order => order.TakenAt);
         // Same length as a username: it is one (US-26).
         builder.Property(order => order.CollectedBy).HasMaxLength(50);
 

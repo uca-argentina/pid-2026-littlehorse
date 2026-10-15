@@ -10,6 +10,7 @@ using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Features.Tables;
 using DrinkIt.Api.Features.VipAccounts;
+using DrinkIt.Api.Features.Waiter;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Infrastructure;
@@ -32,6 +33,7 @@ builder.Services.AddOrderHandlers();
 builder.Services.AddKdsHandlers();
 builder.Services.AddCashierHandlers();
 builder.Services.AddTableHandlers();
+builder.Services.AddWaiterHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
