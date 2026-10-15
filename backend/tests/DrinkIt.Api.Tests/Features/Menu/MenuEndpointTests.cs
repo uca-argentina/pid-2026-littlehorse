@@ -2,6 +2,7 @@ using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Nights;
 using DrinkIt.Application.Venues;
 using Microsoft.AspNetCore.Http;
 
@@ -71,7 +72,7 @@ public class MenuEndpointTests
     public async Task GetAsync_WhenNoVenueHasThatSlug_RespondsWithNotFound()
     {
         IResult result = await MenuEndpoint.GetAsync(
-            "bar-que-no-existe", new CurrentVenue(), new Fake.Menu(), new FakeCategoryQueries(), CancellationToken.None);
+            "bar-que-no-existe", new CurrentVenue(), new Fake.Menu(), new FakeCategoryQueries(), new Fake.Tonight(true), TimeProvider.System, CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Get);
 
@@ -97,6 +98,39 @@ public class MenuEndpointTests
         Assert.Equal("Cervezas", response.Body.GetProperty("categories")[1].GetProperty("name").GetString());
     }
 
+    // US-35, criterion 3: the menu is still readable with no night on, and
+    // says so, so the phone warns before anybody puts an order together.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetAsync_Always_SaysWhetherTheVenueIsTakingOrders(bool nightIsOn)
+    {
+        HttpResponseSnapshot response = await MenuWith(new FakeCategoryQueries(), nightIsOn, GinTonic);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Equal(nightIsOn, response.Body.GetProperty("isTakingOrders").GetBoolean());
+        Assert.Equal(1, response.Body.GetProperty("items").GetArrayLength());
+    }
+
+    // The cards say what tonight's bars can serve: each KDS has its own stock
+    // for the night, and the venue's general stock is not something a
+    // customer can order from (US-37).
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task GetAsync_Always_ReadsTheMenuAgainstTonightsBars(bool nightIsOn)
+    {
+        Fake.Tonight tonight = new(nightIsOn);
+        Fake.Menu menu = new(GinTonic);
+        CurrentVenue venue = new();
+        venue.Resolve(new VenueIdentity(Guid.CreateVersion7(), "Bar Alfa", "bar-alfa"));
+
+        await MenuEndpoint.GetAsync("bar-alfa", venue, menu, new FakeCategoryQueries(), tonight, TimeProvider.System, CancellationToken.None);
+
+        Assert.True(menu.WasRead);
+        Assert.Equal(tonight.Id, menu.ReadForNight);
+    }
+
     // Nothing about how many are left leaves the building.
     [Fact]
     public async Task GetAsync_WhenTheVenueSellsSomething_SendsNoStockCount()
@@ -107,28 +141,48 @@ public class MenuEndpointTests
     }
 
     private static async Task<HttpResponseSnapshot> Menu(params MenuItem[] items) =>
-        await MenuWith(new FakeCategoryQueries(), items);
+        await MenuWith(new FakeCategoryQueries(), nightIsOn: true, items);
 
-    private static async Task<HttpResponseSnapshot> MenuWith(FakeCategoryQueries categories, params MenuItem[] items)
+    private static async Task<HttpResponseSnapshot> MenuWith(FakeCategoryQueries categories, params MenuItem[] items) =>
+        await MenuWith(categories, nightIsOn: true, items);
+
+    private static async Task<HttpResponseSnapshot> MenuWith(FakeCategoryQueries categories, bool nightIsOn, params MenuItem[] items)
     {
         CurrentVenue venue = new();
         venue.Resolve(new VenueIdentity(Guid.CreateVersion7(), "Bar Alfa", "bar-alfa"));
 
         IResult result = await MenuEndpoint.GetAsync(
-            "bar-alfa", venue, new Fake.Menu(items), categories, CancellationToken.None);
+            "bar-alfa", venue, new Fake.Menu(items), categories, new Fake.Tonight(nightIsOn), TimeProvider.System, CancellationToken.None);
 
         return await EndpointResponse.Execute(result, Path, HttpMethods.Get);
     }
 
     private static class Fake
     {
+        public sealed class Tonight(bool isOn) : IUnderwayNightLookup
+        {
+            public Guid? Id { get; } = isOn ? Guid.CreateVersion7() : null;
+
+            public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken) =>
+                Task.FromResult(Id);
+        }
+
         public sealed class Menu(params MenuItem[] items) : IProductQueries
         {
+            public bool WasRead { get; private set; }
+
+            public Guid? ReadForNight { get; private set; }
+
             public Task<IReadOnlyList<ProductListItem>> ListAsync(CancellationToken cancellationToken) =>
                 throw new NotSupportedException("The customer's menu never reads the administration listing.");
 
-            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(CancellationToken cancellationToken) =>
-                Task.FromResult<IReadOnlyList<MenuItem>>(items);
+            public Task<IReadOnlyList<MenuItem>> ListForMenuAsync(Guid? nightId, CancellationToken cancellationToken)
+            {
+                WasRead = true;
+                ReadForNight = nightId;
+
+                return Task.FromResult<IReadOnlyList<MenuItem>>(items);
+            }
         }
     }
 }

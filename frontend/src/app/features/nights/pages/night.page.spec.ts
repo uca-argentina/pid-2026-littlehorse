@@ -1,0 +1,294 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { render, screen } from '@testing-library/angular';
+import { of } from 'rxjs';
+import { ProblemTypes } from '../../../core/api/problem-types';
+import { STAFF_USERS_URL } from '../../staff-users/staff-users.service';
+import { TABLES_URL } from '../../tables/tables.service';
+import type { VipTable } from '../../tables/tables.service';
+import type { StaffUser } from '../../staff-users/staff-users.service';
+import { NIGHTS_URL, NightsService } from '../nights.service';
+import type { NightTable } from '../nights.service';
+import type { Night, NightStock } from '../nights.service';
+import { NightPage } from './night.page';
+
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
+const theTeam: StaffUser[] = [
+  {
+    id: 'main-bar',
+    username: 'main-bar',
+    displayName: null,
+    role: 'Kds',
+    isActive: true,
+    audit: noAudit,
+  },
+  {
+    id: 'till-1',
+    username: 'till-1',
+    displayName: null,
+    role: 'Cashier',
+    isActive: true,
+    audit: noAudit,
+  },
+  {
+    id: 'martin',
+    username: 'martin',
+    displayName: null,
+    role: 'Waiter',
+    isActive: true,
+    audit: noAudit,
+  },
+];
+
+const saturday: Night = {
+  id: 'night-1',
+  name: 'Saturday',
+  startsAt: new Date(2026, 9, 10, 23, 0).toISOString(),
+  endsAt: new Date(2026, 9, 11, 6, 0).toISOString(),
+  crewIds: ['main-bar', 'till-1'],
+  audit: noAudit,
+};
+
+const itsStock: NightStock = {
+  nightId: 'night-1',
+  bars: [
+    {
+      kdsId: 'main-bar',
+      name: 'main-bar',
+      lines: [
+        {
+          productId: 'gin',
+          productName: 'Gin Tonic',
+          loaded: 12,
+          sold: 7,
+          left: 5,
+          inStoreroom: 18,
+        },
+      ],
+    },
+  ],
+};
+
+const beforeItStarts = new Date(2026, 9, 10, 20, 0);
+const whileItIsOn = new Date(2026, 9, 11, 1, 0);
+const afterItEnded = new Date(2026, 9, 11, 7, 0);
+
+async function openScreen(now: Date, update = vi.fn().mockReturnValue(of(saturday))) {
+  vi.setSystemTime(now);
+
+  const rendered = await render(NightPage, {
+    inputs: { venueSlug: 'bar-alfa', id: 'night-1' },
+    providers: [
+      provideRouter([{ path: ':venueSlug/staff/nights', children: [] }]),
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: NightsService, useValue: { update } },
+    ],
+  });
+
+  return { rendered, update, http: TestBed.inject(HttpTestingController) };
+}
+
+/**
+ * The stock (US-37) is asked for by its own component, which only exists
+ * once the night arrived and was drawn: let that happen, then answer it.
+ */
+async function flushTheStock(http: HttpTestingController): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve));
+  TestBed.tick();
+  http.expectOne(`${NIGHTS_URL}/night-1/stock`).flush(itsStock);
+}
+
+const tableFive: VipTable = {
+  id: 't5',
+  number: 5,
+  capacity: 10,
+  location: 'Al lado de la cabina',
+  isActive: true,
+  audit: { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null },
+};
+
+const fiveTonight: NightTable = {
+  tableId: 't5',
+  number: 5,
+  capacity: 10,
+  location: 'Al lado de la cabina',
+  budget: 150000,
+  spent: 0,
+  accessCode: 'a'.repeat(32),
+};
+
+/** The venue's tables and the ones this night sells (US-40). */
+function flushTheTables(http: HttpTestingController, tonight: NightTable[] = []): void {
+  http.expectOne(TABLES_URL).flush([tableFive]);
+  http.expectOne(`${NIGHTS_URL}/night-1/tables`).flush(tonight);
+}
+
+async function openScreenShowing(
+  night: Night,
+  now: Date,
+  update?: Parameters<typeof openScreen>[1],
+  tonight: NightTable[] = [],
+) {
+  const opened = await openScreen(now, update);
+
+  opened.http.expectOne(`${NIGHTS_URL}/night-1`).flush(night);
+  opened.http.expectOne(STAFF_USERS_URL).flush(theTeam);
+  flushTheTables(opened.http, tonight);
+  await flushTheStock(opened.http);
+  await opened.rendered.fixture.whenStable();
+
+  return opened;
+}
+
+describe('NightPage', () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ['Date'] }));
+  afterEach(() => vi.useRealTimers());
+
+  it('opens the saved night ready to edit before it starts', async () => {
+    await openScreenShowing(saturday, beforeItStarts);
+
+    expect(screen.getByRole('heading', { name: 'Saturday' })).not.toBeNull();
+    expect((screen.getByLabelText(/nombre/i) as HTMLInputElement).value).toBe('Saturday');
+    expect((screen.getByLabelText(/empieza/i) as HTMLInputElement).disabled).toBe(false);
+    expect(screen.getByText('Próxima')).not.toBeNull();
+  });
+
+  it('saves the edit through the API and goes back to the listing', async () => {
+    const { rendered, update } = await openScreenShowing(saturday, beforeItStarts);
+
+    screen.getByRole('button', { name: /guardar cambios/i }).click();
+    await rendered.fixture.whenStable();
+
+    expect(update).toHaveBeenCalledWith('night-1', {
+      name: 'Saturday',
+      startsAt: saturday.startsAt,
+      endsAt: saturday.endsAt,
+      crewIds: ['main-bar', 'till-1'],
+      tables: [],
+    });
+  });
+
+  // Its orders already belong to it from its start.
+  it('locks the start of a night that is on', async () => {
+    await openScreenShowing(saturday, whileItIsOn);
+
+    expect(screen.getByText('En curso')).not.toBeNull();
+    expect((screen.getByLabelText(/empieza/i) as HTMLInputElement).disabled).toBe(true);
+  });
+
+  // Its metrics are read against those hours, so it is shown, not edited.
+  it('shows a finished night with its crew, and nothing to save', async () => {
+    await openScreenShowing(saturday, afterItEnded);
+
+    expect(screen.getByText('Terminada')).not.toBeNull();
+    // The crew, not the stock's section of the same bar further down.
+    expect(screen.getByText('main-bar', { selector: 'dd' })).not.toBeNull();
+    expect(screen.getByText('till-1')).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /guardar/i })).toBeNull();
+    expect(screen.queryByLabelText(/nombre/i)).toBeNull();
+  });
+
+  // US-37: the night's stock lives in its own screen, editable or not.
+  it("shows the night's stock under its form", async () => {
+    await openScreenShowing(saturday, beforeItStarts);
+
+    expect(screen.getByRole('heading', { name: /stock de la noche/i })).not.toBeNull();
+    expect(screen.getByRole('button', { name: /cargar/i })).not.toBeNull();
+  });
+
+  it("shows a finished night's stock without offering to change it", async () => {
+    await openScreenShowing(saturday, afterItEnded);
+
+    expect(screen.getByText(/se cargaron 12/i)).not.toBeNull();
+    expect(screen.queryByRole('button', { name: /cargar/i })).toBeNull();
+  });
+
+  // The way into the night's report (US-47 to US-49), once it has orders.
+  // Saving a form drawn before the night's tables arrive would send none of
+  // them, and take every table out of the night.
+  it("does not offer the form until the night's tables arrive", async () => {
+    const { rendered, http } = await openScreen(beforeItStarts);
+
+    http.expectOne(`${NIGHTS_URL}/night-1`).flush(saturday);
+    http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    http.expectOne(TABLES_URL).flush([tableFive]);
+    // Not whenStable: the night's tables are still on their way, on purpose.
+    rendered.fixture.detectChanges();
+    TestBed.tick();
+
+    expect(screen.queryByRole('button', { name: /guardar cambios/i })).toBeNull();
+  });
+
+  it('starts the form from the tables the night sells', async () => {
+    await openScreenShowing(saturday, beforeItStarts, undefined, [fiveTonight]);
+
+    expect((screen.getByRole('checkbox', { name: 'Mesa 5' }) as HTMLInputElement).checked).toBe(
+      true,
+    );
+    expect((screen.getByLabelText('Presupuesto de la mesa 5') as HTMLInputElement).value).toBe(
+      '150000',
+    );
+  });
+
+  it('shows the tables of a finished night with their budgets', async () => {
+    await openScreenShowing(saturday, afterItEnded, undefined, [fiveTonight]);
+
+    expect(screen.getByText(/Mesa 5/).closest('dd')?.textContent).toContain('$ 150.000');
+  });
+
+  it('links to the report of a night that is on', async () => {
+    await openScreenShowing(saturday, whileItIsOn);
+
+    expect(
+      screen.getByRole('link', { name: /ver reporte de la noche/i }).getAttribute('href'),
+    ).toBe('/bar-alfa/staff/reports/night-1');
+  });
+
+  it('links to the report of a finished night', async () => {
+    await openScreenShowing(saturday, afterItEnded);
+
+    expect(screen.getByRole('link', { name: /ver reporte de la noche/i })).not.toBeNull();
+  });
+
+  // Nothing has been ordered yet, so there is nothing to report.
+  it('offers no report before the night starts', async () => {
+    await openScreenShowing(saturday, beforeItStarts);
+
+    expect(screen.queryByRole('link', { name: /ver reporte/i })).toBeNull();
+  });
+
+  it('says so when the venue has no such night', async () => {
+    const { rendered, http } = await openScreen(beforeItStarts);
+
+    http
+      .expectOne(`${NIGHTS_URL}/night-1`)
+      .flush({ type: ProblemTypes.nightNotFound }, { status: 404, statusText: 'Not Found' });
+    http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    flushTheTables(http);
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toContain('No encontramos esa noche');
+    expect(screen.queryByRole('button', { name: /reintentar/i })).toBeNull();
+  });
+
+  it('offers to try again when the night cannot be loaded', async () => {
+    const { rendered, http } = await openScreen(beforeItStarts);
+
+    http.expectOne(`${NIGHTS_URL}/night-1`).flush('', { status: 500, statusText: 'Server Error' });
+    http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    flushTheTables(http);
+    await rendered.fixture.whenStable();
+
+    screen.getByRole('button', { name: /reintentar/i }).click();
+    TestBed.tick();
+    http.expectOne(`${NIGHTS_URL}/night-1`).flush(saturday);
+    await flushTheStock(http);
+    await rendered.fixture.whenStable();
+
+    expect((screen.getByLabelText(/nombre/i) as HTMLInputElement).value).toBe('Saturday');
+  });
+});

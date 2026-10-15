@@ -9,15 +9,18 @@ namespace DrinkIt.Domain.Orders;
 /// positional record generates init setters, and the architecture tests refuse
 /// a public setter anywhere in the domain.
 /// </remarks>
-public sealed record OrderDeliveryUndone : IOrderChanged
+public sealed record OrderDeliveryUndone : IBoardChanged
 {
-    public OrderDeliveryUndone(Guid venueId, TrackingToken trackingToken)
+    public OrderDeliveryUndone(Guid venueId, Guid? kdsId, TrackingToken trackingToken)
     {
         VenueId = venueId;
+        KdsId = kdsId;
         TrackingToken = trackingToken;
     }
 
     public Guid VenueId { get; }
+
+    public Guid? KdsId { get; }
 
     public TrackingToken TrackingToken { get; }
 }

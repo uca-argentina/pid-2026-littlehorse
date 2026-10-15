@@ -1,0 +1,77 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <section class="body" [attr.aria-busy]="nights.isLoading()">
+    <div class="bar">
+      <h1 class="title">Noches</h1>
+      <a class="cta" [routerLink]="['/', venueSlug(), 'staff', 'nights', 'new']">Nueva noche</a>
+    </div>
+
+    @if (nights.isLoading()) {
+      <p class="note" role="status" [class.dk-sr-only]="!isSlow()">
+        Cargando las noches…
+        @if (isSlow()) {
+          Está tardando más de lo normal, seguimos buscando.
+        }
+      </p>
+
+      <ul class="rows" data-testid="nights-skeleton" aria-hidden="true">
+        @for (row of skeletonRows; track row) {
+          <li class="row">
+            <div class="dk-skeleton skeleton-name"></div>
+            <div class="dk-skeleton skeleton-chip"></div>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (failure() === 'forbidden') {
+      <p class="note note-bad" role="alert">
+        Esta pantalla es de administración y tu cuenta ya no lo es. Pedile a un administrador que te
+        la vuelva a dar.
+      </p>
+    } @else if (failure() === 'unreachable') {
+      <div class="note note-bad failed" role="alert">
+        <span>No pudimos traer las noches. Fijate la señal y probá de nuevo.</span>
+        <button class="retry" type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+
+    @if (isEmpty()) {
+      <p class="note" role="status">
+        Todavía no armaste ninguna noche. Sin una noche en curso, los clientes ven la carta pero no
+        pueden pedir.
+      </p>
+    }
+
+    @if (rows().length > 0) {
+      <ul class="rows">
+        @for (row of rows(); track row.id) {
+          <li>
+            <!-- The whole row is the way in: a night is opened to see it or
+                 to change it, and a small "Editar" would be the only target. -->
+            <a
+              class="row"
+              [class.row-off]="row.phase === 'over'"
+              [routerLink]="['/', venueSlug(), 'staff', 'nights', row.id]"
+            >
+              <span class="what">
+                <span class="name">{{ row.name }}</span>
+                <span class="hours">{{ row.hours }} · {{ row.crew }}</span>
+              </span>
+              <span class="chip" [class.chip-on]="row.phase === 'underway'">{{
+                row.phaseName
+              }}</span>
+              <span class="go" aria-hidden="true">›</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+
+    <p class="hint">
+      Sólo el personal de la noche en curso ve sus pedidos. Vos, como administrador, ves todo
+      siempre.
+    </p>
+  </section>
+</div>

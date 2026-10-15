@@ -3,20 +3,30 @@ using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Metrics;
+using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
+using DrinkIt.Application.Tables;
 using DrinkIt.Application.Venues;
+using DrinkIt.Application.VipAccounts;
+using DrinkIt.Application.Waiter;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Menu;
+using DrinkIt.Infrastructure.Metrics;
+using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Seeding;
 using DrinkIt.Infrastructure.Security;
 using DrinkIt.Infrastructure.Staff;
+using DrinkIt.Infrastructure.Tables;
 using DrinkIt.Infrastructure.Venues;
+using DrinkIt.Infrastructure.VipAccounts;
+using DrinkIt.Infrastructure.Waiter;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +73,9 @@ public static class InfrastructureServices
         services.AddScoped<IProductQueries, ProductQueries>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICategoryQueries, CategoryQueries>();
+        services.AddScoped<ITableRepository, TableRepository>();
+        services.AddScoped<ITableQueries, TableQueries>();
+        services.AddScoped<IWaiterQueries, WaiterQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductsForOrdering, ProductsForOrdering>();
@@ -70,6 +83,17 @@ public static class InfrastructureServices
         services.AddScoped<IOrderTrackingQueries, OrderTrackingQueries>();
         services.AddScoped<IKdsQueueQueries, KdsQueueQueries>();
         services.AddScoped<ICashierQueries, CashierQueries>();
+        services.AddScoped<INightRepository, NightRepository>();
+        services.AddScoped<IVipAccountRepository, VipAccountRepository>();
+        services.AddScoped<IVipAccountQueries, VipAccountQueries>();
+        services.AddScoped<INightTableQueries, NightTableQueries>();
+        services.AddScoped<INightQueries, NightQueries>();
+        services.AddScoped<INightStockQueries, NightStockQueries>();
+        services.AddScoped<INightMetricsQueries, NightMetricsQueries>();
+        services.AddScoped<INightStockRepository, NightStockRepository>();
+        services.AddScoped<IBarsForOrdering, BarsForOrdering>();
+        services.AddScoped<IUnderwayNightLookup, UnderwayNightLookup>();
+        services.AddScoped<ITonightsCrew, TonightsCrew>();
 
         // Implemented in Application, not here — same reason as DigitalPaymentStrategy
         // below — but registered from this composition root either way.
@@ -79,8 +103,10 @@ public static class InfrastructureServices
         // notifier only holds IHubContext, which is itself a singleton — no
         // DbContext, no per-request state.
         services.AddSignalR();
+        services.AddScoped<KdsBeats>();
         services.AddSingleton<IKdsBoardNotifier, KdsBoardNotifier>();
         services.AddSingleton<ITillNotifier, TillNotifier>();
+        services.AddSingleton<IWaiterBoardNotifier, WaiterBoardNotifier>();
         services.AddSingleton<IOrderFollowers, OrderFollowers>();
 
         // Registered as a collection on purpose: the handler picks the strategy
@@ -88,6 +114,7 @@ public static class InfrastructureServices
         // adding a class here and touching nothing else.
         services.AddScoped<IPaymentStrategy, DigitalPaymentStrategy>();
         services.AddScoped<IPaymentStrategy, CashPaymentStrategy>();
+        services.AddScoped<IPaymentStrategy, VipBalancePaymentStrategy>();
 
         return services;
     }

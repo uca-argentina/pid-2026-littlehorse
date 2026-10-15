@@ -22,6 +22,9 @@ function anOrder(code: string, status: CustomerOrderStatus): TrackedOrder {
     status,
     total: 9000,
     paidAt: null,
+    barName: null,
+    tableNumber: null,
+    waiterName: null,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
   };
 }
@@ -167,6 +170,20 @@ describe('OrdersInProgress', () => {
 
     expect(screen.getByRole('link', { name: /Tu pedido K-4821/ }).textContent).toContain(
       '¡Está listo! Retiralo en la barra',
+    );
+  });
+
+  // US-36: with more than one bar, "la barra" does not say which.
+  it('names the bar the order is ready at', async () => {
+    const { rendered, http } = await openMenuHaving([['K-4821', token]]);
+
+    http
+      .expectOne(trackingUrl('bar-alfa', 'K-4821', token))
+      .flush({ ...anOrder('K-4821', 'Ready'), barName: 'Barra Pista' });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('link', { name: /Tu pedido K-4821/ }).textContent).toContain(
+      '¡Está listo! Retiralo en Barra Pista',
     );
   });
 

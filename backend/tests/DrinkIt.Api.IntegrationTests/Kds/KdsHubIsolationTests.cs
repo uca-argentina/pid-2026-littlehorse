@@ -31,11 +31,11 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
     [Fact]
     public async Task BoardChanged_WhenAnotherVenuesQueueChanges_IsNeverReceived()
     {
-        Guid mine = Guid.CreateVersion7();
-        Guid theirs = Guid.CreateVersion7();
+        (Guid mine, Guid mineAccount) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
+        (Guid theirs, Guid theirsAccount) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
 
-        await using HubConnection mineConnection = await ConnectedAsKds(mine);
-        await using HubConnection theirsConnection = await ConnectedAsKds(theirs);
+        await using HubConnection mineConnection = await ConnectedAsKds(mine, mineAccount);
+        await using HubConnection theirsConnection = await ConnectedAsKds(theirs, theirsAccount);
 
         TaskCompletionSource mineNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource theirsNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -43,7 +43,7 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
         theirsConnection.On(KdsHub.BoardChanged, () => theirsNotified.TrySetResult());
 
         IKdsBoardNotifier notifier = _factory.Services.GetRequiredService<IKdsBoardNotifier>();
-        await UntilHeard(() => notifier.NotifyBoardChangedAsync(mine, CancellationToken.None), mineNotified.Task);
+        await UntilHeard(() => notifier.NotifyBoardChangedAsync(mine, mineAccount, CancellationToken.None), mineNotified.Task);
 
         // A generous window for the wrong message to arrive before declaring
         // the silence meaningful — the failure mode of a race is a flaky pass,
@@ -56,39 +56,63 @@ public sealed class KdsHubIsolationTests(SqlServerFixture sql) : IAsyncDisposabl
     [Fact]
     public async Task BoardChanged_WhenItsOwnVenuesQueueChanges_IsReceived()
     {
-        Guid venueId = Guid.CreateVersion7();
+        (Guid venueId, Guid account) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
 
-        await using HubConnection connection = await ConnectedAsKds(venueId);
+        await using HubConnection connection = await ConnectedAsKds(venueId, account);
 
         TaskCompletionSource notified = new(TaskCreationOptions.RunContinuationsAsynchronously);
         connection.On(KdsHub.BoardChanged, () => notified.TrySetResult());
 
         IKdsBoardNotifier notifier = _factory.Services.GetRequiredService<IKdsBoardNotifier>();
-        await UntilHeard(() => notifier.NotifyBoardChangedAsync(venueId, CancellationToken.None), notified.Task);
+        await UntilHeard(() => notifier.NotifyBoardChangedAsync(venueId, account, CancellationToken.None), notified.Task);
     }
 
+    // US-36: each bar's board shows only its own orders, so a move redraws the
+    // board of that bar and no other of the same venue.
     [Fact]
-    public async Task OnConnectedAsync_WhenTheTokenCarriesNoVenue_ClosesTheConnection()
+    public async Task BoardChanged_WhenAnotherBarsQueueChanges_IsNeverReceived()
     {
-        await using HubConnection connection = await ConnectedWith(SignedKdsTokenWithoutVenue());
+        (Guid venueId, Guid itsBar) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
+        Guid anotherBar = await SeedTonight.AnotherAccountWorkingTonight(sql, venueId, StaffRole.Kds);
 
-        TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        connection.Closed += _ =>
-        {
-            closed.TrySetResult();
-            return Task.CompletedTask;
-        };
+        await using HubConnection itsConnection = await ConnectedAsKds(venueId, itsBar);
+        await using HubConnection anotherConnection = await ConnectedAsKds(venueId, anotherBar);
 
-        // Already closed by the time the handler was attached counts too.
-        if (connection.State == HubConnectionState.Disconnected) closed.TrySetResult();
+        TaskCompletionSource itsNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource anotherNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        itsConnection.On(KdsHub.BoardChanged, () => itsNotified.TrySetResult());
+        anotherConnection.On(KdsHub.BoardChanged, () => anotherNotified.TrySetResult());
 
-        await closed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        IKdsBoardNotifier notifier = _factory.Services.GetRequiredService<IKdsBoardNotifier>();
+        await UntilHeard(() => notifier.NotifyBoardChangedAsync(venueId, itsBar, CancellationToken.None), itsNotified.Task);
+
+        await Task.WhenAny(anotherNotified.Task, Task.Delay(TimeSpan.FromSeconds(1)));
+
+        Assert.False(anotherNotified.Task.IsCompleted);
     }
 
-    private async Task<HubConnection> ConnectedAsKds(Guid venueId)
+    // Refused at the door since US-35: no venue means no night, and so no crew
+    // to be in. The hub's own check in OnConnectedAsync stays behind it.
+    [Fact]
+    public async Task StartAsync_WhenTheTokenCarriesNoVenue_IsRefused()
+    {
+        await Assert.ThrowsAnyAsync<Exception>(() => ConnectedWith(SignedKdsTokenWithoutVenue()));
+    }
+
+    // US-35, criterion 4: right role, right venue, not in tonight's crew.
+    [Fact]
+    public async Task StartAsync_WhenTheAccountIsNotInTonightsCrew_IsRefused()
+    {
+        (Guid venueId, _) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Kds);
+        Guid outsider = await SeedTonight.AnAccountOffTonight(sql, venueId, StaffRole.Kds);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => ConnectedAsKds(venueId, outsider));
+    }
+
+    private async Task<HubConnection> ConnectedAsKds(Guid venueId, Guid account)
     {
         ITokenIssuer tokenIssuer = _factory.Services.GetRequiredService<ITokenIssuer>();
-        AccessToken token = tokenIssuer.Issue(Guid.CreateVersion7(), venueId, "kds", StaffRole.Kds);
+        AccessToken token = tokenIssuer.Issue(account, venueId, "kds", StaffRole.Kds);
 
         return await ConnectedWith(token.Value);
     }

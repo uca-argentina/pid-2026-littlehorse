@@ -1,0 +1,178 @@
+// Same skin as the staff listing (staff-users.page.scss): the administration
+// screens read as one product.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 900px;
+  padding: var(--dk-space-5);
+  margin: 0 auto;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 50px;
+  padding: 0 var(--dk-space-5);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 15.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cta:hover {
+  background: var(--dk-accent-hover);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  color: inherit;
+  text-decoration: none;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  padding: 13px var(--dk-space-4);
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+}
+
+a.row:hover {
+  border-color: var(--dk-accent);
+}
+
+.go {
+  color: var(--dk-text-muted);
+  font-size: 22px;
+}
+
+// Faded, not hidden: the metrics (US-47 to US-49) are read per finished night.
+.row-off {
+  opacity: 0.65;
+}
+
+.what {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.hours {
+  color: var(--dk-text-muted);
+  font-size: 14px;
+}
+
+.chip {
+  padding: 5px 11px;
+  border: 1.5px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  color: var(--dk-text-muted);
+  font-size: var(--dk-text-min);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+// The one that matters right now gets the accent; the word says it too.
+.chip-on {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}
+
+.note {
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 14.5px;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.failed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.retry {
+  min-height: var(--dk-tap-min);
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.hint {
+  margin: auto 0 0;
+  color: var(--dk-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.skeleton-name {
+  flex: 1;
+  max-width: 240px;
+  height: 18px;
+  margin-right: auto;
+}
+
+.skeleton-chip {
+  width: 90px;
+  height: 26px;
+  border-radius: var(--dk-radius-pill);
+}

@@ -5,6 +5,6 @@ namespace DrinkIt.Infrastructure.Kds;
 
 internal sealed class KdsBoardNotifier(IHubContext<KdsHub> hub) : IKdsBoardNotifier
 {
-    public Task NotifyBoardChangedAsync(Guid venueId, CancellationToken cancellationToken) =>
-        hub.Clients.Group(KdsHub.GroupFor(venueId)).SendAsync(KdsHub.BoardChanged, cancellationToken);
+    public Task NotifyBoardChangedAsync(Guid venueId, Guid kdsId, CancellationToken cancellationToken) =>
+        hub.Clients.Group(KdsHub.GroupFor(venueId, kdsId)).SendAsync(KdsHub.BoardChanged, cancellationToken);
 }

@@ -16,6 +16,9 @@ export type NewStaffUser = components['schemas']['CreateStaffUserRequest'];
  */
 export const STAFF_USERS_URL = '/api/staff/users';
 
+/** Kept in step with StaffUser.DisplayNameMaxLength in the domain. */
+export const DISPLAY_NAME_MAX_LENGTH = 40;
+
 @Injectable({ providedIn: 'root' })
 export class StaffUsersService {
   private readonly http = inject(HttpClient);
@@ -26,6 +29,11 @@ export class StaffUsersService {
 
   changeRole(id: string, role: StaffRole): Observable<StaffUser> {
     return this.http.put<StaffUser>(`${STAFF_USERS_URL}/${id}/role`, { role });
+  }
+
+  /** US-36: the name people read instead of the username. Null takes it away. */
+  rename(id: string, displayName: string | null): Observable<StaffUser> {
+    return this.http.put<StaffUser>(`${STAFF_USERS_URL}/${id}/display-name`, { displayName });
   }
 
   resetPassword(id: string, password: string): Observable<StaffUser> {

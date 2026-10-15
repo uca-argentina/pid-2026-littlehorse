@@ -11,6 +11,8 @@ import { formatPrice } from '../../../shared/money/price';
 import { slowLoading } from '../../../shared/loading/slow-loading';
 import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
 import { OrdersInProgress } from '../components/orders-in-progress';
+import { VipTables, vipTableUrl } from '../../../core/vip-table/vip-tables';
+import type { VipTableAccess } from '../../../core/vip-table/vip-tables';
 import { menuUrl } from '../menu.service';
 import type { Menu, MenuItem } from '../menu.service';
 
@@ -63,6 +65,37 @@ export class MenuPage {
     context: anonymously(),
   }));
 
+  private readonly vipTables = inject(VipTables);
+
+  /** US-41: the VIP table this phone orders for, when a waiter's QR opened one. */
+  private readonly tableCode = computed(() => this.vipTables.codeOf(this.venueSlug()));
+
+  protected readonly table = httpResource<VipTableAccess>(() => {
+    const code = this.tableCode();
+
+    return code === null
+      ? undefined
+      : { url: vipTableUrl(this.venueSlug(), code), context: anonymously() };
+  });
+
+  /** Criterion 1: "Mesa 5 · Saldo disponible $ 150.000,00". */
+  protected readonly tableLine = computed(() =>
+    this.table.hasValue()
+      ? `Mesa ${this.table.value().tableNumber} · Saldo disponible $ ${formatPrice(this.table.value().balance)}`
+      : null,
+  );
+
+  /** Criterion 4: the code ran out with its night, or the waiter replaced it. */
+  protected readonly tableIsGone = computed(() => {
+    const error = this.table.error();
+
+    return error !== undefined && problemTypeOf(error) === ProblemTypes.vipAccountNotFound;
+  });
+
+  protected orderForTheBar(): void {
+    this.vipTables.forget(this.venueSlug());
+  }
+
   protected readonly search = signal('');
 
   /** Opens on 'all', same as every visit: nothing about the last visit is remembered. */
@@ -109,6 +142,11 @@ export class MenuPage {
         ];
   });
 
+  /** Whether a night is on. While the menu loads there is nothing to add anyway. */
+  protected readonly isTakingOrders = computed(
+    () => !this.menu.hasValue() || this.menu.value().isTakingOrders,
+  );
+
   protected readonly cards = computed<MenuCard[]>(() => {
     const term = this.search().trim().toLowerCase();
     const category = this.activeCategory();
@@ -126,7 +164,9 @@ export class MenuPage {
           image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
           amount: item.price,
           price: formatPrice(item.price),
-          isOrderable: item.isOrderable,
+          // With no night on, every drink reads like one that ran out: on
+          // the menu, with no way to add it (US-35, criterion 3).
+          isOrderable: item.isOrderable && this.isTakingOrders(),
         }))
     );
   });

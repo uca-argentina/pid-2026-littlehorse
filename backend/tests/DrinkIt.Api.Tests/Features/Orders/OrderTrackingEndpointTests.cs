@@ -24,7 +24,26 @@ public class OrderTrackingEndpointTests
         OrderStatus.Queued,
         9000m,
         new DateTimeOffset(2026, 9, 17, 2, 30, 0, TimeSpan.Zero),
+        "Barra Pista",
         [new TrackedOrderItem("Gin Tonic", 2, "sin hielo")]);
+
+    // US-43: the customer of a table sees who is carrying it ("Martín lo está
+    // llevando"), and sees nobody while nobody has taken it.
+    [Fact]
+    public async Task FollowAsync_WhenAWaiterIsCarryingIt_SaysWhoSoTheCustomerCanSeeIt()
+    {
+        HttpResponseSnapshot response = await Follow(Waiting with { TableNumber = 5, WaiterName = "Martín" });
+
+        Assert.Equal("Martín", response.Text("waiterName"));
+    }
+
+    [Fact]
+    public async Task FollowAsync_WhenNobodyHasTakenIt_SaysNoWaiter()
+    {
+        HttpResponseSnapshot response = await Follow(Waiting with { TableNumber = 5 });
+
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, response.Body.GetProperty("waiterName").ValueKind);
+    }
 
     // Pins the shape: the Angular client is generated from it, and this is
     // fetched every three seconds by every phone in the venue.
@@ -39,6 +58,7 @@ public class OrderTrackingEndpointTests
         Assert.Equal("María Quadro", response.Text("customerName"));
         Assert.Equal(9000m, response.Body.GetProperty("total").GetDecimal());
         Assert.Equal("Gin Tonic", response.Body.GetProperty("items")[0].GetProperty("productName").GetString());
+        Assert.Equal("Barra Pista", response.Text("barName"));
     }
 
     /// <summary>

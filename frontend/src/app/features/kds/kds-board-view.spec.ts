@@ -15,6 +15,7 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     paidAt: '2026-09-28T01:00:00Z',
     lastModifiedAt: null,
     isForTable: false,
+    tableNumber: null,
     orderItems: [{ productName: 'Gin Tonic', quantity: 1, note: null }],
     ...overrides,
   };

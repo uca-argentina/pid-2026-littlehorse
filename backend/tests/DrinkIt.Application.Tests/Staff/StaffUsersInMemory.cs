@@ -37,6 +37,9 @@ internal sealed class StaffUsersInMemory(params StaffUser[] stored) : IStaffUser
     public Task<StaffUser?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(_stored.Find(user => user.Id == id));
 
+    public Task<IReadOnlyList<StaffUser>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<StaffUser>>(_stored.FindAll(user => ids.Contains(user.Id)));
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         Saves++;

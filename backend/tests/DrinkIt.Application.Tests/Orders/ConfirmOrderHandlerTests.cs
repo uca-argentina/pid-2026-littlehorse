@@ -1,5 +1,7 @@
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 
@@ -16,6 +18,59 @@ public class ConfirmOrderHandlerTests
     private readonly Catalog _menu = new(gin: 20, fernet: 20);
 
     private readonly OrdersInMemory _orders = new();
+
+    private static readonly Guid TheNight = Guid.CreateVersion7();
+
+    /// <summary>On by default: most of what is tested here happens during a night.</summary>
+    private readonly TonightIs _nights = new(TheNight);
+
+    // US-35, criterion 2: the order belongs to the night it was placed in.
+    [Fact]
+    public async Task HandleAsync_WhenANightIsUnderway_PlacesTheOrderInIt()
+    {
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(TheNight, _orders.Added!.NightId);
+    }
+
+    // Asked with the server's clock: the phone's would let anybody order at
+    // 07:00 by setting their own time back.
+    [Fact]
+    public async Task HandleAsync_Always_AsksForTheNightAtTheServersMoment()
+    {
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(Tonight, _nights.AskedAt);
+    }
+
+    // US-35, criterion 3, and the edge in its notes: a cart put together at
+    // 05:58 and confirmed at 06:01 gets the same answer.
+    [Fact]
+    public async Task HandleAsync_WhenNoNightIsUnderway_RefusesWithoutPlacingAnything()
+    {
+        _nights.Close();
+        SequenceThatCounts sequence = new();
+
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, sequence).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(OrderErrors.NotTakingOrders, result.Error);
+        Assert.Null(_orders.Added);
+        Assert.Equal(0, sequence.TimesAsked);
+    }
+
+    // A retry of an order placed at 05:59 that lands at 06:01 is the same
+    // order, not a new one: it is answered as before, not refused.
+    [Fact]
+    public async Task HandleAsync_WhenTheNightClosedBeforeARetryOfAnOrderItAlreadyHas_HandsBackThatOrder()
+    {
+        ConfirmOrderHandler handler = AHandler();
+        Result<ConfirmedOrder> first = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        _nights.Close();
+        Result<ConfirmedOrder> retry = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(first.Value.Code, retry.Value.Code);
+    }
 
     [Fact]
     public async Task HandleAsync_WhenEverythingIsInPlace_ConfirmsThePaidOrderIntoTheQueue()
@@ -129,6 +184,51 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(1, _orders.TimesAdded);
     }
 
+    // US-41, criterion 3: another phone of the same table spent at the same
+    // moment. Going round again reads the balance as it is now.
+    [Fact]
+    public async Task HandleAsync_WhenTheTablesBalanceMovedUnderneath_BuildsTheOrderAgainAndSucceeds()
+    {
+        _orders.RefusesTheFirst(VipAccountErrors.BalanceMoved);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(1, _orders.TimesAdded);
+    }
+
+    // What refuses the money is the method's call; the handler only passes it on.
+    [Fact]
+    public async Task HandleAsync_WhenThePaymentIsRefused_FailsWithItsReasonAndWritesNothing()
+    {
+        Result<ConfirmedOrder> result = await AHandlerPaidBy(new Refuses(VipAccountErrors.BalanceChanged))
+            .HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(VipAccountErrors.BalanceChanged, result.Error);
+        Assert.Null(_orders.Added);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenATableCodeIsSent_HandsItToThePayment()
+    {
+        PaysOnTheSpot payment = new(Tonight);
+
+        await AHandlerPaidBy(payment).HandleAsync(ATwoGinOrder() with { TableCode = "the-code" }, CancellationToken.None);
+
+        Assert.Equal("the-code", payment.Request!.TableCode);
+    }
+
+    // US-42: what the phone agreed to pay on top of the balance, untouched.
+    [Fact]
+    public async Task HandleAsync_WhenADifferenceIsAgreed_HandsItToThePayment()
+    {
+        PaysOnTheSpot payment = new(Tonight);
+
+        await AHandlerPaidBy(payment).HandleAsync(ATwoGinOrder() with { TableCode = "the-code", DigitalAmount = 4_000m }, CancellationToken.None);
+
+        Assert.Equal(4_000m, payment.Request!.DigitalAmount);
+    }
+
     // The same code, not a fresh one per attempt: asking again would leave a
     // hole in the venue's numbering for every race anybody loses.
     [Fact]
@@ -187,6 +287,62 @@ public class ConfirmOrderHandlerTests
         Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
         Assert.Equal("Gin Tonic", result.Error.Subject);
         Assert.Null(_orders.Added);
+    }
+
+    // US-36 and US-37: a paid order goes to the bar with less work among those
+    // that have all of it, and is taken from that bar's stock.
+    [Fact]
+    public async Task HandleAsync_WhenTwoBarsHaveItAll_SendsTheOrderToTheOneWithLessWork()
+    {
+        BarSupply busy = new(Guid.CreateVersion7(), 4, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 });
+        BarSupply quiet = new(Guid.CreateVersion7(), 1, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 });
+        Bars bars = new(busy, quiet);
+
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, bars: bars).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(quiet.KdsId, _orders.Added!.KdsId);
+        Assert.Equal(TheNight, bars.AskedFor);
+    }
+
+    // US-38: a bar whose tablet stopped beating two minutes ago, by the
+    // server's clock, gets nothing however little work it has.
+    [Fact]
+    public async Task HandleAsync_WhenTheQuieterBarIsDisconnected_SendsTheOrderToTheConnectedOne()
+    {
+        BarSupply busy = new(Guid.CreateVersion7(), 4, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 }, Tonight.AddSeconds(-20));
+        BarSupply quiet = new(Guid.CreateVersion7(), 1, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 }, Tonight.AddMinutes(-2));
+
+        await AHandlerOver(_menu, bars: new Bars(quiet, busy)).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(busy.KdsId, _orders.Added!.KdsId);
+    }
+
+    // The gins are in one bar and the fernet in the other: an order is not split
+    // between two bars, so nobody would have it all.
+    [Fact]
+    public async Task HandleAsync_WhenNoBarHasItAll_RejectsTheWholeOrderAndNamesADrink()
+    {
+        Bars bars = new(
+            new BarSupply(Guid.CreateVersion7(), 0, new Dictionary<Guid, int> { [_menu.Gin.Id] = 10 }),
+            new BarSupply(Guid.CreateVersion7(), 0, new Dictionary<Guid, int> { [_menu.Fernet.Id] = 10 }));
+
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, bars: bars).HandleAsync(
+            AnOrderOf(Two(_menu.Gin), One(_menu.Fernet)), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Equal("Fernet con Coca", result.Error.Subject);
+        Assert.Null(_orders.Added);
+    }
+
+    // A night whose bars have nothing loaded sells nothing.
+    [Fact]
+    public async Task HandleAsync_WhenTheNightHasNoBarWithStock_RejectsAndNamesTheDrink()
+    {
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, bars: new Bars()).HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Equal("Gin Tonic", result.Error.Subject);
     }
 
     [Fact]
@@ -277,27 +433,47 @@ public class ConfirmOrderHandlerTests
         Assert.IsType<OrderAwaitingPayment>(Assert.Single(_orders.Added.DomainEvents));
     }
 
+    // US-36: the bar is chosen when the money is in. Cash has not paid yet, so
+    // it holds no bar and takes no stock until the till collects it.
+    [Fact]
+    public async Task HandleAsync_WhenPaidInCash_GoesToNoBarYet()
+    {
+        await AHandler().HandleAsync(ATwoGinOrder(method: PaymentMethod.Cash), CancellationToken.None);
+
+        Assert.Null(_orders.Added!.KdsId);
+    }
+
+    // Still checked, so nobody walks to the till for a drink no bar has.
+    [Fact]
+    public async Task HandleAsync_WhenPaidInCashAndNoBarHasItAll_RejectsAndNamesTheDrink()
+    {
+        Result<ConfirmedOrder> result = await AHandlerOver(_menu, bars: new Bars())
+            .HandleAsync(ATwoGinOrder(method: PaymentMethod.Cash), CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Null(_orders.Added);
+    }
+
     /// <summary>
-    /// How far the order gets is the strategy's call, not the handler's.
+    /// Whether the money is in is the strategy's call; what follows once it is,
+    /// is the same for every way of paying (CLAUDE.md: they converge on the
+    /// same flow after Paid).
     /// </summary>
     /// <remarks>
-    /// The three ways of paying do not end in the same place. Digital and VIP
-    /// settle there and then and the drinks go straight to the bar; cash leaves
-    /// the order waiting at the till (§6 of the functional design), and putting
-    /// it in the queue before the cashier has taken the money would send drinks
-    /// to the bar that nobody paid for. If the handler is the one that enqueues,
-    /// building the cash method means editing the handler — which is the one
-    /// thing the Strategy is here to prevent.
+    /// A new way of paying that settles on the spot is only a class that pays:
+    /// queuing it into a bar is not its business, so it cannot forget to.
+    /// Cash, which does not pay here, stays at the till (the test above).
     /// </remarks>
     [Fact]
-    public async Task HandleAsync_WhenTheStrategyDoesNotQueueTheOrder_LeavesItWhereTheStrategyPutIt()
+    public async Task HandleAsync_WhenTheStrategyPaysOnTheSpot_QueuesTheOrderIntoABar()
     {
-        ConfirmOrderHandler handler = AHandlerPaidBy(new SettlesWithoutQueueing(Tonight));
+        ConfirmOrderHandler handler = AHandlerPaidBy(new PaysOnTheSpot(Tonight));
 
         Result<ConfirmedOrder> result = await handler.HandleAsync(ATwoGinOrder(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(OrderStatus.Paid, _orders.Added!.Status);
+        Assert.Equal(OrderStatus.Queued, _orders.Added!.Status);
+        Assert.NotNull(_orders.Added.KdsId);
     }
 
     private static OrderLineRequest One(Product product) => new(product.Id, 1, null);
@@ -319,31 +495,68 @@ public class ConfirmOrderHandlerTests
     private ConfirmOrderHandler AHandlerPaidBy(IPaymentStrategy payment) =>
         new(_orders,
             _menu,
+            _menu,
             new SequenceThatAnswers("K-4821"),
             [payment],
-            new TheVenueIsFixed(TheVenue));
+            new TheVenueIsFixed(TheVenue),
+            _nights,
+            new FixedClock(Tonight));
 
-    private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null) =>
+    private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null, IBarsForOrdering? bars = null) =>
         new(_orders,
             menu,
+            bars ?? menu,
             codes ?? new SequenceThatAnswers("K-4821"),
             [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
-            new TheVenueIsFixed(TheVenue));
+            new TheVenueIsFixed(TheVenue),
+            _nights,
+            new FixedClock(Tonight));
 
-    /// <summary>
-    /// A method that settles the money and stops, without sending the order
-    /// to the bar: proves the handler never queues on its own.
-    /// </summary>
-    private sealed class SettlesWithoutQueueing(DateTimeOffset now) : IPaymentStrategy
+    /// <summary>A method that only takes the money, as every method that pays on the spot does.</summary>
+    private sealed class PaysOnTheSpot(DateTimeOffset now) : IPaymentStrategy
     {
         public PaymentMethod Method => PaymentMethod.Digital;
 
-        public void Settle(Order order) => order.Pay(now, Method);
+        public PaymentRequest? Request { get; private set; }
+
+        public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken)
+        {
+            Request = request;
+            order.Pay(now, Method);
+
+            return Task.FromResult<Error?>(null);
+        }
+    }
+
+    /// <summary>A method that says no, as the table's balance does when it changed under the phone.</summary>
+    private sealed class Refuses(Error reason) : IPaymentStrategy
+    {
+        public PaymentMethod Method => PaymentMethod.Digital;
+
+        public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult<Error?>(reason);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    /// <summary>Which night is on, as the handler asks for it; the test can close it.</summary>
+    private sealed class TonightIs(Guid night) : IUnderwayNightLookup
+    {
+        private Guid? _underway = night;
+
+        public DateTimeOffset? AskedAt { get; private set; }
+
+        public void Close() => _underway = null;
+
+        public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken)
+        {
+            AskedAt = at;
+
+            return Task.FromResult(_underway);
+        }
     }
 
     private sealed class TheVenueIsFixed(Guid id) : ICurrentVenue
@@ -422,6 +635,9 @@ public class ConfirmOrderHandlerTests
         public Task<Order?> GetForUpdateAsync(OrderCode code, CancellationToken cancellationToken) =>
             throw new NotSupportedException("Confirming never loads an existing order.");
 
+        public Task<Order?> GetForUpdateAsync(Guid orderId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken) =>
             throw new NotSupportedException("Confirming never loads an existing order.");
 
@@ -430,6 +646,9 @@ public class ConfirmOrderHandlerTests
 
         public Task<Result<Order>> SaveCancellationAsync(Order order, CancellationToken cancellationToken) =>
             throw new NotSupportedException("Confirming saves through AddAsync.");
+
+        public Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken) =>
+            throw new NotSupportedException("Confirming saves through AddAsync.");
     }
 
     /// <summary>
@@ -437,8 +656,10 @@ public class ConfirmOrderHandlerTests
     /// products, so the ids the tests ask for are the ones the domain generated
     /// and nothing here has to invent one.
     /// </summary>
-    private sealed class Catalog(int gin, int fernet) : IProductsForOrdering
+    private sealed class Catalog(int gin, int fernet) : IProductsForOrdering, IBarsForOrdering
     {
+        public Guid MainBar { get; } = Guid.CreateVersion7();
+
         public Product Gin { get; } = Product.Create(TheVenue, "Gin Tonic", null, null, 4500m, gin, Guid.CreateVersion7());
 
         public Product Fernet { get; } = Product.Create(TheVenue, "Fernet con Coca", null, null, 4000m, fernet, Guid.CreateVersion7());
@@ -459,5 +680,23 @@ public class ConfirmOrderHandlerTests
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Product>>(
                 [.. new[] { Gin, Fernet }.Where(product => ids.Contains(product.Id))]);
+
+        /// <summary>One bar holding the whole stock: what the tests that are not about bars need.</summary>
+        public Task<IReadOnlyList<BarSupply>> GetAsync(Guid nightId, IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<BarSupply>>(
+                [new BarSupply(MainBar, 0, new Dictionary<Guid, int> { [Gin.Id] = gin, [Fernet.Id] = fernet })]);
+    }
+
+    /// <summary>The night's bars, as the tests about choosing one lay them out.</summary>
+    private sealed class Bars(params BarSupply[] bars) : IBarsForOrdering
+    {
+        public Guid? AskedFor { get; private set; }
+
+        public Task<IReadOnlyList<BarSupply>> GetAsync(Guid nightId, IReadOnlyCollection<Guid> productIds, CancellationToken cancellationToken)
+        {
+            AskedFor = nightId;
+
+            return Task.FromResult<IReadOnlyList<BarSupply>>(bars);
+        }
     }
 }

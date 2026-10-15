@@ -15,7 +15,8 @@ public class LoginHandlerTests
         Username: "euge",
         PasswordHash: Fake.HashOf(RightPassword),
         Role: StaffRole.Administrator,
-        IsActive: true);
+        IsActive: true,
+        DisplayName: null);
 
     [Fact]
     public async Task HandleAsync_WhenCredentialsAreValid_ReturnsASessionForThatUser()
@@ -29,6 +30,19 @@ public class LoginHandlerTests
         Assert.Equal(Fake.TokenFor(ActiveAdministrator.StaffUserId), result.Value.Token);
         Assert.Equal("euge", result.Value.Username);
         Assert.Equal(StaffRole.Administrator, result.Value.Role);
+    }
+
+    // US-36: the board's header names its bar, so the session carries the
+    // name the bar goes by.
+    [Fact]
+    public async Task HandleAsync_WhenTheAccountHasAName_CarriesItInTheSession()
+    {
+        LoginHandler handler = HandlerFinding(ActiveAdministrator with { DisplayName = "Barra Pista" });
+
+        Result<StaffSession> result = await handler.HandleAsync(
+            new LoginCommand("euge", RightPassword), CancellationToken.None);
+
+        Assert.Equal("Barra Pista", result.Value.DisplayName);
     }
 
     // The venue has to reach the token: from here on it is the only source of

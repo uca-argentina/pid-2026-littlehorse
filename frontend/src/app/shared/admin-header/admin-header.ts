@@ -2,10 +2,13 @@ import { Component, input } from '@angular/core';
 import { StaffHeader } from '../staff-header/staff-header';
 import type { StaffSection } from '../staff-header/staff-header';
 
-/** The two administration screens, reachable from each other. */
+/** The administration screens, reachable from each other. */
 const ADMINISTRATION: readonly StaffSection[] = [
   { label: 'Productos', path: 'products' },
   { label: 'Staff', path: 'users' },
+  { label: 'Noches', path: 'nights' },
+  { label: 'Mesas', path: 'tables' },
+  { label: 'Reportes', path: 'reports' },
 ];
 
 /** The staff header as every administration screen draws it. */

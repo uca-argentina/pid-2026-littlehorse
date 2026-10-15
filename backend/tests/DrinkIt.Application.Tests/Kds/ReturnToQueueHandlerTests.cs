@@ -11,14 +11,12 @@ public class ReturnToQueueHandlerTests
 
     private static Order AnOrderInPreparation()
     {
-        Order order = Order.Place(
-            TheVenue,
-            "María Quadro",
+        Order order = Order.Place(TheVenue, Guid.CreateVersion7(), "María Quadro",
             OrderCode.Parse("K-4821"),
             [new NewOrderItem(Guid.CreateVersion7(), "Gin Tonic", 4500m, 1, null)]);
         order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
-        order.Enqueue();
-        order.StartPreparing();
+        order.Enqueue(TestBars.Main);
+        order.StartPreparing(DateTimeOffset.UtcNow);
 
         return order;
     }
@@ -28,7 +26,7 @@ public class ReturnToQueueHandlerTests
     {
         Order order = AnOrderInPreparation();
 
-        Result<OrderStatus> result = await new ReturnToQueueHandler(new KdsOrdersInMemory(order))
+        Result<OrderStatus> result = await new ReturnToQueueHandler(new KdsOrdersInMemory(order), TheKdsIs.Main)
             .HandleAsync("K-4821", CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -41,7 +39,7 @@ public class ReturnToQueueHandlerTests
     {
         KdsOrdersInMemory orders = new(AnOrderInPreparation());
 
-        await new ReturnToQueueHandler(orders).HandleAsync("K-4821", CancellationToken.None);
+        await new ReturnToQueueHandler(orders, TheKdsIs.Main).HandleAsync("K-4821", CancellationToken.None);
 
         Assert.Equal(1, orders.Saves);
     }
@@ -49,7 +47,7 @@ public class ReturnToQueueHandlerTests
     [Fact]
     public async Task HandleAsync_WhenNoOrderHasThatCode_ReturnsNotFound()
     {
-        Result<OrderStatus> result = await new ReturnToQueueHandler(new KdsOrdersInMemory(AnOrderInPreparation()))
+        Result<OrderStatus> result = await new ReturnToQueueHandler(new KdsOrdersInMemory(AnOrderInPreparation()), TheKdsIs.Main)
             .HandleAsync("K-9999", CancellationToken.None);
 
         Assert.Equal(KdsErrors.OrderNotFound, result.Error);

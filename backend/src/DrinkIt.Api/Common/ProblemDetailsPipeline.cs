@@ -27,6 +27,17 @@ internal static class ProblemDetailsPipeline
         // Signing in again would change nothing: the token is fine, the role is
         // not the one that screen needs. Telling this apart from a 401 is what
         // keeps the PWA from bouncing a KDS to the login screen for ever.
+        if (status == StatusCodes.Status403Forbidden && NotInTonightsCrew.WasTheReason(context.HttpContext))
+        {
+            // The role is right; the night is not theirs (US-35, criterion 4).
+            // Neither signing in again nor another role changes that: the
+            // administrator adding them to the night does.
+            context.ProblemDetails.Type = ProblemTypes.For("auth.not_in_tonights_crew");
+            context.ProblemDetails.Title = "Not in tonight's crew";
+
+            return;
+        }
+
         if (status == StatusCodes.Status403Forbidden)
         {
             context.ProblemDetails.Type = ProblemTypes.For("auth.forbidden");

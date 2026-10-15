@@ -58,7 +58,10 @@ class FakeTillChannel {
 
 let channel: FakeTillChannel;
 
-async function openTheTill(pending: CashierOrder[] | 'fails' = [], collected: CashierOrder[] = []) {
+async function openTheTill(
+  pending: CashierOrder[] | 'fails' | 'notTonight' = [],
+  collected: CashierOrder[] = [],
+) {
   const rendered = await render(CashierPage, {
     inputs: { venueSlug: 'bar-alfa' },
     providers: [
@@ -74,6 +77,10 @@ async function openTheTill(pending: CashierOrder[] | 'fails' = [], collected: Ca
   const http = TestBed.inject(HttpTestingController);
 
   if (pending === 'fails') http.expectOne(CASHIER_ORDERS_URL).error(new ProgressEvent('error'));
+  else if (pending === 'notTonight')
+    http
+      .expectOne(CASHIER_ORDERS_URL)
+      .flush({ type: ProblemTypes.notInTonightsCrew }, { status: 403, statusText: 'Forbidden' });
   else http.expectOne(CASHIER_ORDERS_URL).flush(pending);
 
   http.expectOne(MY_COLLECTIONS_URL).flush(collected);
@@ -135,6 +142,17 @@ describe('CashierPage', () => {
 
     expect(screen.getByRole('alert').textContent).toMatch(/no pudimos traer los pedidos/i);
     expect(screen.getByRole('button', { name: /reintentar/i })).not.toBeNull();
+  });
+
+  // US-35, criterion 4: the till signs in, and its list says why it is empty.
+  it('says the account is not in tonight’s crew, and not that the connection dropped', async () => {
+    const { rendered } = await openTheTill('notTonight');
+
+    channel.state.set('reconnecting');
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toContain('no está en la noche de hoy');
+    expect(screen.queryByText(/sin conexión|no pudimos traer los pedidos/i)).toBeNull();
   });
 
   // The wireframe's "Cobros de tu turno", with what the drawer should hold.
@@ -498,6 +516,62 @@ describe('CashierPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('alert').textContent).toMatch(/ya está pago/i);
+  });
+
+  // US-36: cash takes its drinks when collected, and by then none was left.
+  // Nothing was charged; the order stays on screen so the till can cancel it.
+  it('says which drink ran out when collecting is refused for it, and keeps the order', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    collectButton().click();
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(collectUrl('K-4821'))
+      .flush(
+        { type: ProblemTypes.cashierSoldOut, productName: 'Gin Tonic' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/no queda gin tonic/i);
+    expect(screen.getByRole('alert').textContent).toMatch(/no cobres/i);
+    expect(collectButton()).not.toBeNull();
+  });
+
+  // Somebody kept buying the same drink while the till was collecting: the
+  // order still waits, so the cashier tries again — it is not "not found".
+  it('asks to try again when collecting keeps losing the race, and keeps the order', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    collectButton().click();
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(collectUrl('K-4821'))
+      .flush({ type: ProblemTypes.orderStockMoved }, { status: 409, statusText: 'Conflict' });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/probá cobrar de nuevo/i);
+    expect(collectButton()).not.toBeNull();
+  });
+
+  // The order belongs to a night that is over: nothing to collect it against.
+  it('says the order is from a night that is over, and does not collect it', async () => {
+    const { rendered, http } = await openTheTill([anOrder()]);
+
+    await openFromTheList('K-4821', rendered);
+    collectButton().click();
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(collectUrl('K-4821'))
+      .flush({ type: ProblemTypes.cashierNightOver }, { status: 409, statusText: 'Conflict' });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toMatch(/noche que ya terminó/i);
   });
 
   it('does not collect twice on a double tap', async () => {

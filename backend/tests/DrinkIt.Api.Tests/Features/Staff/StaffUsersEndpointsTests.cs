@@ -2,6 +2,7 @@ using DrinkIt.Api.Common;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Kds;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
 using DrinkIt.Domain.Staff;
@@ -56,8 +57,8 @@ public class StaffUsersEndpointsTests
     {
         StaffUserListItem[] stored =
         [
-            new(Guid.CreateVersion7(), "euge.q", StaffRole.Administrator, IsActive: true, new AuditInfo(Created, "euge.q", null, null)),
-            new(Guid.CreateVersion7(), "pablo.l", StaffRole.Waiter, IsActive: false, new AuditInfo(null, null, null, null)),
+            new(Guid.CreateVersion7(), "euge.q", null, StaffRole.Administrator, IsActive: true, new AuditInfo(Created, "euge.q", null, null)),
+            new(Guid.CreateVersion7(), "pablo.l", null, StaffRole.Waiter, IsActive: false, new AuditInfo(null, null, null, null)),
         ];
 
         IResult result = await StaffUsersEndpoints.ListAsync(new Fake.Queries(stored), CancellationToken.None);
@@ -77,8 +78,8 @@ public class StaffUsersEndpointsTests
     {
         StaffUserListItem[] stored =
         [
-            new(Guid.CreateVersion7(), "euge.q", StaffRole.Administrator, IsActive: true, new AuditInfo(Created, "root", Created.AddHours(1), "pablo.l")),
-            new(Guid.CreateVersion7(), "viejo.v", StaffRole.Waiter, IsActive: true, new AuditInfo(null, null, null, null)),
+            new(Guid.CreateVersion7(), "euge.q", null, StaffRole.Administrator, IsActive: true, new AuditInfo(Created, "root", Created.AddHours(1), "pablo.l")),
+            new(Guid.CreateVersion7(), "viejo.v", null, StaffRole.Waiter, IsActive: true, new AuditInfo(null, null, null, null)),
         ];
 
         IResult result = await StaffUsersEndpoints.ListAsync(new Fake.Queries(stored), CancellationToken.None);
@@ -132,6 +133,24 @@ public class StaffUsersEndpointsTests
         Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
         Assert.Equal("Kds", response.Text("role"));
         Assert.Equal("martin.p", response.Text("username"));
+    }
+
+    // US-36: the name a KDS shows as its bar's.
+    [Fact]
+    public async Task RenameAsync_WhenTheAccountIsThisVenues_RespondsWithTheUpdatedUser()
+    {
+        StaffUser martin = AWaiter();
+
+        IResult result = await StaffUsersEndpoints.RenameAsync(
+            martin.Id,
+            new RenameStaffUserRequest("Barra Pista"),
+            new RenameStaffUserHandler(new Fake.Repository(martin), new Fake.Boards()),
+            CancellationToken.None);
+
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Put);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        Assert.Equal("Barra Pista", response.Text("displayName"));
     }
 
     // Either nobody has that id or they belong to another venue, and the query
@@ -264,6 +283,12 @@ public class StaffUsersEndpointsTests
 
     private static class Fake
     {
+        /// <summary>No tablet listening: renaming a KDS tells its board, and nobody hears it here.</summary>
+        public sealed class Boards : IKdsBoardNotifier
+        {
+            public Task NotifyBoardChangedAsync(Guid venueId, Guid kdsId, CancellationToken cancellationToken) => Task.CompletedTask;
+        }
+
         public sealed class CurrentVenue : ICurrentVenue
         {
             public Guid Id { get; } = Guid.CreateVersion7();
@@ -286,6 +311,9 @@ public class StaffUsersEndpointsTests
 
             public Task<StaffUser?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
                 Task.FromResult(_stored.Find(user => user.Id == id));
+
+            public Task<IReadOnlyList<StaffUser>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<StaffUser>>(_stored.FindAll(user => ids.Contains(user.Id)));
 
             public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 

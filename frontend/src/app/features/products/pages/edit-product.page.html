@@ -26,8 +26,9 @@
 
       @if (store.status() === 'stockMoved') {
         <p class="note note-bad" role="alert">
-          Se vendió mientras tanto y ahora hay {{ product.stock }}: no alcanza para restar lo que
-          pusiste. El stock no se tocó; revisá el ajuste y guardá de nuevo.
+          No alcanza para restar lo que pusiste: hay {{ product.stock }} en total, pero parte se
+          vendió mientras tanto o está cargado en las barras de una noche que no terminó. El stock
+          no se tocó; revisá el ajuste y guardá de nuevo.
         </p>
       }
 

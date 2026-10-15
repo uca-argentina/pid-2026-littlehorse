@@ -1,15 +1,18 @@
 using System.Security.Claims;
 using DrinkIt.Api.Common;
+using DrinkIt.Application.Nights;
 using DrinkIt.Domain.Staff;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
+using DrinkIt.Infrastructure.Waiter;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace DrinkIt.Api.Tests.Common;
 
@@ -97,6 +100,28 @@ public class StaffAuthenticationTests
         Assert.False(result.Succeeded);
     }
 
+    // US-35, criterion 4: the right role is not enough while the account is
+    // not in the night's crew.
+    [Theory]
+    [InlineData(StaffRole.Waiter)]
+    [InlineData(StaffRole.Kds)]
+    [InlineData(StaffRole.Cashier)]
+    public async Task StationPolicy_WhenTheAccountIsNotInTonightsCrew_Refuses(StaffRole role)
+    {
+        AuthorizationResult result = await Authorize(role, role.ToString(), worksTonight: false);
+
+        Assert.False(result.Succeeded);
+    }
+
+    // The administrator is never limited by the night.
+    [Fact]
+    public async Task AdministratorPolicy_WhenNoNightListsTheAccount_StillAllows()
+    {
+        AuthorizationResult result = await Authorize(StaffRole.Administrator, Policies.Administrator, worksTonight: false);
+
+        Assert.True(result.Succeeded);
+    }
+
     /// <summary>
     /// US-15: a browser cannot set a header on a WebSocket or EventSource
     /// connection, so the KDS hub's own OnMessageReceived reads the token from
@@ -141,15 +166,55 @@ public class StaffAuthenticationTests
         Assert.Equal("a-till-connection-token", messageReceived.Token);
     }
 
-    private static async Task<AuthorizationResult> Authorize(StaffRole role, string policy)
+    // US-43: the waiter's own phone, and nobody else's.
+    [Fact]
+    public async Task WaiterPolicy_WhenTheTokenSaysWaiter_Allows()
     {
-        await using ServiceProvider provider = Configured();
+        AuthorizationResult result = await Authorize(StaffRole.Waiter, Policies.Waiter);
+
+        Assert.True(result.Succeeded);
+    }
+
+    // By exclusion, like the others: not even the administrator reads another
+    // role's list by omission.
+    [Theory]
+    [InlineData(StaffRole.Administrator)]
+    [InlineData(StaffRole.Kds)]
+    [InlineData(StaffRole.Cashier)]
+    public async Task WaiterPolicy_WhenTheTokenSaysAnythingElse_Refuses(StaffRole role)
+    {
+        AuthorizationResult result = await Authorize(role, Policies.Waiter);
+
+        Assert.False(result.Succeeded);
+    }
+
+    // US-43: the waiter's own hub, reached by a browser the same way.
+    [Fact]
+    public async Task AddStaffAuthentication_WhenTheWaitersHubConnectionCarriesTheTokenInTheQueryString_ReadsIt()
+    {
+        JwtBearerOptions options = ConfiguredBearerOptions();
+
+        DefaultHttpContext context = new();
+        context.Request.Path = WaiterHubRoute.Path;
+        context.Request.QueryString = new QueryString("?access_token=a-waiter-connection-token");
+
+        AuthenticationScheme scheme = new(JwtBearerDefaults.AuthenticationScheme, null, typeof(JwtBearerHandler));
+        MessageReceivedContext messageReceived = new(context, scheme, options);
+
+        await options.Events!.MessageReceived(messageReceived);
+
+        Assert.Equal("a-waiter-connection-token", messageReceived.Token);
+    }
+
+    private static async Task<AuthorizationResult> Authorize(StaffRole role, string policy, bool worksTonight = true)
+    {
+        await using ServiceProvider provider = Configured(worksTonight);
 
         // Built the way the bearer handler builds it once the mapping is off:
         // a claim named "role", on an identity that knows to read roles there.
         ClaimsPrincipal user = new(
             new ClaimsIdentity(
-                [new Claim(JwtClaims.Role, role.ToString())],
+                [new Claim(JwtClaims.Role, role.ToString()), new Claim(JwtRegisteredClaimNames.Sub, Guid.CreateVersion7().ToString())],
                 authenticationType: JwtBearerDefaults.AuthenticationScheme,
                 nameType: JwtClaims.Name,
                 roleType: JwtClaims.Role));
@@ -168,10 +233,12 @@ public class StaffAuthenticationTests
             .Get(JwtBearerDefaults.AuthenticationScheme);
     }
 
-    private static ServiceProvider Configured()
+    private static ServiceProvider Configured(bool worksTonight = true)
     {
         ServiceCollection services = new();
         services.AddLogging();
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<ITonightsCrew>(_ => new FixedCrew(worksTonight));
 
         // Any key of at least 32 bytes: HMAC-SHA256 refuses shorter ones, and
         // nothing here signs or verifies a real token.
@@ -181,5 +248,12 @@ public class StaffAuthenticationTests
         });
 
         return services.BuildServiceProvider();
+    }
+
+    /// <summary>The night's answer, fixed: the policy is under test here, not the query.</summary>
+    private sealed class FixedCrew(bool includes) : ITonightsCrew
+    {
+        public Task<bool> IncludesAsync(Guid staffUserId, DateTimeOffset at, CancellationToken cancellationToken) =>
+            Task.FromResult(includes);
     }
 }

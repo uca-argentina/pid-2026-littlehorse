@@ -16,6 +16,7 @@ function rejectedWith(status: number, type: string): HttpErrorResponse {
 const created: StaffUser = {
   id: '0199a0d2-0000-7000-8000-000000000001',
   username: 'martin.p',
+  displayName: null,
   role: 'Waiter',
   isActive: true,
   audit: noAudit,
@@ -23,6 +24,7 @@ const created: StaffUser = {
 
 const aNewUser: NewStaffUser = {
   username: 'martin.p',
+  displayName: null,
   password: 'a long enough one',
   role: 'Waiter',
 };

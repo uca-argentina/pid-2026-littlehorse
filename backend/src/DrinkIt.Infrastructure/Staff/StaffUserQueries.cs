@@ -21,6 +21,7 @@ internal sealed class StaffUserQueries(DrinkItDbContext context) : IStaffUserQue
             .Select(user => new StaffUserListItem(
                 user.Id,
                 user.Username,
+                user.DisplayName,
                 user.Role,
                 user.IsActive,
                 new AuditInfo(user.CreatedAt, user.CreatedBy, user.LastModifiedAt, user.LastModifiedBy)))

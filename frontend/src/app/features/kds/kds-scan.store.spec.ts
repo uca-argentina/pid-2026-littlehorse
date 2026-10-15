@@ -158,6 +158,21 @@ describe('KdsScanStore', () => {
     expect(scans.recent()[0]).toEqual(expect.objectContaining({ kind: 'unknown' }));
   });
 
+  // US-36: the customer is at the wrong bar. The order exists, so not "unknown".
+  it('says the order is picked up at another bar when the api says so', () => {
+    const { scans, http } = aStore();
+
+    scans.submit(token);
+    http
+      .expectOne(SCAN_URL)
+      .flush(
+        { type: 'urn:drinkit:problem:kds:at-another-bar' },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+    expect(scans.recent()[0]).toEqual(expect.objectContaining({ kind: 'atAnotherBar' }));
+  });
+
   /**
    * The scan never reached the API, so nothing was delivered. Saying so, and
    * letting the same QR through again at once, is what keeps the customer from

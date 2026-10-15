@@ -3,8 +3,11 @@ using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Menu;
+using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Staff;
 using DrinkIt.Domain.Venues;
+using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -67,6 +70,34 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         Assert.Equal(10, codes.Distinct(StringComparer.Ordinal).Count());
     }
 
+    // US-35, criterion 2, through the real lookup and the real table.
+    [Fact]
+    public async Task ConfirmOrder_WhenANightIsOn_StoresTheOrderInThatNight()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20);
+
+        await Confirm(venue, [new OrderLineRequest(gin.Id, 1, null)]);
+
+        await using DrinkItDbContext check = sql.CreateContext(venue.Id);
+        Order stored = await check.Orders.SingleAsync();
+        Night tonight = await check.Nights.SingleAsync();
+
+        Assert.Equal(tonight.Id, stored.NightId);
+    }
+
+    // US-35, criterion 3: the night ended, and confirming is closed.
+    [Fact]
+    public async Task ConfirmOrder_WhenNoNightIsOn_StoresNothing()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20, withNight: false);
+
+        Result<ConfirmedOrder> result = await Confirm(venue, [new OrderLineRequest(gin.Id, 1, null)]);
+
+        await using DrinkItDbContext check = sql.CreateContext(venue.Id);
+        Assert.Equal(OrderErrors.NotTakingOrders, result.Error);
+        Assert.Empty(await check.Orders.ToListAsync());
+    }
+
     // The order and the stock it sold are one write. An order that exists with
     // its drinks still on the shelf is the outcome this rules out.
     [Fact]
@@ -84,6 +115,23 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         Assert.Equal(Tonight, stored.PaidAt);
         Assert.Equal("Gin Tonic", stored.Items.Single().ProductName);
         Assert.Equal(17, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
+    }
+
+    // US-36: cash goes to no bar until the till collects it, and takes nothing
+    // off any bar or the general stock while it waits.
+    [Fact]
+    public async Task ConfirmOrder_WhenPaidInCash_StoresTheOrderWithoutABarOrAnyStockMoved()
+    {
+        (Venue venue, Product gin) = await AVenueSelling("Gin Tonic", stock: 20);
+
+        await Confirm(venue, [new OrderLineRequest(gin.Id, 3, null)], method: PaymentMethod.Cash);
+
+        await using DrinkItDbContext check = sql.CreateContext(venue.Id);
+        Order stored = await check.Orders.SingleAsync();
+        Assert.Equal(OrderStatus.AwaitingPayment, stored.Status);
+        Assert.Null(stored.KdsId);
+        Assert.Equal(20, (await check.BarStocks.SingleAsync()).Units);
+        Assert.Equal(20, (await check.Products.SingleAsync(product => product.Id == gin.Id)).Stock);
     }
 
     // Criterion 6 against a real database: the same key twice is one order and
@@ -290,6 +338,7 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
         OrderLineRequest[] lines,
         string key = "a-key",
         string name = "María Quadro",
+        PaymentMethod method = PaymentMethod.Digital,
         IDomainEventDispatcher? dispatcher = null,
         ILogger<OrderRepository>? logger = null,
         CancellationToken cancellationToken = default)
@@ -303,25 +352,43 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
                 dispatcher ?? new SpyDispatcher(),
                 logger ?? NullLogger<OrderRepository>.Instance),
             new ProductsForOrdering(context),
+            new BarsForOrdering(context),
             new OrderCodeSequence(context, current),
-            [new DigitalPaymentStrategy(new FixedClock(Tonight))],
-            current);
+            [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
+            current,
+            new UnderwayNightLookup(context),
+            new FixedClock(Tonight));
 
         return await handler.HandleAsync(
-            new ConfirmOrderCommand(name, PaymentMethod.Digital, key, lines),
+            new ConfirmOrderCommand(name, method, key, lines),
             cancellationToken);
     }
 
-    private async Task<(Venue Venue, Product Product)> AVenueSelling(string drink, int stock)
+    /// <summary>A venue with one drink, and by default a night on around <see cref="Tonight"/>.</summary>
+    private async Task<(Venue Venue, Product Product)> AVenueSelling(string drink, int stock, bool withNight = true)
     {
         Venue venue = Venue.Create("Bar de prueba", $"bar-{Guid.NewGuid():N}");
         Category category = SeedCategory.For(venue.Id);
         Product product = Product.Create(venue.Id, drink, null, null, 4500m, stock, category.Id);
+        StaffUser[] crew =
+        [
+            StaffUser.Create(venue.Id, "main-bar", "hash", StaffRole.Kds),
+            StaffUser.Create(venue.Id, "till-1", "hash", StaffRole.Cashier),
+        ];
 
         await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
         seed.Venues.Add(venue);
         seed.Categories.Add(category);
         seed.Products.Add(product);
+        seed.StaffUsers.AddRange(crew);
+        if (withNight)
+        {
+            Night tonight = Night.Create(venue.Id, "Tonight", Tonight.AddHours(-3), Tonight.AddHours(4), crew);
+            seed.Nights.Add(tonight);
+            // US-37: all of it loaded into tonight's main bar, so the storeroom is empty.
+            seed.BarStocks.Add(new BarStock { VenueId = venue.Id, NightId = tonight.Id, KdsId = crew[0].Id, ProductId = product.Id, Units = stock });
+        }
+
         await seed.SaveChangesAsync();
 
         return (venue, product);

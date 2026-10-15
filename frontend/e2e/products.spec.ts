@@ -1,7 +1,8 @@
 import { join } from 'node:path';
 import { devices, expect, test } from '@playwright/test';
-import type { Browser, Page } from '@playwright/test';
+import type { APIRequestContext, Browser, Page } from '@playwright/test';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
+import { loadIntoTonight } from './stock';
 
 /**
  * US-06, end to end against the real API and the seeded database: an
@@ -70,6 +71,32 @@ async function aCustomerBuys(browser: Browser, name: string, units: number): Pro
   await expect(customer.getByTestId('order-code')).toBeVisible({ timeout: 15000 });
 
   await phone.close();
+}
+
+/**
+ * US-37: a customer can only order what a KDS of tonight holds. The product
+ * was made on the form after tonight was set up, so its units are all in the
+ * storeroom: they go into a bar the way the night's screen would do it.
+ */
+async function loadIntoTonightByName(
+  request: APIRequestContext,
+  name: string,
+  units: number,
+): Promise<void> {
+  const login = await request.post(`/api/${seededVenueSlug}/auth/login`, {
+    data: { username: seededAdminUsername, password: seededAdminPassword() },
+  });
+  const { token } = (await login.json()) as { token: string };
+  const products = (await (
+    await request.get('/api/staff/products', { headers: { Authorization: `Bearer ${token}` } })
+  ).json()) as { id: string; name: string }[];
+
+  await loadIntoTonight(
+    request,
+    token,
+    products.find((product) => product.name === name)!.id,
+    units,
+  );
 }
 
 /** A one-pixel PNG: enough to be a picture, small enough to live in the repo. */
@@ -402,9 +429,11 @@ test.describe('Products', () => {
   // Two actors: the tablet shows 5, the bar sells 3 from a customer's phone,
   // and a correction to 0 would take away the 5 the screen still shows. The
   // stock is left as the sale left it, and the screen says how many there are.
+  // The 5 are loaded into tonight's bar first, so the customer can buy them.
   test('refuses a correction that sales made meanwhile no longer fit', async ({
     page,
     browser,
+    request,
   }) => {
     const name = aNewProductName();
 
@@ -412,6 +441,8 @@ test.describe('Products', () => {
     await page.goto(`${productsPath}/new`);
     await fillTheForm(page, name, '4500', '5');
     const row = page.getByRole('listitem').filter({ hasText: name });
+    await expect(row).toBeVisible();
+    await loadIntoTonightByName(request, name, 5);
 
     await row.getByRole('link', { name: /editar/i }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/editar producto/i);
@@ -425,7 +456,7 @@ test.describe('Products', () => {
     await expect(page.getByText(/pasa a 0 \(−5\)/i)).toBeVisible();
     await page.getByRole('button', { name: /guardar cambios/i }).click();
 
-    await expect(page.getByRole('alert')).toContainText(/se vendió mientras tanto y ahora hay 2/i);
+    await expect(page.getByRole('alert')).toContainText(/hay 2 en total/i);
 
     await page.goto(productsPath);
     await expect(row).toContainText('2 en stock');

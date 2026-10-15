@@ -116,5 +116,7 @@ public sealed class AuditReadTests(SqlServerFixture sql)
     private sealed class FixedUser(string username) : ICurrentStaffUser
     {
         public string? Username => username;
+
+        public Guid? Id => null;
     }
 }

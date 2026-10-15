@@ -1,29 +1,41 @@
+using DrinkIt.Application.Common;
 using DrinkIt.Domain.Orders;
 
 namespace DrinkIt.Application.Orders;
 
 /// <summary>
-/// What one way of paying does to an order, and how far it takes it.
+/// What one way of paying does to an order: whether the money is in.
 /// </summary>
 /// <remarks>
 /// The three payment methods converge on the same flow after the money is
 /// settled, and the difference between them is exactly this step: digital
-/// leaves the order paid and in the bar's queue, cash leaves it waiting at
-/// the till until a cashier takes the money (§6 of the functional design), VIP
-/// will debit the table. Adding one is adding a class, never an if in the
-/// handler.
+/// pays on the spot, cash leaves the order waiting at the till until a cashier
+/// takes the money (§6 of the functional design), VIP will debit the table.
+/// Adding one is adding a class, never an if in the handler.
 ///
-/// Which is why this settles rather than pays: where the order ends up is part
-/// of what a payment method decides. A handler that paid and then queued on its
-/// own would have to grow a branch the day cash arrives, and the whole point of
-/// this port is that it does not.
+/// What follows a payment is not a method's to decide (US-36): every paid
+/// order goes into the queue of a bar, chosen when the money is in. That step
+/// is the one flow they converge on, so it is written once, in whoever turns
+/// an order paid, and a new method cannot forget it.
 /// </remarks>
 public interface IPaymentStrategy
 {
     PaymentMethod Method { get; }
 
-    void Settle(Order order);
+    /// <summary>
+    /// Settles the money for the order, or answers why it could not: a refusal
+    /// the customer can act on, with nothing settled. Asynchronous because a
+    /// method may have to look something up — the table's balance does.
+    /// </summary>
+    Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// What a method may need beyond the order: the code of a VIP table (US-41),
+/// and what the phone agreed to pay on top of its balance (US-42), null when
+/// nothing. A method that needs neither ignores them.
+/// </summary>
+public sealed record PaymentRequest(string? TableCode, decimal? DigitalAmount = null);
 
 /// <summary>
 /// Card or Mercado Pago. Simulated in Sprint 1, which the brief allows: there
@@ -37,24 +49,30 @@ public sealed class DigitalPaymentStrategy(TimeProvider clock) : IPaymentStrateg
     public PaymentMethod Method => PaymentMethod.Digital;
 
     /// <summary>
-    /// The money is settled on the spot, so the drinks go straight to the bar:
-    /// there is nothing left for anybody to do before they are made.
+    /// The money is settled on the spot: there is nothing left for anybody to
+    /// do before the drinks go to a bar.
     /// </summary>
-    public void Settle(Order order)
+    public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken)
     {
         order.Pay(clock.GetUtcNow(), Method);
-        order.Enqueue();
+
+        return Task.FromResult<Error?>(null);
     }
 }
 
 /// <summary>
 /// Cash at the till (§6, US-24). Nothing is settled here: the order waits
 /// with its code until a cashier takes the money (US-26), and only then does it
-/// reach the bar.
+/// reach a bar — whichever has the least work at that moment (US-36).
 /// </summary>
 public sealed class CashPaymentStrategy : IPaymentStrategy
 {
     public PaymentMethod Method => PaymentMethod.Cash;
 
-    public void Settle(Order order) => order.AwaitPayment(Method);
+    public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken)
+    {
+        order.AwaitPayment(Method);
+
+        return Task.FromResult<Error?>(null);
+    }
 }

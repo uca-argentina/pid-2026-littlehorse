@@ -52,11 +52,23 @@
 
       @if (paysAtTheTill()) {
         <p class="what">Acercate a la caja y mostrale este código al cajero.</p>
+      } @else if (tableNumber(); as table) {
+        <p class="what">Te lo llevamos a la Mesa {{ table }}. Quedate donde estás.</p>
       } @else {
         <p class="what">Mostrá este código en la barra cuando te llamen.</p>
       }
 
       <p class="code" data-testid="order-code">{{ store.order()!.code }}</p>
+
+      <!--
+        US-36: with more than one bar, which one has it. Only once paid: waiting
+        for the till it has none, the bar is chosen when the money is in.
+      -->
+      @if (tableNumber() === null && store.order()!.barName; as bar) {
+        <p class="where">
+          Retiralo en <strong>{{ bar }}</strong>
+        </p>
+      }
 
       <!--
         US-20. Only the token goes in it, and not the tracking link: a phone

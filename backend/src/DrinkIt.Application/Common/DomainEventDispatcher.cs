@@ -1,6 +1,7 @@
 using DrinkIt.Application.Cashier;
 using DrinkIt.Application.Kds;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Waiter;
 using DrinkIt.Domain.Common;
 using DrinkIt.Domain.Orders;
 
@@ -20,15 +21,28 @@ namespace DrinkIt.Application.Common;
 /// <see cref="DrinkIt.Application.Orders.DigitalPaymentStrategy"/> does: it has
 /// no external dependency of its own, only other Application ports.
 /// </remarks>
-public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotifier till, IOrderFollowers followers) : IDomainEventDispatcher
+public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotifier till, IOrderFollowers followers, IWaiterBoardNotifier waiters) : IDomainEventDispatcher
 {
     public async Task DispatchAsync(IReadOnlyList<IDomainEvent> events, CancellationToken cancellationToken)
     {
         foreach (IDomainEvent domainEvent in events)
         {
-            if (VenueWhoseBoardChanged(domainEvent) is Guid venueId) await kdsBoard.NotifyBoardChangedAsync(venueId, cancellationToken);
+            // Only the board of the order's own bar (US-36): every other bar's
+            // shows none of its orders, so it has nothing new to draw.
+            if (domainEvent is IBoardChanged { KdsId: Guid kdsId } moved) await kdsBoard.NotifyBoardChangedAsync(moved.VenueId, kdsId, cancellationToken);
 
             if (VenueWhoseTillChanged(domainEvent) is Guid tillVenueId) await till.NotifyTillChangedAsync(tillVenueId, cancellationToken);
+
+            // What the waiters see (US-43): only table orders raise it, so a bar
+            // order moving about never wakes a waiter's phone.
+            if (domainEvent is TableOrderChanged tableMoved)
+            {
+                await waiters.NotifyBoardChangedAsync(tableMoved.VenueId, cancellationToken);
+
+                // The till has the same list (US-45), and reloads it on the
+                // message it already listens to.
+                await till.NotifyTillChangedAsync(tableMoved.VenueId, cancellationToken);
+            }
         }
 
         // Once per order, not once per event: one move can raise several
@@ -50,19 +64,6 @@ public sealed class DomainEventDispatcher(IKdsBoardNotifier kdsBoard, ITillNotif
         OrderAwaitingPayment waiting => waiting.VenueId,
         OrderCollected collected => collected.VenueId,
         OrderCanceled canceled => canceled.VenueId,
-        _ => null,
-    };
-
-    /// <summary>The venue whose KDS board has to redraw, or null when this event moves no card.</summary>
-    private static Guid? VenueWhoseBoardChanged(IDomainEvent domainEvent) => domainEvent switch
-    {
-        OrderQueued queued => queued.VenueId,
-        OrderPreparationStarted taken => taken.VenueId,
-        OrderRequeued requeued => requeued.VenueId,
-        OrderReady ready => ready.VenueId,
-        OrderReturnedToPreparation returned => returned.VenueId,
-        OrderDelivered delivered => delivered.VenueId,
-        OrderDeliveryUndone undone => undone.VenueId,
         _ => null,
     };
 }

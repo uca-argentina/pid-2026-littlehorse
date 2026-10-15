@@ -12,6 +12,21 @@
     <!-- US-34: the way back to an order, for whoever left its tracking screen. -->
     <drinkit-orders-in-progress [venueSlug]="venueSlug()" />
 
+    <!-- US-41: ordering for a VIP table, from the QR the waiter handed over. -->
+    @if (tableLine(); as line) {
+      <p class="table" role="status" aria-label="Tu mesa">{{ line }}</p>
+    } @else if (tableIsGone()) {
+      <div class="note note-bad table-gone" role="alert">
+        <p class="table-gone-what">
+          El código de tu mesa ya no sirve. Pedile el nuevo al mozo, o pedí para retirar en la
+          barra.
+        </p>
+        <button class="table-gone-cta" type="button" (click)="orderForTheBar()">
+          Pedir para retirar en la barra
+        </button>
+      </div>
+    }
+
     @if (menu.isLoading()) {
       <!-- Read aloud from the start, drawn only once it has something to add
            to the outline below. -->
@@ -43,6 +58,15 @@
         <p class="note-what">No pudimos traer la carta. Fijate la señal y probá de nuevo.</p>
         <button class="retry" type="button" (click)="retry()">Reintentar</button>
       </div>
+    }
+
+    @if (menu.hasValue() && !isTakingOrders()) {
+      <!-- Said before the menu and not when paying: nobody should fill an
+           order that confirming is going to refuse. -->
+      <p class="note" role="status">
+        El boliche no está tomando pedidos ahora. Podés mirar la carta; vas a poder pedir cuando
+        abra la barra.
+      </p>
     }
 
     @if (menu.hasValue()) {

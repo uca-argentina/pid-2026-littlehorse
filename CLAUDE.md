@@ -250,6 +250,10 @@ falta, preguntá antes de inventar el término.
 | Pago digital | `DigitalPayment` | | Suscripción push | `PushSubscription` |
 | Usuario interno | `StaffUser` | | Rol | `StaffRole` |
 | Administrador | `Administrator` | | Baja lógica | `IsActive` |
+| Noche / evento | `Night` | | Alerta / métricas | `Alert` / `Metrics` |
+
+> **`Night`, no `Event` ni `Shift`.** Decidido el 2026-10-07: `Event` se confunde con los
+> eventos de dominio, y `Shift` ya nombra la ventana de cobros de la caja.
 
 > **`Product`, no `Drink`.** Decidido el 2026-09-14: la carta vende tragos pero también
 > botellas, y el nombre tiene que cubrir las dos cosas. Los docs siguen diciendo "trago"

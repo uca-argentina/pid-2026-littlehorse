@@ -1,8 +1,8 @@
-<drinkit-staff-header [venueSlug]="venueSlug()" context="Caja" />
+<drinkit-staff-header [venueSlug]="venueSlug()" context="Caja" [sections]="sections" />
 
 <div class="till">
   <main class="work">
-    @if (channel.state() === 'reconnecting') {
+    @if (channel.state() === 'reconnecting' && !notTonight()) {
       <p class="note note-warn" role="status">
         Sin conexión con la caja — reintentando. "Por cobrar" puede estar desactualizado.
       </p>
@@ -48,6 +48,23 @@
       @case ('cancelFailed') {
         <p class="note note-bad" role="alert">
           No pudimos cancelar el pedido. Revisá la conexión y probá de nuevo.
+        </p>
+      }
+      @case ('soldOut') {
+        <p class="note note-bad" role="alert">
+          No queda {{ soldOutDrink() }} en ninguna barra. No cobres: cancelá el pedido o pedile al
+          cliente que arme otro.
+        </p>
+      }
+      @case ('stockMoved') {
+        <p class="note note-bad" role="alert">
+          Se vendió lo último mientras cobrabas y no se cobró nada. Probá cobrar de nuevo.
+        </p>
+      }
+      @case ('nightOver') {
+        <p class="note note-bad" role="alert">
+          Ese pedido es de una noche que ya terminó. No cobres: cancelalo y que el cliente pida de
+          nuevo.
         </p>
       }
       @case ('collectFailed') {
@@ -170,6 +187,12 @@
             </ul>
           }
         }
+      } @else if (notTonight()) {
+        <p class="note note-bad" role="alert">
+          Esta cuenta no está en la noche de hoy. Pedile al administrador que la sume y tocá
+          Reintentar.
+        </p>
+        <button class="ghost" type="button" (click)="pending.reload()">Reintentar</button>
       } @else if (pending.error()) {
         <p class="note note-bad" role="alert">No pudimos traer los pedidos por cobrar.</p>
         <button class="ghost" type="button" (click)="pending.reload()">Reintentar</button>

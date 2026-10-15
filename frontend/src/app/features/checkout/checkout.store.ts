@@ -6,6 +6,7 @@ import { forkJoin, timer } from 'rxjs';
 import { Cart } from '../../core/cart/cart';
 import { BrowserStore } from '../../core/storage/browser-store';
 import { ProblemTypes } from '../../core/api/problem-types';
+import { problemProductNameOf } from '../../core/api/problem-product-name-of';
 import { problemTypeOf } from '../../core/api/problem-type-of';
 import { CheckoutService } from './checkout.service';
 import type { ConfirmedOrder, PaymentMethod } from './checkout.service';
@@ -82,7 +83,18 @@ export class CheckoutStore {
     return fresh;
   }
 
-  pay(venueSlug: string, customerName: string, method: PaymentMethod): void {
+  /**
+   * tableCode: the VIP table this phone orders for (US-41), or null at the bar.
+   * digitalAmount: what the phone pays on top of the table's balance (US-42),
+   * or null when the balance covers it.
+   */
+  pay(
+    venueSlug: string,
+    customerName: string,
+    method: PaymentMethod,
+    tableCode: string | null = null,
+    digitalAmount: number | null = null,
+  ): void {
     if (this.isPaying()) return;
 
     this.state.set('paying');
@@ -101,6 +113,8 @@ export class CheckoutStore {
           quantity: line.quantity,
           note: line.note,
         })),
+        tableCode,
+        digitalAmount,
       }),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -183,16 +197,7 @@ export interface Refusal {
   readonly productName: string | null;
 }
 
-/**
- * The problem's type, and the drink it names when the menu moved underneath.
- * Never its detail: that sentence is the API's, in English, for developers.
- */
+/** The problem's type, and the drink it names when the menu moved underneath. */
 function refusalOf(error: HttpErrorResponse, type: string | undefined): Refusal {
-  const body: unknown = error.error;
-  const productName =
-    typeof body === 'object' && body !== null && 'productName' in body
-      ? String((body as { productName: unknown }).productName)
-      : null;
-
-  return { type, productName };
+  return { type, productName: problemProductNameOf(error) };
 }

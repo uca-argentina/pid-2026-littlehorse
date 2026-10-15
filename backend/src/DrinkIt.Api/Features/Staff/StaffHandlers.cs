@@ -8,6 +8,7 @@ internal static class StaffHandlers
     public static IServiceCollection AddStaffHandlers(this IServiceCollection services) => services
         .AddScoped<CreateStaffUserHandler>()
         .AddScoped<ChangeStaffUserRoleHandler>()
+        .AddScoped<RenameStaffUserHandler>()
         .AddScoped<ResetStaffUserPasswordHandler>()
         .AddScoped<DeactivateStaffUserHandler>()
         .AddScoped<ReactivateStaffUserHandler>();

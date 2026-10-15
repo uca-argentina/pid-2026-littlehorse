@@ -1,0 +1,187 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { TestBed } from '@angular/core/testing';
+import { Router, provideRouter } from '@angular/router';
+import { Subject, of, throwError } from 'rxjs';
+import { ProblemTypes } from '../../core/api/problem-types';
+import { SaveNightStore, refusalFor } from './save-night.store';
+import { NightsService } from './nights.service';
+import type { NewNight, Night } from './nights.service';
+
+const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
+
+function rejectedWith(status: number, type: string): HttpErrorResponse {
+  return new HttpErrorResponse({ status, error: { type } });
+}
+
+const aNewNight: NewNight = {
+  name: 'Saturday 10/10',
+  startsAt: '2026-10-11T02:00:00.000Z',
+  endsAt: '2026-10-11T09:00:00.000Z',
+  crewIds: ['kds-1', 'till-1'],
+};
+
+const created: Night = { id: 'night-1', ...aNewNight, audit: noAudit };
+
+describe('SaveNightStore', () => {
+  let store: SaveNightStore;
+  let create: ReturnType<typeof vi.fn>;
+  let update: ReturnType<typeof vi.fn>;
+  let router: Router;
+
+  beforeEach(() => {
+    create = vi.fn();
+    update = vi.fn();
+
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        SaveNightStore,
+        { provide: NightsService, useValue: { create, update } },
+      ],
+    });
+
+    store = TestBed.inject(SaveNightStore);
+    router = TestBed.inject(Router);
+  });
+
+  it('does not send twice while a request is in flight', () => {
+    create.mockReturnValue(new Subject<Night>());
+
+    store.create('bar-alfa', aNewNight);
+    store.create('bar-alfa', aNewNight);
+
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  // US-37: setting up a night goes on with loading what each KDS will have
+  // that night, which lives in the new night's own screen.
+  it('opens the new night once it exists, to load the stock of each KDS', () => {
+    create.mockReturnValue(of(created));
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    store.create('bar-alfa', aNewNight);
+
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'nights', 'night-1']);
+    expect(store.status()).toBe('idle');
+  });
+
+  // The one failure the administrator can fix on the spot, by moving the hours.
+  it('says the hours overlap another night when the API refuses them', () => {
+    create.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.nightOverlaps)));
+
+    store.create('bar-alfa', aNewNight);
+
+    expect(store.status()).toBe('overlaps');
+  });
+
+  // An account deactivated or reassigned while the form was open.
+  it('says the crew changed when one of the accounts is no longer the venue’s', () => {
+    create.mockReturnValue(
+      throwError(() => rejectedWith(400, ProblemTypes.nightCrewMemberNotFound)),
+    );
+
+    store.create('bar-alfa', aNewNight);
+
+    expect(store.status()).toBe('crewChanged');
+  });
+
+  it('falls back to a single failure for anything else', () => {
+    create.mockReturnValue(throwError(() => rejectedWith(500, 'about:blank')));
+
+    store.create('bar-alfa', aNewNight);
+
+    expect(store.status()).toBe('unreachable');
+  });
+
+  it('clears a previous failure when the next attempt starts', () => {
+    create.mockReturnValueOnce(throwError(() => rejectedWith(409, ProblemTypes.nightOverlaps)));
+    store.create('bar-alfa', aNewNight);
+
+    create.mockReturnValueOnce(new Subject<Night>());
+    store.create('bar-alfa', aNewNight);
+
+    expect(store.status()).toBe('sending');
+  });
+
+  // The night's own screen: same answers, through PUT instead of POST.
+  it('saves an edit and goes back to the listing', () => {
+    update.mockReturnValue(of(created));
+    const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(update).toHaveBeenCalledWith('night-1', aNewNight);
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'nights']);
+  });
+
+  // The screen was opened while the night was on, and it ended meanwhile.
+  it('says the night is over when the API refuses the edit for that', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.nightOver)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('over');
+  });
+
+  // Opened before it began, saved after: the start moved under a night on.
+  it('says the night already started when the API refuses to move its start', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.nightStartLocked)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('startLocked');
+  });
+
+  // US-37: the KDS taken out still holds stock in the night, and would leave
+  // it stuck. The form says to give it back first.
+  it('says a KDS with stock cannot leave the night when the API refuses it for that', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.nightBarHoldsStock)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('barHoldsStock');
+    expect(refusalFor(store.status())).toMatch(/devolvé su stock al depósito/i);
+  });
+
+  // US-40, §8.3: a night selling tables needs somebody to carry the drinks.
+  it('says the night needs a waiter when the API refuses the tables for that', () => {
+    create.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.nightWaiterRequired)));
+
+    store.create('bar-alfa', aNewNight);
+
+    expect(store.status()).toBe('waiterRequired');
+    expect(refusalFor(store.status())).toMatch(/al menos un mozo/i);
+  });
+
+  // A table was put away, or is not the venue's any more, while the form was open.
+  it.each([ProblemTypes.nightTableNotFound, ProblemTypes.vipAccountTableInactive])(
+    'says the tables changed when the API answers %s',
+    (type) => {
+      create.mockReturnValue(throwError(() => rejectedWith(400, type)));
+
+      store.create('bar-alfa', aNewNight);
+
+      expect(store.status()).toBe('tablesChanged');
+      expect(refusalFor(store.status())).toMatch(/recargá la pantalla/i);
+    },
+  );
+
+  // Found in review: a phone of a table spent while the form was open.
+  it('says a table spent meanwhile when the API refuses the save for that', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(409, ProblemTypes.nightTablesMoved)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('tablesMoved');
+    expect(refusalFor(store.status())).toMatch(/pidió mientras/i);
+  });
+
+  it('says a table that already spent stays in the night', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.vipAccountHasSpending)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('tableSpent');
+    expect(refusalFor(store.status())).toMatch(/ya consumió/i);
+  });
+});

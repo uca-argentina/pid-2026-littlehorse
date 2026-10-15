@@ -29,6 +29,13 @@ public interface IStaffUserRepository
     /// </summary>
     Task<StaffUser?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The users of this venue among those ids, in no particular order. An id
+    /// from another venue is simply missing, like a made-up one: the global
+    /// query filter hides it.
+    /// </summary>
+    Task<IReadOnlyList<StaffUser>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
     /// <summary>Commits what the use case changed on a tracked aggregate.</summary>
     Task SaveChangesAsync(CancellationToken cancellationToken);
 

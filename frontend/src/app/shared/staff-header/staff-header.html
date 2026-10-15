@@ -75,7 +75,8 @@
         class="tab"
         routerLinkActive="tab-on"
         ariaCurrentWhenActive="page"
-        [routerLink]="['/', venueSlug(), 'staff', section.path]"
+        [routerLinkActiveOptions]="{ exact: isExact(section) }"
+        [routerLink]="linkTo(section)"
         (click)="closeNavigation()"
       >
         {{ section.label }}

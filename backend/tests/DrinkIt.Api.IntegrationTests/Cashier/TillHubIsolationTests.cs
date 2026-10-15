@@ -31,11 +31,11 @@ public sealed class TillHubIsolationTests(SqlServerFixture sql) : IAsyncDisposab
     [Fact]
     public async Task TillChanged_WhenAnotherVenuesCashChanges_IsNeverReceived()
     {
-        Guid mine = Guid.CreateVersion7();
-        Guid theirs = Guid.CreateVersion7();
+        (Guid mine, Guid mineAccount) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Cashier);
+        (Guid theirs, Guid theirsAccount) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Cashier);
 
-        await using HubConnection mineConnection = await ConnectedAsCashier(mine);
-        await using HubConnection theirsConnection = await ConnectedAsCashier(theirs);
+        await using HubConnection mineConnection = await ConnectedAsCashier(mine, mineAccount);
+        await using HubConnection theirsConnection = await ConnectedAsCashier(theirs, theirsAccount);
 
         TaskCompletionSource mineNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
         TaskCompletionSource theirsNotified = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -56,9 +56,9 @@ public sealed class TillHubIsolationTests(SqlServerFixture sql) : IAsyncDisposab
     [Fact]
     public async Task TillChanged_WhenItsOwnVenuesCashChanges_IsReceived()
     {
-        Guid venueId = Guid.CreateVersion7();
+        (Guid venueId, Guid account) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Cashier);
 
-        await using HubConnection connection = await ConnectedAsCashier(venueId);
+        await using HubConnection connection = await ConnectedAsCashier(venueId, account);
 
         TaskCompletionSource notified = new(TaskCreationOptions.RunContinuationsAsynchronously);
         connection.On(TillHub.TillChanged, () => notified.TrySetResult());
@@ -67,22 +67,22 @@ public sealed class TillHubIsolationTests(SqlServerFixture sql) : IAsyncDisposab
         await UntilHeard(() => notifier.NotifyTillChangedAsync(venueId, CancellationToken.None), notified.Task);
     }
 
+    // Refused at the door since US-35: no venue means no night, and so no crew
+    // to be in. The hub's own check in OnConnectedAsync stays behind it.
     [Fact]
-    public async Task OnConnectedAsync_WhenTheTokenCarriesNoVenue_ClosesTheConnection()
+    public async Task StartAsync_WhenTheTokenCarriesNoVenue_IsRefused()
     {
-        await using HubConnection connection = await ConnectedWith(SignedCashierTokenWithoutVenue());
+        await Assert.ThrowsAnyAsync<Exception>(() => ConnectedWith(SignedCashierTokenWithoutVenue()));
+    }
 
-        TaskCompletionSource closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        connection.Closed += _ =>
-        {
-            closed.TrySetResult();
-            return Task.CompletedTask;
-        };
+    // US-35, criterion 4: right role, right venue, not in tonight's crew.
+    [Fact]
+    public async Task StartAsync_WhenTheAccountIsNotInTonightsCrew_IsRefused()
+    {
+        (Guid venueId, _) = await SeedTonight.AnAccountWorkingTonight(sql, StaffRole.Cashier);
+        Guid outsider = await SeedTonight.AnAccountOffTonight(sql, venueId, StaffRole.Cashier);
 
-        // Already closed by the time the handler was attached counts too.
-        if (connection.State == HubConnectionState.Disconnected) closed.TrySetResult();
-
-        await closed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await Assert.ThrowsAnyAsync<Exception>(() => ConnectedAsCashier(venueId, outsider));
     }
 
     // The bar's tablet has a token of this venue, and still no business here.
@@ -95,10 +95,10 @@ public sealed class TillHubIsolationTests(SqlServerFixture sql) : IAsyncDisposab
         await Assert.ThrowsAnyAsync<Exception>(() => ConnectedWith(token.Value));
     }
 
-    private async Task<HubConnection> ConnectedAsCashier(Guid venueId)
+    private async Task<HubConnection> ConnectedAsCashier(Guid venueId, Guid account)
     {
         ITokenIssuer tokenIssuer = _factory.Services.GetRequiredService<ITokenIssuer>();
-        AccessToken token = tokenIssuer.Issue(Guid.CreateVersion7(), venueId, "laura.caja", StaffRole.Cashier);
+        AccessToken token = tokenIssuer.Issue(account, venueId, "laura.caja", StaffRole.Cashier);
 
         return await ConnectedWith(token.Value);
     }

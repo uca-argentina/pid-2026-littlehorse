@@ -9,9 +9,9 @@ import { StaffUsersService } from './staff-users.service';
 import type { StaffUser } from './staff-users.service';
 
 /**
- * How one of the three things this screen can do ended up. They are tracked
- * apart on purpose: a password that was refused must not make the role change
- * next to it look like it failed too.
+ * How one of the things this screen can do ended up. They are tracked apart on
+ * purpose: a password that was refused must not make the role change next to
+ * it look like it failed too.
  */
 type ActionStatus =
   'idle' | 'sending' | 'saved' | 'passwordTooShort' | 'lastAdministrator' | 'unreachable';
@@ -29,6 +29,8 @@ export class EditStaffUserStore {
 
   private readonly role = signal<ActionStatus>('idle');
 
+  private readonly name = signal<ActionStatus>('idle');
+
   private readonly password = signal<ActionStatus>('idle');
 
   private readonly access = signal<ActionStatus>('idle');
@@ -38,18 +40,24 @@ export class EditStaffUserStore {
 
   readonly roleStatus = this.role.asReadonly();
 
+  readonly nameStatus = this.name.asReadonly();
+
   readonly passwordStatus = this.password.asReadonly();
 
   readonly accessStatus = this.access.asReadonly();
 
   readonly updated = this.current.asReadonly();
 
-  readonly isBusy = computed(
-    () => this.role() === 'sending' || this.password() === 'sending' || this.access() === 'sending',
+  readonly isBusy = computed(() =>
+    [this.role(), this.name(), this.password(), this.access()].includes('sending'),
   );
 
   changeRole(id: string, role: StaffRole): void {
     this.run(this.role, () => this.staffUsers.changeRole(id, role));
+  }
+
+  rename(id: string, displayName: string | null): void {
+    this.run(this.name, () => this.staffUsers.rename(id, displayName));
   }
 
   resetPassword(id: string, password: string): void {
@@ -65,9 +73,9 @@ export class EditStaffUserStore {
   }
 
   /**
-   * The four actions differ only in which request they send and which of the
-   * three outcomes they report through. Writing them out four times would be
-   * four places to forget the in-flight guard.
+   * The actions differ only in which request they send and which outcome they
+   * report through. Writing them out one by one would be one more place each
+   * to forget the in-flight guard.
    *
    * A factory and not an observable: building the request is the caller's last
    * statement, so passing one already built would ask the service for it before

@@ -1,0 +1,57 @@
+// A screen nobody stays on: the QR either opens the menu at once, or says why not.
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  justify-content: center;
+  max-width: 460px;
+  min-height: 100dvh;
+  padding: var(--dk-space-5) var(--dk-space-4);
+  margin: 0 auto;
+}
+
+.mark {
+  display: flex;
+  justify-content: center;
+  color: var(--dk-accent);
+}
+
+.note {
+  margin: 0;
+  padding: 15px 17px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 15px;
+  text-align: center;
+}
+
+.note-bad {
+  border-color: var(--dk-danger);
+  text-align: left;
+}
+
+.note-ttl {
+  margin: 0 0 6px;
+  color: var(--dk-text);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.note-what {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.cta {
+  min-height: 56px;
+  border: 0;
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-accent);
+  color: var(--dk-ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+}

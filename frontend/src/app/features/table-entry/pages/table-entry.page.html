@@ -1,0 +1,25 @@
+<main class="frame">
+  <div class="mark" aria-hidden="true">
+    <drinkit-glass-mark [size]="34" [strokeWidth]="1.9" />
+  </div>
+
+  @if (isGone()) {
+    <div class="note note-bad" role="alert">
+      <p class="note-ttl">Este código ya no sirve</p>
+      <p class="note-what">
+        Puede ser de otra noche, o lo cambiaron. Pedile el código nuevo al mozo, o pedí como
+        cualquiera y retiralo en la barra.
+      </p>
+    </div>
+    <button class="cta" type="button" (click)="orderForTheBar()">
+      Pedir para retirar en la barra
+    </button>
+  } @else if (isUnreachable()) {
+    <div class="note note-bad" role="alert">
+      <p class="note-what">No pudimos abrir tu mesa. Fijate la señal y probá de nuevo.</p>
+    </div>
+    <button class="cta" type="button" (click)="retry()">Probar de nuevo</button>
+  } @else {
+    <p class="note" role="status">Abriendo tu mesa…</p>
+  }
+</main>

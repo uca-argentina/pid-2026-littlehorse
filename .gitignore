@@ -48,6 +48,8 @@ appsettings.*.Local.json
 *.key
 secrets.json
 .mcp.local.json
+# The Mercado Pago wizard's state: it names the app and the test users.
+.mp-integrate-progress.md
 
 # ---------- IDE / OS ----------
 .vs/

@@ -16,6 +16,7 @@ const aSession: StaffSession = {
   token: 'un-token',
   expiresAt: new Date(Date.now() + 60_000).toISOString(),
   username: 'euge',
+  displayName: null,
   role: 'Administrator',
 };
 
@@ -41,7 +42,7 @@ describe('StaffLoginStore', () => {
     router = TestBed.inject(Router);
   });
 
-  const credentials = { username: 'euge', password: 'a-password' };
+  const credentials = { username: 'euge', displayName: null, password: 'a-password' };
 
   // Two taps on a slow connection must not place two logins.
   it('does not send twice while a request is in flight', () => {
@@ -89,8 +90,8 @@ describe('StaffLoginStore', () => {
     expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'kds']);
   });
 
-  // US-01, criterion 2: a role without screens is told so, not left on the login.
-  it('takes any other role to the screen that says there is nothing for them yet', () => {
+  // US-43: the waiter's phone has its own screen.
+  it('takes a waiter straight to their tables', () => {
     const navigate = vi.spyOn(router, 'navigate').mockResolvedValue(true);
     const response = new Subject<StaffSession>();
     logIn.mockReturnValue(response);
@@ -98,7 +99,7 @@ describe('StaffLoginStore', () => {
     store.submit('bar-alfa', credentials);
     response.next({ ...aSession, role: 'Waiter' });
 
-    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff']);
+    expect(navigate).toHaveBeenCalledWith(['bar-alfa', 'staff', 'waiter']);
   });
 
   it('reports the same failure whichever field was wrong', () => {

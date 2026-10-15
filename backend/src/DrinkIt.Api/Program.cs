@@ -5,8 +5,12 @@ using DrinkIt.Api.Features.Authentication;
 using DrinkIt.Api.Features.Cashier;
 using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
+using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
+using DrinkIt.Api.Features.Tables;
+using DrinkIt.Api.Features.VipAccounts;
+using DrinkIt.Api.Features.Waiter;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Infrastructure;
@@ -14,6 +18,8 @@ using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Orders;
+using DrinkIt.Infrastructure.Waiter;
+using Microsoft.AspNetCore.SignalR;
 using Scalar.AspNetCore;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -22,16 +28,21 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // One line per feature: each one lists its own handlers, next to its endpoints.
 builder.Services.AddLoginHandlers();
 builder.Services.AddStaffHandlers();
+builder.Services.AddNightHandlers();
 builder.Services.AddMenuHandlers();
 builder.Services.AddOrderHandlers();
 builder.Services.AddKdsHandlers();
 builder.Services.AddCashierHandlers();
+builder.Services.AddTableHandlers();
+builder.Services.AddWaiterHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
 builder.Services.AddScoped<CurrentVenue>();
 builder.Services.AddScoped<ICurrentVenue>(services => services.GetRequiredService<CurrentVenue>());
 builder.Services.AddHttpContextAccessor();
+// The same, for each hub call: it runs in a scope no middleware saw.
+builder.Services.Configure<HubOptions>(options => options.AddFilter<VenueResolutionHubFilter>());
 builder.Services.AddScoped<ICurrentStaffUser, CurrentStaffUser>();
 
 JwtOptions jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
@@ -111,12 +122,20 @@ app.MapLogin();
 app.MapMenu();
 app.MapOrders();
 app.MapOrderTracking();
+app.MapVipAccounts();
 app.MapStaffUsers();
+app.MapNights();
 app.MapCategories();
+app.MapTables();
+app.MapWaiter();
 app.MapProducts();
 app.MapKds();
-app.MapHub<KdsHub>(KdsHubRoute.Path);
-app.MapHub<TillHub>(TillHubRoute.Path);
+// The hubs carry their role in [Authorize]; the policy adds the night's crew
+// (US-35), so a tablet outside it hears nothing either. The customer's
+// tracking hub has no account behind it, so no night applies there.
+app.MapHub<KdsHub>(KdsHubRoute.Path).RequireAuthorization(Policies.Kds);
+app.MapHub<TillHub>(TillHubRoute.Path).RequireAuthorization(Policies.Cashier);
+app.MapHub<WaiterHub>(WaiterHubRoute.Path).RequireAuthorization(Policies.Waiter);
 app.MapHub<TrackingHub>(TrackingHubRoute.Path);
 app.MapCashier();
 

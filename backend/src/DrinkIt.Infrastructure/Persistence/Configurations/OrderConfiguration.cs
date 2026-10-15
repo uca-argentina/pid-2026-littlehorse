@@ -1,4 +1,5 @@
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Tables;
 using DrinkIt.Domain.Venues;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -7,6 +8,11 @@ namespace DrinkIt.Infrastructure.Persistence.Configurations;
 
 internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
+    /// <summary>
+    /// A display name (40) or, without one, a username: whichever is longer fits.
+    /// </summary>
+    private const int WaiterNameMaxLength = 64;
+
     /// <summary>
     /// The column that tells one attempt at the same order from another. A
     /// shadow property because it is how the request arrived and not something
@@ -27,9 +33,33 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property(order => order.CustomerName).HasMaxLength(Order.CustomerNameMaxLength).IsRequired();
         builder.Property(order => order.Status).IsRequired();
+        // Null on the orders from before nights existed (US-35). No foreign key,
+        // as with OrderItem.ProductId: nights are never deleted, and the
+        // metrics read orders by it.
+        builder.Property(order => order.NightId);
+        // The bar it goes to, chosen when it is paid (US-36). Null while it
+        // waits for cash and on orders from before bars kept stock; no foreign
+        // key, for the same reason as the night.
+        builder.Property(order => order.KdsId);
+
+        // US-41: the VIP table it is carried to. Tables are never deleted, only
+        // put away, so the foreign key always has a row to point at.
+        builder.Property(order => order.TableId);
+        builder.Property(order => order.TableNumber);
+        builder.Property(order => order.BalanceAmount).HasPrecision(10, 2);
+        builder.HasOne<Table>().WithMany().HasForeignKey(order => order.TableId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(order => order.PaidAt);
         builder.Property(order => order.Method);
+        // For the metrics of US-47; null on every order from before US-36.
+        builder.Property(order => order.PreparationStartedAt);
+        builder.Property(order => order.ReadyAt);
         builder.Property(order => order.DeliveredAt);
+
+        // US-43: the waiter carrying a table's order. The name is kept as it was
+        // when they took it, like TableNumber: the others read it, for good.
+        builder.Property(order => order.WaiterId);
+        builder.Property(order => order.WaiterName).HasMaxLength(WaiterNameMaxLength);
+        builder.Property(order => order.TakenAt);
         // Same length as a username: it is one (US-26).
         builder.Property(order => order.CollectedBy).HasMaxLength(50);
 
@@ -63,6 +93,10 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasIndex(order => new { order.VenueId, order.Code }).IsUnique();
         builder.HasIndex(IdempotencyKey, nameof(Order.VenueId)).IsUnique();
         builder.HasIndex(order => new { order.VenueId, order.TrackingToken }).IsUnique();
+        // Every metric of a night (US-47 to US-49) starts by reading its orders.
+        builder.HasIndex(order => new { order.VenueId, order.NightId });
+        // "Less work" when choosing a bar: its orders waiting or being prepared.
+        builder.HasIndex(order => new { order.VenueId, order.KdsId, order.Status });
         // The till's "cobros de tu turno": one cashier's collections, by time.
         builder.HasIndex(order => new { order.VenueId, order.CollectedBy, order.PaidAt });
 

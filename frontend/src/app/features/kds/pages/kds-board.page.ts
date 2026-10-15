@@ -11,6 +11,8 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { problemTypeOf } from '../../../core/api/problem-type-of';
+import { ProblemTypes } from '../../../core/api/problem-types';
 import { SessionStorage } from '../../../core/auth/session-storage';
 import { KDS_RETRY_MS, KdsBoardChannel } from '../../../core/kds/kds-board-channel';
 import { slowLoading } from '../../../shared/loading/slow-loading';
@@ -19,8 +21,8 @@ import type { AgeBand } from '../kds-age';
 import { ageBandFor, ageLabelFor } from '../kds-age';
 import { byTimeInColumn, minutesInColumn, readyShelf } from '../kds-board-view';
 import { KdsOrderActions } from '../kds-order-actions';
-import { KDS_QUEUE_URL } from '../kds-queue';
-import type { KdsOrderStatus, KdsQueueOrder } from '../kds-queue';
+import { KDS_QUEUE_URL, KDS_STATION_URL } from '../kds-queue';
+import type { KdsOrderStatus, KdsQueueOrder, KdsStation } from '../kds-queue';
 
 /** How often the clock ticks to re-read every card's age, independent of any SignalR message. */
 const AGE_TICK_MS = 15_000;
@@ -78,10 +80,24 @@ export class KdsBoardPage {
   private readonly router = inject(Router);
 
   /**
-   * The station's own account stands in for "Barra principal" until there is
-   * a BarStation to name: the account is the station's, not a person's.
+   * The name of this tablet's bar as the API says it goes by now (US-36):
+   * asked again whenever the board is told something changed, which a rename
+   * is, so the header follows without signing in again.
    */
-  protected readonly station = computed(() => this.sessions.session()?.username ?? '');
+  private readonly stationName = httpResource<KdsStation>(() => KDS_STATION_URL);
+
+  /**
+   * Which bar this tablet is. Until the API answers — or when it cannot — the
+   * name it had when it signed in, or its username. A session saved before
+   * names existed has no such field at all, hence the fallback on undefined.
+   */
+  protected readonly station = computed(() => {
+    if (this.stationName.hasValue()) return this.stationName.value().name;
+
+    const session = this.sessions.session();
+
+    return session?.displayName ?? session?.username ?? '';
+  });
 
   /**
    * The Resource API rather than a subscription: loading, error and value
@@ -112,6 +128,15 @@ export class KdsBoardPage {
    * the warning does not blink off and on every few seconds while it keeps
    * failing.
    */
+  /**
+   * US-35, criterion 4: signed in as the station, but not in tonight's crew.
+   * Not a failure to retry by hand: the board keeps asking on its own, and
+   * shows the queue as soon as the administrator adds the station.
+   */
+  protected readonly notTonight = computed(
+    () => problemTypeOf(this.queue.error()) === ProblemTypes.notInTonightsCrew,
+  );
+
   protected readonly failed = linkedSignal<string, boolean>({
     source: () => this.queue.status(),
     computation: (status, previous) => {
@@ -247,7 +272,10 @@ export class KdsBoardPage {
   });
 
   constructor() {
-    this.channel.connect(() => this.queue.reload());
+    this.channel.connect(() => {
+      this.queue.reload();
+      this.stationName.reload();
+    });
 
     // Once an action lands the order is let go of — taken, marked ready, or
     // refused — and the queue is read again: a refusal usually means the card
@@ -305,8 +333,11 @@ export class KdsBoardPage {
     return ageLabelFor(this.ageMinutes(order));
   }
 
+  /** "Mesa 5" for a VIP table's order (US-41), so whoever takes it knows where it goes. */
   protected deliveryLabel(order: KdsQueueOrder): string {
-    return order.isForTable ? 'Mesa' : 'Barra';
+    if (!order.isForTable) return 'Barra';
+
+    return order.tableNumber === null ? 'Mesa' : `Mesa ${order.tableNumber}`;
   }
 
   protected canChoose(order: KdsQueueOrder): boolean {

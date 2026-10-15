@@ -2,8 +2,11 @@ using DrinkIt.Api.Features.Authentication;
 using DrinkIt.Api.Features.Cashier;
 using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
+using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
+using DrinkIt.Api.Features.Tables;
+using DrinkIt.Api.Features.Waiter;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DrinkIt.Api.Tests.Common;
@@ -25,6 +28,9 @@ public class HandlerRegistrationTests
         services.AddOrderHandlers();
         services.AddKdsHandlers();
         services.AddCashierHandlers();
+        services.AddNightHandlers();
+        services.AddTableHandlers();
+        services.AddWaiterHandlers();
 
         string[] missing =
         [

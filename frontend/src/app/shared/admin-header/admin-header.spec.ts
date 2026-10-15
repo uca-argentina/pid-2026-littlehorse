@@ -29,6 +29,7 @@ async function openHeader() {
     token: 'un-token',
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
     username: 'euge',
+    displayName: null,
     role: 'Administrator',
   });
   await rendered.fixture.whenStable();
@@ -67,6 +68,15 @@ describe('AdminHeader', () => {
     );
     expect(screen.getByRole('link', { name: /staff/i }).getAttribute('href')).toBe(
       '/bar-alfa/staff/users',
+    );
+    expect(screen.getByRole('link', { name: /noches/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/nights',
+    );
+    expect(screen.getByRole('link', { name: /mesas/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/tables',
+    );
+    expect(screen.getByRole('link', { name: /reportes/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/reports',
     );
   });
 

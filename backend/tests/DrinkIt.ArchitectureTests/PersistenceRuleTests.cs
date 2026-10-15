@@ -41,8 +41,11 @@ public class PersistenceRuleTests
     {
         // OrderItem is written once with its order and never changes after it,
         // so the order's own time is its time. The counter is technical: it is
-        // written on every sale and no user ever edits it.
-        string[] withoutOne = ["OrderItem", "OrderCodeCounter"];
+        // written on every sale and no user ever edits it. So is a bar's stock:
+        // who loaded it and when is on each NightStockAdjustment (US-37). A
+        // tablet's beat is overwritten every twenty seconds by the tablet
+        // itself, and its only time is the beat (US-38).
+        string[] withoutOne = ["OrderItem", "OrderCodeCounter", "BarStock", "KdsBeat"];
 
         using DrinkItDbContext context = BuildModelOnlyContext();
 

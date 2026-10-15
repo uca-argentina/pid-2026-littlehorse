@@ -1,0 +1,27 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <section class="body">
+    <h1 class="title">Nueva noche</h1>
+
+    @if (team.error() !== undefined || tables.error() !== undefined) {
+      <div class="note note-bad failed" role="alert">
+        <span>No pudimos traer al equipo y las mesas. Fijate la señal y probá de nuevo.</span>
+        <button class="retry" type="button" (click)="retry()">Reintentar</button>
+      </div>
+    } @else if (team.hasValue() && tables.hasValue()) {
+      <drinkit-night-form
+        [team]="team.value()"
+        [tables]="tables.value()"
+        [sending]="store.isSending()"
+        [refusal]="refusal()"
+        submitLabel="Crear noche"
+        (saved)="save($event)"
+      />
+    } @else {
+      <p class="note" role="status">Cargando el equipo…</p>
+    }
+
+    <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'nights']">Cancelar</a>
+  </section>
+</div>

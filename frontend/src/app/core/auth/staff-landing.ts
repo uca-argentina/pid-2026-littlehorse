@@ -7,7 +7,7 @@ import { SessionStorage } from './session-storage';
  * Where somebody goes right after signing in, by role. Decided on 2026-09-15:
  * an administrator has no home screen — they sign in to manage the menu, so
  * the menu is what they see first. US-15 adds the bar's own board the same
- * way, and US-26 the till. Every other role still lands on the screen that says their screens do
+ * way, US-26 the till and US-43 the waiter's tables. Every other role still lands on the screen that says their screens do
  * not exist yet (US-01, criterion 2), because somebody who signs in and sees
  * nothing cannot tell a working system from a broken one.
  */
@@ -19,6 +19,8 @@ export function staffLandingFor(role: string | undefined, venueSlug: string): st
       return [venueSlug, 'staff', 'kds'];
     case 'Cashier':
       return [venueSlug, 'staff', 'cashier'];
+    case 'Waiter':
+      return [venueSlug, 'staff', 'waiter'];
     default:
       return [venueSlug, 'staff'];
   }

@@ -62,6 +62,13 @@ public interface IOrderRepository
     Task<Order?> GetForUpdateAsync(TrackingToken token, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The same, found by its id (US-43): the waiter's list names the orders it
+    /// shows by id, and "La llevo yo" says which one. Another venue's order is
+    /// null here too.
+    /// </summary>
+    Task<Order?> GetForUpdateAsync(Guid orderId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Commits what the use case changed, and only then reacts to the events
     /// the order raised — so the board never hears about a change that did not
     /// make it to the database.
@@ -75,9 +82,24 @@ public interface IOrderRepository
     Task<Result<Order>> SaveAsync(Order order, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Commits a collection at the till (US-26) and takes its drinks from the
+    /// bar it now goes to (US-36), in one unit of work: cash took no stock
+    /// while it waited.
+    /// </summary>
+    /// <remarks>
+    /// Refused with <see cref="OrderErrors.StockMoved"/> when that bar sold
+    /// them in the meantime, like <see cref="AddAsync"/>, and with
+    /// <see cref="OrderErrors.ChangedMeanwhile"/> when another till collected
+    /// it first. Either way nothing is written and nothing of this attempt is
+    /// left tracked: the caller finds the order again and may try once more.
+    /// </remarks>
+    Task<Result<Order>> SaveCollectionAsync(Order order, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Commits a cancellation (US-23) and puts its drinks back on the shelf, in
-    /// one unit of work: the stock taken when the order was confirmed returns
-    /// with it, or not at all.
+    /// one unit of work: whatever stock the order took returns with it, or not
+    /// at all. Waiting for cash it took none (US-36), so then only the order
+    /// is written.
     /// </summary>
     /// <remarks>
     /// Refused with <see cref="OrderErrors.ChangedMeanwhile"/> the same way as

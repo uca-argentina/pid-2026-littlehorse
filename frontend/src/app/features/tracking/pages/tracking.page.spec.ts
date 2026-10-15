@@ -17,14 +17,22 @@ const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
 
 const url = trackingUrl('bar-alfa', 'K-4821', token);
 
-function anOrder(status: CustomerOrderStatus): TrackedOrder {
+function anOrder(
+  status: CustomerOrderStatus,
+  barName: string | null = null,
+  tableNumber: number | null = null,
+  waiterName: string | null = null,
+): TrackedOrder {
   return {
     code: 'K-4821',
     customerName: 'María Quadro',
     status,
     total: 9000,
     paidAt: '2026-09-17T02:30:00Z',
+    barName,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo' }],
+    tableNumber,
+    waiterName,
   };
 }
 
@@ -37,7 +45,12 @@ function aQuietChannel(): Pick<TrackingChannel, 'state' | 'follow' | 'disconnect
   };
 }
 
-async function openScreenShowing(status: CustomerOrderStatus) {
+async function openScreenShowing(
+  status: CustomerOrderStatus,
+  barName: string | null = null,
+  tableNumber: number | null = null,
+  waiterName: string | null = null,
+) {
   const rendered = await render(TrackingPage, {
     inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
     providers: [
@@ -51,7 +64,7 @@ async function openScreenShowing(status: CustomerOrderStatus) {
   });
 
   const http = TestBed.inject(HttpTestingController);
-  http.expectOne(url).flush(anOrder(status));
+  http.expectOne(url).flush(anOrder(status, barName, tableNumber, waiterName));
   await rendered.fixture.whenStable();
 
   // The store belongs to the component, not to the TestBed: a test that needs a
@@ -115,6 +128,24 @@ describe('TrackingPage', () => {
       );
     },
   );
+
+  // US-36, criterion 3: with more than one bar, the customer has to know
+  // which one to go to — from the moment one has it, not only once it is ready.
+  it.each<CustomerOrderStatus>(['Queued', 'InPreparation', 'Ready'])(
+    'says which bar to pick a %s order up at',
+    async (status) => {
+      await openScreenShowing(status, 'Barra Pista');
+
+      expect(screen.getByText(/retiralo en/i).textContent).toContain('Barra Pista');
+    },
+  );
+
+  // Waiting for the till it has no bar yet: one is chosen when the money is in.
+  it('names no bar while the order waits to be paid at the till', async () => {
+    await openScreenShowing('AwaitingPayment');
+
+    expect(screen.queryByText(/retiralo en/i)).toBeNull();
+  });
 
   it('says it is waiting while nobody has taken it', async () => {
     await openScreenShowing('Queued');
@@ -389,5 +420,48 @@ describe('TrackingPage', () => {
 
     expect(screen.getByRole('alert').textContent).toMatch(/sin se[ñn]al|conexi[óo]n/i);
     expect(screen.queryByText(/buscando tu pedido/i)).toBeNull();
+  });
+
+  describe('from a VIP table', () => {
+    // US-41: the waiter carries it (§8.3). There is nothing to show at a bar.
+    it('says it is carried to the table, with no QR and no bar to go to', async () => {
+      const { rendered } = await openScreenShowing('Queued', 'Barra Pista', 5);
+
+      expect(screen.getByText(/te lo llevamos a la mesa 5/i)).not.toBeNull();
+      expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).toBeNull();
+      expect(screen.queryByText(/retiralo en/i)).toBeNull();
+    });
+
+    it('says a ready order is on its way to the table', async () => {
+      await openScreenShowing('Ready', 'Barra Pista', 5);
+
+      expect(screen.getByRole('status').textContent).toContain('sale para tu mesa');
+    });
+
+    // US-43: once a waiter took it the customer knows who is bringing it.
+    it('says which waiter is carrying it once one took it', async () => {
+      await openScreenShowing('Ready', 'Barra Pista', 5, 'Martín');
+
+      expect(screen.getByRole('status').textContent).toContain('Martín lo está llevando a tu mesa');
+    });
+
+    it('does not name a waiter for an order picked up at the bar', async () => {
+      await openScreenShowing('Ready', 'Barra Pista', null, 'Martín');
+
+      expect(screen.getByRole('status').textContent).not.toContain('lo está llevando');
+    });
+
+    // US-44, criterion 1: the waiter left it at the table.
+    it('says it is at the table once the waiter delivered it', async () => {
+      await openScreenShowing('Delivered', 'Barra Pista', 5, 'Martín');
+
+      expect(screen.getByRole('status').textContent).toContain('En tu mesa');
+    });
+
+    it('keeps saying it was handed over for an order picked up at the bar', async () => {
+      await openScreenShowing('Delivered', 'Barra Pista', null);
+
+      expect(screen.getByRole('status').textContent).toContain('Entregado');
+    });
   });
 });

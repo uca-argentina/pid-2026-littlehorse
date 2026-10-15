@@ -8,6 +8,7 @@ import { BrowserStore } from '../../../core/storage/browser-store';
 import { StoreInMemory } from '../../../core/storage/store-in-memory';
 import { PROCESSING_PAUSE_MS } from '../checkout.store';
 import { ordersUrl } from '../checkout.service';
+import { VIP_TABLE_KEY_PREFIX, vipTableUrl } from '../../../core/vip-table/vip-tables';
 import { CheckoutPage } from './checkout.page';
 
 let store: StoreInMemory;
@@ -103,9 +104,8 @@ describe('CheckoutPage', () => {
     expect(sent.request.body.method).toBe('Digital');
   });
 
-  // US-24, criterion 1. The VIP tables are out of this sprint: drawn, so the
-  // screen is the one somebody will learn, and switched off.
-  it('offers paying from the phone or at the till, and not the table balance yet', async () => {
+  // US-24, criterion 1. The table's balance only opens with a VIP table's QR (US-41).
+  it('offers paying from the phone or at the till, and not the table balance without a table', async () => {
     await openScreenWith(anOrderOfTwoGins);
 
     expect(screen.getByLabelText<HTMLInputElement>(/pago digital/i).disabled).toBe(false);
@@ -227,6 +227,13 @@ describe('CheckoutPage', () => {
       expect(said).toContain('Alguien pidió al mismo tiempo');
     });
 
+    // US-35, criterion 3: a cart put together before closing and paid after.
+    it('says in Spanish that the venue stopped taking orders', async () => {
+      const said = await refusedWith({ type: 'urn:drinkit:problem:order:not-taking-orders' }, 409);
+
+      expect(said).toContain('El boliche no está tomando pedidos en este momento.');
+    });
+
     it.each([
       ['urn:drinkit:problem:order:name-required', 'Necesitamos un nombre'],
       ['urn:drinkit:problem:order:name-needs-surname', 'Poné tu nombre y tu apellido.'],
@@ -254,5 +261,140 @@ describe('CheckoutPage', () => {
 
     expect(screen.getByRole('status').textContent).toMatch(/no hay nada/i);
     expect(screen.queryByRole('button', { name: /pagar/i })).toBeNull();
+  });
+
+  describe('from a VIP table', () => {
+    const CODE = 'a'.repeat(32);
+
+    async function openForTheTable(balance: number) {
+      store.write(VIP_TABLE_KEY_PREFIX + 'bar-alfa', CODE);
+      const rendered = await render(CheckoutPage, {
+        inputs: { venueSlug: 'bar-alfa' },
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: BrowserStore, useValue: store },
+          { provide: PROCESSING_PAUSE_MS, useValue: 0 },
+        ],
+      });
+      const cart = TestBed.inject(Cart);
+      cart.open('bar-alfa');
+      anOrderOfTwoGins(cart);
+      const http = TestBed.inject(HttpTestingController);
+
+      // Answered before waiting: the screen is not stable while it asks.
+      http.expectOne(vipTableUrl('bar-alfa', CODE)).flush({ tableNumber: 5, balance });
+      await rendered.fixture.whenStable();
+
+      return { rendered, http };
+    }
+
+    async function payAs(rendered: Awaited<ReturnType<typeof openForTheTable>>['rendered']) {
+      fireEvent.input(name(), { target: { value: 'María Quadro' } });
+      await rendered.fixture.whenStable();
+      payButton().click();
+      await rendered.fixture.whenStable();
+    }
+
+    // US-41, criterion 2: the balance pays, and nobody chooses a method.
+    it("pays from the table's balance, with no method to choose", async () => {
+      const { rendered, http } = await openForTheTable(20000);
+
+      expect(screen.queryByLabelText(/pago digital/i)).toBeNull();
+      expect(screen.queryByLabelText(/efectivo/i)).toBeNull();
+      expect(screen.getByText(/disponible \$ 20\.000,00/i)).not.toBeNull();
+
+      await payAs(rendered);
+
+      const sent = http.expectOne(ordersUrl('bar-alfa'));
+      expect(sent.request.body.method).toBe('VipBalance');
+      expect(sent.request.body.tableCode).toBe(CODE);
+      expect(sent.request.body.digitalAmount).toBeNull();
+    });
+
+    // US-42, criterion 1: what the balance covers and what is left to pay.
+    it('shows what the balance covers and what is left to pay when it falls short', async () => {
+      const { rendered } = await openForTheTable(5000);
+
+      fireEvent.input(name(), { target: { value: 'María Quadro' } });
+      await rendered.fixture.whenStable();
+
+      const split = screen.getByTestId('split').textContent;
+      expect(split).toContain('$ 5.000,00');
+      expect(split).toContain('$ 4.000,00');
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(payButton().textContent).toContain('Pagar la diferencia');
+      expect(payButton().textContent).toContain('$ 4.000,00');
+      expect(payButton().disabled).toBe(false);
+    });
+
+    // US-42, criterion 2: the phone pays the difference it showed, no more.
+    it('sends the difference it showed when it is paid', async () => {
+      const { rendered, http } = await openForTheTable(5000);
+
+      await payAs(rendered);
+
+      const sent = http.expectOne(ordersUrl('bar-alfa'));
+      expect(sent.request.body.method).toBe('VipBalance');
+      expect(sent.request.body.digitalAmount).toBe(4000);
+    });
+
+    // The server compares to the cent: 9000 - 1234.56 is 7765.4400000000005 in
+    // a float, which it would refuse as a difference that changed, forever.
+    it('sends the difference rounded to the cent', async () => {
+      const { rendered, http } = await openForTheTable(1234.56);
+
+      await payAs(rendered);
+
+      expect(http.expectOne(ordersUrl('bar-alfa')).request.body.digitalAmount).toBe(7765.44);
+    });
+
+    // US-42, a balance at zero: the difference is the whole order.
+    it('pays the whole order from the phone when the balance is empty', async () => {
+      const { rendered, http } = await openForTheTable(0);
+
+      await payAs(rendered);
+
+      expect(http.expectOne(ordersUrl('bar-alfa')).request.body.digitalAmount).toBe(9000);
+    });
+
+    // US-41 criterion 3 and the edge of US-42: another phone of the table spent
+    // first, so the difference shown is old. The balance is asked for again.
+    it('says the balance changed when the API refuses it, and shows it again', async () => {
+      const { rendered, http } = await openForTheTable(20000);
+
+      await payAs(rendered);
+      http
+        .expectOne(ordersUrl('bar-alfa'))
+        .flush(
+          { type: 'urn:drinkit:problem:vip-account:balance-changed' },
+          { status: 409, statusText: '' },
+        );
+      // Not whenStable: the balance is being asked for again, on purpose.
+      rendered.fixture.detectChanges();
+      TestBed.tick();
+
+      expect(screen.getByRole('alert').textContent).toContain('Alguien de tu mesa pidió');
+      http.expectOne(vipTableUrl('bar-alfa', CODE)).flush({ tableNumber: 5, balance: 3000 });
+      await rendered.fixture.whenStable();
+      expect(screen.getByText(/disponible \$ 3\.000,00/i)).not.toBeNull();
+    });
+
+    // Criterion 4: the night ended, or the waiter replaced the code, while paying.
+    it("says the table's code no longer works when the API refuses it", async () => {
+      const { rendered, http } = await openForTheTable(20000);
+
+      await payAs(rendered);
+      http
+        .expectOne(ordersUrl('bar-alfa'))
+        .flush(
+          { type: 'urn:drinkit:problem:vip-account:not-found' },
+          { status: 404, statusText: '' },
+        );
+      await rendered.fixture.whenStable();
+
+      expect(screen.getByRole('alert').textContent).toContain('El código de tu mesa ya no sirve');
+    });
   });
 });

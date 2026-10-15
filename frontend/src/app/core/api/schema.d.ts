@@ -101,6 +101,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/{venueSlug}/vip-accounts/{code}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The VIP table a code opens tonight, with what it has left to spend. */
+    get: operations['FindVipTable'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/kds/queue': {
     parameters: {
       query?: never;
@@ -110,6 +127,23 @@ export interface paths {
     };
     /** The bar's queue: every paid order still on its way, oldest paid first. */
     get: operations['GetKdsQueue'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/kds/station': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Which bar this tablet is, by the name it goes by now. */
+    get: operations['GetKdsStation'];
     put?: never;
     post?: never;
     delete?: never;
@@ -172,6 +206,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/cashier/vip-deliveries': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * The tables ready to be carried, the one that has waited longest first.
+     *     The same list the waiters read, minus the waiter's id: the till only
+     *     needs to know who has it, to say it out loud.
+     */
+    get: operations['GetVipDeliveries'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/users': {
     parameters: {
       query?: never;
@@ -200,6 +255,23 @@ export interface paths {
     get?: never;
     /** Corrects the role somebody was given. */
     put: operations['ChangeStaffUserRole'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/users/{id}/display-name': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Gives somebody the name people read instead of their username. */
+    put: operations['RenameStaffUser'];
     post?: never;
     delete?: never;
     options?: never;
@@ -258,6 +330,127 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/nights': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists every night of the venue, the latest first. */
+    get: operations['ListNights'];
+    put?: never;
+    /** Sets up a night of the venue with its hours and the staff working it. */
+    post: operations['CreateNight'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** One night of the venue, with its hours and its crew. */
+    get: operations['GetNight'];
+    /** Changes a night that has not ended. Once it started, its start stays; an end already past closes it now. */
+    put: operations['UpdateNight'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}/stock': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The night's stock, bar by bar: what was loaded of each product, sold and is left, and what the storeroom still has. */
+    get: operations['GetNightStock'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}/tables': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The VIP tables the night sells, by number, with the budget of each package and what it spent. */
+    get: operations['GetNightTables'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}/tables/{tableId}/access-code': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Gives a table of the night a new code for its QR. The old one stops working; the balance stays. */
+    post: operations['RegenerateNightTableCode'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}/metrics': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The night's report: what was sold and how it was paid, how long orders took, and the most ordered products against their stock. So far, for a night still underway. */
+    get: operations['GetNightMetrics'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/nights/{id}/stock/{kdsId}/{productId}/adjust': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Moves units of a product from the storeroom into one bar of a night that has not ended, or back. */
+    post: operations['AdjustNightStock'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/categories': {
     parameters: {
       query?: never;
@@ -270,6 +463,126 @@ export interface paths {
     put?: never;
     /** Adds a category the venue's menu can be split by. */
     post: operations['CreateCategory'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/tables': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists the venue's VIP tables by number, the ones put away included. */
+    get: operations['ListTables'];
+    put?: never;
+    /** Adds a VIP table with its number, how many people it seats and where it is. */
+    post: operations['CreateTable'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/tables/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Changes how many people a table seats and where it is. The number stays. */
+    put: operations['UpdateTable'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/tables/{id}/deactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Puts a table away without deleting it, unless a night that has not ended sells it. */
+    post: operations['DeactivateTable'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/tables/{id}/reactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Brings back a table that was put away. */
+    post: operations['ReactivateTable'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/waiter/tables': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The venue's table orders that are ready, the one that has waited longest first. */
+    get: operations['ListWaiterTables'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/waiter/tables/{orderId}/take': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Takes a table's ready order to carry it. Taking it again changes nothing. */
+    post: operations['TakeTableOrder'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/waiter/tables/{orderId}/deliver': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Hands over, at its table, an order the caller took. Delivering it again changes nothing. */
+    post: operations['DeliverTableOrder'];
     delete?: never;
     options?: never;
     head?: never;
@@ -574,6 +887,16 @@ export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     /**
+     * @description How much a product's stock moves in one bar for the night: positive when
+     *     units go in from the storeroom, negative when they go back to it. A change,
+     *     never the new total, so a sale made while the screen was open is not
+     *     overwritten.
+     */
+    AdjustNightStockRequest: {
+      /** Format: int32 */
+      change: number;
+    };
+    /**
      * @description How much the stock moves: positive when units arrived, negative when it was
      *     loaded wrong. A change, never the new total.
      */
@@ -592,6 +915,13 @@ export interface components {
       /** Format: date-time */
       lastModifiedAt: null | string;
       lastModifiedBy: null | string;
+    };
+    /** @description From paid to ready at one bar of the night, by the name its board shows. */
+    BarTimesResponse: {
+      /** Format: uuid */
+      kdsId: string;
+      name: string;
+      paidToReady: components['schemas']['StageTimesResponse'];
     };
     /** @description One drink of an order, as the till reads it back. */
     CashierOrderItemResponse: {
@@ -618,6 +948,24 @@ export interface components {
     /** @description What a reader or the camera read off the customer's phone. */
     CashierScanRequest: {
       read: null | string;
+    };
+    /**
+     * @description One table's order that is ready to be carried, as the till sees it: who has
+     *     it, if anybody, and since when. The till only looks: coordinating is done
+     *     out loud.
+     */
+    CashierVipDeliveryResponse: {
+      /** Format: uuid */
+      orderId: string;
+      /** Format: int32 */
+      tableNumber: number;
+      customerName: string;
+      /** Format: date-time */
+      readyAt: null | string;
+      takenByName: null | string;
+      /** Format: date-time */
+      takenAt: null | string;
+      items: components['schemas']['WaiterOrderItemResponse'][];
     };
     CategoryResponse: {
       /** Format: uuid */
@@ -647,10 +995,22 @@ export interface components {
       method: components['schemas']['PaymentMethodName'];
       idempotencyKey: null | string;
       lines: null | components['schemas']['OrderLineRequestBody'][];
+      tableCode?: null | string;
+      /** Format: double */
+      digitalAmount?: null | number;
     };
     /** @description What the administration screen posts to add a category. */
     CreateCategoryRequest: {
       name: string;
+    };
+    CreateNightRequest: {
+      name: string;
+      /** Format: date-time */
+      startsAt: string;
+      /** Format: date-time */
+      endsAt: string;
+      crewIds: string[];
+      tables?: null | components['schemas']['NightTableRequestBody'][];
     };
     /**
      * @description What the administration screen posts. The image address is whatever the
@@ -668,11 +1028,23 @@ export interface components {
       /** Format: uuid */
       categoryId: string;
     };
-    /** @description What the administration screen posts. The role travels as its name. */
+    /**
+     * @description What the administration screen posts. The role travels as its name; the
+     *     display name is optional, and a KDS shows it as its bar's.
+     */
     CreateStaffUserRequest: {
       username: string;
       password: string;
       role: components['schemas']['StaffRoleName'];
+      displayName?: null | string;
+    };
+    /** @description What the administration screen posts to add a table. */
+    CreateTableRequest: {
+      /** Format: int32 */
+      number: number;
+      /** Format: int32 */
+      capacity: number;
+      location: null | string;
     };
     /**
      * @description Where an order is, as the customer's phone reads it.
@@ -705,6 +1077,12 @@ export interface components {
       lastModifiedAt: null | string;
       isForTable: boolean;
       orderItems: components['schemas']['KdsQueueOrderItemResponse'][];
+      /** Format: int32 */
+      tableNumber: null | number;
+    };
+    /** @description Which bar this tablet is, by the name it goes by now. */
+    KdsStationResponse: {
+      name: string;
     };
     /** @description The credentials a staff member signs in with. */
     LoginRequest: {
@@ -717,6 +1095,7 @@ export interface components {
       expiresAt: string;
       username: string;
       role: components['schemas']['StaffRoleName'];
+      displayName: null | string;
     };
     /** @description One card of the menu, as the customer's phone receives it. */
     MenuItemResponse: {
@@ -734,8 +1113,107 @@ export interface components {
     /** @description The venue's menu: its name, its categories and its products. */
     MenuResponse: {
       venueName: string;
+      isTakingOrders: boolean;
       categories: components['schemas']['CategoryResponse'][];
       items: components['schemas']['MenuItemResponse'][];
+    };
+    /**
+     * @description A night's report. WorstTenthSeconds is the average of the slowest tenth of
+     *     the orders, not a percentile. Unmeasured counts the orders from before
+     *     ReadyAt was kept, which have no time to give.
+     */
+    NightMetricsResponse: {
+      /** Format: uuid */
+      nightId: string;
+      /** Format: double */
+      sold: number;
+      /** Format: int32 */
+      orders: number;
+      /** Format: double */
+      averageTicket: number;
+      /** Format: int32 */
+      units: number;
+      byMethod: components['schemas']['SalesByMethodResponse'][];
+      paidToReady: components['schemas']['StageTimesResponse'];
+      readyToDelivered: components['schemas']['StageTimesResponse'];
+      byBar: components['schemas']['BarTimesResponse'][];
+      /** Format: int32 */
+      unmeasured: number;
+      top: components['schemas']['TopProductResponse'][];
+      /** Format: int32 */
+      soldOutProducts: number;
+    };
+    NightResponse: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      /** Format: date-time */
+      startsAt: string;
+      /** Format: date-time */
+      endsAt: string;
+      crewIds: string[];
+      audit: components['schemas']['AuditResponse'];
+    };
+    /** @description One bar of the night: a KDS of its crew, with its own stock. */
+    NightStockBarResponse: {
+      /** Format: uuid */
+      kdsId: string;
+      name: string;
+      lines: components['schemas']['NightStockLineResponse'][];
+    };
+    /**
+     * @description One product in one bar for the night. Every night's bars start empty, so
+     *     Loaded is all that came in. InStoreroom is the product's, the same in every
+     *     bar: what is left to load.
+     */
+    NightStockLineResponse: {
+      /** Format: uuid */
+      productId: string;
+      productName: string;
+      /** Format: int32 */
+      loaded: number;
+      /** Format: int32 */
+      sold: number;
+      /** Format: int32 */
+      left: number;
+      /** Format: int32 */
+      inStoreroom: number;
+    };
+    NightStockResponse: {
+      /** Format: uuid */
+      nightId: string;
+      bars: components['schemas']['NightStockBarResponse'][];
+    };
+    /** @description The new code of a table after the old one leaked. */
+    NightTableCodeResponse: {
+      /** Format: uuid */
+      tableId: string;
+      accessCode: string;
+    };
+    /** @description What the administration screen posts to set up a night. */
+    NightTableRequestBody: {
+      /** Format: uuid */
+      tableId: string;
+      /** Format: double */
+      budget: number;
+    };
+    /**
+     * @description A table of the night with what was loaded onto it, what its orders took,
+     *     and the code of its QR for the waiter to hand over.
+     */
+    NightTableResponse: {
+      /** Format: uuid */
+      tableId: string;
+      /** Format: int32 */
+      number: number;
+      /** Format: int32 */
+      capacity: number;
+      location: null | string;
+      /** Format: double */
+      budget: number;
+      /** Format: double */
+      spent: number;
+      accessCode: string;
     };
     /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
@@ -779,9 +1257,21 @@ export interface components {
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
     };
+    /** @description What it sends to give somebody the name people read. Blank takes it away. */
+    RenameStaffUserRequest: {
+      displayName: null | string;
+    };
     /** @description What it sends to hand somebody a new password. */
     ResetStaffUserPasswordRequest: {
       password: string;
+    };
+    /** @description What was paid with one method. Every method has a row, even at zero. */
+    SalesByMethodResponse: {
+      method: components['schemas']['PaymentMethodName'];
+      /** Format: int32 */
+      orders: number;
+      /** Format: double */
+      amount: number;
     };
     /** @description Whose order a scan found, and what it did with it. */
     ScannedOrderResponse: {
@@ -807,9 +1297,54 @@ export interface components {
       /** Format: uuid */
       id: string;
       username: string;
+      displayName: null | string;
       role: components['schemas']['StaffRoleName'];
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
+    };
+    /** @description How long a stage took, in whole seconds. Null until some order has been through it. */
+    StageTimesResponse: {
+      /** Format: int32 */
+      averageSeconds: null | number;
+      /** Format: int32 */
+      worstTenthSeconds: null | number;
+    };
+    TableResponse: {
+      /** Format: uuid */
+      id: string;
+      /** Format: int32 */
+      number: number;
+      /** Format: int32 */
+      capacity: number;
+      location: null | string;
+      isActive: boolean;
+      audit: components['schemas']['AuditResponse'];
+    };
+    /** @description What the phone gets back once the order is the waiter's. */
+    TakenTableResponse: {
+      /** Format: uuid */
+      orderId: string;
+      /** Format: int32 */
+      tableNumber: number;
+      waiterName: string;
+      /** Format: date-time */
+      takenAt: string;
+    };
+    /**
+     * @description One of the most ordered products, with the name and what it billed as it
+     *     was ordered, beside what its bars were loaded with that night.
+     */
+    TopProductResponse: {
+      /** Format: uuid */
+      productId: string;
+      name: string;
+      /** Format: int32 */
+      units: number;
+      /** Format: double */
+      billed: number;
+      /** Format: int32 */
+      loaded: number;
+      soldOut: boolean;
     };
     /** @description One drink of the order, as the tracking screen draws it. */
     TrackedOrderItemResponse: {
@@ -818,7 +1353,7 @@ export interface components {
       quantity: number;
       note: null | string;
     };
-    /** @description Where an order is. */
+    /** @description Where an order is, and which bar to pick it up at. */
     TrackedOrderResponse: {
       code: string;
       customerName: string;
@@ -827,7 +1362,21 @@ export interface components {
       total: number;
       /** Format: date-time */
       paidAt: null | string;
+      barName: null | string;
       items: components['schemas']['TrackedOrderItemResponse'][];
+      /** Format: int32 */
+      tableNumber: null | number;
+      waiterName: null | string;
+    };
+    /** @description What the night's own screen saves: the whole form, as on creation. */
+    UpdateNightRequest: {
+      name: string;
+      /** Format: date-time */
+      startsAt: string;
+      /** Format: date-time */
+      endsAt: string;
+      crewIds: string[];
+      tables?: null | components['schemas']['NightTableRequestBody'][];
     };
     /**
      * @description A product's name, description, price and category. Stock, picture and
@@ -840,6 +1389,44 @@ export interface components {
       price: number;
       /** Format: uuid */
       categoryId: string;
+    };
+    /** @description What the edit screen puts. No number: it is what the orders placed from the table say. */
+    UpdateTableRequest: {
+      /** Format: int32 */
+      capacity: number;
+      location: null | string;
+    };
+    /** @description What the menu shows at the top for a VIP table: its number and what it has left to spend. */
+    VipTableAccessResponse: {
+      /** Format: int32 */
+      tableNumber: number;
+      /** Format: double */
+      balance: number;
+    };
+    /** @description One drink on a table's order, as the waiter's phone reads it. */
+    WaiterOrderItemResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+      note: null | string;
+    };
+    /**
+     * @description One table's order that is ready to be carried. `TakenByName` is null
+     *     while nobody has it; `TakenByMe` says whether it is the caller.
+     */
+    WaiterTableResponse: {
+      /** Format: uuid */
+      orderId: string;
+      /** Format: int32 */
+      tableNumber: number;
+      customerName: string;
+      /** Format: date-time */
+      readyAt: null | string;
+      takenByName: null | string;
+      takenByMe: boolean;
+      /** Format: date-time */
+      takenAt: null | string;
+      items: components['schemas']['WaiterOrderItemResponse'][];
     };
   };
   responses: never;
@@ -1040,6 +1627,38 @@ export interface operations {
       };
     };
   };
+  FindVipTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        venueSlug: string;
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['VipTableAccessResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   GetKdsQueue: {
     parameters: {
       query?: never;
@@ -1056,6 +1675,26 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['KdsQueueOrderResponse'][];
+        };
+      };
+    };
+  };
+  GetKdsStation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['KdsStationResponse'];
         };
       };
     };
@@ -1151,6 +1790,26 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['CashierOrderResponse'][];
+        };
+      };
+    };
+  };
+  GetVipDeliveries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CashierVipDeliveryResponse'][];
         };
       };
     };
@@ -1261,6 +1920,50 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RenameStaffUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RenameStaffUserRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StaffUserResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -1385,6 +2088,341 @@ export interface operations {
       };
     };
   };
+  ListNights: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightResponse'][];
+        };
+      };
+    };
+  };
+  CreateNight: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateNightRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetNight: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UpdateNight: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateNightRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetNightStock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightStockResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetNightTables: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightTableResponse'][];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  RegenerateNightTableCode: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        tableId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightTableCodeResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetNightMetrics: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightMetricsResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  AdjustNightStock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+        kdsId: string;
+        productId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AdjustNightStockRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightStockResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   ListCategories: {
     parameters: {
       query?: never;
@@ -1429,6 +2467,299 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListTables: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'][];
+        };
+      };
+    };
+  };
+  CreateTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTableRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UpdateTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateTableRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  DeactivateTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReactivateTable: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TableResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListWaiterTables: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['WaiterTableResponse'][];
+        };
+      };
+    };
+  };
+  TakeTableOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        orderId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['TakenTableResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  DeliverTableOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        orderId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

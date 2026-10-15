@@ -95,11 +95,13 @@ async function openScreenFor(id: string, overrides: Record<string, unknown> = {}
 
 // jsdom has no object URLs.
 beforeEach(() => {
-  vi.stubGlobal('URL', {
-    ...URL,
-    createObjectURL: vi.fn((file: File) => `blob:preview/${file.name}`),
-    revokeObjectURL: vi.fn(),
-  });
+  // A subclass and not a plain object: the router builds URLs with `new URL`.
+  class UrlWithObjectUrls extends URL {
+    static override createObjectURL = vi.fn((file: File) => `blob:preview/${file.name}`);
+    static override revokeObjectURL = vi.fn();
+  }
+
+  vi.stubGlobal('URL', UrlWithObjectUrls);
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -548,9 +550,10 @@ describe('EditProductPage', () => {
   });
 
   // The screen showed 20 and the bar sold 18 while it was open: a correction
-  // to 0 would take away 20, and only 2 are left. Nothing is written, and the
-  // message says what there is now.
-  it('says sales made meanwhile left less than the correction takes away', async () => {
+  // to 0 would take away 20, and only 2 are left. Units loaded into the bars of
+  // a night not yet over cannot be taken away from here either (US-37).
+  // Nothing is written, and the message says what there is now and why.
+  it('says sales or the bars left less than the correction takes away', async () => {
     const { rendered } = await openScreenFor('id-2', {
       update: vi.fn().mockReturnValue(of({ ...ginTonic, stock: 2 })),
       adjustStock: rejectedWith(409, ProblemTypes.productStockMoved),
@@ -561,8 +564,8 @@ describe('EditProductPage', () => {
     await rendered.fixture.whenStable();
 
     const alert = screen.getByRole('alert').textContent ?? '';
-    expect(alert).toContain('Se vendió mientras tanto');
-    expect(alert).toContain('ahora hay 2');
+    expect(alert).toContain('hay 2 en total');
+    expect(alert).toContain('cargado en las barras');
   });
 
   it('cannot be submitted twice while saving', async () => {

@@ -10,5 +10,5 @@ namespace DrinkIt.Application.Kds;
 /// </remarks>
 public interface IKdsBoardNotifier
 {
-    Task NotifyBoardChangedAsync(Guid venueId, CancellationToken cancellationToken);
+    Task NotifyBoardChangedAsync(Guid venueId, Guid kdsId, CancellationToken cancellationToken);
 }

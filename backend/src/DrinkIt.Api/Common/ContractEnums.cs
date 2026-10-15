@@ -122,6 +122,14 @@ public static class ContractEnums
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, "A cart never reaches the customer's answers."),
     };
 
+    public static PaymentMethodName ToContract(this PaymentMethod method) => method switch
+    {
+        PaymentMethod.Digital => PaymentMethodName.Digital,
+        PaymentMethod.Cash => PaymentMethodName.Cash,
+        PaymentMethod.VipBalance => PaymentMethodName.VipBalance,
+        _ => throw new ArgumentOutOfRangeException(nameof(method), method, "A payment method the contract has no name for."),
+    };
+
     public static PaymentMethod ToDomain(this PaymentMethodName method) => method switch
     {
         PaymentMethodName.Digital => PaymentMethod.Digital,

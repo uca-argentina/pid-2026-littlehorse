@@ -30,6 +30,9 @@ internal sealed class StaffUserRepository(DrinkItDbContext context) : IStaffUser
     public Task<StaffUser?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
         context.StaffUsers.FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
 
+    public async Task<IReadOnlyList<StaffUser>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        await context.StaffUsers.Where(user => ids.Contains(user.Id)).ToListAsync(cancellationToken);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken) =>
         context.SaveChangesAsync(cancellationToken);
 

@@ -23,7 +23,8 @@ public class LoginEndpointTests
         Username: "euge",
         PasswordHash: $"hashed:{RightPassword}",
         Role: StaffRole.Administrator,
-        IsActive: true);
+        IsActive: true,
+        DisplayName: null);
 
     [Fact]
     public async Task HandleAsync_WhenCredentialsAreWrong_RespondsWithProblemJson()

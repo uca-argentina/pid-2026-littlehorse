@@ -16,7 +16,7 @@ import {
   startPreparingUrl,
   undoDeliveryUrl,
 } from '../kds-orders.service';
-import { KDS_QUEUE_URL } from '../kds-queue';
+import { KDS_QUEUE_URL, KDS_STATION_URL } from '../kds-queue';
 import type { KdsQueueOrder } from '../kds-queue';
 import { KdsBoardPage } from './kds-board.page';
 
@@ -43,6 +43,7 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     paidAt: new Date().toISOString(),
     lastModifiedAt: null,
     isForTable: false,
+    tableNumber: null,
     orderItems: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
     ...overrides,
   };
@@ -59,6 +60,7 @@ function signedInAsTheStation(): void {
       token: 'un-token',
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
       username: 'barra.demo',
+      displayName: null,
       role: 'Kds',
     }),
   );
@@ -66,7 +68,11 @@ function signedInAsTheStation(): void {
 
 afterEach(() => sessionStorage.clear());
 
-async function openScreen() {
+/**
+ * The board asks for its bar's name as it opens (US-36). Answered here, as the
+ * station's username, unless a test wants to hold the answer back (null).
+ */
+async function openScreen(station: string | null = 'barra.demo') {
   signedInAsTheStation();
   const channel = new FakeKdsBoardChannel();
 
@@ -80,11 +86,20 @@ async function openScreen() {
     ],
   });
 
-  return { rendered, channel, http: TestBed.inject(HttpTestingController) };
+  const http = TestBed.inject(HttpTestingController);
+
+  if (station !== null) http.expectOne(KDS_STATION_URL).flush({ name: station });
+
+  return { rendered, channel, http };
 }
 
-async function openScreenShowing(orders: KdsQueueOrder[]) {
-  const { rendered, channel, http } = await openScreen();
+/** Told something changed, the board asks for its name again too (US-36). */
+function answerTheStation(http: HttpTestingController): void {
+  http.match(KDS_STATION_URL).forEach((request) => request.flush({ name: 'barra.demo' }));
+}
+
+async function openScreenShowing(orders: KdsQueueOrder[], station = 'barra.demo') {
+  const { rendered, channel, http } = await openScreen(station);
 
   http.expectOne(KDS_QUEUE_URL).flush(orders);
   await rendered.fixture.whenStable();
@@ -140,6 +155,23 @@ describe('KdsBoardPage', () => {
     expect(screen.getByText('K-0002').closest('.card')?.textContent).toContain('Mesa');
   });
 
+  // US-41: which table, so the waiter knows where it goes.
+  it('labels a table order with the number of its table', async () => {
+    await openScreenShowing([anOrder({ code: 'K-0002', isForTable: true, tableNumber: 5 })]);
+
+    expect(screen.getByText('K-0002').closest('.card')?.textContent).toContain('Mesa 5');
+  });
+
+  // US-41: a table's order stays in Listos until the waiter takes it (US-43);
+  // it is not handed over at the bar with the customer's QR.
+  it('offers no Entregado on a ready table order', async () => {
+    await openScreenShowing([
+      anOrder({ code: 'K-0002', isForTable: true, tableNumber: 5, status: 'Ready' }),
+    ]);
+
+    expect(screen.queryByRole('button', { name: 'Entregado K-0002' })).toBeNull();
+  });
+
   // Criterion 2: the three age bands, at the boundaries the criterion names.
   it.each([
     [4, 'ok' as const, '4 min'],
@@ -170,6 +202,45 @@ describe('KdsBoardPage', () => {
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('alert')).not.toBeNull();
+  });
+
+  // US-35, criterion 4: signed in, right role, not in tonight's crew. The hub
+  // is refused too, and keeps trying — that is not a dropped connection, and
+  // saying so would send somebody to check the wifi.
+  it('says the station is not in tonight’s crew, and not that the connection dropped', async () => {
+    const { rendered, http, channel } = await openScreen();
+
+    http
+      .expectOne(KDS_QUEUE_URL)
+      .flush({ type: ProblemTypes.notInTonightsCrew }, { status: 403, statusText: 'Forbidden' });
+    channel.state.set('reconnecting');
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('alert').textContent).toContain('no está en la noche de hoy');
+    expect(screen.queryByText(/sin conexión|no pudimos cargar/i)).toBeNull();
+  });
+
+  // The board retries on its own; while it does, the reason stays the night.
+  it('keeps saying it is the night while it retries on its own', async () => {
+    const { rendered, http } = await openScreen();
+    vi.useFakeTimers();
+
+    try {
+      http
+        .expectOne(KDS_QUEUE_URL)
+        .flush({ type: ProblemTypes.notInTonightsCrew }, { status: 403, statusText: 'Forbidden' });
+      await vi.advanceTimersByTimeAsync(0);
+      rendered.fixture.detectChanges();
+
+      await vi.advanceTimersByTimeAsync(KDS_RETRY_MS);
+      rendered.fixture.detectChanges();
+      http.expectOne(KDS_QUEUE_URL);
+
+      expect(screen.getByRole('alert').textContent).toContain('no está en la noche de hoy');
+      expect(screen.queryByText(/no pudimos cargar/i)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('draws the outline of the three columns while the queue loads', async () => {
@@ -291,21 +362,40 @@ describe('KdsBoardPage', () => {
     });
   });
 
-  // The wireframe's header: which venue, and which station's tablet this is.
-  it('shows the venue and the station account in the header', async () => {
-    const { rendered } = await openScreenShowing([]);
-
-    rendered.fixture.debugElement.injector.get(SessionStorage).remember({
-      token: 'un-token',
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
-      username: 'barra-principal',
-      role: 'Kds',
-    });
-    await rendered.fixture.whenStable();
+  // The wireframe's header: which venue, and which station's tablet this is
+  // — by the name its bar goes by (US-36).
+  it('shows the venue and the name of its bar in the header', async () => {
+    await openScreenShowing([], 'Barra Pista');
 
     const header = screen.getByRole('banner');
     expect(header.textContent).toContain('bar-alfa');
-    expect(header.textContent).toContain('barra-principal');
+    expect(header.textContent).toContain('Barra Pista');
+  });
+
+  // Until the API answers, the header is not left blank.
+  it('shows the account it signed in with while its name has not arrived', async () => {
+    const { rendered, http } = await openScreen(null);
+
+    http.expectOne(KDS_QUEUE_URL).flush([]);
+    rendered.fixture.detectChanges();
+
+    expect(screen.getByRole('banner').textContent).toContain('barra.demo');
+  });
+
+  // US-36: renamed while the tablet was signed in. Its board is told, and
+  // the header follows without signing in again.
+  it('shows the new name of its bar once the board is told something changed', async () => {
+    const { rendered, channel, http } = await openScreenShowing([], 'Barra 1');
+
+    expect(screen.getByRole('banner').textContent).toContain('Barra 1');
+
+    channel.onChanged?.();
+    rendered.fixture.detectChanges();
+    http.expectOne(KDS_QUEUE_URL).flush([]);
+    http.expectOne(KDS_STATION_URL).flush({ name: 'Barra Pista' });
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByRole('banner').textContent).toContain('Barra Pista');
   });
 
   // US-15: this is the whole point of SignalR — a new order shows up without
@@ -317,6 +407,7 @@ describe('KdsBoardPage', () => {
     rendered.fixture.detectChanges();
 
     http.expectOne(KDS_QUEUE_URL).flush([anOrder()]);
+    answerTheStation(http);
     await rendered.fixture.whenStable();
 
     expect(screen.getByText('K-4821')).not.toBeNull();
@@ -521,11 +612,13 @@ describe('KdsBoardPage', () => {
       channel.onChanged?.();
       rendered.fixture.detectChanges();
       http.expectOne(KDS_QUEUE_URL).flush([anOrder({ status: 'InPreparation' })]);
+      answerTheStation(http);
       await rendered.fixture.whenStable();
 
       channel.onChanged?.();
       rendered.fixture.detectChanges();
       http.expectOne(KDS_QUEUE_URL).flush([anOrder({ status: 'Queued' })]);
+      answerTheStation(http);
       await rendered.fixture.whenStable();
 
       expect(

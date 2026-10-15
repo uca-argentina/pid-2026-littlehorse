@@ -111,13 +111,33 @@ export class TrackingPage {
   /** US-23: nothing to pick up and nothing left to wait for, so the journey is not drawn. */
   protected readonly isCanceled = computed(() => this.status() === 'Canceled');
 
+  /** US-41: the VIP table it is carried to, or null when it is picked up at the bar. */
+  protected readonly tableNumber = computed(() => this.store.order()?.tableNumber ?? null);
+
+  /** US-43: the waiter carrying it to the table, once one took it. */
+  protected readonly waiterName = computed(() => this.store.order()?.waiterName ?? null);
+
   /** "Cancelar pedido" was tapped once: it asks before doing it. */
   protected readonly confirmingCancel = signal(false);
 
   protected readonly whatIsHappening = computed(() => {
     const status = this.status();
 
-    return status === null ? '' : (WHAT_IS_HAPPENING[status] ?? '');
+    if (status === null) return '';
+
+    // US-44: the waiter left it at the table, so there is no bar to have picked it up at.
+    if (status === 'Delivered' && this.tableNumber() !== null)
+      return 'En tu mesa. ¡Que lo disfrutes!';
+
+    if (status === 'Ready' && this.tableNumber() !== null) {
+      const waiter = this.waiterName();
+
+      return waiter === null
+        ? '¡Está listo! Ya sale para tu mesa.'
+        : `¡Está listo! ${waiter} lo está llevando a tu mesa.`;
+    }
+
+    return WHAT_IS_HAPPENING[status] ?? '';
   });
 
   /**
@@ -127,7 +147,8 @@ export class TrackingPage {
   protected readonly showsQr = computed(() => {
     const status = this.status();
 
-    return status !== null && CLAIMABLE.includes(status);
+    // A table's order is carried by the waiter (§8.3): there is nothing to show.
+    return status !== null && CLAIMABLE.includes(status) && this.tableNumber() === null;
   });
 
   protected readonly qrPaper = QR_PAPER;

@@ -1,5 +1,6 @@
 import { devices, expect, test } from '@playwright/test';
 import type { APIRequestContext, Browser, Page } from '@playwright/test';
+import { loadIntoTonight } from './stock';
 import { seededAdminPassword, seededAdminUsername, seededVenueSlug } from './seeded-data';
 import { categoryIdNamed } from './categories';
 
@@ -44,6 +45,7 @@ async function loadProduct(request: APIRequestContext, name: string): Promise<vo
   });
 
   expect(created.status()).toBe(201);
+  await loadIntoTonight(request, token, ((await created.json()) as { id: string }).id, 20);
 }
 
 async function theCustomersPhone(browser: Browser, baseURL: string | undefined): Promise<Page> {

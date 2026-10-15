@@ -1,4 +1,5 @@
 using DrinkIt.Application.Common;
+using DrinkIt.Application.Nights;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 
@@ -11,7 +12,9 @@ public sealed record ConfirmOrderCommand(
     string? CustomerName,
     PaymentMethod Method,
     string? IdempotencyKey,
-    IReadOnlyCollection<OrderLineRequest> Lines);
+    IReadOnlyCollection<OrderLineRequest> Lines,
+    string? TableCode = null,
+    decimal? DigitalAmount = null);
 
 /// <summary>
 /// The order as the confirmation screen shows it.
@@ -43,9 +46,12 @@ public sealed record ConfirmedOrder(
 public sealed class ConfirmOrderHandler(
     IOrderRepository orders,
     IProductsForOrdering products,
+    IBarsForOrdering bars,
     IOrderCodeSequence codes,
     IEnumerable<IPaymentStrategy> paymentStrategies,
-    ICurrentVenue currentVenue)
+    ICurrentVenue currentVenue,
+    IUnderwayNightLookup nights,
+    TimeProvider clock)
 {
     public static readonly Error Empty =
         new("order.empty", "There is nothing in the order.");
@@ -68,14 +74,6 @@ public sealed class ConfirmOrderHandler(
     public static readonly Error QuantityNotPositive =
         new("order.quantity_not_positive", "Every drink in the order needs a quantity of at least one.");
 
-    /// <summary>
-    /// How many times an order will be rebuilt against a menu that moved
-    /// underneath it. A packed venue has everybody ordering the same three
-    /// drinks at once, so losing a race is ordinary and must not reach anybody:
-    /// what must reach them is running out, which is a different answer.
-    /// </summary>
-    private const int Attempts = 5;
-
     public async Task<Result<ConfirmedOrder>> HandleAsync(
         ConfirmOrderCommand command,
         CancellationToken cancellationToken)
@@ -88,6 +86,13 @@ public sealed class ConfirmOrderHandler(
         // already produced an order is answered with that order, whatever the
         // menu looks like now. Criterion 6.
         if (await orders.FindByIdempotencyKeyAsync(key, cancellationToken) is Order already) return Confirmation(already);
+
+        // After the retry above, so an order confirmed at 05:59 and retried at
+        // 06:01 is still that order; before anything else, so a closed venue
+        // spends no code. The server's clock, never the phone's.
+        Guid? night = await nights.FindIdAsync(clock.GetUtcNow(), cancellationToken);
+
+        if (night is null) return OrderErrors.NotTakingOrders;
 
         Result<string> name = CustomerNamePolicy.Read(command.CustomerName);
 
@@ -117,18 +122,9 @@ public sealed class ConfirmOrderHandler(
         OrderCode code = await codes.NextAsync(cancellationToken);
 
         Guid[] wanted = [.. command.Lines.Select(line => line.ProductId)];
-        Result<ConfirmedOrder> outcome = OrderErrors.StockMoved;
 
-        for (int attempt = 0; attempt < Attempts; attempt++)
-        {
-            outcome = await TryToConfirm(command, wanted, name.Value, code, payment, cancellationToken);
-
-            if (outcome.IsSuccess || outcome.Error!.Code != OrderErrors.StockMoved.Code) return outcome;
-        }
-
-        // Every attempt lost the race. Somebody is hammering the same drink and
-        // the honest answer is to look at the order again, not to keep trying.
-        return outcome;
+        return await StockRace.RunAsync(
+            () => TryToConfirm(command, wanted, night.Value, name.Value, code, payment, cancellationToken));
     }
 
     /// <summary>
@@ -140,6 +136,7 @@ public sealed class ConfirmOrderHandler(
     private async Task<Result<ConfirmedOrder>> TryToConfirm(
         ConfirmOrderCommand command,
         Guid[] wanted,
+        Guid night,
         string customerName,
         OrderCode code,
         IPaymentStrategy payment,
@@ -151,11 +148,32 @@ public sealed class ConfirmOrderHandler(
 
         if (!items.IsSuccess) return items.Error!;
 
-        Order order = Order.Place(currentVenue.Id, customerName, code, items.Value);
+        // US-37: each bar keeps a stock of its own, and a paid order is taken
+        // from one of them. Asked even for cash, which pays later: nobody
+        // should walk to the till for something no bar has. Like the menu
+        // above, a few seconds old by the write: the conditional statement in
+        // the repository is what settles a race.
+        OrderLine[] lines = [.. command.Lines.Select(line => new OrderLine(line.ProductId, line.Quantity))];
+        IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, wanted, cancellationToken);
+        BarSupply? bar = BarChooser.Choose(nightsBars, lines, clock.GetUtcNow());
 
-        // How far this goes is the payment method's call, not this handler's:
-        // digital settles and queues, cash stops at the till.
-        payment.Settle(order);
+        if (bar is null)
+        {
+            Guid missing = BarChooser.Missing(nightsBars, lines);
+
+            return OutOfStock(menu.First(product => product.Id == missing));
+        }
+
+        Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
+
+        // Whether the money is in is the payment method's call: digital pays
+        // here, cash stops at the till. What follows once it is in is the same
+        // for every method (US-36): into the queue of that bar.
+        Error? refusal = await payment.SettleAsync(order, new PaymentRequest(command.TableCode, command.DigitalAmount), cancellationToken);
+
+        if (refusal is not null) return refusal;
+
+        if (order.Status == OrderStatus.Paid) order.Enqueue(bar.KdsId);
 
         // The one write of the use case: the order and the stock it sold. It
         // can come back refused, because somebody else sold from the same
@@ -172,11 +190,8 @@ public sealed class ConfirmOrderHandler(
     /// because nobody should pay for an order they will not get in full.
     /// </summary>
     /// <remarks>
-    /// The stock read here is a few seconds old by the time anything is
-    /// written, which is what makes this a message and not a guarantee: it
-    /// exists so the customer is told which drink ran out, in a sentence. What
-    /// actually stops one drink being sold twice is the conditional update in
-    /// the repository.
+    /// Whether there are enough is not asked here but of the bars (US-37):
+    /// each keeps its own stock.
     /// </remarks>
     private static Result<List<NewOrderItem>> Price(
         IReadOnlyCollection<OrderLineRequest> lines,
@@ -192,7 +207,6 @@ public sealed class ConfirmOrderHandler(
             // all: the customer is told the same thing, because from where they
             // are standing it is the same thing.
             if (product is not { IsActive: true, IsAvailable: true }) return NotOnTheMenuFor(product);
-            if (product.Stock < line.Quantity) return OutOfStock(product);
 
             items.Add(new NewOrderItem(product.Id, product.Name, product.Price, line.Quantity, line.Note));
         }

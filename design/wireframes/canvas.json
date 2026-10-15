@@ -362,6 +362,33 @@
       "y": 13920,
       "w": 1440,
       "h": 900
+    },
+    {
+      "file": "AdminReportes.dc.html",
+      "page": "admin",
+      "title": "5 · Reportes — noche terminada",
+      "x": 0,
+      "y": 15100,
+      "w": 1440,
+      "h": 1203
+    },
+    {
+      "file": "AdminNocheReporte.dc.html",
+      "page": "admin",
+      "title": "6 · Ficha de la noche — puerta al reporte",
+      "x": 1560,
+      "y": 15100,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "AdminReportesVacio.dc.html",
+      "page": "admin",
+      "title": "7 · Reportes — sin noches",
+      "x": 1560,
+      "y": 16120,
+      "w": 1440,
+      "h": 900
     }
   ],
   "annotations": [
@@ -532,6 +559,14 @@
       "y": 12700,
       "w": 3000,
       "text": "ADMINISTRACION · web de escritorio 1440x900. Cubre DOS de los seis puntos del Sprint 1 que no estaban disenados: ABM de productos y ABM de usuarios internos. Campos tomados de docs/modelo-de-datos.md.\n\nLA DECISION QUE ORDENA TODA LA PANTALLA: 'disponible esta noche' (is_available) y 'dar de baja' (is_active) son cosas distintas, y el modelo de datos insiste en eso. El diseno lo resuelve por FRECUENCIA DE USO, no por parecido:\n\n· is_available = un interruptor EN LA FILA de la tabla. Se usa todas las noches, apurado, cuando se acaba algo. Un toque y desaparece del menu del cliente; otro toque y vuelve.\n· is_active = adentro de la edicion, en un bloque aparte y en rojo. Es una accion rara y semipermanente. Ponerla lejos es a proposito: que nadie de de baja un producto a las tres de la manana queriendo decir 'se acabo el gin'.\n\nNinguna de las dos borra: los ORDER_ITEM historicos referencian al producto, y los pedidos preparados referencian al usuario. El texto de la pantalla lo explica en criollo, porque el que lo opera no sabe lo que es una baja logica.\n\nEl login del personal NO se rehizo: es el mismo de escritorio que ya esta en la pagina Cajero. Lo que cambia es que el rol del token decide que ve cada uno — el Sprint 1 solo tiene Administrador y Mozo.\n\nOJO CON EL ALCANCE: la caja, el mozo y las mesas VIP que disenamos estan ADELANTADOS al Sprint 1, que es solo retiro en barra con esos dos roles. Estan bien que existan, pero no son camino critico.\n\nOJO — EL NOMBRE DEL ROL NO COINCIDE CON LOS DOCS. Estas pantallas dicen MOZO, pero docs/sprints/sprint-1.md linea 12 dice 'Administrador y Bartender', docs/modelo-de-datos.md linea 30 declara el enum como 'Administrator | Bartender', y el glosario de CLAUDE.md los trata como actores DISTINTOS: Bartender -> Bartender, Mozo -> Waiter. Si el rol es Mozo, en codigo el enum es Waiter, no Bartender, y hay que corregir los tres documentos. Mientras no se unifique, alguien va a implementar el enum leyendo el modelo y no la pantalla."
+    },
+    {
+      "id": "n-reportes",
+      "page": "admin",
+      "x": 0,
+      "y": 14900,
+      "w": 3000,
+      "text": "REPORTES · el dashboard de una noche (US-47, US-48, US-49). US-46 no tiene pantalla: la alerta son los colores del tablero del KDS.\n\nCOMO SE LLEGA — dos puertas, una sola pantalla:\n\n1. PESTAÑA 'REPORTES', la cuarta de la administración (/:venueSlug/staff/reports). Abre sola la noche que importa: la EN CURSO si hay una, y si no la ULTIMA TERMINADA. La direccion queda con la noche (/staff/reports/:nightId), asi que recargar o mandar el link muestra la misma.\n\n2. BOTON 'VER REPORTE DE LA NOCHE' en la ficha de cada noche. Solo aparece cuando la noche ya empezo: una proxima no tiene pedidos. No va en la fila del listado de Noches porque la fila entera ya es un link a la ficha, y un link adentro de otro no se puede.\n\nAdentro, el selector de arriba cambia de noche (en curso y terminadas, la mas nueva primero; las proximas no aparecen) y 'Ver la noche' vuelve a la ficha. Sin ninguna noche empezada, el estado vacio manda a Noches.\n\nPOR QUE POR NOCHE Y NO POR FECHAS: las tres stories dicen 'dado que elijo una noche', y la noche cruza la medianoche. Un filtro por dia partiria el sabado en dos.\n\nLO QUE MUESTRA, de arriba para abajo: cuatro numeros (vendido, pedidos, pago->listo con el peor 10 %, unidades), ventas por medio de pago, tiempos por etapa y por barra, y los mas pedidos con el stock que se les habia cargado. Con la noche EN CURSO el chip dice 'En vivo' y los numeros se actualizan solos. Los numeros son de ejemplo."
     }
   ],
   "launch": {

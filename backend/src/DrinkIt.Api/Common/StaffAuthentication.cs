@@ -2,7 +2,9 @@ using System.Text;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
+using DrinkIt.Infrastructure.Waiter;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 
@@ -69,14 +71,21 @@ internal static class StaffAuthentication
         services.AddAuthorization(options =>
         {
             options.AddPolicy(Policies.Administrator, policy => policy.RequireRole(Policies.Administrator));
-            options.AddPolicy(Policies.Kds, policy => policy.RequireRole(Policies.Kds));
-            options.AddPolicy(Policies.Cashier, policy => policy.RequireRole(Policies.Cashier));
+            // The role first: its handler runs before the crew's, which skips
+            // the query when the role already failed (US-35, criterion 4).
+            options.AddPolicy(Policies.Kds, policy => policy.RequireRole(Policies.Kds).AddRequirements(new TonightsCrewRequirement()));
+            options.AddPolicy(Policies.Cashier, policy => policy.RequireRole(Policies.Cashier).AddRequirements(new TonightsCrewRequirement()));
+            options.AddPolicy(Policies.Waiter, policy => policy.RequireRole(Policies.Waiter).AddRequirements(new TonightsCrewRequirement()));
         });
+
+        // Scoped: it asks the night through the request's DbContext.
+        services.AddScoped<IAuthorizationHandler, TonightsCrewHandler>();
+        services.AddHttpContextAccessor();
 
         return services;
     }
 
-    /// <summary>The two hubs a browser connects to: the bar's board and the till.</summary>
+    /// <summary>The hubs a browser connects to: the bar's board, the till and the waiter's phone.</summary>
     private static bool IsAHub(PathString path) =>
-        path.StartsWithSegments(KdsHubRoute.Path) || path.StartsWithSegments(TillHubRoute.Path);
+        path.StartsWithSegments(KdsHubRoute.Path) || path.StartsWithSegments(TillHubRoute.Path) || path.StartsWithSegments(WaiterHubRoute.Path);
 }

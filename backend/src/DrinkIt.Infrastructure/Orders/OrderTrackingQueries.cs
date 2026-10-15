@@ -32,6 +32,14 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
                 order.Status,
                 order.PaidAt,
                 order.TrackingToken,
+                order.TableNumber,
+                order.WaiterName,
+                // Where to pick it up (US-36): the bar's name, or its username
+                // when nobody gave it one. Null while no bar has it.
+                BarName = context.StaffUsers
+                    .Where(user => user.Id == order.KdsId)
+                    .Select(user => user.DisplayName ?? user.Username)
+                    .FirstOrDefault(),
                 Items = order.Items
                     .Select(item => new TrackedOrderItem(item.ProductName, item.Quantity, item.Note))
                     .ToList(),
@@ -52,6 +60,9 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
             found.Status,
             found.Total,
             found.PaidAt,
-            found.Items);
+            found.BarName,
+            found.Items,
+            found.TableNumber,
+            found.WaiterName);
     }
 }

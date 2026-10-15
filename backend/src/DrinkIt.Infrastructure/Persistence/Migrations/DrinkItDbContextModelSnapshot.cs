@@ -17,7 +17,7 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -120,11 +120,109 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.ToTable("Products", (string)null);
                 });
 
+            modelBuilder.Entity("DrinkIt.Domain.Nights.Night", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTimeOffset>("EndsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<DateTimeOffset>("StartsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.PrimitiveCollection<string>("_crewIds")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("CrewIds");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId", "StartsAt", "EndsAt");
+
+                    b.ToTable("Nights", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Nights.NightStockAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Change")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("KdsId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("NightId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("KdsId");
+
+                    b.HasIndex("NightId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("VenueId", "NightId", "KdsId", "ProductId");
+
+                    b.ToTable("NightStockAdjustments", (string)null);
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Orders.Order", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("BalanceAmount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -155,6 +253,9 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid?>("KdsId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("LastModifiedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -165,11 +266,29 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<int?>("Method")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("NightId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("PreparationStartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ReadyAt")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("TableId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("TableNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("TakenAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("TrackingToken")
                         .IsRequired()
@@ -184,7 +303,16 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<Guid?>("WaiterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("WaiterName")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TableId");
 
                     b.HasIndex("IdempotencyKey", "VenueId")
                         .IsUnique();
@@ -192,10 +320,14 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.HasIndex("VenueId", "Code")
                         .IsUnique();
 
+                    b.HasIndex("VenueId", "NightId");
+
                     b.HasIndex("VenueId", "TrackingToken")
                         .IsUnique();
 
                     b.HasIndex("VenueId", "CollectedBy", "PaidAt");
+
+                    b.HasIndex("VenueId", "KdsId", "Status");
 
                     b.ToTable("Orders", (string)null);
                 });
@@ -248,6 +380,10 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -282,6 +418,50 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.ToTable("StaffUsers", (string)null);
                 });
 
+            modelBuilder.Entity("DrinkIt.Domain.Tables.Table", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Capacity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId", "Number")
+                        .IsUnique();
+
+                    b.ToTable("Tables", (string)null);
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Venues.Venue", b =>
                 {
                     b.Property<Guid>("Id")
@@ -307,6 +487,118 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Venues", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.VipAccounts.VipAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccessCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nchar(32)")
+                        .IsFixedLength();
+
+                    b.Property<decimal>("Budget")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("NightId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Spent")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<Guid>("TableId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccessCode")
+                        .IsUnique();
+
+                    b.HasIndex("NightId");
+
+                    b.HasIndex("TableId");
+
+                    b.HasIndex("VenueId", "NightId", "TableId")
+                        .IsUnique();
+
+                    b.ToTable("VipAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Infrastructure.Persistence.BarStock", b =>
+                {
+                    b.Property<Guid>("NightId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("KdsId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Units")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("NightId", "KdsId", "ProductId");
+
+                    b.HasIndex("KdsId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("VenueId");
+
+                    b.ToTable("BarStocks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_BarStocks_Units", "[Units] >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("DrinkIt.Infrastructure.Persistence.KdsBeat", b =>
+                {
+                    b.Property<Guid>("KdsId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("LastBeatAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("KdsId");
+
+                    b.HasIndex("VenueId");
+
+                    b.ToTable("KdsBeats", (string)null);
                 });
 
             modelBuilder.Entity("DrinkIt.Infrastructure.Persistence.OrderCodeCounter", b =>
@@ -349,8 +641,49 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DrinkIt.Domain.Nights.Night", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Nights.NightStockAdjustment", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Staff.StaffUser", null)
+                        .WithMany()
+                        .HasForeignKey("KdsId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Nights.Night", null)
+                        .WithMany()
+                        .HasForeignKey("NightId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Menu.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DrinkIt.Domain.Orders.Order", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.Tables.Table", null)
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
                         .HasForeignKey("VenueId")
@@ -368,6 +701,78 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Tables.Table", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.VipAccounts.VipAccount", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Nights.Night", null)
+                        .WithMany()
+                        .HasForeignKey("NightId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Tables.Table", null)
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Infrastructure.Persistence.BarStock", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Staff.StaffUser", null)
+                        .WithMany()
+                        .HasForeignKey("KdsId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Nights.Night", null)
+                        .WithMany()
+                        .HasForeignKey("NightId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Menu.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Infrastructure.Persistence.KdsBeat", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Staff.StaffUser", null)
+                        .WithMany()
+                        .HasForeignKey("KdsId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
                         .HasForeignKey("VenueId")

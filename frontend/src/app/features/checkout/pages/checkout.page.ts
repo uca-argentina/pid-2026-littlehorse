@@ -1,10 +1,15 @@
 import { NgTemplateOutlet } from '@angular/common';
+import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { anonymously } from '../../../core/auth/anonymous-request';
 import { Cart } from '../../../core/cart/cart';
+import { VipTables, vipTableUrl } from '../../../core/vip-table/vip-tables';
+import type { VipTableAccess } from '../../../core/vip-table/vip-tables';
+import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { formatPrice } from '../../../shared/money/price';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
 import { CheckoutStore } from '../checkout.store';
@@ -71,7 +76,56 @@ export class CheckoutPage {
     initialValue: this.customerName.value,
   });
 
-  protected readonly canPay = computed(() => FULL_NAME.test(this.typed().trim()));
+  private readonly vipTables = inject(VipTables);
+
+  /** US-41: the VIP table this phone orders for, when a waiter's QR opened one. */
+  protected readonly tableCode = computed(() => this.vipTables.codeOf(this.venueSlug()));
+
+  protected readonly table = httpResource<VipTableAccess>(() => {
+    const code = this.tableCode();
+
+    return code === null
+      ? undefined
+      : { url: vipTableUrl(this.venueSlug(), code), context: anonymously() };
+  });
+
+  /** Ordering for a table: its balance pays, and there is nothing to choose (criterion 2). */
+  protected readonly forTable = computed(() => this.tableCode() !== null);
+
+  /** Criterion 4: the code ran out with its night, or the waiter replaced it. */
+  protected readonly tableIsGone = computed(() => {
+    const error = this.table.error();
+
+    return error !== undefined && problemTypeOf(error) === ProblemTypes.vipAccountNotFound;
+  });
+
+  /** What the table's balance gives: all of it, up to the total. */
+  private readonly fromBalance = computed(() =>
+    this.table.hasValue() ? Math.min(this.cart.total(), this.table.value().balance) : 0,
+  );
+
+  /**
+   * What the balance does not cover, or 0: the phone pays it (US-42). To the
+   * cent, because the server checks it is exactly the difference, and a float
+   * left over from the subtraction would never be.
+   */
+  private readonly shortBy = computed(() =>
+    this.table.hasValue() ? Math.round((this.cart.total() - this.fromBalance()) * 100) / 100 : 0,
+  );
+
+  /** Criterion 1: what the balance covers and what is left to pay, when it falls short. */
+  protected readonly split = computed(() =>
+    this.shortBy() > 0
+      ? { fromBalance: formatPrice(this.fromBalance()), fromPhone: formatPrice(this.shortBy()) }
+      : null,
+  );
+
+  /** What the button charges: the difference when there is one, the total otherwise. */
+  protected readonly charged = computed(() => this.split()?.fromPhone ?? this.total());
+
+  protected readonly canPay = computed(
+    () => FULL_NAME.test(this.typed().trim()) && (!this.forTable() || this.table.hasValue()),
+  );
 
   protected readonly lines = computed<PayingFor[]>(() =>
     this.cart.lines().map((line) => ({
@@ -89,29 +143,80 @@ export class CheckoutPage {
    * table balance is drawn switched off rather than hidden: this is the screen
    * somebody learns, and nothing moves under them when it arrives.
    */
-  protected readonly waysOfPaying: readonly WayOfPaying[] = [
-    { method: 'Digital', name: 'Pago digital', what: 'Tarjeta o Mercado Pago', isBuilt: true },
-    {
-      method: 'Cash',
-      name: 'Efectivo en caja',
-      what: 'Te damos un código y pagás en la caja',
-      isBuilt: true,
-    },
-    { method: 'VipBalance', name: 'Saldo de la mesa', what: 'Próximamente', isBuilt: false },
-  ];
+  protected readonly waysOfPaying = computed<readonly WayOfPaying[]>(() =>
+    this.forTable()
+      ? [
+          {
+            method: 'VipBalance',
+            name: 'Saldo de la mesa',
+            what: this.table.hasValue()
+              ? `Disponible $ ${formatPrice(this.table.value().balance)}`
+              : 'Buscando el saldo…',
+            isBuilt: this.table.hasValue(),
+          },
+        ]
+      : [
+          {
+            method: 'Digital',
+            name: 'Pago digital',
+            what: 'Tarjeta o Mercado Pago',
+            isBuilt: true,
+          },
+          {
+            method: 'Cash',
+            name: 'Efectivo en caja',
+            what: 'Te damos un código y pagás en la caja',
+            isBuilt: true,
+          },
+          {
+            method: 'VipBalance',
+            name: 'Saldo de la mesa',
+            what: 'Sólo con el QR de una mesa VIP',
+            isBuilt: false,
+          },
+        ],
+  );
 
-  protected readonly method = signal<PaymentMethod>('Digital');
+  private readonly chosen = signal<PaymentMethod>('Digital');
+
+  /** With a table there is only one way, whatever was tapped before the QR. */
+  protected readonly method = computed<PaymentMethod>(() =>
+    this.forTable() ? 'VipBalance' : this.chosen(),
+  );
 
   /** Cash is not paid here: the order is confirmed and the money changes hands at the till. */
   protected readonly paysAtTheTill = computed(() => this.method() === 'Cash');
 
   constructor() {
     effect(() => this.cart.open(this.venueSlug()));
+
+    // Another phone of the table spent first (US-41, criterion 3): the
+    // balance on screen and the difference it gives are old, so it is asked
+    // for again.
+    effect(() => {
+      if (this.store.whatWentWrong()?.type === ProblemTypes.vipAccountBalanceChanged)
+        this.table.reload();
+    });
+  }
+
+  protected choose(method: PaymentMethod): void {
+    this.chosen.set(method);
+  }
+
+  /** Back to ordering for the bar, like anybody without a table. */
+  protected orderForTheBar(): void {
+    this.vipTables.forget(this.venueSlug());
   }
 
   protected pay(): void {
     if (!this.canPay()) return;
 
-    this.store.pay(this.venueSlug(), this.typed().trim(), this.method());
+    this.store.pay(
+      this.venueSlug(),
+      this.typed().trim(),
+      this.method(),
+      this.tableCode(),
+      this.shortBy() > 0 ? this.shortBy() : null,
+    );
   }
 }

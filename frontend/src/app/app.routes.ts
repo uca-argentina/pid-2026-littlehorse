@@ -24,6 +24,21 @@ export const routes: Routes = [
       import('./features/staff-users/staff-users.routes').then((m) => m.staffUsersRoutes),
   },
   {
+    path: ':venueSlug/staff/tables',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/tables/tables.routes').then((m) => m.tablesRoutes),
+  },
+  {
+    path: ':venueSlug/staff/nights',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/nights/nights.routes').then((m) => m.nightsRoutes),
+  },
+  {
+    path: ':venueSlug/staff/reports',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/reports/reports.routes').then((m) => m.reportsRoutes),
+  },
+  {
     path: ':venueSlug/staff/products',
     canActivate: [rememberVenueGuard],
     loadChildren: () => import('./features/products/products.routes').then((m) => m.productsRoutes),
@@ -33,6 +48,11 @@ export const routes: Routes = [
     canActivate: [rememberVenueGuard],
     loadChildren: () =>
       import('./features/categories/categories.routes').then((m) => m.categoriesRoutes),
+  },
+  {
+    path: ':venueSlug/staff/waiter',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () => import('./features/waiter/waiter.routes').then((m) => m.waiterRoutes),
   },
   {
     path: ':venueSlug/staff/kds',
@@ -53,6 +73,12 @@ export const routes: Routes = [
   // the device, so there is nothing here a guard would protect.
   // Where an order lives once it is the venue's: code and token, which is the
   // link the customer keeps. It is also where paying lands.
+  // US-41: what a VIP table's QR points at. It opens that table's menu.
+  {
+    path: ':venueSlug/table',
+    loadChildren: () =>
+      import('./features/table-entry/table-entry.routes').then((m) => m.tableEntryRoutes),
+  },
   {
     path: ':venueSlug/orders',
     loadChildren: () => import('./features/tracking/tracking.routes').then((m) => m.trackingRoutes),
