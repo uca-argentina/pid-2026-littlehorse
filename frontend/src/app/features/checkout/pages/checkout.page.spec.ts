@@ -310,19 +310,57 @@ describe('CheckoutPage', () => {
       const sent = http.expectOne(ordersUrl('bar-alfa'));
       expect(sent.request.body.method).toBe('VipBalance');
       expect(sent.request.body.tableCode).toBe(CODE);
+      expect(sent.request.body.digitalAmount).toBeNull();
     });
 
-    // US-42 covers the difference; until then, the order has to fit.
-    it('says what is missing when the balance falls short, and cannot be paid', async () => {
-      await openForTheTable(5000);
+    // US-42, criterion 1: what the balance covers and what is left to pay.
+    it('shows what the balance covers and what is left to pay when it falls short', async () => {
+      const { rendered } = await openForTheTable(5000);
 
       fireEvent.input(name(), { target: { value: 'María Quadro' } });
+      await rendered.fixture.whenStable();
 
-      expect(screen.getByRole('alert').textContent).toContain('faltan $ 4.000,00');
-      expect(payButton().disabled).toBe(true);
+      const split = screen.getByTestId('split').textContent;
+      expect(split).toContain('$ 5.000,00');
+      expect(split).toContain('$ 4.000,00');
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(payButton().textContent).toContain('Pagar la diferencia');
+      expect(payButton().textContent).toContain('$ 4.000,00');
+      expect(payButton().disabled).toBe(false);
     });
 
-    // Criterion 3: another phone of the table spent first. The balance shown is refreshed.
+    // US-42, criterion 2: the phone pays the difference it showed, no more.
+    it('sends the difference it showed when it is paid', async () => {
+      const { rendered, http } = await openForTheTable(5000);
+
+      await payAs(rendered);
+
+      const sent = http.expectOne(ordersUrl('bar-alfa'));
+      expect(sent.request.body.method).toBe('VipBalance');
+      expect(sent.request.body.digitalAmount).toBe(4000);
+    });
+
+    // The server compares to the cent: 9000 - 1234.56 is 7765.4400000000005 in
+    // a float, which it would refuse as a difference that changed, forever.
+    it('sends the difference rounded to the cent', async () => {
+      const { rendered, http } = await openForTheTable(1234.56);
+
+      await payAs(rendered);
+
+      expect(http.expectOne(ordersUrl('bar-alfa')).request.body.digitalAmount).toBe(7765.44);
+    });
+
+    // US-42, a balance at zero: the difference is the whole order.
+    it('pays the whole order from the phone when the balance is empty', async () => {
+      const { rendered, http } = await openForTheTable(0);
+
+      await payAs(rendered);
+
+      expect(http.expectOne(ordersUrl('bar-alfa')).request.body.digitalAmount).toBe(9000);
+    });
+
+    // US-41 criterion 3 and the edge of US-42: another phone of the table spent
+    // first, so the difference shown is old. The balance is asked for again.
     it('says the balance changed when the API refuses it, and shows it again', async () => {
       const { rendered, http } = await openForTheTable(20000);
 
@@ -330,7 +368,7 @@ describe('CheckoutPage', () => {
       http
         .expectOne(ordersUrl('bar-alfa'))
         .flush(
-          { type: 'urn:drinkit:problem:vip-account:balance-short' },
+          { type: 'urn:drinkit:problem:vip-account:balance-changed' },
           { status: 409, statusText: '' },
         );
       // Not whenStable: the balance is being asked for again, on purpose.

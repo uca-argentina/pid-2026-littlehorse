@@ -201,10 +201,10 @@ public class ConfirmOrderHandlerTests
     [Fact]
     public async Task HandleAsync_WhenThePaymentIsRefused_FailsWithItsReasonAndWritesNothing()
     {
-        Result<ConfirmedOrder> result = await AHandlerPaidBy(new Refuses(VipAccountErrors.BalanceShort))
+        Result<ConfirmedOrder> result = await AHandlerPaidBy(new Refuses(VipAccountErrors.BalanceChanged))
             .HandleAsync(ATwoGinOrder(), CancellationToken.None);
 
-        Assert.Equal(VipAccountErrors.BalanceShort, result.Error);
+        Assert.Equal(VipAccountErrors.BalanceChanged, result.Error);
         Assert.Null(_orders.Added);
     }
 
@@ -216,6 +216,17 @@ public class ConfirmOrderHandlerTests
         await AHandlerPaidBy(payment).HandleAsync(ATwoGinOrder() with { TableCode = "the-code" }, CancellationToken.None);
 
         Assert.Equal("the-code", payment.Request!.TableCode);
+    }
+
+    // US-42: what the phone agreed to pay on top of the balance, untouched.
+    [Fact]
+    public async Task HandleAsync_WhenADifferenceIsAgreed_HandsItToThePayment()
+    {
+        PaysOnTheSpot payment = new(Tonight);
+
+        await AHandlerPaidBy(payment).HandleAsync(ATwoGinOrder() with { TableCode = "the-code", DigitalAmount = 4_000m }, CancellationToken.None);
+
+        Assert.Equal(4_000m, payment.Request!.DigitalAmount);
     }
 
     // The same code, not a fresh one per attempt: asking again would leave a
@@ -517,7 +528,7 @@ public class ConfirmOrderHandlerTests
         }
     }
 
-    /// <summary>A method that says no, as the table's balance does when it falls short.</summary>
+    /// <summary>A method that says no, as the table's balance does when it changed under the phone.</summary>
     private sealed class Refuses(Error reason) : IPaymentStrategy
     {
         public PaymentMethod Method => PaymentMethod.Digital;

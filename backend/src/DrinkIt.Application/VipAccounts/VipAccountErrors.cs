@@ -12,9 +12,14 @@ public static class VipAccountErrors
     public static readonly Error NotFound =
         new("vip_account.not_found", "That code does not open any table tonight.");
 
-    /// <summary>US-41: the table's balance does not cover the order. US-42 pays the difference.</summary>
-    public static readonly Error BalanceShort =
-        new("vip_account.balance_short", "The table's balance does not cover this order.");
+    /// <summary>
+    /// US-42: what the phone agreed to pay on top of the balance is not the
+    /// difference any more — another phone of the table spent meanwhile, or the
+    /// package grew. Refused before anything is charged: the customer sees the
+    /// new difference and pays that.
+    /// </summary>
+    public static readonly Error BalanceChanged =
+        new("vip_account.balance_changed", "The table's balance changed: the difference to pay is not what the phone showed.");
 
     /// <summary>
     /// US-41, criterion 3: another phone of the table spent while this order

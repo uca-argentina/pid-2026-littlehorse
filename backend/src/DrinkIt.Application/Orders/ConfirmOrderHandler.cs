@@ -13,7 +13,8 @@ public sealed record ConfirmOrderCommand(
     PaymentMethod Method,
     string? IdempotencyKey,
     IReadOnlyCollection<OrderLineRequest> Lines,
-    string? TableCode = null);
+    string? TableCode = null,
+    decimal? DigitalAmount = null);
 
 /// <summary>
 /// The order as the confirmation screen shows it.
@@ -168,7 +169,7 @@ public sealed class ConfirmOrderHandler(
         // Whether the money is in is the payment method's call: digital pays
         // here, cash stops at the till. What follows once it is in is the same
         // for every method (US-36): into the queue of that bar.
-        Error? refusal = await payment.SettleAsync(order, new PaymentRequest(command.TableCode), cancellationToken);
+        Error? refusal = await payment.SettleAsync(order, new PaymentRequest(command.TableCode, command.DigitalAmount), cancellationToken);
 
         if (refusal is not null) return refusal;
 

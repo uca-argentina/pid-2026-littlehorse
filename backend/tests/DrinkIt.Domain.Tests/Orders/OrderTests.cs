@@ -1044,12 +1044,37 @@ public class OrderTests
         Assert.Equal(OrderStatus.Cart, order.Status);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void PayFromBalance_WhenItIsNotPositive_ThrowsBalanceAmountOutOfRange(int amount)
+    // US-42: the balance gives what it has and the phone pays the rest.
+    [Fact]
+    public void PayFromBalance_WhenItCoversPartOfTheOrder_KeepsOnlyWhatTheBalanceGave()
     {
-        DomainException error = Assert.Throws<DomainException>(() => AnOrder().PayFromBalance(DateTimeOffset.UtcNow, amount));
+        Order order = AnOrder();
+
+        order.PayFromBalance(DateTimeOffset.UtcNow, order.Total - 1);
+
+        Assert.Equal(OrderStatus.Paid, order.Status);
+        Assert.Equal(PaymentMethod.VipBalance, order.Method);
+        Assert.Equal(order.Total - 1, order.BalanceAmount);
+    }
+
+    // US-42, a balance at zero is not a case apart: the difference is the total,
+    // and the order is still the table's.
+    [Fact]
+    public void PayFromBalance_WhenTheBalanceGaveNothing_PaysItForTheTableAnyway()
+    {
+        Order order = AnOrder();
+
+        order.PayFromBalance(DateTimeOffset.UtcNow, 0);
+
+        Assert.Equal(OrderStatus.Paid, order.Status);
+        Assert.Equal(PaymentMethod.VipBalance, order.Method);
+        Assert.Equal(0, order.BalanceAmount);
+    }
+
+    [Fact]
+    public void PayFromBalance_WhenItIsNegative_ThrowsBalanceAmountOutOfRange()
+    {
+        DomainException error = Assert.Throws<DomainException>(() => AnOrder().PayFromBalance(DateTimeOffset.UtcNow, -1));
 
         Assert.Equal(Order.ErrorCodes.BalanceAmountOutOfRange, error.Code);
     }

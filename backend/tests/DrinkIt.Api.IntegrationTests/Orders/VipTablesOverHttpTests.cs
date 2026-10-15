@@ -78,8 +78,27 @@ public sealed class VipTablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposa
         Assert.Equal(5, card.GetProperty("tableNumber").GetInt32());
     }
 
+    // US-42, criterion 2: the phone pays what the balance does not cover, the
+    // balance ends at zero and the bar gets the order.
     [Fact]
-    public async Task Confirm_WhenTheBalanceFallsShort_RespondsConflictAndSpendsNothing()
+    public async Task Confirm_PayingTheDifference_EmptiesTheBalanceAndTheBarGetsIt()
+    {
+        Seeded seeded = await AVenueWithATableTonight(budget: 5_000m);
+        using HttpClient phone = _factory.CreateClient();
+
+        using HttpResponseMessage confirmed = await phone.PostAsJsonAsync($"/{seeded.Venue.Slug}/orders", AnOrderFrom(seeded, digitalAmount: 4_000m));
+        JsonElement table = await phone.GetFromJsonAsync<JsonElement>($"/{seeded.Venue.Slug}/vip-accounts/{seeded.AccessCode}");
+        JsonElement queue = await BarOf(seeded).GetFromJsonAsync<JsonElement>("/kds/queue");
+
+        Assert.Equal(HttpStatusCode.Created, confirmed.StatusCode);
+        Assert.Equal(0m, table.GetProperty("balance").GetDecimal());
+        Assert.Equal(5, Assert.Single(queue.EnumerateArray()).GetProperty("tableNumber").GetInt32());
+    }
+
+    // US-42, the edge: the difference the phone showed is not the difference
+    // any more. 409 before charging anything, and the balance as it was.
+    [Fact]
+    public async Task Confirm_WhenTheDifferenceChanged_RespondsConflictAndSpendsNothing()
     {
         Seeded seeded = await AVenueWithATableTonight(budget: 5_000m);
         using HttpClient phone = _factory.CreateClient();
@@ -88,20 +107,21 @@ public sealed class VipTablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposa
         JsonElement table = await phone.GetFromJsonAsync<JsonElement>($"/{seeded.Venue.Slug}/vip-accounts/{seeded.AccessCode}");
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-        Assert.Equal("urn:drinkit:problem:vip-account:balance-short", await TypeOf(response));
+        Assert.Equal("urn:drinkit:problem:vip-account:balance-changed", await TypeOf(response));
         Assert.Equal(5_000m, table.GetProperty("balance").GetDecimal());
     }
 
     private sealed record Seeded(Venue Venue, Product Gin, StaffUser Bar, string AccessCode);
 
     /// <summary>Two gin tonics at 4500: 9000.</summary>
-    private static object AnOrderFrom(Seeded seeded) => new
+    private static object AnOrderFrom(Seeded seeded, decimal? digitalAmount = null) => new
     {
         customerName = "María Quadro",
         method = "VipBalance",
         idempotencyKey = Guid.NewGuid().ToString(),
         lines = new[] { new { productId = seeded.Gin.Id, quantity = 2 } },
         tableCode = seeded.AccessCode,
+        digitalAmount,
     };
 
     private static async Task<string?> TypeOf(HttpResponseMessage response) =>

@@ -101,11 +101,20 @@
             Pedir para retirar en la barra
           </button>
         </div>
-      } @else if (shortfall(); as missing) {
-        <p class="note note-bad" role="alert">
-          El saldo de la mesa no alcanza para este pedido: faltan $ {{ missing }}. Sacá algo del
-          pedido.
-        </p>
+      } @else if (split(); as parts) {
+        <div class="split" data-testid="split">
+          <p class="split-line">
+            <span>Cubre el saldo de la mesa</span>
+            <span class="split-num">$ {{ parts.fromBalance }}</span>
+          </p>
+          <p class="split-line split-rest">
+            <span>Te falta pagar</span>
+            <span class="split-num">$ {{ parts.fromPhone }}</span>
+          </p>
+          <p class="split-note">
+            El saldo no alcanza para todo el pedido. La diferencia la pagás con el pago digital.
+          </p>
+        </div>
       }
 
       @if (store.status() === 'paying') {
@@ -145,14 +154,21 @@
       <button class="cta" type="button" [disabled]="!canPay() || store.isPaying()" (click)="pay()">
         @if (store.isPaying()) {
           <span>Procesando…</span>
+        } @else if (paysAtTheTill()) {
+          <span>Confirmar pedido</span>
         } @else {
-          <span>{{ paysAtTheTill() ? 'Confirmar pedido' : 'Pagar' }}</span>
+          <span>{{ split() ? 'Pagar la diferencia' : 'Pagar' }}</span>
         }
-        <span class="num">$ {{ total() }}</span>
+        <span class="num">$ {{ charged() }}</span>
       </button>
 
       @if (paysAtTheTill()) {
         <p class="safe">Pagás en la caja, mostrando el código que te damos.</p>
+      } @else if (split(); as parts) {
+        <p class="safe">
+          Se descuentan $ {{ parts.fromBalance }} del saldo de la mesa. El pago está simulado:
+          todavía no se cobra nada de verdad.
+        </p>
       } @else if (forTable()) {
         <p class="safe">Se descuenta del saldo de la mesa.</p>
       } @else {
@@ -187,9 +203,9 @@
     @case (problems.orderStockMoved) {
       Alguien pidió al mismo tiempo y cambió lo que queda. Revisá tu pedido.
     }
-    @case (problems.vipAccountBalanceShort) {
-      Alguien de tu mesa pidió al mismo tiempo y el saldo cambió. Mirá cuánto queda y ajustá el
-      pedido.
+    @case (problems.vipAccountBalanceChanged) {
+      Alguien de tu mesa pidió al mismo tiempo y el saldo cambió. No se cobró nada: mirá cuánto te
+      falta pagar ahora y probá de nuevo.
     }
     @case (problems.vipAccountNotFound) {
       El código de tu mesa ya no sirve. Pedile el nuevo al mozo.

@@ -164,6 +164,46 @@ test.describe('Ordering from a VIP table', () => {
     expect(after.find((sold) => sold.tableId === table.tableId)!.spent).toBe(4500);
   });
 
+  // US-42: the balance falls short, the screen splits the order, and the phone
+  // pays the difference. The balance ends at zero.
+  test('pays from the phone what the balance does not cover', async ({ page, request }) => {
+    const token = await adminToken(request);
+    await aWaiterTonight(request, token);
+    const table = await aTableSoldTonight(request, token, 3000);
+    const drink = await aDrinkOnTheMenu(request, token);
+
+    await page.goto(`/${seededVenueSlug}/table/${table.code}`);
+    await expect(page).toHaveURL(new RegExp(`/${seededVenueSlug}/menu$`));
+    await page.getByRole('searchbox', { name: /buscar trago/i }).fill(drink);
+    await page.getByRole('button', { name: new RegExp(`agregar ${drink}`, 'i') }).click();
+    await page.getByTestId('order-summary').click();
+    await page.getByRole('link', { name: /ir a pagar/i }).click();
+
+    // Criterion 1: what the balance covers and what is left to pay.
+    const split = page.getByTestId('split');
+    await expect(split).toContainText('$ 3.000,00');
+    await expect(split).toContainText('$ 1.500,00');
+    await page.getByRole('textbox', { name: /nombre/i }).fill('María Quadro');
+    const pay = page.getByRole('button', { name: /pagar la diferencia/i });
+    await expect(pay).toContainText('$ 1.500,00');
+    await pay.click();
+
+    // Criterion 2: the order is in, carried to the table, and the balance is at zero.
+    await expect(
+      page.getByText(new RegExp(`te lo llevamos a la mesa ${table.number}`, 'i')),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+
+    const after = (await (
+      await request.get(`/api/nights/${table.nightId}/tables`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    ).json()) as NightTableBody[];
+    const sold = after.find((row) => row.tableId === table.tableId)!;
+    expect(sold.budget - sold.spent).toBe(0);
+  });
+
   // Criterion 4: a code nobody was given.
   test('says a code that opens nothing no longer works, and offers to order for the bar', async ({
     page,

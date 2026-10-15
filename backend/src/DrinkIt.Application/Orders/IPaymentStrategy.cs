@@ -31,10 +31,11 @@ public interface IPaymentStrategy
 }
 
 /// <summary>
-/// What a method may need beyond the order. Only the code of a VIP table so
-/// far (US-41); a method that needs nothing ignores it.
+/// What a method may need beyond the order: the code of a VIP table (US-41),
+/// and what the phone agreed to pay on top of its balance (US-42), null when
+/// nothing. A method that needs neither ignores them.
 /// </summary>
-public sealed record PaymentRequest(string? TableCode);
+public sealed record PaymentRequest(string? TableCode, decimal? DigitalAmount = null);
 
 /// <summary>
 /// Card or Mercado Pago. Simulated in Sprint 1, which the brief allows: there
