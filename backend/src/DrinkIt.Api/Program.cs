@@ -18,6 +18,7 @@ using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Orders;
+using DrinkIt.Infrastructure.Waiter;
 using Microsoft.AspNetCore.SignalR;
 using Scalar.AspNetCore;
 
@@ -126,6 +127,7 @@ app.MapStaffUsers();
 app.MapNights();
 app.MapCategories();
 app.MapTables();
+app.MapWaiter();
 app.MapProducts();
 app.MapKds();
 // The hubs carry their role in [Authorize]; the policy adds the night's crew
@@ -133,6 +135,7 @@ app.MapKds();
 // tracking hub has no account behind it, so no night applies there.
 app.MapHub<KdsHub>(KdsHubRoute.Path).RequireAuthorization(Policies.Kds);
 app.MapHub<TillHub>(TillHubRoute.Path).RequireAuthorization(Policies.Cashier);
+app.MapHub<WaiterHub>(WaiterHubRoute.Path).RequireAuthorization(Policies.Waiter);
 app.MapHub<TrackingHub>(TrackingHubRoute.Path);
 app.MapCashier();
 

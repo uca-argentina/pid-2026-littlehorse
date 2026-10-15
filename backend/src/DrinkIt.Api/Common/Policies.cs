@@ -24,4 +24,7 @@ internal static class Policies
 
     /// <summary>The till (US-26): looks up what is waiting for cash and takes it, while it works the night.</summary>
     public const string Cashier = nameof(StaffRole.Cashier);
+
+    /// <summary>The waiter's phone (US-43): the tables that are ready and taking one, while it works the night.</summary>
+    public const string Waiter = nameof(StaffRole.Waiter);
 }
