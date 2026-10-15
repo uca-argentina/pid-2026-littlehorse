@@ -77,6 +77,20 @@ public class CollectCashHandlerTests
         Assert.Equal(TheNight, bars.AskedFor);
     }
 
+    // US-38: connected is measured against the server's clock at the moment
+    // the money comes in. The quieter bar's tablet went quiet two minutes ago.
+    [Fact]
+    public async Task HandleAsync_WhenTheQuieterBarIsDisconnected_SendsItToTheConnectedOne()
+    {
+        Order order = AnOrderWaitingForCash();
+        BarSupply busy = new(Guid.CreateVersion7(), 4, new Dictionary<Guid, int> { [GinTonic] = 10 }, Tonight.AddSeconds(-20));
+        BarSupply quiet = new(Guid.CreateVersion7(), 1, new Dictionary<Guid, int> { [GinTonic] = 10 }, Tonight.AddMinutes(-2));
+
+        await AHandlerOver(new KdsOrdersInMemory(order), new Bars(quiet, busy)).HandleAsync("K-4821", CancellationToken.None);
+
+        Assert.Equal(busy.KdsId, order.KdsId);
+    }
+
     // US-36: cash takes no stock until it is collected, so what was there at
     // confirmation may be gone. The till hears it before taking the money,
     // and the order keeps waiting, so the customer can change it or cancel.

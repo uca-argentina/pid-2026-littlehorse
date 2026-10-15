@@ -1,6 +1,7 @@
 using DrinkIt.Api.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Metrics;
 using DrinkIt.Application.Nights;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -54,6 +55,61 @@ public sealed record NightStockResponse(Guid NightId, IReadOnlyList<NightStockBa
             [.. bar.Lines.Select(line => new NightStockLineResponse(line.ProductId, line.ProductName, line.Loaded, line.Sold, line.Left, line.InStoreroom))]))]);
 }
 
+/// <summary>How long a stage took, in whole seconds. Null until some order has been through it.</summary>
+public sealed record StageTimesResponse(int? AverageSeconds, int? WorstTenthSeconds)
+{
+    internal static StageTimesResponse Of(StageTimes times) => new(SecondsOf(times.Average), SecondsOf(times.WorstTenth));
+
+    private static int? SecondsOf(TimeSpan? time) => time is TimeSpan measured ? (int)Math.Round(measured.TotalSeconds) : null;
+}
+
+/// <summary>What was paid with one method. Every method has a row, even at zero.</summary>
+public sealed record SalesByMethodResponse(PaymentMethodName Method, int Orders, decimal Amount);
+
+/// <summary>From paid to ready at one bar of the night, by the name its board shows.</summary>
+public sealed record BarTimesResponse(Guid KdsId, string Name, StageTimesResponse PaidToReady);
+
+/// <summary>
+/// One of the most ordered products, with the name and what it billed as it
+/// was ordered, beside what its bars were loaded with that night.
+/// </summary>
+public sealed record TopProductResponse(Guid ProductId, string Name, int Units, decimal Billed, int Loaded, bool SoldOut);
+
+/// <summary>
+/// A night's report. WorstTenthSeconds is the average of the slowest tenth of
+/// the orders, not a percentile. Unmeasured counts the orders from before
+/// ReadyAt was kept, which have no time to give.
+/// </summary>
+/// <remarks>US-47 to US-49.</remarks>
+public sealed record NightMetricsResponse(
+    Guid NightId,
+    decimal Sold,
+    int Orders,
+    decimal AverageTicket,
+    int Units,
+    IReadOnlyList<SalesByMethodResponse> ByMethod,
+    StageTimesResponse PaidToReady,
+    StageTimesResponse ReadyToDelivered,
+    IReadOnlyList<BarTimesResponse> ByBar,
+    int Unmeasured,
+    IReadOnlyList<TopProductResponse> Top,
+    int SoldOutProducts)
+{
+    internal static NightMetricsResponse Of(Guid nightId, NightMetrics metrics) => new(
+        nightId,
+        metrics.Sold,
+        metrics.Orders,
+        metrics.AverageTicket,
+        metrics.Units,
+        [.. metrics.ByMethod.Select(row => new SalesByMethodResponse(row.Method.ToContract(), row.Orders, row.Amount))],
+        StageTimesResponse.Of(metrics.PaidToReady),
+        StageTimesResponse.Of(metrics.ReadyToDelivered),
+        [.. metrics.ByBar.Select(bar => new BarTimesResponse(bar.KdsId, bar.Name, StageTimesResponse.Of(bar.PaidToReady)))],
+        metrics.Unmeasured,
+        [.. metrics.Top.Select(product => new TopProductResponse(product.ProductId, product.Name, product.Units, product.Billed, product.Loaded, product.SoldOut))],
+        metrics.SoldOutProducts);
+}
+
 internal static class NightsEndpoints
 {
     public static IEndpointRouteBuilder MapNights(this IEndpointRouteBuilder endpoints)
@@ -91,6 +147,13 @@ internal static class NightsEndpoints
             .WithName("GetNightStock")
             .WithSummary("The night's stock, bar by bar: what was loaded of each product, sold and is left, and what the storeroom still has.")
             .Produces<NightStockResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapGet("/{id:guid}/metrics", GetMetricsAsync)
+            .WithName("GetNightMetrics")
+            .WithSummary("The night's report: what was sold and how it was paid, how long orders took, and the most ordered products against their stock. So far, for a night still underway.")
+            .Produces<NightMetricsResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         // POST and not PUT: it moves the stock, it does not replace it, so
@@ -134,6 +197,13 @@ internal static class NightsEndpoints
         NightStockSheet? sheet = await sheets.GetAsync(id, cancellationToken);
 
         return sheet is null ? Rejected(NightErrors.NotFound) : TypedResults.Ok(NightStockResponse.Of(sheet));
+    }
+
+    internal static async Task<IResult> GetMetricsAsync(Guid id, GetNightMetricsHandler handler, CancellationToken cancellationToken)
+    {
+        Result<NightMetrics> result = await handler.HandleAsync(id, cancellationToken);
+
+        return result.IsSuccess ? TypedResults.Ok(NightMetricsResponse.Of(id, result.Value)) : Rejected(result.Error!);
     }
 
     internal static async Task<IResult> AdjustStockAsync(

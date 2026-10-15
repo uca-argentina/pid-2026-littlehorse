@@ -1,3 +1,4 @@
+using DrinkIt.Application.Metrics;
 using DrinkIt.Application.Nights;
 
 namespace DrinkIt.Api.Features.Nights;
@@ -8,5 +9,6 @@ internal static class NightHandlers
     public static IServiceCollection AddNightHandlers(this IServiceCollection services) => services
         .AddScoped<CreateNightHandler>()
         .AddScoped<UpdateNightHandler>()
-        .AddScoped<AdjustNightStockHandler>();
+        .AddScoped<AdjustNightStockHandler>()
+        .AddScoped<GetNightMetricsHandler>();
 }

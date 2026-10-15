@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HubChannel, hubUrl } from '../realtime/hub-channel';
 
 export {
+  HUB_BEAT_MS as KDS_BEAT_MS,
   HUB_CONNECTION as KDS_HUB_CONNECTION,
   HUB_RETRY_MS as KDS_RETRY_MS,
   hubRetryDelay as kdsRetryDelay,
@@ -14,13 +15,17 @@ export type {
 /** Must match KdsHub.BoardChanged on the backend — the one message this hub ever sends. */
 export const BOARD_CHANGED_MESSAGE = 'BoardChanged';
 
+/** Must match KdsHub.Beat on the backend — what the tablet calls to say it is still there (US-38). */
+export const BEAT_MESSAGE = 'Beat';
+
 /** Where the bar's hub lives: see hubUrl. */
 export function kdsHubUrl(apiBaseUrl: string): string {
   return hubUrl(apiBaseUrl, 'kds');
 }
 
 /**
- * US-15: the live half of the board — the queue changed, reload it.
+ * US-15: the live half of the board — the queue changed, reload it — and,
+ * since US-38, the beat that tells paying this tablet is still there.
  *
  * providedIn: 'root', not the page's own providers, so a test can override
  * this singleton in the TestBed the ordinary way instead of fighting a
@@ -31,4 +36,6 @@ export class KdsBoardChannel extends HubChannel {
   protected readonly hub = 'kds';
 
   protected readonly message = BOARD_CHANGED_MESSAGE;
+
+  protected override readonly beat = BEAT_MESSAGE;
 }

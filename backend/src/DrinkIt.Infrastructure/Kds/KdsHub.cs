@@ -20,11 +20,18 @@ public static class KdsHubRoute
 /// a staff screen resolves its venue and its bar: from the token, never from
 /// the request.
 /// </summary>
+/// <remarks>
+/// US-38: the tablet beats on connecting and every twenty seconds after, and
+/// the last beat is what paying reads to leave out a bar that went quiet.
+/// </remarks>
 [Authorize(Roles = nameof(StaffRole.Kds))]
-public sealed class KdsHub : Hub
+public sealed class KdsHub(KdsBeats beats, TimeProvider clock) : Hub
 {
     /// <summary>The one message this hub ever sends: reload, something changed.</summary>
     public const string BoardChanged = "BoardChanged";
+
+    /// <summary>What the tablet calls every twenty seconds to say it is still there (US-38).</summary>
+    public const string Beat = "Beat";
 
     public override async Task OnConnectedAsync()
     {
@@ -37,7 +44,20 @@ public sealed class KdsHub : Hub
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, GroupFor(venueId, kdsId));
+        await beats.RecordAsync(kdsId, clock.GetUtcNow(), Context.ConnectionAborted);
         await base.OnConnectedAsync();
+    }
+
+    /// <summary>
+    /// Still here. Nothing is answered, and a beat that comes without a bar in
+    /// its token is dropped: OnConnectedAsync already closed that connection.
+    /// </summary>
+    [HubMethodName(Beat)]
+    public async Task BeatAsync()
+    {
+        if (KdsIdOf(Context.User) is not Guid kdsId) return;
+
+        await beats.RecordAsync(kdsId, clock.GetUtcNow(), Context.ConnectionAborted);
     }
 
     /// <summary>

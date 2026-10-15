@@ -1,0 +1,206 @@
+<div class="frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <section class="body" [attr.aria-busy]="nights.isLoading() || report.isLoading()">
+    @if (failure() === 'notFound') {
+      <p class="note note-bad" role="alert">
+        No encontramos esa noche en este boliche. Elegí otra o volvé a las noches.
+      </p>
+    } @else if (failure() === 'unreachable') {
+      <div class="note note-bad failed" role="alert">
+        <span>No pudimos traer el reporte. Fijate la señal y probá de nuevo.</span>
+        <button class="retry" type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+
+    @if (isEmpty()) {
+      <h1 class="title">Reportes</h1>
+      <div class="empty">
+        <p class="empty-title">Todavía no hay noches para mostrar</p>
+        <p class="empty-text">
+          El reporte de una noche aparece cuando empieza. Armá la primera desde Noches y, mientras
+          esté en curso, acá vas a ver las ventas y los tiempos en vivo.
+        </p>
+        <a class="primary" [routerLink]="['/', venueSlug(), 'staff', 'nights']">Ir a Noches</a>
+      </div>
+    }
+
+    @if (nightId() !== undefined && choices().length > 0) {
+      <div class="bar">
+        <label class="dk-sr-only" for="night-picker">Noche</label>
+        <select id="night-picker" class="picker" [value]="nightId()" (change)="choose($event)">
+          @for (choice of choices(); track choice.id) {
+            <option [value]="choice.id" [selected]="choice.id === nightId()">
+              {{ choice.name }}
+            </option>
+          }
+        </select>
+        @if (night(); as night) {
+          <span class="hours">{{ hours() }}</span>
+          <span class="chip" [class.chip-live]="isLive()">{{
+            isLive() ? 'En vivo' : 'Terminada'
+          }}</span>
+          <a class="ghost" [routerLink]="['/', venueSlug(), 'staff', 'nights', night.id]">
+            Ver la noche
+          </a>
+        }
+      </div>
+    }
+
+    @if (report.hasValue() && failure() === 'none') {
+      @let r = report.value();
+
+      <div class="kpis">
+        <div class="kpi" data-testid="sold">
+          <span class="label">Vendido</span>
+          <span class="value">$ {{ price(r.sold) }}</span>
+          <span class="detail">pagado, sin cancelados</span>
+        </div>
+        <div class="kpi" data-testid="orders">
+          <span class="label">Pedidos</span>
+          <span class="value">{{ r.orders }}</span>
+          <span class="detail">$ {{ price(r.averageTicket) }} por pedido</span>
+        </div>
+        <div class="kpi">
+          <span class="label">Pago → listo</span>
+          <span class="value">{{ minutes(r.paidToReady.averageSeconds) }}</span>
+          <span class="detail">
+            el peor 10 %: <b class="slow">{{ minutes(r.paidToReady.worstTenthSeconds) }}</b>
+          </span>
+        </div>
+        <div class="kpi">
+          <span class="label">Unidades</span>
+          <span class="value">{{ r.units }}</span>
+          <span class="detail">
+            {{
+              r.soldOutProducts === 1
+                ? '1 producto se agotó'
+                : r.soldOutProducts + ' productos se agotaron'
+            }}
+          </span>
+        </div>
+      </div>
+
+      <div class="panels">
+        <section class="panel" aria-labelledby="sales-title">
+          <h2 id="sales-title" class="panel-title">Ventas por medio de pago</h2>
+          <div class="stack" aria-hidden="true">
+            @for (method of methods(); track method.method) {
+              <span
+                [class]="'segment segment-' + method.tone"
+                [style.width.%]="method.share"
+              ></span>
+            }
+          </div>
+          <ul class="rows">
+            @for (method of methods(); track method.method) {
+              <li class="row" [attr.data-testid]="'method-' + method.method">
+                <span [class]="'dot dot-' + method.tone" aria-hidden="true"></span>
+                <span class="grow">{{ method.name }}</span>
+                <span class="muted">{{
+                  method.orders === 1 ? '1 pedido' : method.orders + ' pedidos'
+                }}</span>
+                <span class="number">$ {{ price(method.amount) }}</span>
+              </li>
+            }
+          </ul>
+          <p class="foot">
+            El efectivo es lo que tiene que haber en la caja. El saldo VIP es lo que se
+            <b>consumió</b> de las mesas, no lo que se les cargó: el paquete se cobró aparte, al
+            venderlo.
+          </p>
+        </section>
+
+        <section class="panel" aria-labelledby="times-title">
+          <h2 id="times-title" class="panel-title">Tiempos</h2>
+          <div class="stages">
+            <div class="stage" data-testid="paid-to-ready">
+              <span class="label">Pago → listo</span>
+              <span class="stage-value"
+                >{{ minutes(r.paidToReady.averageSeconds) }} <small>promedio</small></span
+              >
+              <span class="detail"
+                >peor 10 %: <b class="slow">{{ minutes(r.paidToReady.worstTenthSeconds) }}</b></span
+              >
+            </div>
+            <div class="stage">
+              <span class="label">Listo → entregado</span>
+              <span class="stage-value"
+                >{{ minutes(r.readyToDelivered.averageSeconds) }} <small>promedio</small></span
+              >
+              <span class="detail"
+                >peor 10 %:
+                <b class="slow">{{ minutes(r.readyToDelivered.worstTenthSeconds) }}</b></span
+              >
+            </div>
+          </div>
+          @if (r.byBar.length > 0) {
+            <table class="bars">
+              <caption class="dk-sr-only">
+                Pago a listo por barra
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Por barra · pago → listo</th>
+                  <th scope="col" class="number">Promedio</th>
+                  <th scope="col" class="number">Peor 10 %</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (bar of r.byBar; track bar.kdsId) {
+                  <tr [attr.data-testid]="'bar-' + bar.kdsId">
+                    <td>{{ bar.name }}</td>
+                    <td class="number">{{ minutes(bar.paidToReady.averageSeconds) }}</td>
+                    <td class="number">{{ minutes(bar.paidToReady.worstTenthSeconds) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+          @if (r.unmeasured > 0) {
+            <p class="foot">
+              {{
+                r.unmeasured === 1
+                  ? '1 pedido no se pudo medir'
+                  : r.unmeasured + ' pedidos no se pudieron medir'
+              }}: son de antes de que se guardara cuándo quedaban listos.
+            </p>
+          }
+        </section>
+      </div>
+
+      <section class="panel" aria-labelledby="top-title">
+        <h2 id="top-title" class="panel-title">Los más pedidos</h2>
+        @if (top().length === 0) {
+          <p class="muted">Todavía no se pidió nada esta noche.</p>
+        } @else {
+          <ol class="ranking">
+            @for (product of top(); track product.productId) {
+              <li class="product" [attr.data-testid]="'top-' + product.productId">
+                <span class="rank">{{ product.rank }}</span>
+                <span class="drink">{{ product.name }}</span>
+                <span class="units">
+                  <span class="meter" aria-hidden="true"
+                    ><i [style.width.%]="product.share"></i
+                  ></span>
+                  <span class="number">{{ product.units }} u.</span>
+                </span>
+                <span class="number">$ {{ price(product.billed) }}</span>
+                <span class="muted loaded">de {{ product.loaded }} cargadas</span>
+                <span class="chip" [class.chip-out]="product.soldOut">
+                  {{ product.soldOut ? 'Se agotó' : 'Sobró' }}
+                </span>
+              </li>
+            }
+          </ol>
+          <p class="foot">
+            "Se agotó" quiere decir que vendió todo lo que se le cargó en las barras: la próxima
+            noche probablemente necesite más.
+          </p>
+        }
+      </section>
+    } @else if (nightId() !== undefined && failure() === 'none') {
+      <p class="note" role="status">Cargando el reporte…</p>
+    }
+  </section>
+</div>

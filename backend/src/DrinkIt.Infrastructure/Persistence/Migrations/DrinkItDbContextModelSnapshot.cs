@@ -454,6 +454,24 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DrinkIt.Infrastructure.Persistence.KdsBeat", b =>
+                {
+                    b.Property<Guid>("KdsId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("LastBeatAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("KdsId");
+
+                    b.HasIndex("VenueId");
+
+                    b.ToTable("KdsBeats", (string)null);
+                });
+
             modelBuilder.Entity("DrinkIt.Infrastructure.Persistence.OrderCodeCounter", b =>
                 {
                     b.Property<Guid>("VenueId")
@@ -573,6 +591,21 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.HasOne("DrinkIt.Domain.Menu.Product", null)
                         .WithMany()
                         .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Infrastructure.Persistence.KdsBeat", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Staff.StaffUser", null)
+                        .WithMany()
+                        .HasForeignKey("KdsId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

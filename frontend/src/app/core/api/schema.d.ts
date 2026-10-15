@@ -345,6 +345,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/nights/{id}/metrics': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The night's report: what was sold and how it was paid, how long orders took, and the most ordered products against their stock. So far, for a night still underway. */
+    get: operations['GetNightMetrics'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/nights/{id}/stock/{kdsId}/{productId}/adjust': {
     parameters: {
       query?: never;
@@ -707,6 +724,13 @@ export interface components {
       lastModifiedAt: null | string;
       lastModifiedBy: null | string;
     };
+    /** @description From paid to ready at one bar of the night, by the name its board shows. */
+    BarTimesResponse: {
+      /** Format: uuid */
+      kdsId: string;
+      name: string;
+      paidToReady: components['schemas']['StageTimesResponse'];
+    };
     /** @description One drink of an order, as the till reads it back. */
     CashierOrderItemResponse: {
       productName: string;
@@ -870,6 +894,32 @@ export interface components {
       categories: components['schemas']['CategoryResponse'][];
       items: components['schemas']['MenuItemResponse'][];
     };
+    /**
+     * @description A night's report. WorstTenthSeconds is the average of the slowest tenth of
+     *     the orders, not a percentile. Unmeasured counts the orders from before
+     *     ReadyAt was kept, which have no time to give.
+     */
+    NightMetricsResponse: {
+      /** Format: uuid */
+      nightId: string;
+      /** Format: double */
+      sold: number;
+      /** Format: int32 */
+      orders: number;
+      /** Format: double */
+      averageTicket: number;
+      /** Format: int32 */
+      units: number;
+      byMethod: components['schemas']['SalesByMethodResponse'][];
+      paidToReady: components['schemas']['StageTimesResponse'];
+      readyToDelivered: components['schemas']['StageTimesResponse'];
+      byBar: components['schemas']['BarTimesResponse'][];
+      /** Format: int32 */
+      unmeasured: number;
+      top: components['schemas']['TopProductResponse'][];
+      /** Format: int32 */
+      soldOutProducts: number;
+    };
     NightResponse: {
       /** Format: uuid */
       id: string;
@@ -961,6 +1011,14 @@ export interface components {
     ResetStaffUserPasswordRequest: {
       password: string;
     };
+    /** @description What was paid with one method. Every method has a row, even at zero. */
+    SalesByMethodResponse: {
+      method: components['schemas']['PaymentMethodName'];
+      /** Format: int32 */
+      orders: number;
+      /** Format: double */
+      amount: number;
+    };
     /** @description Whose order a scan found, and what it did with it. */
     ScannedOrderResponse: {
       code: string;
@@ -989,6 +1047,29 @@ export interface components {
       role: components['schemas']['StaffRoleName'];
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
+    };
+    /** @description How long a stage took, in whole seconds. Null until some order has been through it. */
+    StageTimesResponse: {
+      /** Format: int32 */
+      averageSeconds: null | number;
+      /** Format: int32 */
+      worstTenthSeconds: null | number;
+    };
+    /**
+     * @description One of the most ordered products, with the name and what it billed as it
+     *     was ordered, beside what its bars were loaded with that night.
+     */
+    TopProductResponse: {
+      /** Format: uuid */
+      productId: string;
+      name: string;
+      /** Format: int32 */
+      units: number;
+      /** Format: double */
+      billed: number;
+      /** Format: int32 */
+      loaded: number;
+      soldOut: boolean;
     };
     /** @description One drink of the order, as the tracking screen draws it. */
     TrackedOrderItemResponse: {
@@ -1802,6 +1883,37 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['NightStockResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetNightMetrics: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightMetricsResponse'];
         };
       };
       /** @description Not Found */

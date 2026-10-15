@@ -2,10 +2,12 @@ using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
+using DrinkIt.Application.Metrics;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Staff;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
+using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Staff;
 using Microsoft.AspNetCore.Http;
 
@@ -194,6 +196,77 @@ public class NightsEndpointsTests
         Assert.Equal("urn:drinkit:problem:night:not-found", response.Text("type"));
     }
 
+    // US-47 to US-49. Pins the report's shape: the Angular client is
+    // generated from it. Times travel in whole seconds, methods by name.
+    [Fact]
+    public async Task GetMetricsAsync_WhenTheVenueHasTheNight_RespondsWithItsReport()
+    {
+        Guid night = Guid.CreateVersion7();
+        Guid gin = Guid.CreateVersion7();
+        DateTimeOffset paid = Opening.AddHours(1);
+        NightSales sales = new(
+            [new NightBar(MainBar.Id, "Barra Pista")],
+            [new PaidOrder(MainBar.Id, PaymentMethod.Cash, 9000m, OrderStatus.Delivered, paid, paid.AddMinutes(6), paid.AddMinutes(9))],
+            [new ProductSales(gin, "Gin Tonic", 2, 9000m)]);
+        NightStockSheet sheet = new(night, [new NightStockBar(MainBar.Id, "main-bar", [new NightStockLine(gin, "Gin Tonic", Loaded: 2, Sold: 2, InStoreroom: 0)])]);
+
+        IResult result = await NightsEndpoints.GetMetricsAsync(night, new GetNightMetricsHandler(new Fake.Sales(sales), new Fake.Sheets(sheet)), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{night}/metrics", HttpMethods.Get);
+
+        Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
+        System.Text.Json.JsonElement body = response.Body;
+        Assert.Equal(night, body.GetProperty("nightId").GetGuid());
+        Assert.Equal(9000m, body.GetProperty("sold").GetDecimal());
+        Assert.Equal(1, body.GetProperty("orders").GetInt32());
+        Assert.Equal(9000m, body.GetProperty("averageTicket").GetDecimal());
+        Assert.Equal(2, body.GetProperty("units").GetInt32());
+        System.Text.Json.JsonElement cash = body.GetProperty("byMethod")[0];
+        Assert.Equal("Cash", cash.GetProperty("method").GetString());
+        Assert.Equal(1, cash.GetProperty("orders").GetInt32());
+        Assert.Equal(9000m, cash.GetProperty("amount").GetDecimal());
+        Assert.Equal(360, body.GetProperty("paidToReady").GetProperty("averageSeconds").GetInt32());
+        Assert.Equal(360, body.GetProperty("paidToReady").GetProperty("worstTenthSeconds").GetInt32());
+        Assert.Equal(180, body.GetProperty("readyToDelivered").GetProperty("averageSeconds").GetInt32());
+        System.Text.Json.JsonElement bar = body.GetProperty("byBar")[0];
+        Assert.Equal("Barra Pista", bar.GetProperty("name").GetString());
+        Assert.Equal(360, bar.GetProperty("paidToReady").GetProperty("averageSeconds").GetInt32());
+        Assert.Equal(0, body.GetProperty("unmeasured").GetInt32());
+        System.Text.Json.JsonElement top = body.GetProperty("top")[0];
+        Assert.Equal("Gin Tonic", top.GetProperty("name").GetString());
+        Assert.Equal(2, top.GetProperty("units").GetInt32());
+        Assert.Equal(9000m, top.GetProperty("billed").GetDecimal());
+        Assert.Equal(2, top.GetProperty("loaded").GetInt32());
+        Assert.True(top.GetProperty("soldOut").GetBoolean());
+        Assert.Equal(1, body.GetProperty("soldOutProducts").GetInt32());
+    }
+
+    // Nothing ready yet: no time to show, which is not zero minutes.
+    [Fact]
+    public async Task GetMetricsAsync_WhenNoOrderIsReadyYet_RespondsWithoutTimes()
+    {
+        Guid night = Guid.CreateVersion7();
+
+        IResult result = await NightsEndpoints.GetMetricsAsync(
+            night,
+            new GetNightMetricsHandler(new Fake.Sales(new NightSales([], [], [])), new Fake.Sheets(new NightStockSheet(night, []))),
+            CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{night}/metrics", HttpMethods.Get);
+
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, response.Body.GetProperty("paidToReady").GetProperty("averageSeconds").ValueKind);
+    }
+
+    [Fact]
+    public async Task GetMetricsAsync_WhenTheVenueHasNoSuchNight_RespondsWithNotFound()
+    {
+        Guid unknown = Guid.CreateVersion7();
+
+        IResult result = await NightsEndpoints.GetMetricsAsync(unknown, new GetNightMetricsHandler(new Fake.Sales(null), new Fake.Sheets(null)), CancellationToken.None);
+        HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{unknown}/metrics", HttpMethods.Get);
+
+        Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);
+        Assert.Equal("urn:drinkit:problem:night:not-found", response.Text("type"));
+    }
+
     [Fact]
     public async Task AdjustStockAsync_WhenTheChangeIsValid_RespondsWithTheSheet()
     {
@@ -357,6 +430,11 @@ public class NightsEndpointsTests
 
             public Task<NightSummary?> GetAsync(Guid id, CancellationToken cancellationToken) =>
                 Task.FromResult(stored.FirstOrDefault(night => night.Id == id));
+        }
+
+        public sealed class Sales(NightSales? stored) : INightMetricsQueries
+        {
+            public Task<NightSales?> GetAsync(Guid nightId, CancellationToken cancellationToken) => Task.FromResult(stored);
         }
 
         public sealed class Sheets(NightStockSheet? stored) : INightStockQueries

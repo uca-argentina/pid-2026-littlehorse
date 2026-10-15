@@ -7,11 +7,19 @@ namespace DrinkIt.Application.Orders;
 /// </summary>
 public static class BarChooser
 {
-    /// <summary>Null when no single bar has it all. Equal work goes to the first given, so asking twice answers the same.</summary>
-    public static BarSupply? Choose(IReadOnlyList<BarSupply> bars, IReadOnlyCollection<OrderLine> lines) =>
+    /// <summary>
+    /// Null when no single bar has it all. Among those that do, a bar whose
+    /// tablet is connected wins over one that is not (US-38), and only then
+    /// does less work decide. With none of them connected the order still goes
+    /// to one, and waits on that tablet: refused or left without a bar, the
+    /// customer would lose it over something they cannot see. Equal work goes
+    /// to the first given, so asking twice answers the same.
+    /// </summary>
+    public static BarSupply? Choose(IReadOnlyList<BarSupply> bars, IReadOnlyCollection<OrderLine> lines, DateTimeOffset now) =>
         bars
             .Where(bar => lines.All(line => bar.UnitsOf(line.ProductId) >= line.Quantity))
-            .OrderBy(bar => bar.Load)
+            .OrderByDescending(bar => bar.IsConnectedAt(now))
+            .ThenBy(bar => bar.Load)
             .FirstOrDefault();
 
     /// <summary>

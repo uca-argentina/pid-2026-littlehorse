@@ -8,7 +8,7 @@ namespace DrinkIt.Infrastructure.Orders;
 
 /// <summary>
 /// Read-only, like ProductsForOrdering: what each bar holds for the night and
-/// how much work it has. The stock is taken by OrderRepository.AddAsync. No
+/// how much work it has, and when its tablet last beat. The stock is taken by OrderRepository.AddAsync. No
 /// venue in any WHERE: the global query filters add it.
 /// </summary>
 internal sealed class BarsForOrdering(DrinkItDbContext context) : IBarsForOrdering
@@ -43,9 +43,17 @@ internal sealed class BarsForOrdering(DrinkItDbContext context) : IBarsForOrderi
             .Select(stock => new { stock.KdsId, stock.ProductId, stock.Units })
             .ToListAsync(cancellationToken);
 
+        // US-38: when each tablet last beat. Whether that is recent enough is
+        // the chooser's call, against the moment of paying.
+        Dictionary<Guid, DateTimeOffset> beats = await context.KdsBeats
+            .AsNoTracking()
+            .Where(beat => bars.Contains(beat.KdsId))
+            .ToDictionaryAsync(beat => beat.KdsId, beat => beat.LastBeatAt, cancellationToken);
+
         return [.. bars.Select(bar => new BarSupply(
             bar,
             loads.GetValueOrDefault(bar),
-            units.Where(stock => stock.KdsId == bar).ToDictionary(stock => stock.ProductId, stock => stock.Units)))];
+            units.Where(stock => stock.KdsId == bar).ToDictionary(stock => stock.ProductId, stock => stock.Units),
+            beats.TryGetValue(bar, out DateTimeOffset beat) ? beat : null))];
     }
 }
