@@ -586,6 +586,26 @@ describe:
 - **El aviso al celular del mozo** (de `MozoLogin`) depende de US-21. Si US-21 no entra, el
   mozo se entera mirando la pantalla.
 
+**Construida el 2026-10-15.** Decidido ese día:
+
+- **El pedido guarda quién lo lleva** (`WaiterId`, `WaiterName`, `TakenAt`), sin estado nuevo:
+  sigue en `Ready` hasta que alguien lo entrega. El nombre queda como era al tomarlo, como el
+  número de mesa: es lo que leen los demás mozos y el cliente.
+- **La carrera (criterio 3) se resuelve con el token de concurrencia del pedido**: el primero
+  que guarda gana, y el otro recibe 409 y recarga para ver quién fue.
+- **Un doble toque del mismo mozo no cambia nada**, ni dispara aviso.
+- **Si la barra devuelve el pedido a preparación, el mozo que lo había tomado lo pierde**: cuando
+  vuelva a estar listo, se toma de nuevo.
+- **"La suelto" queda afuera**, como decía la nota. Una mesa tomada por error no tiene salida
+  hasta entregarla: **limitación conocida**.
+- **El cliente se entera**: el seguimiento dice "Martín lo está llevando a tu mesa", con el
+  aviso en vivo de US-22.
+- **El mozo sólo ve y toma con la política `Waiter`** (rol más estar en la noche, como la caja y
+  el KDS): ni el administrador entra a esa lista por omisión.
+- **Pendiente: el aviso al celular** (US-21) y **el E2E de dos actores**: el recorrido está
+  cubierto por tests de dominio, de aplicación, de integración contra la base real y por HTTP,
+  pero no hay un spec de Playwright con dos celulares.
+
 ### US-44 · Marcar entregado en la mesa
 
 > **Como** mozo
@@ -609,6 +629,18 @@ describe:
   KDS: el mozo tiene el celular en una mano y la bandeja en la otra.
 - **Es `Order.Deliver`**, la misma transición de la barra. El pedido guarda además qué mozo lo
   entregó, para la auditoría.
+
+**Construida el 2026-10-15.** Decidido ese día:
+
+- **No hay columna nueva para "quién entregó"**: sólo entrega el mozo que lo tomó, así que
+  `WaiterId` ya es quien entregó, y la auditoría de la entrega (`LastModifiedBy`) lo firma.
+- **La confirmación es en la tarjeta**: "Entregado" pregunta "¿La dejaste en la mesa?" antes de
+  hacerlo, y no ofrece "Deshacer".
+- **Un pedido ajeno, o uno que nadie tomó, responde 409** (`waiter.not_yours`), igual que cuando
+  la barra lo devolvió a preparación después de tomarlo: el toque viejo es un conflicto, no un
+  error. La pantalla recarga y lo muestra donde quedó.
+- **El cliente ve "En tu mesa"**: al entregarse, el seguimiento cierra con ese texto en lugar
+  del de retiro en barra.
 
 ### US-45 · Coordinar las mesas desde la caja
 
@@ -634,6 +666,16 @@ describe:
   `StaffHeader` ya acepta solapas.
 - **Sólo mira**: el cajero no asigna ni marca nada. El sistema expone la información y la
   coordinación es de palabra (§8.3).
+
+**Construida el 2026-10-15.** Decidido ese día:
+
+- **Es la misma lista que ven los mozos**, sin el id del mozo: la caja sólo necesita saber quién
+  la lleva para decirlo en voz alta. No hay una consulta nueva.
+- **Se actualiza con el hub de la caja que ya existía** (`TillChanged`): cualquier cambio de una
+  mesa le avisa también a la caja, sin canal nuevo.
+- **La caja pasa a tener dos solapas** ("Cobro en efectivo" y "Entregas VIP"). El encabezado
+  compartido arma ahora los enlaces con la ruta partida en segmentos, y marca la solapa activa
+  sólo en su dirección exacta cuando otra cuelga de ella.
 
 ---
 
