@@ -53,9 +53,10 @@ internal static class TablesEndpoints
         group
             .MapPost("/{id:guid}/deactivate", DeactivateAsync)
             .WithName("DeactivateTable")
-            .WithSummary("Puts a table away without deleting it.")
+            .WithSummary("Puts a table away without deleting it, unless a night that has not ended sells it.")
             .Produces<TableResponse>()
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         group
             .MapPost("/{id:guid}/reactivate", ReactivateAsync)
@@ -128,6 +129,7 @@ internal static class TablesEndpoints
         {
             _ when error == TableErrors.NumberTaken => ("Table number already taken", StatusCodes.Status409Conflict),
             _ when error == TableErrors.NotFound => ("Not found", StatusCodes.Status404NotFound),
+            _ when error == TableErrors.InANightNotOver => ("Table in a night that has not ended", StatusCodes.Status409Conflict),
             _ => ("Invalid request", StatusCodes.Status400BadRequest),
         };
 

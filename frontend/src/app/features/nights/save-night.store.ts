@@ -17,6 +17,9 @@ export type SaveNightStatus =
   | 'over'
   | 'startLocked'
   | 'barHoldsStock'
+  | 'waiterRequired'
+  | 'tablesChanged'
+  | 'tableSpent'
   | 'unreachable';
 
 /**
@@ -87,6 +90,10 @@ const REASONS = new Map<string, SaveNightStatus>([
   [ProblemTypes.nightOver, 'over'],
   [ProblemTypes.nightStartLocked, 'startLocked'],
   [ProblemTypes.nightBarHoldsStock, 'barHoldsStock'],
+  [ProblemTypes.nightWaiterRequired, 'waiterRequired'],
+  [ProblemTypes.nightTableNotFound, 'tablesChanged'],
+  [ProblemTypes.vipAccountTableInactive, 'tablesChanged'],
+  [ProblemTypes.vipAccountHasSpending, 'tableSpent'],
 ]);
 
 /**
@@ -107,6 +114,10 @@ const REFUSALS: Partial<Record<SaveNightStatus, string>> = {
   startLocked: 'La noche empezó mientras la editabas: el inicio ya no se puede mover.',
   barHoldsStock:
     'Una de las KDS que sacaste todavía tiene stock en esta noche. Devolvé su stock al depósito desde el stock de la noche y después sacala.',
+  waiterRequired: 'Con mesas VIP, la noche necesita al menos un mozo. Sumá uno en Mozos.',
+  tablesChanged:
+    'Una de las mesas elegidas se dio de baja o ya no está en el boliche. Recargá la pantalla y elegí de nuevo.',
+  tableSpent: 'Una de las mesas que sacaste ya consumió en esta noche, así que queda en ella.',
   unreachable: 'No pudimos guardarla. Fijate la señal y probá de nuevo.',
 };
 

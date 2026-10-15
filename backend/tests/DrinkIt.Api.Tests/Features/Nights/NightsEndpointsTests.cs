@@ -1,5 +1,6 @@
 using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Tests.Common;
+using DrinkIt.Api.Tests.Features.Tables;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Application.Metrics;
@@ -147,6 +148,8 @@ public class NightsEndpointsTests
         UpdateNightHandler handler = new(
             new Fake.Nights(overlaps: false, saturday, barHoldingStock: VipBar.Id),
             new Fake.Staff(MainBar, VipBar, Till),
+            new FakeTables(),
+            new NoVipAccounts(),
             new Fake.Clock(Opening.AddHours(-2)));
 
         IResult result = await NightsEndpoints.UpdateAsync(
@@ -379,7 +382,7 @@ public class NightsEndpointsTests
     private static async Task<HttpResponseSnapshot> Update(Night? stored, UpdateNightRequest request, bool overlaps = false)
     {
         Guid id = stored?.Id ?? Guid.CreateVersion7();
-        UpdateNightHandler handler = new(new Fake.Nights(overlaps, stored), new Fake.Staff(MainBar, Till), new Fake.Clock(Opening.AddHours(-2)));
+        UpdateNightHandler handler = new(new Fake.Nights(overlaps, stored), new Fake.Staff(MainBar, Till), new FakeTables(), new NoVipAccounts(), new Fake.Clock(Opening.AddHours(-2)));
 
         IResult result = await NightsEndpoints.UpdateAsync(id, request, handler, CancellationToken.None);
 
@@ -388,7 +391,7 @@ public class NightsEndpointsTests
 
     private static async Task<HttpResponseSnapshot> Create(CreateNightRequest request, bool overlaps = false)
     {
-        CreateNightHandler handler = new(new Fake.Nights(overlaps), new Fake.Staff(MainBar, Till), new Fake.CurrentVenue(), new Fake.Clock(Opening.AddHours(-2)));
+        CreateNightHandler handler = new(new Fake.Nights(overlaps), new Fake.Staff(MainBar, Till), new FakeTables(), new NoVipAccounts(), new Fake.CurrentVenue(), new Fake.Clock(Opening.AddHours(-2)));
 
         IResult result = await NightsEndpoints.CreateAsync(request, handler, CancellationToken.None);
 

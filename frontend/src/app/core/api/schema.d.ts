@@ -345,6 +345,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/nights/{id}/tables': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The VIP tables the night sells, by number, with the budget of each package and what it spent. */
+    get: operations['GetNightTables'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/nights/{id}/metrics': {
     parameters: {
       query?: never;
@@ -441,7 +458,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Puts a table away without deleting it. */
+    /** Puts a table away without deleting it, unless a night that has not ended sells it. */
     post: operations['DeactivateTable'];
     delete?: never;
     options?: never;
@@ -859,7 +876,6 @@ export interface components {
     CreateCategoryRequest: {
       name: string;
     };
-    /** @description What the administration screen posts to set up a night. */
     CreateNightRequest: {
       name: string;
       /** Format: date-time */
@@ -867,6 +883,7 @@ export interface components {
       /** Format: date-time */
       endsAt: string;
       crewIds: string[];
+      tables?: null | components['schemas']['NightTableRequestBody'][];
     };
     /**
      * @description What the administration screen posts. The image address is whatever the
@@ -1038,6 +1055,27 @@ export interface components {
       nightId: string;
       bars: components['schemas']['NightStockBarResponse'][];
     };
+    /** @description What the administration screen posts to set up a night. */
+    NightTableRequestBody: {
+      /** Format: uuid */
+      tableId: string;
+      /** Format: double */
+      budget: number;
+    };
+    /** @description A table of the night with what was loaded onto it and what its orders took. */
+    NightTableResponse: {
+      /** Format: uuid */
+      tableId: string;
+      /** Format: int32 */
+      number: number;
+      /** Format: int32 */
+      capacity: number;
+      location: null | string;
+      /** Format: double */
+      budget: number;
+      /** Format: double */
+      spent: number;
+    };
     /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
     OrderLineRequestBody: {
       /** Format: uuid */
@@ -1186,6 +1224,7 @@ export interface components {
       /** Format: date-time */
       endsAt: string;
       crewIds: string[];
+      tables?: null | components['schemas']['NightTableRequestBody'][];
     };
     /**
      * @description A product's name, description, price and category. Stock, picture and
@@ -1990,6 +2029,37 @@ export interface operations {
       };
     };
   };
+  GetNightTables: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['NightTableResponse'][];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   GetNightMetrics: {
     parameters: {
       query?: never;
@@ -2266,6 +2336,15 @@ export interface operations {
       };
       /** @description Not Found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

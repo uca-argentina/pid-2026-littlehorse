@@ -182,6 +182,25 @@ describe('TablesPage', () => {
     expect(screen.getByRole('alert').textContent).toContain('tu cuenta ya no lo es');
   });
 
+  // US-39's edge: somebody bought the table for a night that has not ended.
+  it('says the table is sold in a night that has not ended when the API refuses to put it away', async () => {
+    const deactivate = vi.fn().mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 409,
+            error: { type: ProblemTypes.tableInANightNotOver },
+          }),
+      ),
+    );
+    const { rendered } = await openScreenShowing([tableTwo], { deactivate });
+
+    screen.getByRole('button', { name: /dar de baja la mesa 2/i }).click();
+    await settleOnce(rendered.fixture);
+
+    expect(screen.getByRole('alert').textContent).toContain('noche que todavía no terminó');
+  });
+
   it('says so when the listing cannot be loaded', async () => {
     const { rendered, http } = await openScreen();
 

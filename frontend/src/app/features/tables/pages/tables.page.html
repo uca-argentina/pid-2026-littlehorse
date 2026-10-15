@@ -25,6 +25,11 @@
       <p class="note note-bad" role="alert">
         No pudimos traer las mesas. Fijate la señal y probá de nuevo.
       </p>
+    } @else if (changeFailure() === 'inANight') {
+      <p class="note note-bad" role="alert">
+        Esta mesa está vendida en una noche que todavía no terminó. Sacala de esa noche primero, o
+        esperá a que termine.
+      </p>
     } @else if (changeFailure() === 'unreachable') {
       <p class="note note-bad" role="alert">
         No pudimos hacer el cambio. Fijate la señal y probá de nuevo.

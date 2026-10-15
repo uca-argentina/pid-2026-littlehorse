@@ -1,11 +1,21 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Staff;
+using DrinkIt.Application.Tables;
+using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Staff;
 
 namespace DrinkIt.Application.Nights;
 
-public sealed record CreateNightCommand(string Name, DateTimeOffset StartsAt, DateTimeOffset EndsAt, IReadOnlyList<Guid> CrewIds);
+/// <summary>One VIP table the night sells, with the package's budget (US-40).</summary>
+public sealed record NightTableRequest(Guid TableId, decimal Budget);
+
+public sealed record CreateNightCommand(
+    string Name,
+    DateTimeOffset StartsAt,
+    DateTimeOffset EndsAt,
+    IReadOnlyList<Guid> CrewIds,
+    IReadOnlyList<NightTableRequest>? Tables = null);
 
 /// <summary>
 /// US-35: the administrator sets up a night of their own venue. The venue
@@ -18,6 +28,8 @@ public sealed record CreateNightCommand(string Name, DateTimeOffset StartsAt, Da
 public sealed class CreateNightHandler(
     INightRepository nights,
     IStaffUserRepository staffUsers,
+    ITableRepository tables,
+    IVipAccountRepository vipAccounts,
     ICurrentVenue currentVenue,
     TimeProvider clock)
 {
@@ -39,9 +51,17 @@ public sealed class CreateNightHandler(
             command.EndsAt,
             crewIds.Select(id => crew.First(member => member.Id == id)));
 
+        DateTimeOffset now = clock.GetUtcNow();
+
+        // US-40: the tables go in with the night. They are only tracked here;
+        // AddAsync commits them in the same transaction, or nothing at all.
+        Error? refusal = await NightTables.ApplyAsync(night, crew, command.Tables ?? [], [], tables, vipAccounts, now, cancellationToken);
+
+        if (refusal is not null) return refusal;
+
         StaffUser[] bars = [.. crewIds.Select(id => crew.First(member => member.Id == id)).Where(member => member.Role == StaffRole.Kds)];
 
-        await nights.AddAsync(night, bars, clock.GetUtcNow(), cancellationToken);
+        await nights.AddAsync(night, bars, now, cancellationToken);
 
         return NightSummary.Of(night);
     }

@@ -16,6 +16,9 @@ public interface ITableRepository
     /// </summary>
     Task<bool> NumberExistsAsync(int number, CancellationToken cancellationToken);
 
+    /// <summary>The venue's tables with those ids. Ids of another venue are simply not found.</summary>
+    Task<IReadOnlyList<Table>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
     /// <summary>The table tracked for change, or null when this venue has none with that id.</summary>
     Task<Table?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken);
 

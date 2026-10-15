@@ -10,7 +10,7 @@ import { TABLES_URL, TablesService } from '../tables.service';
 import type { VipTable } from '../tables.service';
 
 /** Why the listing is not on screen, or why a change did not go through. */
-type Failure = 'none' | 'forbidden' | 'unreachable';
+type Failure = 'none' | 'forbidden' | 'inANight' | 'unreachable';
 
 @Component({
   selector: 'drinkit-tables-page',
@@ -101,5 +101,10 @@ export class TablesPage {
 function failureOf(error: unknown): Failure {
   if (!(error instanceof HttpErrorResponse)) return 'unreachable';
 
-  return problemTypeOf(error) === ProblemTypes.forbidden ? 'forbidden' : 'unreachable';
+  const type = problemTypeOf(error);
+
+  if (type === ProblemTypes.forbidden) return 'forbidden';
+  if (type === ProblemTypes.tableInANightNotOver) return 'inANight';
+
+  return 'unreachable';
 }

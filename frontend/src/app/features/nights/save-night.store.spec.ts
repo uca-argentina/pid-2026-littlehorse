@@ -142,4 +142,36 @@ describe('SaveNightStore', () => {
     expect(store.status()).toBe('barHoldsStock');
     expect(refusalFor(store.status())).toMatch(/devolvé su stock al depósito/i);
   });
+
+  // US-40, §8.3: a night selling tables needs somebody to carry the drinks.
+  it('says the night needs a waiter when the API refuses the tables for that', () => {
+    create.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.nightWaiterRequired)));
+
+    store.create('bar-alfa', aNewNight);
+
+    expect(store.status()).toBe('waiterRequired');
+    expect(refusalFor(store.status())).toMatch(/al menos un mozo/i);
+  });
+
+  // A table was put away, or is not the venue's any more, while the form was open.
+  it.each([ProblemTypes.nightTableNotFound, ProblemTypes.vipAccountTableInactive])(
+    'says the tables changed when the API answers %s',
+    (type) => {
+      create.mockReturnValue(throwError(() => rejectedWith(400, type)));
+
+      store.create('bar-alfa', aNewNight);
+
+      expect(store.status()).toBe('tablesChanged');
+      expect(refusalFor(store.status())).toMatch(/recargá la pantalla/i);
+    },
+  );
+
+  it('says a table that already spent stays in the night', () => {
+    update.mockReturnValue(throwError(() => rejectedWith(400, ProblemTypes.vipAccountHasSpending)));
+
+    store.update('bar-alfa', 'night-1', aNewNight);
+
+    expect(store.status()).toBe('tableSpent');
+    expect(refusalFor(store.status())).toMatch(/ya consumió/i);
+  });
 });

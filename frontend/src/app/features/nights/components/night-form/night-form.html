@@ -76,6 +76,76 @@
     />
   }
 
+  <fieldset class="tables" [disabled]="sending()">
+    <legend class="label">Mesas VIP</legend>
+
+    @if (offeredTables().length === 0) {
+      <p class="help">No hay mesas cargadas. Se dan de alta desde Mesas.</p>
+    } @else {
+      <p class="help">Elegí las mesas que se venden esta noche y el presupuesto de cada paquete.</p>
+
+      <div class="tables-actions">
+        <button class="small" type="button" (click)="chooseAllTables()">Agregar todas</button>
+        <button class="small" type="button" (click)="clearTables()">Sacar todas</button>
+      </div>
+
+      <ul class="table-rows">
+        @for (table of offeredTables(); track table.id) {
+          <li class="table-row" [class.table-on]="isChosen(table.id)">
+            <div class="table-pick">
+              <input
+                class="check"
+                type="checkbox"
+                [id]="'table-' + table.id"
+                [checked]="isChosen(table.id)"
+                [disabled]="cannotLeave(table.id)"
+                [attr.aria-describedby]="'table-details-' + table.id"
+                (change)="toggleTable(table.id)"
+              />
+              <span class="table-name">
+                <label class="table-number" [for]="'table-' + table.id"
+                  >Mesa {{ table.number }}</label
+                >
+                <span class="table-details" [id]="'table-details-' + table.id">{{
+                  table.details
+                }}</span>
+              </span>
+            </div>
+
+            @if (isChosen(table.id)) {
+              <div class="budget">
+                <label class="dk-sr-only" [for]="'budget-' + table.id"
+                  >Presupuesto de la mesa {{ table.number }}</label
+                >
+                <span class="budget-sign" aria-hidden="true">$</span>
+                <input
+                  class="input budget-input"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="150.000"
+                  [id]="'budget-' + table.id"
+                  [value]="budgetOf(table.id)"
+                  [class.input-bad]="budgetIsBad(table.id)"
+                  [attr.aria-invalid]="budgetIsBad(table.id) ? 'true' : null"
+                  (input)="typeBudget(table.id, $event)"
+                />
+              </div>
+            }
+
+            @if (cannotLeave(table.id)) {
+              <p class="help table-locked">Ya consumió: queda en la noche.</p>
+            }
+          </li>
+        }
+      </ul>
+
+      @if (tablesError() !== null) {
+        <p class="bad">{{ tablesError() }}</p>
+      }
+    }
+  </fieldset>
+
   <!-- Right above the button and not under the title: after tapping it on a
        phone, the top of the form is a long scroll away and a refusal would look
        like a button that did nothing. -->

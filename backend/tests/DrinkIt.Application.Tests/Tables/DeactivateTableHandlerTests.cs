@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Tables;
+using DrinkIt.Application.Tests.VipAccounts;
 using DrinkIt.Domain.Tables;
 
 namespace DrinkIt.Application.Tests.Tables;
@@ -14,7 +15,7 @@ public class DeactivateTableHandlerTests
         Table table = ATable();
         FakeTables tables = new(existing: table);
 
-        Result<TableSummary> result = await new DeactivateTableHandler(tables).HandleAsync(table.Id, CancellationToken.None);
+        Result<TableSummary> result = await new DeactivateTableHandler(tables, new VipAccountsInMemory(), TimeProvider.System).HandleAsync(table.Id, CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.False(table.IsActive);
@@ -28,9 +29,25 @@ public class DeactivateTableHandlerTests
     {
         FakeTables tables = new();
 
-        Result<TableSummary> result = await new DeactivateTableHandler(tables).HandleAsync(Guid.CreateVersion7(), CancellationToken.None);
+        Result<TableSummary> result = await new DeactivateTableHandler(tables, new VipAccountsInMemory(), TimeProvider.System).HandleAsync(Guid.CreateVersion7(), CancellationToken.None);
 
         Assert.Equal(TableErrors.NotFound, result.Error);
+        Assert.Equal(0, tables.Saves);
+    }
+
+    // US-39's edge: somebody bought the table for a night still to come.
+    [Fact]
+    public async Task HandleAsync_WhenTheTableIsInANightNotOver_FailsInANightNotOverAndSavesNothing()
+    {
+        Table table = ATable();
+        FakeTables tables = new(existing: table);
+        VipAccountsInMemory accounts = new();
+        accounts.TablesInANightNotOver.Add(table.Id);
+
+        Result<TableSummary> result = await new DeactivateTableHandler(tables, accounts, TimeProvider.System).HandleAsync(table.Id, CancellationToken.None);
+
+        Assert.Equal(TableErrors.InANightNotOver, result.Error);
+        Assert.True(table.IsActive);
         Assert.Equal(0, tables.Saves);
     }
 }

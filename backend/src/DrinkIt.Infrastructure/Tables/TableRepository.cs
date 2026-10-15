@@ -15,6 +15,10 @@ internal sealed class TableRepository(DrinkItDbContext context) : ITableReposito
     public Task<bool> NumberExistsAsync(int number, CancellationToken cancellationToken) =>
         context.Tables.AnyAsync(table => table.Number == number, cancellationToken);
 
+    /// <summary>The venue filter applies: another venue's ids are simply not found.</summary>
+    public async Task<IReadOnlyList<Table>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+        await context.Tables.Where(table => ids.Contains(table.Id)).ToListAsync(cancellationToken);
+
     /// <summary>The venue filter applies here too: another venue's id finds nothing.</summary>
     public Task<Table?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken) =>
         context.Tables.SingleOrDefaultAsync(table => table.Id == id, cancellationToken);

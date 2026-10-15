@@ -14,6 +14,8 @@ using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Staff;
+using DrinkIt.Infrastructure.Tables;
+using DrinkIt.Infrastructure.VipAccounts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -431,6 +433,8 @@ public sealed class NightStockTests(SqlServerFixture sql)
         return await new CreateNightHandler(
                 new NightRepository(context),
                 new StaffUserRepository(context),
+                new TableRepository(context),
+                new VipAccountRepository(context),
                 new FixedVenue(seeded.Venue.Id),
                 new FixedClock(at))
             .HandleAsync(new CreateNightCommand("Sunday", sunday, sunday.AddHours(7), [seeded.MainBar.Id, seeded.VipBar.Id, seeded.Till.Id]), CancellationToken.None);
@@ -440,7 +444,7 @@ public sealed class NightStockTests(SqlServerFixture sql)
     {
         await using DrinkItDbContext context = sql.CreateContext(seeded.Venue.Id);
 
-        return await new UpdateNightHandler(new NightRepository(context), new StaffUserRepository(context), new FixedClock(Saturday.AddHours(-1)))
+        return await new UpdateNightHandler(new NightRepository(context), new StaffUserRepository(context), new TableRepository(context), new VipAccountRepository(context), new FixedClock(Saturday.AddHours(-1)))
             .HandleAsync(
                 new UpdateNightCommand(seeded.Saturday.Id, "Saturday", Saturday, Saturday.AddHours(7), [seeded.MainBar.Id, seeded.Till.Id]),
                 CancellationToken.None);

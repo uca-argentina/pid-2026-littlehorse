@@ -279,4 +279,21 @@ public class NightTests
 
         Assert.Equal(Night.ErrorCodes.NightOver, error.Code);
     }
+
+    // §8.3: a table's drinks are carried by a waiter, so a night selling
+    // tables needs at least one.
+    [Fact]
+    public void EnsureCrewCanServeTables_WhenTheCrewHasNoWaiter_ThrowsWaiterRequired()
+    {
+        DomainException error = Assert.Throws<DomainException>(
+            () => Night.EnsureCrewCanServeTables([MainBar, Till]));
+
+        Assert.Equal(Night.ErrorCodes.WaiterRequired, error.Code);
+    }
+
+    [Fact]
+    public void EnsureCrewCanServeTables_WhenTheCrewHasAWaiter_DoesNotThrow()
+    {
+        Night.EnsureCrewCanServeTables([MainBar, Till, Martin]);
+    }
 }

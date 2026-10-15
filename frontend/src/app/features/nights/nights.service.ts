@@ -11,6 +11,9 @@ export type NewNight = components['schemas']['CreateNightRequest'];
 /** US-37: bar by bar, what each product was loaded with, sold and has left, and what the storeroom has. */
 export type NightStock = components['schemas']['NightStockResponse'];
 
+/** A VIP table the night sells, with its budget and what it spent (US-40). */
+export type NightTable = components['schemas']['NightTableResponse'];
+
 export type NightStockBar = NightStock['bars'][number];
 
 export type NightStockLine = NightStockBar['lines'][number];

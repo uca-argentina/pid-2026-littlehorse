@@ -87,7 +87,7 @@ public class TablesEndpointsTests
         Table table = ATable();
 
         IResult result = await TablesEndpoints.DeactivateAsync(
-            table.Id, new DeactivateTableHandler(new FakeTables(existing: table)), CancellationToken.None);
+            table.Id, new DeactivateTableHandler(new FakeTables(existing: table), new NoVipAccounts(), TimeProvider.System), CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{table.Id}/deactivate", HttpMethods.Post);
 
         Assert.Equal(StatusCodes.Status200OK, response.StatusCode);
@@ -101,7 +101,7 @@ public class TablesEndpointsTests
         Guid id = Guid.CreateVersion7();
 
         IResult result = await TablesEndpoints.DeactivateAsync(
-            id, new DeactivateTableHandler(new FakeTables()), CancellationToken.None);
+            id, new DeactivateTableHandler(new FakeTables(), new NoVipAccounts(), TimeProvider.System), CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, $"{Path}/{id}/deactivate", HttpMethods.Post);
 
         Assert.Equal(StatusCodes.Status404NotFound, response.StatusCode);

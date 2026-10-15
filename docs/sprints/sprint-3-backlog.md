@@ -421,6 +421,21 @@ describe:
 - **Cargar saldo** (`TopUp`) usa el `rowversion`: si choca con un pedido que descontó en el
   medio, relee y vuelve a sumar.
 
+**Construida en parte el 2026-10-15** (las mesas y su presupuesto; falta el código y su QR):
+
+- **Las mesas se eligen en el mismo formulario de la noche**, al crearla y al editarla, cada una
+  con su presupuesto en pesos ("150.000" o "150000"). "Agregar todas" y "Sacar todas" ayudan
+  cuando son muchas. Se guarda todo junto: la noche y sus mesas, o nada.
+- **`VipAccount` guarda `Budget` y `Spent` por separado**, y el saldo es la resta. Así se cumple
+  el criterio 2 sin una acción de "cargar": subir el presupuesto desde el formulario nunca pisa
+  lo que ya se gastó. Una mesa que ya consumió no se saca de la noche.
+- **`tables` ausente en el `PUT` deja las mesas como están.** Un cliente que no las conoce (el
+  setup del E2E extiende la noche así) no tiene que vaciarlas. Una lista vacía sí las saca todas.
+- **Se lee con `GET /nights/{id}/tables`**, aparte de la noche, como el stock. Una noche
+  terminada las muestra con su presupuesto, sin formulario.
+- **Falta:** mostrar el código y su QR, y regenerarlo (criterios 1 y 4). El código ya se genera
+  y se guarda al abrir la cuenta, con índice único, para que US-41 lo busque.
+
 ### US-41 · Pedir desde la mesa VIP con el saldo
 
 > **Como** cliente de una mesa VIP
