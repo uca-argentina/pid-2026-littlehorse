@@ -41,14 +41,16 @@ describe('staffLandingFor', () => {
     expect(staffLandingFor('Cashier', 'bar-alfa')).toEqual(['bar-alfa', 'staff', 'cashier']);
   });
 
-  // US-01, criterion 2: a role with no screens yet is told so, instead of
+  // US-43: the waiter's phone has its own screen too.
+  it('sends a waiter straight to their tables', () => {
+    expect(staffLandingFor('Waiter', 'bar-alfa')).toEqual(['bar-alfa', 'staff', 'waiter']);
+  });
+
+  // US-01, criterion 2: somebody with no role to go by is told so, instead of
   // being left on an empty page.
-  it.each(['Waiter', undefined])(
-    'sends %s to the screen that says there is nothing yet',
-    (role) => {
-      expect(staffLandingFor(role, 'bar-alfa')).toEqual(['bar-alfa', 'staff']);
-    },
-  );
+  it('sends an unknown role to the screen that says there is nothing yet', () => {
+    expect(staffLandingFor(undefined, 'bar-alfa')).toEqual(['bar-alfa', 'staff']);
+  });
 });
 
 describe('staffLandsOnItsOwnScreenGuard', () => {
@@ -89,9 +91,9 @@ describe('staffLandsOnItsOwnScreenGuard', () => {
     expect(router.serializeUrl(run() as UrlTree)).toBe('/bar-alfa/staff/cashier');
   });
 
-  it.each<StaffRole>(['Waiter'])('lets a %s stay', (role) => {
-    sessions.remember(sessionFor(role));
+  it('redirects a waiter to their tables', () => {
+    sessions.remember(sessionFor('Waiter'));
 
-    expect(run()).toBe(true);
+    expect(router.serializeUrl(run() as UrlTree)).toBe('/bar-alfa/staff/waiter');
   });
 });

@@ -10,6 +10,7 @@ using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Features.Tables;
 using DrinkIt.Api.Features.VipAccounts;
+using DrinkIt.Api.Features.Waiter;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Infrastructure;
@@ -17,6 +18,7 @@ using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
 using DrinkIt.Infrastructure.Orders;
+using DrinkIt.Infrastructure.Waiter;
 using Microsoft.AspNetCore.SignalR;
 using Scalar.AspNetCore;
 
@@ -32,6 +34,7 @@ builder.Services.AddOrderHandlers();
 builder.Services.AddKdsHandlers();
 builder.Services.AddCashierHandlers();
 builder.Services.AddTableHandlers();
+builder.Services.AddWaiterHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
@@ -124,6 +127,7 @@ app.MapStaffUsers();
 app.MapNights();
 app.MapCategories();
 app.MapTables();
+app.MapWaiter();
 app.MapProducts();
 app.MapKds();
 // The hubs carry their role in [Authorize]; the policy adds the night's crew
@@ -131,6 +135,7 @@ app.MapKds();
 // tracking hub has no account behind it, so no night applies there.
 app.MapHub<KdsHub>(KdsHubRoute.Path).RequireAuthorization(Policies.Kds);
 app.MapHub<TillHub>(TillHubRoute.Path).RequireAuthorization(Policies.Cashier);
+app.MapHub<WaiterHub>(WaiterHubRoute.Path).RequireAuthorization(Policies.Waiter);
 app.MapHub<TrackingHub>(TrackingHubRoute.Path);
 app.MapCashier();
 

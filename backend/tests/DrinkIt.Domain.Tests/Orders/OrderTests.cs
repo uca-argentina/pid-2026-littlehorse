@@ -929,11 +929,21 @@ public class OrderTests
             canceled.AwaitPayment(PaymentMethod.Cash);
             canceled.Cancel();
 
+            // Carried to a table and taken by a waiter (US-43): what the waiters see.
+            Order atTable = Order.Place(AVenue, ANight, "María Quadro", OrderCode.Parse("K-4824"), [AGinTonic()]);
+            atTable.ServeAtTable(Guid.CreateVersion7(), 5);
+            atTable.PayFromBalance(At, atTable.Total);
+            atTable.Enqueue(MainBar);
+            atTable.StartPreparing(DateTimeOffset.UtcNow);
+            atTable.MarkReady(DateTimeOffset.UtcNow);
+            atTable.TakeToTable(Guid.CreateVersion7(), "Martín", At);
+
             return
             [
                 .. cash.DomainEvents.Select(raised => (cash, raised)),
                 .. digital.DomainEvents.Select(raised => (digital, raised)),
                 .. canceled.DomainEvents.Select(raised => (canceled, raised)),
+                .. atTable.DomainEvents.Select(raised => (atTable, raised)),
             ];
         }
 

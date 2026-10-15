@@ -27,6 +27,24 @@ public class OrderTrackingEndpointTests
         "Barra Pista",
         [new TrackedOrderItem("Gin Tonic", 2, "sin hielo")]);
 
+    // US-43: the customer of a table sees who is carrying it ("Martín lo está
+    // llevando"), and sees nobody while nobody has taken it.
+    [Fact]
+    public async Task FollowAsync_WhenAWaiterIsCarryingIt_SaysWhoSoTheCustomerCanSeeIt()
+    {
+        HttpResponseSnapshot response = await Follow(Waiting with { TableNumber = 5, WaiterName = "Martín" });
+
+        Assert.Equal("Martín", response.Text("waiterName"));
+    }
+
+    [Fact]
+    public async Task FollowAsync_WhenNobodyHasTakenIt_SaysNoWaiter()
+    {
+        HttpResponseSnapshot response = await Follow(Waiting with { TableNumber = 5 });
+
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, response.Body.GetProperty("waiterName").ValueKind);
+    }
+
     // Pins the shape: the Angular client is generated from it, and this is
     // fetched every three seconds by every phone in the venue.
     [Fact]

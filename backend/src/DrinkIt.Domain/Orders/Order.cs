@@ -36,6 +36,9 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         public const string UndoWindowPassed = "order.undo_window_passed";
         public const string BalanceAmountOutOfRange = "order.balance_amount_out_of_range";
         public const string BalanceNeedsItsAmount = "order.balance_needs_its_amount";
+        public const string AlreadyTaken = "order.already_taken";
+        public const string NotAtATable = "order.not_at_a_table";
+        public const string WaiterRequired = "order.waiter_required";
     }
 
     /// <summary>Room for a full name on a ticket, and no more.</summary>
@@ -134,6 +137,21 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
     /// <summary>When it was handed over, or null while nobody has picked it up.</summary>
     public DateTimeOffset? DeliveredAt { get; private set; }
+
+    /// <summary>
+    /// The waiter carrying it to its table (US-43), or null while nobody does.
+    /// Nobody assigns it: whoever taps first has it.
+    /// </summary>
+    public Guid? WaiterId { get; private set; }
+
+    /// <summary>
+    /// How the waiter is called, as it was when they took it: what the other
+    /// waiters and the customer read ("Martín lo está llevando").
+    /// </summary>
+    public string? WaiterName { get; private set; }
+
+    /// <summary>When the waiter took it, or null while nobody has.</summary>
+    public DateTimeOffset? TakenAt { get; private set; }
 
     /// <summary>
     /// The cashier who took the money for it (US-26), or null when nobody did:
@@ -329,6 +347,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         Status = OrderStatus.Ready;
         ReadyAt = at;
         _domainEvents.Add(new OrderReady(VenueId, KdsId, Id, TrackingToken));
+        RaiseWhatTheWaitersSee();
     }
 
     /// <summary>Marked ready by mistake: back to the bar, as if it never was.</summary>
@@ -340,7 +359,14 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         Status = OrderStatus.InPreparation;
         ReadyAt = null;
+
+        // Taken and then sent back to the bar: whoever had it is not carrying
+        // anything any more, and takes it again when it is ready.
+        WaiterId = null;
+        WaiterName = null;
+        TakenAt = null;
         _domainEvents.Add(new OrderReturnedToPreparation(VenueId, KdsId, TrackingToken));
+        RaiseWhatTheWaitersSee();
     }
 
     /// <summary>
@@ -356,6 +382,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         Status = OrderStatus.Delivered;
         DeliveredAt = at;
         _domainEvents.Add(new OrderDelivered(VenueId, KdsId, TrackingToken));
+        RaiseWhatTheWaitersSee();
     }
 
     /// <summary>
@@ -374,6 +401,28 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         Status = OrderStatus.Ready;
         DeliveredAt = null;
         _domainEvents.Add(new OrderDeliveryUndone(VenueId, KdsId, TrackingToken));
+        RaiseWhatTheWaitersSee();
+    }
+
+    /// <summary>A waiter takes the table's order that is ready, so nobody else carries it (US-43).</summary>
+    public void TakeToTable(Guid waiterId, string waiterName, DateTimeOffset at)
+    {
+        if (waiterId == Guid.Empty || string.IsNullOrWhiteSpace(waiterName)) throw new DomainException(ErrorCodes.WaiterRequired, "Somebody has to be the one carrying it.");
+
+        EnsureItIs(OrderStatus.Ready);
+
+        if (TableId is null) throw new DomainException(ErrorCodes.NotAtATable, "That order is picked up at the bar, not carried to a table.");
+
+        // The same waiter asking again is a double tap or a retry, and nothing
+        // changes for anyone: no event, and the moment stays the first one.
+        if (WaiterId == waiterId) return;
+
+        if (WaiterId is not null) throw new DomainException(ErrorCodes.AlreadyTaken, "Another waiter is already carrying that order.");
+
+        WaiterId = waiterId;
+        WaiterName = waiterName.Trim();
+        TakenAt = at;
+        RaiseWhatTheWaitersSee();
     }
 
     /// <summary>
@@ -398,6 +447,15 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// to it. Never called from inside the domain itself.
     /// </summary>
     public void ClearDomainEvents() => _domainEvents.Clear();
+
+    /// <summary>
+    /// Tells the waiters their list changed, but only for an order that is
+    /// carried to a table: the ones picked up at the bar are no waiter's.
+    /// </summary>
+    private void RaiseWhatTheWaitersSee()
+    {
+        if (TableId is not null) _domainEvents.Add(new TableOrderChanged(VenueId, TrackingToken));
+    }
 
     private static OrderItem ToItem(NewOrderItem item)
     {

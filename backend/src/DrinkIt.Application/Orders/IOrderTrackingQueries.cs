@@ -22,7 +22,8 @@ public sealed record TrackedOrder(
     DateTimeOffset? PaidAt,
     string? BarName,
     IReadOnlyList<TrackedOrderItem> Items,
-    int? TableNumber = null);
+    int? TableNumber = null,
+    string? WaiterName = null);
 
 /// <summary>
 /// The read side of an order, for the customer who placed it.

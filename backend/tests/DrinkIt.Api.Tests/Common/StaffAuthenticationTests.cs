@@ -5,6 +5,7 @@ using DrinkIt.Domain.Staff;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
+using DrinkIt.Infrastructure.Waiter;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -102,6 +103,7 @@ public class StaffAuthenticationTests
     // US-35, criterion 4: the right role is not enough while the account is
     // not in the night's crew.
     [Theory]
+    [InlineData(StaffRole.Waiter)]
     [InlineData(StaffRole.Kds)]
     [InlineData(StaffRole.Cashier)]
     public async Task StationPolicy_WhenTheAccountIsNotInTonightsCrew_Refuses(StaffRole role)
@@ -162,6 +164,46 @@ public class StaffAuthenticationTests
         await options.Events!.MessageReceived(messageReceived);
 
         Assert.Equal("a-till-connection-token", messageReceived.Token);
+    }
+
+    // US-43: the waiter's own phone, and nobody else's.
+    [Fact]
+    public async Task WaiterPolicy_WhenTheTokenSaysWaiter_Allows()
+    {
+        AuthorizationResult result = await Authorize(StaffRole.Waiter, Policies.Waiter);
+
+        Assert.True(result.Succeeded);
+    }
+
+    // By exclusion, like the others: not even the administrator reads another
+    // role's list by omission.
+    [Theory]
+    [InlineData(StaffRole.Administrator)]
+    [InlineData(StaffRole.Kds)]
+    [InlineData(StaffRole.Cashier)]
+    public async Task WaiterPolicy_WhenTheTokenSaysAnythingElse_Refuses(StaffRole role)
+    {
+        AuthorizationResult result = await Authorize(role, Policies.Waiter);
+
+        Assert.False(result.Succeeded);
+    }
+
+    // US-43: the waiter's own hub, reached by a browser the same way.
+    [Fact]
+    public async Task AddStaffAuthentication_WhenTheWaitersHubConnectionCarriesTheTokenInTheQueryString_ReadsIt()
+    {
+        JwtBearerOptions options = ConfiguredBearerOptions();
+
+        DefaultHttpContext context = new();
+        context.Request.Path = WaiterHubRoute.Path;
+        context.Request.QueryString = new QueryString("?access_token=a-waiter-connection-token");
+
+        AuthenticationScheme scheme = new(JwtBearerDefaults.AuthenticationScheme, null, typeof(JwtBearerHandler));
+        MessageReceivedContext messageReceived = new(context, scheme, options);
+
+        await options.Events!.MessageReceived(messageReceived);
+
+        Assert.Equal("a-waiter-connection-token", messageReceived.Token);
     }
 
     private static async Task<AuthorizationResult> Authorize(StaffRole role, string policy, bool worksTonight = true)

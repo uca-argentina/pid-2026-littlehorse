@@ -21,6 +21,7 @@ function anOrder(
   status: CustomerOrderStatus,
   barName: string | null = null,
   tableNumber: number | null = null,
+  waiterName: string | null = null,
 ): TrackedOrder {
   return {
     code: 'K-4821',
@@ -31,6 +32,7 @@ function anOrder(
     barName,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo' }],
     tableNumber,
+    waiterName,
   };
 }
 
@@ -47,6 +49,7 @@ async function openScreenShowing(
   status: CustomerOrderStatus,
   barName: string | null = null,
   tableNumber: number | null = null,
+  waiterName: string | null = null,
 ) {
   const rendered = await render(TrackingPage, {
     inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
@@ -61,7 +64,7 @@ async function openScreenShowing(
   });
 
   const http = TestBed.inject(HttpTestingController);
-  http.expectOne(url).flush(anOrder(status, barName, tableNumber));
+  http.expectOne(url).flush(anOrder(status, barName, tableNumber, waiterName));
   await rendered.fixture.whenStable();
 
   // The store belongs to the component, not to the TestBed: a test that needs a
@@ -433,6 +436,32 @@ describe('TrackingPage', () => {
       await openScreenShowing('Ready', 'Barra Pista', 5);
 
       expect(screen.getByRole('status').textContent).toContain('sale para tu mesa');
+    });
+
+    // US-43: once a waiter took it the customer knows who is bringing it.
+    it('says which waiter is carrying it once one took it', async () => {
+      await openScreenShowing('Ready', 'Barra Pista', 5, 'Martín');
+
+      expect(screen.getByRole('status').textContent).toContain('Martín lo está llevando a tu mesa');
+    });
+
+    it('does not name a waiter for an order picked up at the bar', async () => {
+      await openScreenShowing('Ready', 'Barra Pista', null, 'Martín');
+
+      expect(screen.getByRole('status').textContent).not.toContain('lo está llevando');
+    });
+
+    // US-44, criterion 1: the waiter left it at the table.
+    it('says it is at the table once the waiter delivered it', async () => {
+      await openScreenShowing('Delivered', 'Barra Pista', 5, 'Martín');
+
+      expect(screen.getByRole('status').textContent).toContain('En tu mesa');
+    });
+
+    it('keeps saying it was handed over for an order picked up at the bar', async () => {
+      await openScreenShowing('Delivered', 'Barra Pista', null);
+
+      expect(screen.getByRole('status').textContent).toContain('Entregado');
     });
   });
 });

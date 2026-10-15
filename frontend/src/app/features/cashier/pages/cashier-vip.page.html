@@ -1,0 +1,82 @@
+<drinkit-staff-header [venueSlug]="venueSlug()" context="Caja" [sections]="sections" />
+
+<main class="vip" [attr.aria-busy]="deliveries.isLoading()">
+  @if (channel.state() === 'reconnecting' && !notTonight()) {
+    <p class="note note-warn" role="status">
+      Sin conexión con la caja — reintentando. Las entregas pueden estar desactualizadas.
+    </p>
+  }
+
+  @if (notTonight()) {
+    <p class="note note-bad" role="alert">
+      Entraste, pero no estás en la noche de hoy: no ves ninguna entrega. Pedile a un administrador
+      que te sume.
+    </p>
+  } @else if (unreachable()) {
+    <div class="note note-bad failed" role="alert">
+      <span>No pudimos traer las entregas. Fijate la señal y probá de nuevo.</span>
+      <button class="retry" type="button" (click)="deliveries.reload()">Reintentar</button>
+    </div>
+  } @else if (deliveries.isLoading() && !deliveries.hasValue()) {
+    <p class="note" role="status">Cargando las entregas…</p>
+  }
+
+  <section class="group" aria-labelledby="waiting-title">
+    <h2 id="waiting-title" class="group-title">
+      Mesas listas que todavía no tomó ningún mozo <span class="count">{{ waiting().length }}</span>
+    </h2>
+
+    <ul class="cards">
+      @for (table of waiting(); track table.orderId) {
+        <li class="card">
+          <div class="card-head">
+            <span class="table">Mesa {{ table.tableNumber }}</span>
+            <span class="tag">Nadie la tomó</span>
+          </div>
+          <p class="drinks">
+            @for (item of table.items; track $index) {
+              <span class="drink">{{ item.quantity }}× {{ item.productName }}</span>
+            }
+          </p>
+          <p class="who">{{ table.customerName }} · listo desde {{ clock(table.readyAt) }}</p>
+          <p class="wait">{{ since(table.readyAt) }} esperando</p>
+        </li>
+      }
+    </ul>
+
+    @if (isEmpty()) {
+      <p class="note">No hay más mesas esperando.</p>
+    }
+  </section>
+
+  @if (taken().length > 0) {
+    <section class="group" aria-labelledby="taken-title">
+      <h2 id="taken-title" class="group-title">
+        Ya las tomó un mozo <span class="count">{{ taken().length }}</span>
+      </h2>
+
+      <ul class="cards">
+        @for (table of taken(); track table.orderId) {
+          <li class="card card-taken">
+            <div class="card-head">
+              <span class="table">Mesa {{ table.tableNumber }}</span>
+            </div>
+            <p class="drinks">
+              @for (item of table.items; track $index) {
+                <span class="drink">{{ item.quantity }}× {{ item.productName }}</span>
+              }
+            </p>
+            <p class="who">{{ table.takenByName }} · la tomó hace {{ since(table.takenAt) }}</p>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <p class="hint">
+    Nadie asigna mesas: cada mozo toma la que va a llevar desde su celular, y acá lo ves en el
+    momento. Tu trabajo es mirar las que no tomó nadie y se están poniendo viejas, y avisar por
+    radio. Si una figura tomada hace rato y el trago sigue en la barra, ese mozo se colgó: volvé a
+    coordinar a mano.
+  </p>
+</main>

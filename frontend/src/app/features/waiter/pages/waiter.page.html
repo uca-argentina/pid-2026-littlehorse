@@ -1,0 +1,158 @@
+<drinkit-staff-header [venueSlug]="venueSlug()" context="Mozo" />
+
+<main class="phone" [attr.aria-busy]="tables.isLoading()">
+  @if (channel.state() === 'reconnecting' && !notTonight()) {
+    <p class="note note-warn" role="status">
+      Sin conexión — reintentando. Las mesas pueden estar desactualizadas.
+    </p>
+  }
+
+  @if (outcome() === 'beatenToIt') {
+    <p class="note note-warn" role="status">
+      Esa mesa ya la tomó otro mozo. Abajo ves quién la lleva.
+    </p>
+  } @else if (outcome() === 'notYours') {
+    <p class="note note-warn" role="status">
+      Esa mesa ya no es tuya: cambió mientras la tenías. Abajo ves cómo quedó.
+    </p>
+  } @else if (outcome() === 'failed') {
+    <p class="note note-bad" role="alert">
+      No pudimos hacer el cambio. Fijate la señal y probá de nuevo.
+    </p>
+  }
+
+  @if (notTonight()) {
+    <p class="note note-bad" role="alert">
+      Entraste, pero no estás en la noche de hoy: no ves ninguna mesa. Pedile a un administrador que
+      te sume.
+    </p>
+  } @else if (unreachable()) {
+    <div class="note note-bad failed" role="alert">
+      <span>No pudimos traer las mesas. Fijate la señal y probá de nuevo.</span>
+      <button class="retry" type="button" (click)="tables.reload()">Reintentar</button>
+    </div>
+  } @else if (tables.isLoading() && !tables.hasValue()) {
+    <p class="note" role="status">Cargando las mesas…</p>
+  }
+
+  @if (mine().length > 0) {
+    <section class="group" aria-labelledby="mine-title">
+      <h2 id="mine-title" class="group-title">
+        Las que tomaste <span class="count">{{ mine().length }}</span>
+      </h2>
+
+      <ul class="cards">
+        @for (table of mine(); track table.orderId) {
+          <li class="card card-mine">
+            <div class="card-head">
+              <span class="table">Mesa {{ table.tableNumber }}</span>
+              <span class="since">la tomaste hace {{ since(table.takenAt) }}</span>
+            </div>
+            <p class="drinks">
+              @for (item of table.items; track $index) {
+                <span class="drink">{{ item.quantity }}× {{ item.productName }}</span>
+              }
+            </p>
+            <p class="who">
+              {{ table.customerName }}
+              @for (item of table.items; track $index) {
+                @if (item.note) {
+                  · {{ item.note }}
+                }
+              }
+            </p>
+            @if (confirming() === table.orderId) {
+              <p
+                class="confirm"
+                role="group"
+                aria-label="Confirmar entrega, mesa {{ table.tableNumber }}"
+              >
+                <span class="confirm-ask">¿La dejaste en la mesa?</span>
+                <button class="take" type="button" (click)="deliver(table)">
+                  Sí, la dejé en la mesa
+                </button>
+                <button class="ghost" type="button" (click)="keepCarrying()">No, todavía</button>
+              </p>
+            } @else {
+              <button
+                class="take"
+                type="button"
+                [disabled]="taking() !== null"
+                [attr.aria-label]="'Entregado, mesa ' + table.tableNumber"
+                (click)="askToDeliver(table)"
+              >
+                Entregado
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="group" aria-labelledby="free-title">
+    <h2 id="free-title" class="group-title">
+      Libres — todavía no las tomó nadie <span class="count">{{ free().length }}</span>
+    </h2>
+
+    @if (isEmpty()) {
+      <p class="note" role="status">
+        Ninguna mesa lista por ahora. Cuando la barra termine un pedido de mesa, aparece acá.
+      </p>
+    }
+
+    <ul class="cards">
+      @for (table of free(); track table.orderId) {
+        <li class="card">
+          <div class="card-head">
+            <span class="table">Mesa {{ table.tableNumber }}</span>
+            <span class="since">esperando {{ since(table.readyAt) }}</span>
+          </div>
+          <p class="drinks">
+            @for (item of table.items; track $index) {
+              <span class="drink">{{ item.quantity }}× {{ item.productName }}</span>
+            }
+          </p>
+          <p class="who">
+            {{ table.customerName }}
+            @for (item of table.items; track $index) {
+              @if (item.note) {
+                · {{ item.note }}
+              }
+            }
+          </p>
+          <button
+            class="take"
+            type="button"
+            [disabled]="taking() !== null"
+            [attr.aria-label]="'La llevo yo, mesa ' + table.tableNumber"
+            (click)="take(table)"
+          >
+            La llevo yo
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+
+  @if (others().length > 0) {
+    <section class="group" aria-labelledby="others-title">
+      <h2 id="others-title" class="group-title">
+        Las lleva otro <span class="count">{{ others().length }}</span>
+      </h2>
+
+      <ul class="cards">
+        @for (table of others(); track table.orderId) {
+          <li class="card card-other">
+            <div class="card-head">
+              <span class="table">Mesa {{ table.tableNumber }}</span>
+              <span class="since">{{ table.takenByName }} · hace {{ since(table.takenAt) }}</span>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <p class="hint">Nadie te asigna mesas: las tomás vos.</p>
+</main>

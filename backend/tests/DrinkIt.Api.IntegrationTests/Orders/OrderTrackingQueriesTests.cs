@@ -62,6 +62,29 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
         Assert.Equal("barra.pista", found?.BarName);
     }
 
+    // US-43: the customer of a table sees who carries it once a waiter took it.
+    [Fact]
+    public async Task FindAsync_WhenAWaiterTookTheTablesOrder_CarriesTheirName()
+    {
+        (Venue venue, Order order) = await AVenueWithATableOrder(takenBy: "Martín");
+
+        TrackedOrder? found = await Tracking(venue)
+            .FindAsync(order.Code.Value, order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Equal("Martín", found?.WaiterName);
+    }
+
+    [Fact]
+    public async Task FindAsync_WhenNobodyTookTheTablesOrder_CarriesNoWaiter()
+    {
+        (Venue venue, Order order) = await AVenueWithATableOrder(takenBy: null);
+
+        TrackedOrder? found = await Tracking(venue)
+            .FindAsync(order.Code.Value, order.TrackingToken.Value, CancellationToken.None);
+
+        Assert.Null(found?.WaiterName);
+    }
+
     // Criterion 5: the codes run in order, so the one next door is this one
     // minus one. Knowing it has to get nobody anywhere.
     [Fact]
@@ -196,6 +219,35 @@ public sealed class OrderTrackingQueriesTests(SqlServerFixture sql)
     }
 
     private OrderTrackingQueries Tracking(Venue venue) => new(sql.CreateContext(venue.Id));
+
+    private async Task<(Venue Venue, Order Order)> AVenueWithATableOrder(string? takenBy)
+    {
+        Venue venue = Venue.Create("Bar de prueba", $"bar-{Guid.NewGuid():N}");
+        Category category = SeedCategory.For(venue.Id);
+        Product gin = Product.Create(venue.Id, "Gin Tonic", null, null, 4500m, 20, category.Id);
+        DrinkIt.Domain.Tables.Table table = DrinkIt.Domain.Tables.Table.Create(venue.Id, 5, 8, null, DateTimeOffset.UtcNow);
+
+        Order order = Order.Place(venue.Id, Guid.CreateVersion7(), "María Quadro", OrderCode.First,
+            [new NewOrderItem(gin.Id, "Gin Tonic", 4500m, 1, null)]);
+        order.ServeAtTable(table.Id, table.Number);
+        order.PayFromBalance(DateTimeOffset.UtcNow, order.Total);
+        order.Enqueue(Guid.CreateVersion7());
+        order.StartPreparing(DateTimeOffset.UtcNow);
+        order.MarkReady(DateTimeOffset.UtcNow);
+
+        if (takenBy is not null) order.TakeToTable(Guid.CreateVersion7(), takenBy, DateTimeOffset.UtcNow);
+
+        await using DrinkItDbContext seed = sql.CreateContext(venue.Id);
+        seed.Venues.Add(venue);
+        seed.Categories.Add(category);
+        seed.Products.Add(gin);
+        seed.Tables.Add(table);
+        seed.Orders.Add(order);
+        seed.Entry(order).Property("IdempotencyKey").CurrentValue = Guid.NewGuid().ToString();
+        await seed.SaveChangesAsync();
+
+        return (venue, order);
+    }
 
     private async Task<(Venue Venue, Order Order)> AVenueWithAnOrderFor(string customer, string? barName = "Barra Pista")
     {

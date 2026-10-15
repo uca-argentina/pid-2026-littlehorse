@@ -24,6 +24,7 @@ function anOrder(code: string, status: CustomerOrderStatus): TrackedOrder {
     paidAt: null,
     barName: null,
     tableNumber: null,
+    waiterName: null,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
   };
 }

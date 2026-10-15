@@ -287,6 +287,9 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<int?>("TableNumber")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset?>("TakenAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("TrackingToken")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -299,6 +302,13 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
+
+                    b.Property<Guid?>("WaiterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("WaiterName")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.HasKey("Id");
 

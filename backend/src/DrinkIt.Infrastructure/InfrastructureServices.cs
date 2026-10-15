@@ -11,6 +11,7 @@ using DrinkIt.Application.Staff;
 using DrinkIt.Application.Tables;
 using DrinkIt.Application.Venues;
 using DrinkIt.Application.VipAccounts;
+using DrinkIt.Application.Waiter;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
@@ -25,6 +26,7 @@ using DrinkIt.Infrastructure.Staff;
 using DrinkIt.Infrastructure.Tables;
 using DrinkIt.Infrastructure.Venues;
 using DrinkIt.Infrastructure.VipAccounts;
+using DrinkIt.Infrastructure.Waiter;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,6 +75,7 @@ public static class InfrastructureServices
         services.AddScoped<ICategoryQueries, CategoryQueries>();
         services.AddScoped<ITableRepository, TableRepository>();
         services.AddScoped<ITableQueries, TableQueries>();
+        services.AddScoped<IWaiterQueries, WaiterQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductsForOrdering, ProductsForOrdering>();
@@ -103,6 +106,7 @@ public static class InfrastructureServices
         services.AddScoped<KdsBeats>();
         services.AddSingleton<IKdsBoardNotifier, KdsBoardNotifier>();
         services.AddSingleton<ITillNotifier, TillNotifier>();
+        services.AddSingleton<IWaiterBoardNotifier, WaiterBoardNotifier>();
         services.AddSingleton<IOrderFollowers, OrderFollowers>();
 
         // Registered as a collection on purpose: the handler picks the strategy

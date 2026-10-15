@@ -33,6 +33,7 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
                 order.PaidAt,
                 order.TrackingToken,
                 order.TableNumber,
+                order.WaiterName,
                 // Where to pick it up (US-36): the bar's name, or its username
                 // when nobody gave it one. Null while no bar has it.
                 BarName = context.StaffUsers
@@ -61,6 +62,7 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
             found.PaidAt,
             found.BarName,
             found.Items,
-            found.TableNumber);
+            found.TableNumber,
+            found.WaiterName);
     }
 }

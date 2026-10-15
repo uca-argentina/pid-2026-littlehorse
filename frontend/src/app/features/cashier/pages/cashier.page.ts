@@ -21,6 +21,7 @@ import { problemProductNameOf } from '../../../core/api/problem-product-name-of'
 import { formatPrice } from '../../../shared/money/price';
 import { QrCamera } from '../../../shared/qr-camera/qr-camera';
 import { StaffHeader } from '../../../shared/staff-header/staff-header';
+import { CASHIER_SECTIONS } from '../cashier-sections';
 import { CASHIER_ORDERS_URL, CashierService, MY_COLLECTIONS_URL } from '../cashier.service';
 import type { CashierOrder } from '../cashier.service';
 import { OrderToCollect } from '../components/order-to-collect';
@@ -84,6 +85,9 @@ export class CashierPage {
   private readonly entry = viewChild<ElementRef<HTMLInputElement>>('entry');
 
   readonly venueSlug = input.required<string>();
+
+  /** The till's tabs: this one and "Entregas VIP" (US-45). */
+  protected readonly sections = CASHIER_SECTIONS;
 
   /** Everything still waiting for cash, oldest first. */
   protected readonly pending = httpResource<CashierOrder[]>(() => CASHIER_ORDERS_URL);
