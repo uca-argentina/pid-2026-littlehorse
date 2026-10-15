@@ -72,6 +72,9 @@ describe('AdminHeader', () => {
     expect(screen.getByRole('link', { name: /noches/i }).getAttribute('href')).toBe(
       '/bar-alfa/staff/nights',
     );
+    expect(screen.getByRole('link', { name: /mesas/i }).getAttribute('href')).toBe(
+      '/bar-alfa/staff/tables',
+    );
     expect(screen.getByRole('link', { name: /reportes/i }).getAttribute('href')).toBe(
       '/bar-alfa/staff/reports',
     );

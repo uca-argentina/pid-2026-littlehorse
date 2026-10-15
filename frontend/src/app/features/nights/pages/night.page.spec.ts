@@ -6,8 +6,11 @@ import { render, screen } from '@testing-library/angular';
 import { of } from 'rxjs';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { STAFF_USERS_URL } from '../../staff-users/staff-users.service';
+import { TABLES_URL } from '../../tables/tables.service';
+import type { VipTable } from '../../tables/tables.service';
 import type { StaffUser } from '../../staff-users/staff-users.service';
 import { NIGHTS_URL, NightsService } from '../nights.service';
+import type { NightTable } from '../nights.service';
 import type { Night, NightStock } from '../nights.service';
 import { NightPage } from './night.page';
 
@@ -99,15 +102,42 @@ async function flushTheStock(http: HttpTestingController): Promise<void> {
   http.expectOne(`${NIGHTS_URL}/night-1/stock`).flush(itsStock);
 }
 
+const tableFive: VipTable = {
+  id: 't5',
+  number: 5,
+  capacity: 10,
+  location: 'Al lado de la cabina',
+  isActive: true,
+  audit: { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null },
+};
+
+const fiveTonight: NightTable = {
+  tableId: 't5',
+  number: 5,
+  capacity: 10,
+  location: 'Al lado de la cabina',
+  budget: 150000,
+  spent: 0,
+  accessCode: 'a'.repeat(32),
+};
+
+/** The venue's tables and the ones this night sells (US-40). */
+function flushTheTables(http: HttpTestingController, tonight: NightTable[] = []): void {
+  http.expectOne(TABLES_URL).flush([tableFive]);
+  http.expectOne(`${NIGHTS_URL}/night-1/tables`).flush(tonight);
+}
+
 async function openScreenShowing(
   night: Night,
   now: Date,
   update?: Parameters<typeof openScreen>[1],
+  tonight: NightTable[] = [],
 ) {
   const opened = await openScreen(now, update);
 
   opened.http.expectOne(`${NIGHTS_URL}/night-1`).flush(night);
   opened.http.expectOne(STAFF_USERS_URL).flush(theTeam);
+  flushTheTables(opened.http, tonight);
   await flushTheStock(opened.http);
   await opened.rendered.fixture.whenStable();
 
@@ -138,6 +168,7 @@ describe('NightPage', () => {
       startsAt: saturday.startsAt,
       endsAt: saturday.endsAt,
       crewIds: ['main-bar', 'till-1'],
+      tables: [],
     });
   });
 
@@ -177,6 +208,38 @@ describe('NightPage', () => {
   });
 
   // The way into the night's report (US-47 to US-49), once it has orders.
+  // Saving a form drawn before the night's tables arrive would send none of
+  // them, and take every table out of the night.
+  it("does not offer the form until the night's tables arrive", async () => {
+    const { rendered, http } = await openScreen(beforeItStarts);
+
+    http.expectOne(`${NIGHTS_URL}/night-1`).flush(saturday);
+    http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    http.expectOne(TABLES_URL).flush([tableFive]);
+    // Not whenStable: the night's tables are still on their way, on purpose.
+    rendered.fixture.detectChanges();
+    TestBed.tick();
+
+    expect(screen.queryByRole('button', { name: /guardar cambios/i })).toBeNull();
+  });
+
+  it('starts the form from the tables the night sells', async () => {
+    await openScreenShowing(saturday, beforeItStarts, undefined, [fiveTonight]);
+
+    expect((screen.getByRole('checkbox', { name: 'Mesa 5' }) as HTMLInputElement).checked).toBe(
+      true,
+    );
+    expect((screen.getByLabelText('Presupuesto de la mesa 5') as HTMLInputElement).value).toBe(
+      '150000',
+    );
+  });
+
+  it('shows the tables of a finished night with their budgets', async () => {
+    await openScreenShowing(saturday, afterItEnded, undefined, [fiveTonight]);
+
+    expect(screen.getByText(/Mesa 5/).closest('dd')?.textContent).toContain('$ 150.000');
+  });
+
   it('links to the report of a night that is on', async () => {
     await openScreenShowing(saturday, whileItIsOn);
 
@@ -205,6 +268,7 @@ describe('NightPage', () => {
       .expectOne(`${NIGHTS_URL}/night-1`)
       .flush({ type: ProblemTypes.nightNotFound }, { status: 404, statusText: 'Not Found' });
     http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    flushTheTables(http);
     await rendered.fixture.whenStable();
 
     expect(screen.getByRole('alert').textContent).toContain('No encontramos esa noche');
@@ -216,6 +280,7 @@ describe('NightPage', () => {
 
     http.expectOne(`${NIGHTS_URL}/night-1`).flush('', { status: 500, statusText: 'Server Error' });
     http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    flushTheTables(http);
     await rendered.fixture.whenStable();
 
     screen.getByRole('button', { name: /reintentar/i }).click();

@@ -333,8 +333,11 @@ export class KdsBoardPage {
     return ageLabelFor(this.ageMinutes(order));
   }
 
+  /** "Mesa 5" for a VIP table's order (US-41), so whoever takes it knows where it goes. */
   protected deliveryLabel(order: KdsQueueOrder): string {
-    return order.isForTable ? 'Mesa' : 'Barra';
+    if (!order.isForTable) return 'Barra';
+
+    return order.tableNumber === null ? 'Mesa' : `Mesa ${order.tableNumber}`;
   }
 
   protected canChoose(order: KdsQueueOrder): boolean {

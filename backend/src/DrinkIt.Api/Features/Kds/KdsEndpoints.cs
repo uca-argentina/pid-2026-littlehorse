@@ -18,7 +18,8 @@ public sealed record KdsQueueOrderResponse(
     DateTimeOffset PaidAt,
     DateTimeOffset? LastModifiedAt,
     bool IsForTable,
-    IReadOnlyList<KdsQueueOrderItemResponse> OrderItems);
+    IReadOnlyList<KdsQueueOrderItemResponse> OrderItems,
+    int? TableNumber);
 
 /// <summary>What the bar's camera or reader read off the customer's phone.</summary>
 public sealed record ScanRequest(string? Read);
@@ -225,6 +226,7 @@ internal static class KdsEndpoints
                 order.PaidAt,
                 order.LastModifiedAt,
                 order.IsForTable,
-                [.. order.OrderItems.Select(item => new KdsQueueOrderItemResponse(item.ProductName, item.Quantity, item.Note))]))]);
+                [.. order.OrderItems.Select(item => new KdsQueueOrderItemResponse(item.ProductName, item.Quantity, item.Note))],
+                order.TableNumber))]);
     }
 }

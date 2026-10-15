@@ -61,13 +61,17 @@
           maxlength="60"
         />
 
-        <p class="help">Para que te lo entreguen en la barra cuando esté listo.</p>
+        @if (forTable()) {
+          <p class="help">Para que el mozo sepa a quién se lo lleva.</p>
+        } @else {
+          <p class="help">Para que te lo entreguen en la barra cuando esté listo.</p>
+        }
       </section>
 
       <section class="ways">
         <h2 class="ways-ttl">Método de pago</h2>
 
-        @for (way of waysOfPaying; track way.method) {
+        @for (way of waysOfPaying(); track way.method) {
           <label class="way" [class.way-off]="!way.isBuilt">
             <input
               type="radio"
@@ -76,7 +80,7 @@
               [value]="way.method"
               [checked]="way.method === method()"
               [disabled]="!way.isBuilt"
-              (change)="method.set(way.method)"
+              (change)="choose(way.method)"
               [attr.aria-label]="way.name"
             />
             <span class="way-what">
@@ -86,6 +90,23 @@
           </label>
         }
       </section>
+
+      @if (tableIsGone()) {
+        <div class="note note-bad" role="alert">
+          <p class="note-what">
+            El código de tu mesa ya no sirve. Pedile el nuevo al mozo, o pedí para retirar en la
+            barra.
+          </p>
+          <button class="ghost" type="button" (click)="orderForTheBar()">
+            Pedir para retirar en la barra
+          </button>
+        </div>
+      } @else if (shortfall(); as missing) {
+        <p class="note note-bad" role="alert">
+          El saldo de la mesa no alcanza para este pedido: faltan $ {{ missing }}. Sacá algo del
+          pedido.
+        </p>
+      }
 
       @if (store.status() === 'paying') {
         <p class="note" role="status">
@@ -132,6 +153,8 @@
 
       @if (paysAtTheTill()) {
         <p class="safe">Pagás en la caja, mostrando el código que te damos.</p>
+      } @else if (forTable()) {
+        <p class="safe">Se descuenta del saldo de la mesa.</p>
       } @else {
         <p class="safe">El pago está simulado: todavía no se cobra nada de verdad.</p>
       }
@@ -163,6 +186,13 @@
     }
     @case (problems.orderStockMoved) {
       Alguien pidió al mismo tiempo y cambió lo que queda. Revisá tu pedido.
+    }
+    @case (problems.vipAccountBalanceShort) {
+      Alguien de tu mesa pidió al mismo tiempo y el saldo cambió. Mirá cuánto queda y ajustá el
+      pedido.
+    }
+    @case (problems.vipAccountNotFound) {
+      El código de tu mesa ya no sirve. Pedile el nuevo al mozo.
     }
     @case (problems.orderNotTakingOrders) {
       El boliche no está tomando pedidos en este momento.

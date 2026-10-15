@@ -1,4 +1,5 @@
 using DrinkIt.Application.Common;
+using DrinkIt.Application.VipAccounts;
 
 namespace DrinkIt.Application.Orders;
 
@@ -30,9 +31,16 @@ internal static class StockRace
         {
             outcome = await attempt();
 
-            if (outcome.IsSuccess || outcome.Error!.Code != OrderErrors.StockMoved.Code) return outcome;
+            if (outcome.IsSuccess || !IsALostRace(outcome.Error!)) return outcome;
         }
 
         return outcome;
     }
+
+    /// <summary>
+    /// Somebody else wrote first: the stock of a drink, or the balance of the
+    /// same VIP table (US-41). Both are answered by building the order again.
+    /// </summary>
+    private static bool IsALostRace(Error error) =>
+        error.Code == OrderErrors.StockMoved.Code || error.Code == VipAccountErrors.BalanceMoved.Code;
 }

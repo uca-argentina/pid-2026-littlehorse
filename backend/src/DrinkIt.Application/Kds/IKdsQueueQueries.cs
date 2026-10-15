@@ -22,7 +22,8 @@ public sealed record KdsQueueOrder(
     DateTimeOffset PaidAt,
     DateTimeOffset? LastModifiedAt,
     bool IsForTable,
-    IReadOnlyList<KdsQueueOrderItem> OrderItems);
+    IReadOnlyList<KdsQueueOrderItem> OrderItems,
+    int? TableNumber = null);
 
 /// <summary>
 /// The bar's queue: every order still on its way to this bar, oldest paid

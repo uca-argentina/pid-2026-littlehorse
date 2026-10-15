@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { of, throwError } from 'rxjs';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { TABLES_URL } from '../../tables/tables.service';
 import { STAFF_USERS_URL } from '../../staff-users/staff-users.service';
 import type { StaffUser } from '../../staff-users/staff-users.service';
 import { NightsService } from '../nights.service';
@@ -75,6 +76,7 @@ describe('NewNightPage', () => {
   it('creates the night the form hands over', async () => {
     const { rendered, create, http } = await openScreen();
     http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    http.expectOne(TABLES_URL).flush([]);
     await rendered.fixture.whenStable();
 
     await fillAndSave(rendered);
@@ -94,6 +96,7 @@ describe('NewNightPage', () => {
       );
     const { rendered, http } = await openScreen(overlapping);
     http.expectOne(STAFF_USERS_URL).flush(theTeam);
+    http.expectOne(TABLES_URL).flush([]);
     await rendered.fixture.whenStable();
 
     await fillAndSave(rendered);
@@ -104,6 +107,7 @@ describe('NewNightPage', () => {
   it('says so when the team cannot be loaded, and tries again', async () => {
     const { rendered, http } = await openScreen();
 
+    http.expectOne(TABLES_URL).flush([]);
     http.expectOne(STAFF_USERS_URL).flush('', { status: 500, statusText: 'Server Error' });
     await rendered.fixture.whenStable();
 

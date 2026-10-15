@@ -3,6 +3,7 @@ using DrinkIt.Api.Common;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.VipAccounts;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace DrinkIt.Api.Features.Orders;
@@ -23,7 +24,8 @@ public sealed record ConfirmOrderRequest(
     string? CustomerName,
     [property: JsonRequired] PaymentMethodName Method,
     string? IdempotencyKey,
-    IReadOnlyList<OrderLineRequestBody>? Lines);
+    IReadOnlyList<OrderLineRequestBody>? Lines,
+    string? TableCode = null);
 
 /// <summary>The order as the confirmation screen shows it.</summary>
 /// <remarks>
@@ -75,7 +77,8 @@ internal static class OrdersEndpoints
                 request.CustomerName,
                 request.Method.ToDomain(),
                 request.IdempotencyKey,
-                [.. (request.Lines ?? []).Select(line => new OrderLineRequest(line.ProductId, line.Quantity, line.Note))]),
+                [.. (request.Lines ?? []).Select(line => new OrderLineRequest(line.ProductId, line.Quantity, line.Note))],
+                request.TableCode),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -108,11 +111,17 @@ internal static class OrdersEndpoints
         [OrderErrors.StockMoved.Code] = StatusCodes.Status409Conflict,
         // The venue closed, not the order went wrong (US-35).
         [OrderErrors.NotTakingOrders.Code] = StatusCodes.Status409Conflict,
+        // US-41: a table code that opens nothing tonight, like a tracking link.
+        [VipAccountErrors.NotFound.Code] = StatusCodes.Status404NotFound,
+        // The balance was enough when the menu showed it; the world moved.
+        [VipAccountErrors.BalanceShort.Code] = StatusCodes.Status409Conflict,
+        [VipAccountErrors.BalanceMoved.Code] = StatusCodes.Status409Conflict,
     };
 
     private static readonly Dictionary<int, string> TitleByStatus = new()
     {
         [StatusCodes.Status400BadRequest] = "Invalid request",
+        [StatusCodes.Status404NotFound] = "Not found",
         [StatusCodes.Status409Conflict] = "Conflict",
     };
 

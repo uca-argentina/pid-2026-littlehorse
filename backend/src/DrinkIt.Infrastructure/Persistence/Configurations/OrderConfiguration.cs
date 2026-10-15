@@ -1,4 +1,5 @@
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Tables;
 using DrinkIt.Domain.Venues;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -35,6 +36,13 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // waits for cash and on orders from before bars kept stock; no foreign
         // key, for the same reason as the night.
         builder.Property(order => order.KdsId);
+
+        // US-41: the VIP table it is carried to. Tables are never deleted, only
+        // put away, so the foreign key always has a row to point at.
+        builder.Property(order => order.TableId);
+        builder.Property(order => order.TableNumber);
+        builder.Property(order => order.BalanceAmount).HasPrecision(10, 2);
+        builder.HasOne<Table>().WithMany().HasForeignKey(order => order.TableId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(order => order.PaidAt);
         builder.Property(order => order.Method);
         // For the metrics of US-47; null on every order from before US-36.

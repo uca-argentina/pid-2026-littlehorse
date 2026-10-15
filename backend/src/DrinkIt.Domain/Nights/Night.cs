@@ -23,6 +23,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         public const string HoursInvalid = "night.hours_invalid";
         public const string KdsRequired = "night.kds_required";
         public const string CashierRequired = "night.cashier_required";
+        public const string WaiterRequired = "night.waiter_required";
         public const string CrewRoleInvalid = "night.crew_role_invalid";
         public const string CrewMemberInactive = "night.crew_member_inactive";
         public const string CrewMemberFromAnotherVenue = "night.crew_member_from_another_venue";
@@ -101,6 +102,16 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         EndsAt = effectiveEnd;
         _crewIds.Clear();
         _crewIds.AddRange(crewIds);
+    }
+
+    /// <summary>
+    /// §8.3: a table's drinks are carried by a waiter, so a night that sells
+    /// VIP tables needs at least one. Asked by whoever puts tables in a night,
+    /// with the crew the night ends up with.
+    /// </summary>
+    public static void EnsureCrewCanServeTables(IEnumerable<StaffUser> crew)
+    {
+        if (!crew.Any(member => member.Role == StaffRole.Waiter)) throw new DomainException(ErrorCodes.WaiterRequired, "A night with VIP tables needs at least one waiter.");
     }
 
     public bool IsUnderwayAt(DateTimeOffset moment) => StartsAt <= moment && moment < EndsAt;

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/angular';
 import type { StaffUser } from '../../../staff-users/staff-users.service';
-import type { Night } from '../../nights.service';
+import type { VipTable } from '../../../tables/tables.service';
+import type { Night, NightTable } from '../../nights.service';
 import { NightForm } from './night-form';
 
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
@@ -27,10 +28,27 @@ const saturday: Night = {
   audit: noAudit,
 };
 
-async function openForm(inputs: Partial<{ initial: Night; startLocked: boolean }> = {}) {
+function vipTable(id: string, number: number, extra: Partial<VipTable> = {}): VipTable {
+  return { id, number, capacity: 8, location: null, isActive: true, audit: noAudit, ...extra };
+}
+
+const theTables: VipTable[] = [
+  vipTable('t5', 5, { capacity: 10, location: 'Al lado de la cabina' }),
+  vipTable('t7', 7),
+  vipTable('t9', 9, { isActive: false }),
+];
+
+async function openForm(
+  inputs: Partial<{
+    initial: Night;
+    startLocked: boolean;
+    tables: VipTable[];
+    initialTables: NightTable[];
+  }> = {},
+) {
   const saved = vi.fn();
   const rendered = await render(NightForm, {
-    inputs: { team: theTeam, submitLabel: 'Guardar', ...inputs },
+    inputs: { team: theTeam, tables: theTables, submitLabel: 'Guardar', ...inputs },
     on: { saved },
   });
 
@@ -73,6 +91,7 @@ describe('NightForm', () => {
 
     const offered = screen
       .getAllByRole('checkbox')
+      .filter((box) => !box.closest('fieldset'))
       .map((box) => box.closest('label')?.textContent?.trim());
     expect(offered).toEqual(['main-bar', 'vip-bar', 'till-1', 'martin']);
   });
@@ -92,6 +111,7 @@ describe('NightForm', () => {
       startsAt: new Date(2026, 9, 10, 23, 0).toISOString(),
       endsAt: new Date(2026, 9, 11, 6, 0).toISOString(),
       crewIds: ['main-bar', 'till-1', 'martin'],
+      tables: [],
     });
   });
 
@@ -157,6 +177,7 @@ describe('NightForm', () => {
       startsAt: saturday.startsAt,
       endsAt: saturday.endsAt,
       crewIds: ['main-bar', 'till-1'],
+      tables: [],
     });
   });
 
@@ -166,5 +187,143 @@ describe('NightForm', () => {
 
     expect((screen.getByLabelText(/empieza/i) as HTMLInputElement).disabled).toBe(true);
     expect(screen.getByText(/ya empezó/i)).not.toBeNull();
+  });
+
+  describe('VIP tables', () => {
+    function tableBox(number: number): HTMLInputElement {
+      return screen.getByRole('checkbox', {
+        name: new RegExp(`^Mesa ${number}\\b`),
+      }) as HTMLInputElement;
+    }
+
+    function budgetOf(number: number): HTMLInputElement {
+      return screen.getByLabelText(`Presupuesto de la mesa ${number}`) as HTMLInputElement;
+    }
+
+    async function aValidCrew(rendered: Awaited<ReturnType<typeof openForm>>['rendered']) {
+      fillTheNight();
+      await openThePickers(rendered);
+      pick('main-bar');
+      pick('till-1');
+      pick('martin');
+    }
+
+    // US-39: a table put away no longer shows up to be given a night.
+    it('offers the active tables of the venue, with their people and location', async () => {
+      await openForm();
+
+      expect(tableBox(5).getAttribute('aria-describedby')).not.toBeNull();
+      expect(tableBox(5).closest('li')?.textContent).toContain(
+        '10 personas · Al lado de la cabina',
+      );
+      expect(tableBox(7)).not.toBeNull();
+      expect(screen.queryByRole('checkbox', { name: /^Mesa 9\b/ })).toBeNull();
+    });
+
+    it('hands over the chosen tables with their budgets, in pesos', async () => {
+      const { rendered, saved } = await openForm();
+
+      await aValidCrew(rendered);
+      tableBox(5).click();
+      tableBox(7).click();
+      await rendered.fixture.whenStable();
+      fireEvent.input(budgetOf(5), { target: { value: '150.000' } });
+      fireEvent.input(budgetOf(7), { target: { value: '90000' } });
+      await save(rendered);
+
+      expect(saved).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tables: [
+            { tableId: 't5', budget: 150000 },
+            { tableId: 't7', budget: 90000 },
+          ],
+        }),
+      );
+    });
+
+    it('does not hand over a chosen table without its budget', async () => {
+      const { rendered, saved } = await openForm();
+
+      await aValidCrew(rendered);
+      tableBox(5).click();
+      await save(rendered);
+
+      expect(saved).not.toHaveBeenCalled();
+      expect(budgetOf(5).getAttribute('aria-invalid')).toBe('true');
+    });
+
+    // §8.3: somebody has to carry the drinks to the tables.
+    it('asks for a waiter when the night sells tables', async () => {
+      const { rendered, saved } = await openForm();
+
+      fillTheNight();
+      await openThePickers(rendered);
+      pick('main-bar');
+      pick('till-1');
+      tableBox(5).click();
+      await rendered.fixture.whenStable();
+      fireEvent.input(budgetOf(5), { target: { value: '1000' } });
+      await save(rendered);
+
+      expect(saved).not.toHaveBeenCalled();
+      expect(screen.getByText(/con mesas vip, la noche necesita al menos un mozo/i)).not.toBeNull();
+    });
+
+    it('adds every table at once, and takes them all out again', async () => {
+      const { rendered } = await openForm();
+
+      screen.getByRole('button', { name: /agregar todas/i }).click();
+      await rendered.fixture.whenStable();
+
+      expect([tableBox(5).checked, tableBox(7).checked]).toEqual([true, true]);
+
+      screen.getByRole('button', { name: /sacar todas/i }).click();
+      await rendered.fixture.whenStable();
+
+      expect([tableBox(5).checked, tableBox(7).checked]).toEqual([false, false]);
+    });
+
+    it('starts from the tables the night already sells', async () => {
+      await openForm({
+        initial: { ...saturday, crewIds: ['main-bar', 'till-1', 'martin'] },
+        initialTables: [
+          {
+            tableId: 't7',
+            number: 7,
+            capacity: 8,
+            location: null,
+            budget: 90000,
+            spent: 0,
+            accessCode: 'a'.repeat(32),
+          },
+        ],
+      });
+
+      expect(tableBox(5).checked).toBe(false);
+      expect(tableBox(7).checked).toBe(true);
+      expect(budgetOf(7).value).toBe('90000');
+    });
+
+    it('leaves out a table that is unticked', async () => {
+      const { rendered, saved } = await openForm({
+        initial: { ...saturday, crewIds: ['main-bar', 'till-1', 'martin'] },
+        initialTables: [
+          {
+            tableId: 't7',
+            number: 7,
+            capacity: 8,
+            location: null,
+            budget: 90000,
+            spent: 0,
+            accessCode: 'a'.repeat(32),
+          },
+        ],
+      });
+
+      tableBox(7).click();
+      await save(rendered);
+
+      expect(saved).toHaveBeenCalledWith(expect.objectContaining({ tables: [] }));
+    });
   });
 });

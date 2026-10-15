@@ -4,6 +4,8 @@ import { RouterLink } from '@angular/router';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { STAFF_USERS_URL } from '../../staff-users/staff-users.service';
 import type { StaffUser } from '../../staff-users/staff-users.service';
+import { TABLES_URL } from '../../tables/tables.service';
+import type { VipTable } from '../../tables/tables.service';
 import { NightForm } from '../components/night-form/night-form';
 import type { NewNight } from '../nights.service';
 import { SaveNightStore, refusalFor } from '../save-night.store';
@@ -24,6 +26,14 @@ export class NewNightPage {
 
   /** The whole team, for the crew dropdowns. */
   protected readonly team = httpResource<StaffUser[]>(() => STAFF_USERS_URL);
+
+  /** The venue's VIP tables, for the night to sell (US-40). */
+  protected readonly tables = httpResource<VipTable[]>(() => TABLES_URL);
+
+  protected retry(): void {
+    if (this.team.error() !== undefined) this.team.reload();
+    if (this.tables.error() !== undefined) this.tables.reload();
+  }
 
   protected readonly refusal = computed(() => refusalFor(this.store.status()));
 

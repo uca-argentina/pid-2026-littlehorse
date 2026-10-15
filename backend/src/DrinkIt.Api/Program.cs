@@ -8,6 +8,8 @@ using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Features.Orders;
 using DrinkIt.Api.Features.Staff;
+using DrinkIt.Api.Features.Tables;
+using DrinkIt.Api.Features.VipAccounts;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Infrastructure;
@@ -29,6 +31,7 @@ builder.Services.AddMenuHandlers();
 builder.Services.AddOrderHandlers();
 builder.Services.AddKdsHandlers();
 builder.Services.AddCashierHandlers();
+builder.Services.AddTableHandlers();
 
 // Both names resolve to the same per-request instance: the middleware writes to
 // it and the DbContext reads from it while handling the same request.
@@ -116,9 +119,11 @@ app.MapLogin();
 app.MapMenu();
 app.MapOrders();
 app.MapOrderTracking();
+app.MapVipAccounts();
 app.MapStaffUsers();
 app.MapNights();
 app.MapCategories();
+app.MapTables();
 app.MapProducts();
 app.MapKds();
 // The hubs carry their role in [Authorize]; the policy adds the night's crew

@@ -27,6 +27,9 @@ export const ProblemTypes = {
 
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
+  /** US-39: the number belongs to a table of the venue, put away or not. */
+  tableNumberTaken: 'urn:drinkit:problem:table:number-taken',
+
   /** Sales left less stock than an adjustment of the night's stock takes away (US-37). */
   productStockMoved: 'urn:drinkit:problem:product:stock-moved',
 
@@ -85,6 +88,30 @@ export const ProblemTypes = {
 
   /** US-37: loading a bar takes from the storeroom, and it has fewer than that. */
   nightStoreroomShort: 'urn:drinkit:problem:night:storeroom-short',
+
+  /** US-41: the table's code opens nothing tonight — ran out, regenerated, invented or another venue's. */
+  vipAccountNotFound: 'urn:drinkit:problem:vip-account:not-found',
+
+  /** US-41: the table's balance does not cover the order. */
+  vipAccountBalanceShort: 'urn:drinkit:problem:vip-account:balance-short',
+
+  /** US-40: a night selling VIP tables needs at least one waiter in its crew. */
+  nightWaiterRequired: 'urn:drinkit:problem:night:waiter-required',
+
+  /** US-41: a phone of one of the night's tables spent while its form was open. */
+  nightTablesMoved: 'urn:drinkit:problem:night:tables-moved',
+
+  /** US-40: one of the chosen tables is not the venue's any more. */
+  nightTableNotFound: 'urn:drinkit:problem:night:table-not-found',
+
+  /** US-40: one of the chosen tables was put away while the form was open. */
+  vipAccountTableInactive: 'urn:drinkit:problem:vip-account:table-inactive',
+
+  /** US-40: a table that already spent part of its budget stays in the night. */
+  vipAccountHasSpending: 'urn:drinkit:problem:vip-account:has-spending',
+
+  /** US-39: the table is sold in a night that has not ended, so it is not put away. */
+  tableInANightNotOver: 'urn:drinkit:problem:table:in-a-night-not-over',
 
   /** US-37: a KDS still holding stock in the night cannot be taken out of its crew. */
   nightBarHoldsStock: 'urn:drinkit:problem:night:bar-holds-stock',

@@ -38,6 +38,7 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     paidAt: new Date().toISOString(),
     lastModifiedAt: null,
     isForTable: false,
+    tableNumber: null,
     orderItems: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
     ...overrides,
   };

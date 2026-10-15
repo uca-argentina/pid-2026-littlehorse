@@ -17,7 +17,11 @@ const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
 
 const url = trackingUrl('bar-alfa', 'K-4821', token);
 
-function anOrder(status: CustomerOrderStatus, barName: string | null = null): TrackedOrder {
+function anOrder(
+  status: CustomerOrderStatus,
+  barName: string | null = null,
+  tableNumber: number | null = null,
+): TrackedOrder {
   return {
     code: 'K-4821',
     customerName: 'María Quadro',
@@ -26,6 +30,7 @@ function anOrder(status: CustomerOrderStatus, barName: string | null = null): Tr
     paidAt: '2026-09-17T02:30:00Z',
     barName,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo' }],
+    tableNumber,
   };
 }
 
@@ -38,7 +43,11 @@ function aQuietChannel(): Pick<TrackingChannel, 'state' | 'follow' | 'disconnect
   };
 }
 
-async function openScreenShowing(status: CustomerOrderStatus, barName: string | null = null) {
+async function openScreenShowing(
+  status: CustomerOrderStatus,
+  barName: string | null = null,
+  tableNumber: number | null = null,
+) {
   const rendered = await render(TrackingPage, {
     inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
     providers: [
@@ -52,7 +61,7 @@ async function openScreenShowing(status: CustomerOrderStatus, barName: string | 
   });
 
   const http = TestBed.inject(HttpTestingController);
-  http.expectOne(url).flush(anOrder(status, barName));
+  http.expectOne(url).flush(anOrder(status, barName, tableNumber));
   await rendered.fixture.whenStable();
 
   // The store belongs to the component, not to the TestBed: a test that needs a
@@ -408,5 +417,22 @@ describe('TrackingPage', () => {
 
     expect(screen.getByRole('alert').textContent).toMatch(/sin se[ñn]al|conexi[óo]n/i);
     expect(screen.queryByText(/buscando tu pedido/i)).toBeNull();
+  });
+
+  describe('from a VIP table', () => {
+    // US-41: the waiter carries it (§8.3). There is nothing to show at a bar.
+    it('says it is carried to the table, with no QR and no bar to go to', async () => {
+      const { rendered } = await openScreenShowing('Queued', 'Barra Pista', 5);
+
+      expect(screen.getByText(/te lo llevamos a la mesa 5/i)).not.toBeNull();
+      expect(rendered.fixture.debugElement.query(By.directive(QRCodeComponent))).toBeNull();
+      expect(screen.queryByText(/retiralo en/i)).toBeNull();
+    });
+
+    it('says a ready order is on its way to the table', async () => {
+      await openScreenShowing('Ready', 'Barra Pista', 5);
+
+      expect(screen.getByRole('status').textContent).toContain('sale para tu mesa');
+    });
   });
 });

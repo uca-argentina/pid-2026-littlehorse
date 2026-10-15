@@ -21,7 +21,8 @@ public sealed record TrackedOrder(
     decimal Total,
     DateTimeOffset? PaidAt,
     string? BarName,
-    IReadOnlyList<TrackedOrderItem> Items);
+    IReadOnlyList<TrackedOrderItem> Items,
+    int? TableNumber = null);
 
 /// <summary>
 /// The read side of an order, for the customer who placed it.

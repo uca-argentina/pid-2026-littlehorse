@@ -1,7 +1,8 @@
 import { Component, computed, input, linkedSignal, output, signal } from '@angular/core';
 import type { StaffRole } from '../../../../core/staff/staff-roles';
 import type { StaffUser } from '../../../staff-users/staff-users.service';
-import type { NewNight, Night } from '../../nights.service';
+import type { VipTable } from '../../../tables/tables.service';
+import type { NewNight, Night, NightTable } from '../../nights.service';
 import { CrewPicker } from '../crew-picker/crew-picker';
 import type { CrewAccount } from '../crew-picker/crew-picker';
 
@@ -22,6 +23,30 @@ const CREW_ROLES: readonly Omit<CrewGroup, 'accounts'>[] = [
   { role: 'Cashier', title: 'Cajeros', whenNone: 'No hay cajeros activos.' },
   { role: 'Waiter', title: 'Mozos', whenNone: 'No hay mozos activos. Son opcionales.' },
 ];
+
+/** Kept in step with VipAccount.BudgetMaxValue, in whole pesos. */
+const BUDGET_MAX = 99_999_999;
+
+/**
+ * Whole pesos, the way people write them here: "150000" or "150.000". Null
+ * when it is not a budget the night can sell a table for.
+ */
+function pesosIn(text: string): number | null {
+  const digits = text.trim().replace(/\./g, '');
+
+  if (!/^\d+$/.test(digits)) return null;
+
+  const pesos = Number(digits);
+
+  return pesos >= 1 && pesos <= BUDGET_MAX ? pesos : null;
+}
+
+/** "10 personas · Al lado de la cabina", or just the people when it has no location. */
+function detailsOf(table: VipTable): string {
+  const people = `${table.capacity} ${table.capacity === 1 ? 'persona' : 'personas'}`;
+
+  return table.location ? `${people} · ${table.location}` : people;
+}
 
 /** "2026-10-10T23:00", in local time, as a datetime-local input reads and writes it. */
 function toLocalInput(instant: string | undefined): string {
@@ -61,6 +86,12 @@ export class NightForm {
 
   readonly submitLabel = input.required<string>();
 
+  /** The venue's VIP tables, for the night to sell (US-40). */
+  readonly tables = input<readonly VipTable[]>([]);
+
+  /** The tables the saved night already sells, with their budgets. */
+  readonly initialTables = input<readonly NightTable[]>([]);
+
   readonly saved = output<NewNight>();
 
   protected readonly name = linkedSignal(() => this.initial()?.name ?? '');
@@ -71,6 +102,31 @@ export class NightForm {
 
   protected readonly crew = linkedSignal<ReadonlySet<string>>(
     () => new Set(this.initial()?.crewIds ?? []),
+  );
+
+  /** The chosen tables, each with its budget as typed. A Map keeps the order they were chosen in. */
+  protected readonly chosenTables = linkedSignal<ReadonlyMap<string, string>>(
+    () => new Map(this.initialTables().map((table) => [table.tableId, `${table.budget}`])),
+  );
+
+  /**
+   * The active tables, plus any the night already sells: a table is only put
+   * away once no night still to end sells it, so in practice they match.
+   */
+  protected readonly offeredTables = computed(() =>
+    this.tables()
+      .filter((table) => table.isActive || this.chosenTables().has(table.id))
+      .map((table) => ({ ...table, details: detailsOf(table) })),
+  );
+
+  /** A table that already spent stays in the night: its orders point at it. */
+  private readonly spentTables = computed(
+    () =>
+      new Set(
+        this.initialTables()
+          .filter((table) => table.spent > 0)
+          .map((table) => table.tableId),
+      ),
   );
 
   /** Errors stay hidden until the first attempt: flagging while typing is noise. */
@@ -122,9 +178,38 @@ export class NightForm {
     this.shown(!this.chosenRoles().has('Cashier'), 'Elegí al menos un cajero.'),
   );
 
+  /** §8.3: a table's drinks are carried by a waiter. */
+  protected readonly waiterError = computed(() =>
+    this.shown(
+      this.chosenTables().size > 0 && !this.chosenRoles().has('Waiter'),
+      'Con mesas VIP, la noche necesita al menos un mozo.',
+    ),
+  );
+
+  private readonly tablesWithoutBudget = computed(
+    () =>
+      new Set(
+        [...this.chosenTables()].filter(([, budget]) => pesosIn(budget) === null).map(([id]) => id),
+      ),
+  );
+
+  protected readonly tablesError = computed(() =>
+    this.shown(
+      this.tablesWithoutBudget().size > 0,
+      'Poné el presupuesto de cada mesa elegida, en pesos y sin centavos.',
+    ),
+  );
+
   /** Said next to the button, since the field that is wrong may be far above it. */
   protected readonly formError = computed(() => {
-    const errors = [this.nameError(), this.hoursError(), this.kdsError(), this.cashierError()];
+    const errors = [
+      this.nameError(),
+      this.hoursError(),
+      this.kdsError(),
+      this.cashierError(),
+      this.waiterError(),
+      this.tablesError(),
+    ];
 
     return errors.some((error) => error !== null) ? 'Revisá lo marcado más arriba.' : null;
   });
@@ -132,8 +217,59 @@ export class NightForm {
   protected errorFor(role: StaffRole): string | null {
     if (role === 'Kds') return this.kdsError();
     if (role === 'Cashier') return this.cashierError();
+    if (role === 'Waiter') return this.waiterError();
 
     return null;
+  }
+
+  protected isChosen(tableId: string): boolean {
+    return this.chosenTables().has(tableId);
+  }
+
+  protected budgetOf(tableId: string): string {
+    return this.chosenTables().get(tableId) ?? '';
+  }
+
+  protected budgetIsBad(tableId: string): boolean {
+    return this.attempted() && this.tablesWithoutBudget().has(tableId);
+  }
+
+  protected cannotLeave(tableId: string): boolean {
+    return this.spentTables().has(tableId);
+  }
+
+  protected toggleTable(tableId: string): void {
+    this.chosenTables.update((chosen) => {
+      const next = new Map(chosen);
+
+      if (next.has(tableId)) next.delete(tableId);
+      else next.set(tableId, '');
+
+      return next;
+    });
+  }
+
+  protected typeBudget(tableId: string, event: Event): void {
+    const typed = (event.target as HTMLInputElement).value;
+
+    this.chosenTables.update((chosen) => new Map(chosen).set(tableId, typed));
+  }
+
+  protected chooseAllTables(): void {
+    this.chosenTables.update((chosen) => {
+      const next = new Map(chosen);
+
+      for (const table of this.offeredTables()) if (!next.has(table.id)) next.set(table.id, '');
+
+      return next;
+    });
+  }
+
+  /** All but the ones that already spent, which stay in the night. */
+  protected clearTables(): void {
+    this.chosenTables.update(
+      (chosen) => new Map([...chosen].filter(([id]) => this.spentTables().has(id))),
+    );
   }
 
   protected typed(field: 'name' | 'startsAt' | 'endsAt', event: Event): void {
@@ -167,6 +303,10 @@ export class NightForm {
       startsAt: this.instantOf(this.startsAt(), this.initial()?.startsAt),
       endsAt: this.instantOf(this.endsAt(), this.initial()?.endsAt),
       crewIds,
+      // In the order the form shows them, like the crew.
+      tables: this.offeredTables()
+        .filter((table) => this.chosenTables().has(table.id))
+        .map((table) => ({ tableId: table.id, budget: pesosIn(this.budgetOf(table.id)) ?? 0 })),
     });
   }
 

@@ -43,6 +43,7 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     paidAt: new Date().toISOString(),
     lastModifiedAt: null,
     isForTable: false,
+    tableNumber: null,
     orderItems: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
     ...overrides,
   };
@@ -152,6 +153,23 @@ describe('KdsBoardPage', () => {
 
     expect(screen.getByText('K-0001').closest('.card')?.textContent).toContain('Barra');
     expect(screen.getByText('K-0002').closest('.card')?.textContent).toContain('Mesa');
+  });
+
+  // US-41: which table, so the waiter knows where it goes.
+  it('labels a table order with the number of its table', async () => {
+    await openScreenShowing([anOrder({ code: 'K-0002', isForTable: true, tableNumber: 5 })]);
+
+    expect(screen.getByText('K-0002').closest('.card')?.textContent).toContain('Mesa 5');
+  });
+
+  // US-41: a table's order stays in Listos until the waiter takes it (US-43);
+  // it is not handed over at the bar with the customer's QR.
+  it('offers no Entregado on a ready table order', async () => {
+    await openScreenShowing([
+      anOrder({ code: 'K-0002', isForTable: true, tableNumber: 5, status: 'Ready' }),
+    ]);
+
+    expect(screen.queryByRole('button', { name: 'Entregado K-0002' })).toBeNull();
   });
 
   // Criterion 2: the three age bands, at the boundaries the criterion names.

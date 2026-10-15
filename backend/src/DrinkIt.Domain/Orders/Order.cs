@@ -34,6 +34,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         public const string InvalidTransition = "order.invalid_transition";
         public const string CollectorRequired = "order.collector_required";
         public const string UndoWindowPassed = "order.undo_window_passed";
+        public const string BalanceAmountOutOfRange = "order.balance_amount_out_of_range";
+        public const string BalanceNeedsItsAmount = "order.balance_needs_its_amount";
     }
 
     /// <summary>Room for a full name on a ticket, and no more.</summary>
@@ -78,6 +80,22 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// a stock of their own, for the same reason as <see cref="NightId"/>.
     /// </summary>
     public Guid? KdsId { get; private set; }
+
+    /// <summary>
+    /// What came out of a VIP table's balance (US-41), or null when none did.
+    /// Kept apart from <see cref="Method"/>: US-42 pays the rest with another
+    /// method, and the sales have to say how much entered each way.
+    /// </summary>
+    public decimal? BalanceAmount { get; private set; }
+
+    /// <summary>The VIP table it is carried to (US-41), or null when it is picked up at the bar.</summary>
+    public Guid? TableId { get; private set; }
+
+    /// <summary>
+    /// The number of that table as it was when the order was placed: what the
+    /// bar, the waiter and the customer read ("Mesa 5"), for good.
+    /// </summary>
+    public int? TableNumber { get; private set; }
 
     /// <summary>Who the bar calls for it.</summary>
     public string CustomerName { get; }
@@ -170,11 +188,43 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     }
 
     /// <summary>
+    /// US-41: ordered with the code of a VIP table, so it is carried to it
+    /// instead of picked up at the bar. Decided before paying, in the cart.
+    /// </summary>
+    public void ServeAtTable(Guid tableId, int tableNumber)
+    {
+        EnsureItIs(OrderStatus.Cart);
+
+        TableId = tableId;
+        TableNumber = tableNumber;
+    }
+
+    /// <summary>
     /// Paid from the phone, straight from the cart — the gateway is simulated,
     /// as the brief allows. Cash goes through <see cref="CollectCash"/> instead.
     /// Either way, what follows is <see cref="Enqueue"/> into a bar.
     /// </summary>
     public void Pay(DateTimeOffset at, PaymentMethod method)
+    {
+        if (method == PaymentMethod.VipBalance) throw new DomainException(ErrorCodes.BalanceNeedsItsAmount, "A table's balance pays through PayFromBalance, which records how much it gave.");
+
+        MarkPaid(at, method);
+    }
+
+    /// <summary>
+    /// US-41: paid from the table's balance, with what the balance gave. The
+    /// whole order for now; US-42 lets the balance give less and another method
+    /// pay the rest.
+    /// </summary>
+    public void PayFromBalance(DateTimeOffset at, decimal amount)
+    {
+        if (amount <= 0 || amount > Total) throw new DomainException(ErrorCodes.BalanceAmountOutOfRange, "What the balance pays has to be more than 0 and at most the order's total.");
+
+        MarkPaid(at, PaymentMethod.VipBalance);
+        BalanceAmount = amount;
+    }
+
+    private void MarkPaid(DateTimeOffset at, PaymentMethod method)
     {
         EnsureItIs(OrderStatus.Cart);
 

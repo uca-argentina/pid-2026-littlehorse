@@ -25,8 +25,13 @@ public interface INightRepository
     /// </summary>
     Task<Night?> GetForUpdateAsync(Guid id, CancellationToken cancellationToken);
 
-    /// <summary>Commits what the use case changed on a tracked aggregate.</summary>
-    Task SaveChangesAsync(CancellationToken cancellationToken);
+    /// <summary>
+    /// Commits what the use case changed on a tracked aggregate, the night's
+    /// VIP tables included. False, with nothing written, when a phone of one
+    /// of those tables spent from its balance meanwhile (US-41): the change was
+    /// made against a balance that is no longer there.
+    /// </summary>
+    Task<bool> SaveChangesAsync(CancellationToken cancellationToken);
 
     /// <summary>
     /// Persists the new night with what its KDS start with (US-37): each

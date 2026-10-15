@@ -1,5 +1,6 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Configurations;
@@ -53,8 +54,11 @@ internal sealed partial class OrderRepository(
         {
             // Somebody else got there in the seconds this order took to price.
             // Nothing is written, and the caller may try the whole thing again
-            // against the menu as it is now.
+            // against the menu as it is now. What the attempt changed in
+            // memory goes too: a VIP table's spend (US-41) left tracked would
+            // be spent again by the retry, on top of itself.
             await transaction.RollbackAsync(cancellationToken);
+            context.ChangeTracker.Clear();
 
             return OrderErrors.StockMoved;
         }
@@ -73,6 +77,17 @@ internal sealed partial class OrderRepository(
             await DispatchWithoutFailingTheOrder(order, CancellationToken.None);
 
             return order;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // US-41: the only tracked row with a concurrency token an order
+            // writes is the VIP table it spent from. Another phone of the same
+            // table spent first; nothing is written, and the order is built
+            // again against the balance as it is now.
+            await transaction.RollbackAsync(cancellationToken);
+            context.ChangeTracker.Clear();
+
+            return VipAccountErrors.BalanceMoved;
         }
         catch (DbUpdateException)
         {

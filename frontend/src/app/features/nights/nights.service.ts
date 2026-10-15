@@ -11,6 +11,11 @@ export type NewNight = components['schemas']['CreateNightRequest'];
 /** US-37: bar by bar, what each product was loaded with, sold and has left, and what the storeroom has. */
 export type NightStock = components['schemas']['NightStockResponse'];
 
+/** A VIP table the night sells, with its budget and what it spent (US-40). */
+export type NightTable = components['schemas']['NightTableResponse'];
+
+export type NightTableCode = components['schemas']['NightTableCodeResponse'];
+
 export type NightStockBar = NightStock['bars'][number];
 
 export type NightStockLine = NightStockBar['lines'][number];
@@ -36,6 +41,14 @@ export class NightsService {
    * when negative. A change and never a total, so a sale made while the screen
    * was open is kept.
    */
+  /** US-40: a new code for the table's QR. The old one stops working; the balance stays. */
+  regenerateTableCode(nightId: string, tableId: string): Observable<NightTableCode> {
+    return this.http.post<NightTableCode>(
+      `${NIGHTS_URL}/${nightId}/tables/${tableId}/access-code`,
+      {},
+    );
+  }
+
   adjustStock(
     nightId: string,
     kdsId: string,

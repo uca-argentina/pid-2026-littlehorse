@@ -3,7 +3,9 @@ using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Staff;
+using DrinkIt.Domain.Tables;
 using DrinkIt.Domain.Venues;
+using DrinkIt.Domain.VipAccounts;
 using Microsoft.EntityFrameworkCore;
 
 namespace DrinkIt.Infrastructure.Persistence;
@@ -19,9 +21,13 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
 
     public DbSet<Category> Categories => Set<Category>();
 
+    public DbSet<Table> Tables => Set<Table>();
+
     public DbSet<Order> Orders => Set<Order>();
 
     public DbSet<Night> Nights => Set<Night>();
+
+    public DbSet<VipAccount> VipAccounts => Set<VipAccount>();
 
     public DbSet<NightStockAdjustment> NightStockAdjustments => Set<NightStockAdjustment>();
 
@@ -50,8 +56,10 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
         modelBuilder.Entity<StaffUser>().HasQueryFilter(user => user.VenueId == CurrentVenueId);
         modelBuilder.Entity<Product>().HasQueryFilter(product => product.VenueId == CurrentVenueId);
         modelBuilder.Entity<Category>().HasQueryFilter(category => category.VenueId == CurrentVenueId);
+        modelBuilder.Entity<Table>().HasQueryFilter(table => table.VenueId == CurrentVenueId);
         modelBuilder.Entity<Order>().HasQueryFilter(order => order.VenueId == CurrentVenueId);
         modelBuilder.Entity<Night>().HasQueryFilter(night => night.VenueId == CurrentVenueId);
+        modelBuilder.Entity<VipAccount>().HasQueryFilter(account => account.VenueId == CurrentVenueId);
         modelBuilder.Entity<NightStockAdjustment>().HasQueryFilter(adjustment => adjustment.VenueId == CurrentVenueId);
         modelBuilder.Entity<BarStock>().HasQueryFilter(stock => stock.VenueId == CurrentVenueId);
         modelBuilder.Entity<KdsBeat>().HasQueryFilter(beat => beat.VenueId == CurrentVenueId);

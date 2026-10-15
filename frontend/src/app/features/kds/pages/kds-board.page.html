@@ -180,15 +180,19 @@
                       >
                         Volver a preparación
                       </button>
-                      <button
-                        type="button"
-                        class="act primary"
-                        [attr.aria-label]="'Entregado ' + order.code"
-                        [disabled]="isBusy(order)"
-                        (click)="deliver(order)"
-                      >
-                        Entregado
-                      </button>
+                      <!-- US-41: a table's order is carried by the waiter (US-43),
+                           not handed over at the bar with the customer's QR. -->
+                      @if (!order.isForTable) {
+                        <button
+                          type="button"
+                          class="act primary"
+                          [attr.aria-label]="'Entregado ' + order.code"
+                          [disabled]="isBusy(order)"
+                          (click)="deliver(order)"
+                        >
+                          Entregado
+                        </button>
+                      }
                     </div>
                   }
                 </article>

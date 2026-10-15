@@ -11,6 +11,8 @@ import { formatPrice } from '../../../shared/money/price';
 import { slowLoading } from '../../../shared/loading/slow-loading';
 import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
 import { OrdersInProgress } from '../components/orders-in-progress';
+import { VipTables, vipTableUrl } from '../../../core/vip-table/vip-tables';
+import type { VipTableAccess } from '../../../core/vip-table/vip-tables';
 import { menuUrl } from '../menu.service';
 import type { Menu, MenuItem } from '../menu.service';
 
@@ -62,6 +64,37 @@ export class MenuPage {
     // not what the QR on the wall points at.
     context: anonymously(),
   }));
+
+  private readonly vipTables = inject(VipTables);
+
+  /** US-41: the VIP table this phone orders for, when a waiter's QR opened one. */
+  private readonly tableCode = computed(() => this.vipTables.codeOf(this.venueSlug()));
+
+  protected readonly table = httpResource<VipTableAccess>(() => {
+    const code = this.tableCode();
+
+    return code === null
+      ? undefined
+      : { url: vipTableUrl(this.venueSlug(), code), context: anonymously() };
+  });
+
+  /** Criterion 1: "Mesa 5 · Saldo disponible $ 150.000,00". */
+  protected readonly tableLine = computed(() =>
+    this.table.hasValue()
+      ? `Mesa ${this.table.value().tableNumber} · Saldo disponible $ ${formatPrice(this.table.value().balance)}`
+      : null,
+  );
+
+  /** Criterion 4: the code ran out with its night, or the waiter replaced it. */
+  protected readonly tableIsGone = computed(() => {
+    const error = this.table.error();
+
+    return error !== undefined && problemTypeOf(error) === ProblemTypes.vipAccountNotFound;
+  });
+
+  protected orderForTheBar(): void {
+    this.vipTables.forget(this.venueSlug());
+  }
 
   protected readonly search = signal('');
 

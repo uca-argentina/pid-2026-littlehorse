@@ -341,7 +341,35 @@ una KDS.
 - **Diseño: no está dibujado.** Es el ABM más chico del sistema.
 - **Borde:** dar de baja una mesa con una cuenta abierta (US-40) se rechaza.
 
+**Construida el 2026-10-14.** Decidido ese día:
+
+- **El número sigue ocupado aunque la mesa esté de baja.** Para volver a usarlo se la
+  reactiva; crear otra con ese número se rechaza (409). Si se liberara, dos mesas distintas
+  dirían "Mesa 5" en los pedidos viejos y no habría cómo distinguirlas. El índice único
+  `(VenueId, Number)` vale para las activas y las de baja.
+- **El número va de 1 a 999.** Tres cifras alcanzan para la etiqueta que lee el mozo, y el
+  dominio lo valida igual que la pantalla.
+- **La baja es lógica y reversible**: `POST /staff/tables/{id}/deactivate` y `/reactivate`.
+  La fila no se borra porque los pedidos que salieron de esa mesa la siguen apuntando.
+- **El criterio 2 se completa en US-40.** Hoy el listado muestra las mesas de baja marcadas,
+  para poder reactivarlas; "deja de aparecer para abrirle cuenta" es filtrar `IsActive` en la
+  pantalla de apertura, que todavía no existe. Lo mismo el borde de arriba: el rechazo de la
+  baja con una cuenta abierta va en `DeactivateTableHandler` cuando exista la cuenta.
+- **El alta y el listado son páginas separadas** (`/staff/tables` y `/staff/tables/new`), con
+  la pestaña "Mesas" en el header de administración.
+
+**Ampliada el 2026-10-15.** La mesa se carga una sola vez, fuera de las noches, con lo que la
+describe:
+
+- **Personas (`Capacity`)**, obligatoria, de 1 a 50: para cuántas personas se vende el paquete.
+- **Ubicación (`Location`)**, opcional, hasta 60 caracteres ("Al lado de la cabina"): para que
+  el mozo la encuentre. En el listado se lee completa debajo del número, sin cortarse.
+- Las mesas que ya existían quedan con capacidad 1 (la migración no puede dejar un valor que el
+  dominio rechaza).
+
 ### US-40 · Abrir la cuenta de una mesa con su saldo
+
+> **Decidido el 2026-10-15** (ver al final de la story).
 
 > **Como** administrador
 > **quiero** abrir la cuenta de una mesa para la noche con el saldo del paquete que se vendió
@@ -372,6 +400,42 @@ una KDS.
   el local quiere otra cosa, es una decisión de producto para otro sprint.
 - **Diseño: no está dibujado.** La ficha de la mesa con "Abrir cuenta", el saldo y el QR para
   mostrar o compartir.
+
+**Decidido el 2026-10-15:**
+
+- **La mesa es fija; la cuenta es de una noche.** `VipAccount` lleva `VenueId`, `NightId`,
+  `TableId`, `Balance`, `AccessCode` y un `rowversion`. Índice único `(VenueId, NightId, TableId)`:
+  una mesa tiene a lo sumo una cuenta por noche. No hay acción de "cerrar": la cierra el fin de
+  la noche (criterio 3, y §8.2: no se modela apertura/cierre de sesión).
+- **Se agregan desde la ficha de la noche, todas o las que se elijan**, cada una con su saldo.
+  Es una sección nueva debajo del stock de la noche, armada igual. Sólo ofrece mesas activas
+  (completa el criterio 2 de US-39). Se pueden agregar antes de que la noche empiece, porque
+  los paquetes se venden antes; el código sirve sólo mientras la noche está en curso.
+- **El paquete se paga siempre en el boliche.** El sistema registra el saldo, no cobra la carga.
+- **Con mesas, la noche necesita un mozo.** Agregar una mesa a una noche sin mozo se rechaza, y
+  también sacar al último mozo de una noche que tiene mesas (la nota de US-35).
+- **Dar de baja una mesa con cuenta en una noche no terminada se rechaza** (el borde de US-39),
+  en `DeactivateTableHandler`.
+- **El código es un secreto como `TrackingToken`.** El QR abre `/{venueSlug}/table/{code}`.
+  Regenerarlo mata el anterior y no toca el saldo.
+- **Cargar saldo** (`TopUp`) usa el `rowversion`: si choca con un pedido que descontó en el
+  medio, relee y vuelve a sumar.
+
+**Construida en parte el 2026-10-15** (las mesas y su presupuesto; falta el código y su QR):
+
+- **Las mesas se eligen en el mismo formulario de la noche**, al crearla y al editarla, cada una
+  con su presupuesto en pesos ("150.000" o "150000"). "Agregar todas" y "Sacar todas" ayudan
+  cuando son muchas. Se guarda todo junto: la noche y sus mesas, o nada.
+- **`VipAccount` guarda `Budget` y `Spent` por separado**, y el saldo es la resta. Así se cumple
+  el criterio 2 sin una acción de "cargar": subir el presupuesto desde el formulario nunca pisa
+  lo que ya se gastó. Una mesa que ya consumió no se saca de la noche.
+- **`tables` ausente en el `PUT` deja las mesas como están.** Un cliente que no las conoce (el
+  setup del E2E extiende la noche así) no tiene que vaciarlas. Una lista vacía sí las saca todas.
+- **Se lee con `GET /nights/{id}/tables`**, aparte de la noche, como el stock. Una noche
+  terminada las muestra con su presupuesto, sin formulario.
+- **Completada el 2026-10-15:** la ficha de la noche muestra el QR de cada mesa con lo que le
+  queda de saldo, "Copiar link" y "Compartir" (WhatsApp desde el celular), y "Se filtró el
+  código: generar otro", que pide confirmación. Una noche terminada ya no muestra códigos.
 
 ### US-41 · Pedir desde la mesa VIP con el saldo
 
@@ -410,6 +474,44 @@ una KDS.
   donde estás").
 - **Multi-tenancy:** el código de una mesa de otro local da el mismo error que uno inventado,
   como pasa con el QR de retiro (US-20).
+
+**Decidido el 2026-10-15:**
+
+- **Entrada:** el QR lleva a `/{venueSlug}/table/{code}`. El front consulta
+  `GET /api/{venueSlug}/vip-accounts/{code}` (número de mesa y saldo), guarda el código en
+  `sessionStorage` y pasa a la carta. Vencido, regenerado, inventado o de otro local: un solo
+  error, con "Pedir para retirar en la barra".
+- **`IPaymentStrategy` cambia una vez:** de `Settle(Order)` a
+  `SettleAsync(Order, PaymentRequest, ct)` con `Result`, porque la estrategia de saldo tiene que
+  cargar la cuenta. `ConfirmOrderHandler` no cambia: el pedido pagado se encola en la barra
+  elegida, como el digital.
+- **Concurrencia (criterio 3):** la cuenta se trackea en el mismo `DbContext` que el pedido y un
+  solo `SaveChanges` guarda los dos. El que choca con el `rowversion` recibe
+  `vip_account.balance_moved` con el saldo actualizado, sin descontar nada.
+- **El pedido guarda `TableId` y `TableNumber`** (copia, para que los viejos sigan diciendo
+  "Mesa 5") y cuánto pagó con saldo (`BalanceAmount`), así US-42 suma el importe digital sin
+  migrar pedidos viejos.
+- **En los reportes (US-48) todo cuenta como venta.** Si hace falta, se diferencia lo pagado con
+  saldo de lo demás más adelante.
+- **Pendiente:** sin US-43/44, un pedido de mesa queda en "Listo" para siempre (el KDS no lo
+  entrega). Conviene que entren junto con esta story o enseguida después.
+
+**Construida el 2026-10-15:**
+
+- **El QR abre `/{venueSlug}/table/{code}`**, que valida el código y lo recuerda en el celular
+  (por boliche). La carta muestra "Mesa 5 · Saldo disponible $ …". Un código vencido, regenerado,
+  inventado o de otro local da la misma respuesta y ofrece "Pedir para retirar en la barra".
+- **Con mesa, el pago es sólo "Saldo de la mesa"**: no se elige método. Si el total supera el
+  saldo, la pantalla dice cuánto falta y no deja pagar (US-42 lo va a cubrir).
+- **Concurrencia (criterio 3):** el saldo se descuenta en el mismo guardado que el pedido, con el
+  `rowversion` de la cuenta. El celular que pierde la carrera reintenta con el saldo nuevo (igual
+  que con el stock); si ya no alcanza, ve el saldo actualizado y no se descuenta nada. Lo prueba
+  un test de integración con dos confirmaciones simultáneas.
+- **El pedido guarda `TableId` y `TableNumber`.** El KDS muestra "Mesa 5" y no ofrece
+  "Entregado" en esas tarjetas; el seguimiento dice "Te lo llevamos a la Mesa 5" sin QR.
+- **El pedido guarda `BalanceAmount`**, lo que salió del saldo, aparte del método
+  (`Order.PayFromBalance`). Hoy es el total; US-42 lo baja y suma el importe digital, sin migrar
+  pedidos viejos.
 
 ### US-42 · Cubrir la diferencia si el saldo no alcanza
 

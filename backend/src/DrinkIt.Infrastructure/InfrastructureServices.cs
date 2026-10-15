@@ -8,7 +8,9 @@ using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Security;
 using DrinkIt.Application.Staff;
+using DrinkIt.Application.Tables;
 using DrinkIt.Application.Venues;
+using DrinkIt.Application.VipAccounts;
 using DrinkIt.Infrastructure.Authentication;
 using DrinkIt.Infrastructure.Cashier;
 using DrinkIt.Infrastructure.Kds;
@@ -20,7 +22,9 @@ using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Seeding;
 using DrinkIt.Infrastructure.Security;
 using DrinkIt.Infrastructure.Staff;
+using DrinkIt.Infrastructure.Tables;
 using DrinkIt.Infrastructure.Venues;
+using DrinkIt.Infrastructure.VipAccounts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,6 +71,8 @@ public static class InfrastructureServices
         services.AddScoped<IProductQueries, ProductQueries>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<ICategoryQueries, CategoryQueries>();
+        services.AddScoped<ITableRepository, TableRepository>();
+        services.AddScoped<ITableQueries, TableQueries>();
         services.AddScoped<IVenueLookup, VenueLookup>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IProductsForOrdering, ProductsForOrdering>();
@@ -75,6 +81,9 @@ public static class InfrastructureServices
         services.AddScoped<IKdsQueueQueries, KdsQueueQueries>();
         services.AddScoped<ICashierQueries, CashierQueries>();
         services.AddScoped<INightRepository, NightRepository>();
+        services.AddScoped<IVipAccountRepository, VipAccountRepository>();
+        services.AddScoped<IVipAccountQueries, VipAccountQueries>();
+        services.AddScoped<INightTableQueries, NightTableQueries>();
         services.AddScoped<INightQueries, NightQueries>();
         services.AddScoped<INightStockQueries, NightStockQueries>();
         services.AddScoped<INightMetricsQueries, NightMetricsQueries>();
@@ -101,6 +110,7 @@ public static class InfrastructureServices
         // adding a class here and touching nothing else.
         services.AddScoped<IPaymentStrategy, DigitalPaymentStrategy>();
         services.AddScoped<IPaymentStrategy, CashPaymentStrategy>();
+        services.AddScoped<IPaymentStrategy, VipBalancePaymentStrategy>();
 
         return services;
     }

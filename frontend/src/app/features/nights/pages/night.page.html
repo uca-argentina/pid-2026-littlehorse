@@ -11,7 +11,7 @@
         <span>No pudimos traer la noche. Fijate la señal y probá de nuevo.</span>
         <button class="retry" type="button" (click)="retry()">Reintentar</button>
       </div>
-    } @else if (night.hasValue() && team.hasValue()) {
+    } @else if (ready() && night.hasValue() && team.hasValue()) {
       <h1 class="title">{{ night.value().name }}</h1>
       <p class="phase">
         <span class="chip" [class.chip-on]="phase() === 'underway'">{{ phaseName() }}</span>
@@ -36,6 +36,14 @@
               <dd class="fact-value">{{ name }}</dd>
             }
           </div>
+          @if (tableLines().length > 0) {
+            <div class="fact">
+              <dt class="fact-name">Mesas VIP</dt>
+              @for (line of tableLines(); track line) {
+                <dd class="fact-value">{{ line }}</dd>
+              }
+            </div>
+          }
         </dl>
         <p class="note">
           Una noche terminada ya no se edita: sus métricas se leen contra estos horarios.
@@ -43,6 +51,8 @@
       } @else {
         <drinkit-night-form
           [team]="team.value()"
+          [tables]="venueTables.hasValue() ? venueTables.value() : []"
+          [initialTables]="nightTables.hasValue() ? nightTables.value() : []"
           [initial]="night.value()"
           [startLocked]="phase() === 'underway'"
           [sending]="store.isSending()"
@@ -53,6 +63,14 @@
       }
 
       @if (phase(); as phase) {
+        @if (nightTables.hasValue()) {
+          <drinkit-night-table-codes
+            [venueSlug]="venueSlug()"
+            [nightId]="id()"
+            [phase]="phase"
+            [tables]="nightTables.value()"
+          />
+        }
         <drinkit-night-stock [nightId]="id()" [phase]="phase" />
       }
     } @else {

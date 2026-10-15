@@ -238,9 +238,9 @@ public class OrderTests
         {
             Order order = ACartOf();
 
-            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.VipBalance);
+            order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
 
-            Assert.Equal(PaymentMethod.VipBalance, order.Method);
+            Assert.Equal(PaymentMethod.Digital, order.Method);
         }
 
         // US-36: every paid order, however it was paid, goes into the queue of
@@ -979,5 +979,101 @@ public class OrderTests
                 everyKind.Order(),
                 EveryMove().Select(move => move.Raised.GetType().Name).Distinct().Order());
         }
+    }
+
+    // US-41: an order from a VIP table is carried to it, and says which one
+    // ("Mesa 5") for as long as the order exists.
+    [Fact]
+    public void ServeAtTable_WhenInTheCart_KeepsTheTableAndItsNumber()
+    {
+        Order order = AnOrder();
+        Guid table = Guid.CreateVersion7();
+
+        order.ServeAtTable(table, 5);
+
+        Assert.Equal(table, order.TableId);
+        Assert.Equal(5, order.TableNumber);
+    }
+
+    [Fact]
+    public void ServeAtTable_WhenAlreadyPaid_ThrowsInvalidTransition()
+    {
+        Order order = AnOrder();
+        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+
+        DomainException error = Assert.Throws<DomainException>(() => order.ServeAtTable(Guid.CreateVersion7(), 5));
+
+        Assert.Equal(Order.ErrorCodes.InvalidTransition, error.Code);
+        Assert.Null(order.TableId);
+    }
+
+    [Fact]
+    public void Place_WhenNew_IsNotForAnyTable()
+    {
+        Order order = AnOrder();
+
+        Assert.Null(order.TableId);
+        Assert.Null(order.TableNumber);
+    }
+
+    // US-41: what came out of the table's balance is kept apart from the
+    // method, so US-42 can add what was paid on top and the sales (US-48) can
+    // tell one from the other.
+    [Fact]
+    public void PayFromBalance_WhenItCoversTheOrder_PaysItAndKeepsWhatTheBalanceGave()
+    {
+        Order order = AnOrder();
+        DateTimeOffset at = DateTimeOffset.UtcNow;
+
+        order.PayFromBalance(at, order.Total);
+
+        Assert.Equal(OrderStatus.Paid, order.Status);
+        Assert.Equal(PaymentMethod.VipBalance, order.Method);
+        Assert.Equal(at, order.PaidAt);
+        Assert.Equal(order.Total, order.BalanceAmount);
+    }
+
+    [Fact]
+    public void PayFromBalance_WhenItIsMoreThanTheOrder_ThrowsBalanceAmountOutOfRange()
+    {
+        Order order = AnOrder();
+
+        DomainException error = Assert.Throws<DomainException>(() => order.PayFromBalance(DateTimeOffset.UtcNow, order.Total + 1));
+
+        Assert.Equal(Order.ErrorCodes.BalanceAmountOutOfRange, error.Code);
+        Assert.Equal(OrderStatus.Cart, order.Status);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void PayFromBalance_WhenItIsNotPositive_ThrowsBalanceAmountOutOfRange(int amount)
+    {
+        DomainException error = Assert.Throws<DomainException>(() => AnOrder().PayFromBalance(DateTimeOffset.UtcNow, amount));
+
+        Assert.Equal(Order.ErrorCodes.BalanceAmountOutOfRange, error.Code);
+    }
+
+    [Fact]
+    public void Pay_WhenPaidOnTheSpot_TakesNothingFromAnyBalance()
+    {
+        Order order = AnOrder();
+
+        order.Pay(DateTimeOffset.UtcNow, PaymentMethod.Digital);
+
+        Assert.Null(order.BalanceAmount);
+    }
+
+    // Found in review: a balance payment that skipped PayFromBalance would
+    // leave no record of what the balance gave.
+    [Fact]
+    public void Pay_WhenTheMethodIsTheTablesBalance_ThrowsBalanceNeedsItsAmount()
+    {
+        Order order = AnOrder();
+
+        DomainException error = Assert.Throws<DomainException>(() => order.Pay(DateTimeOffset.UtcNow, PaymentMethod.VipBalance));
+
+        Assert.Equal(Order.ErrorCodes.BalanceNeedsItsAmount, error.Code);
+        Assert.Equal(OrderStatus.Cart, order.Status);
     }
 }

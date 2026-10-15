@@ -9,10 +9,36 @@ namespace DrinkIt.Api.Features.Nights;
 
 /// <summary>What the administration screen posts to set up a night.</summary>
 /// <remarks>US-35.</remarks>
-public sealed record CreateNightRequest(string Name, DateTimeOffset StartsAt, DateTimeOffset EndsAt, IReadOnlyList<Guid> CrewIds);
+/// <summary>One VIP table the night sells, with the budget of its package (US-40).</summary>
+public sealed record NightTableRequestBody(Guid TableId, decimal Budget);
+
+public sealed record CreateNightRequest(
+    string Name,
+    DateTimeOffset StartsAt,
+    DateTimeOffset EndsAt,
+    IReadOnlyList<Guid> CrewIds,
+    IReadOnlyList<NightTableRequestBody>? Tables = null);
 
 /// <summary>What the night's own screen saves: the whole form, as on creation.</summary>
-public sealed record UpdateNightRequest(string Name, DateTimeOffset StartsAt, DateTimeOffset EndsAt, IReadOnlyList<Guid> CrewIds);
+/// <remarks>
+/// Tables is the whole list the night ends up with: a table left out is taken
+/// out of the night. Left out altogether, the night's tables stay as they are.
+/// </remarks>
+public sealed record UpdateNightRequest(
+    string Name,
+    DateTimeOffset StartsAt,
+    DateTimeOffset EndsAt,
+    IReadOnlyList<Guid> CrewIds,
+    IReadOnlyList<NightTableRequestBody>? Tables = null);
+
+/// <summary>
+/// A table of the night with what was loaded onto it, what its orders took,
+/// and the code of its QR for the waiter to hand over.
+/// </summary>
+public sealed record NightTableResponse(Guid TableId, int Number, int Capacity, string? Location, decimal Budget, decimal Spent, string AccessCode);
+
+/// <summary>The new code of a table after the old one leaked.</summary>
+public sealed record NightTableCodeResponse(Guid TableId, string AccessCode);
 
 public sealed record NightResponse(
     Guid Id,
@@ -150,6 +176,23 @@ internal static class NightsEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group
+            .MapGet("/{id:guid}/tables", GetTablesAsync)
+            .WithName("GetNightTables")
+            .WithSummary("The VIP tables the night sells, by number, with the budget of each package and what it spent.")
+            .Produces<IReadOnlyList<NightTableResponse>>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        // POST: every call makes a new code, so sending it twice is not the
+        // same as sending it once.
+        group
+            .MapPost("/{id:guid}/tables/{tableId:guid}/access-code", RegenerateTableCodeAsync)
+            .WithName("RegenerateNightTableCode")
+            .WithSummary("Gives a table of the night a new code for its QR. The old one stops working; the balance stays.")
+            .Produces<NightTableCodeResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
             .MapGet("/{id:guid}/metrics", GetMetricsAsync)
             .WithName("GetNightMetrics")
             .WithSummary("The night's report: what was sold and how it was paid, how long orders took, and the most ordered products against their stock. So far, for a night still underway.")
@@ -199,6 +242,28 @@ internal static class NightsEndpoints
         return sheet is null ? Rejected(NightErrors.NotFound) : TypedResults.Ok(NightStockResponse.Of(sheet));
     }
 
+    internal static async Task<IResult> GetTablesAsync(Guid id, INightTableQueries tables, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<NightTableLine>? lines = await tables.ListAsync(id, cancellationToken);
+
+        return lines is null
+            ? Rejected(NightErrors.NotFound)
+            : TypedResults.Ok(lines.Select(line => new NightTableResponse(line.TableId, line.Number, line.Capacity, line.Location, line.Budget, line.Spent, line.AccessCode)).ToArray());
+    }
+
+    internal static async Task<IResult> RegenerateTableCodeAsync(
+        Guid id,
+        Guid tableId,
+        RegenerateTableCodeHandler handler,
+        CancellationToken cancellationToken)
+    {
+        Result<NightTableCode> result = await handler.HandleAsync(id, tableId, cancellationToken);
+
+        return result.IsSuccess
+            ? TypedResults.Ok(new NightTableCodeResponse(result.Value.TableId, result.Value.AccessCode))
+            : Rejected(result.Error!);
+    }
+
     internal static async Task<IResult> GetMetricsAsync(Guid id, GetNightMetricsHandler handler, CancellationToken cancellationToken)
     {
         Result<NightMetrics> result = await handler.HandleAsync(id, cancellationToken);
@@ -226,7 +291,7 @@ internal static class NightsEndpoints
         CancellationToken cancellationToken)
     {
         Result<NightSummary> result = await handler.HandleAsync(
-            new UpdateNightCommand(id, request.Name, request.StartsAt, request.EndsAt, request.CrewIds ?? []),
+            new UpdateNightCommand(id, request.Name, request.StartsAt, request.EndsAt, request.CrewIds ?? [], request.Tables is null ? null : TablesOf(request.Tables)),
             cancellationToken);
 
         return result.IsSuccess ? TypedResults.Ok(NightResponse.Of(result.Value)) : Rejected(result.Error!);
@@ -238,7 +303,7 @@ internal static class NightsEndpoints
         CancellationToken cancellationToken)
     {
         Result<NightSummary> result = await handler.HandleAsync(
-            new CreateNightCommand(request.Name, request.StartsAt, request.EndsAt, request.CrewIds ?? []),
+            new CreateNightCommand(request.Name, request.StartsAt, request.EndsAt, request.CrewIds ?? [], TablesOf(request.Tables)),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -248,6 +313,9 @@ internal static class NightsEndpoints
         return TypedResults.Created((string?)null, NightResponse.Of(result.Value));
     }
 
+    private static NightTableRequest[] TablesOf(IReadOnlyList<NightTableRequestBody>? tables) =>
+        [.. (tables ?? []).Select(table => new NightTableRequest(table.TableId, table.Budget))];
+
     /// <summary>
     /// Overlapping argues with the venue's other nights, so it is a conflict, and
     /// so does stock that moved or a night that closed while the screen was
@@ -256,7 +324,9 @@ internal static class NightsEndpoints
     private static readonly Dictionary<string, int> StatusByErrorCode = new(StringComparer.Ordinal)
     {
         [NightErrors.NotFound.Code] = StatusCodes.Status404NotFound,
+        [NightErrors.TableNotInNight.Code] = StatusCodes.Status404NotFound,
         [NightErrors.Overlaps.Code] = StatusCodes.Status409Conflict,
+        [NightErrors.TablesMoved.Code] = StatusCodes.Status409Conflict,
         [NightErrors.StockClosed.Code] = StatusCodes.Status409Conflict,
         [NightErrors.StoreroomShort.Code] = StatusCodes.Status409Conflict,
         [NightErrors.BarHoldsStock.Code] = StatusCodes.Status409Conflict,

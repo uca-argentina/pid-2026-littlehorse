@@ -6,12 +6,16 @@ import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { STAFF_USERS_URL } from '../../staff-users/staff-users.service';
 import type { StaffUser } from '../../staff-users/staff-users.service';
+import { TABLES_URL } from '../../tables/tables.service';
+import type { VipTable } from '../../tables/tables.service';
+import { formatPrice } from '../../../shared/money/price';
 import { NightForm } from '../components/night-form/night-form';
 import { NightStock } from '../components/night-stock/night-stock';
+import { NightTableCodes } from '../components/night-table-codes/night-table-codes';
 import { nightHours, phaseOf } from '../night-calendar';
 import type { NightPhase } from '../night-calendar';
 import { NIGHTS_URL } from '../nights.service';
-import type { NewNight, Night } from '../nights.service';
+import type { NewNight, Night, NightTable } from '../nights.service';
 import { SaveNightStore, refusalFor } from '../save-night.store';
 
 const PHASE_NAMES: Record<NightPhase, string> = {
@@ -30,7 +34,7 @@ type LoadFailure = 'none' | 'notFound' | 'unreachable';
  */
 @Component({
   selector: 'drinkit-night-page',
-  imports: [AdminHeader, NightForm, NightStock, RouterLink],
+  imports: [AdminHeader, NightForm, NightStock, NightTableCodes, RouterLink],
   providers: [SaveNightStore],
   styleUrl: './night-pages.scss',
   templateUrl: './night.page.html',
@@ -46,6 +50,33 @@ export class NightPage {
   protected readonly night = httpResource<Night>(() => `${NIGHTS_URL}/${this.id()}`);
 
   protected readonly team = httpResource<StaffUser[]>(() => STAFF_USERS_URL);
+
+  /** The venue's VIP tables, for the form to offer (US-40). */
+  protected readonly venueTables = httpResource<VipTable[]>(() => TABLES_URL);
+
+  /** The tables this night sells, with their budgets. */
+  protected readonly nightTables = httpResource<NightTable[]>(
+    () => `${NIGHTS_URL}/${this.id()}/tables`,
+  );
+
+  /**
+   * Everything the form starts from. Drawn before the night's tables arrive,
+   * a save would send none of them and take every table out of the night.
+   */
+  protected readonly ready = computed(
+    () =>
+      this.night.hasValue() &&
+      this.team.hasValue() &&
+      this.venueTables.hasValue() &&
+      this.nightTables.hasValue(),
+  );
+
+  /** "Mesa 5 · $ 150.000,00", for a finished night that is only read. */
+  protected readonly tableLines = computed(() =>
+    (this.nightTables.hasValue() ? this.nightTables.value() : []).map(
+      (table) => `Mesa ${table.number} · $ ${formatPrice(table.budget)}`,
+    ),
+  );
 
   /** Read against the moment it arrived, as the listing does. */
   protected readonly phase = computed<NightPhase | null>(() =>
@@ -74,7 +105,11 @@ export class NightPage {
   });
 
   protected readonly failure = computed<LoadFailure>(() => {
-    const error = this.night.error() ?? this.team.error();
+    const error =
+      this.night.error() ??
+      this.team.error() ??
+      this.venueTables.error() ??
+      this.nightTables.error();
 
     if (error === undefined) return 'none';
 
@@ -86,6 +121,8 @@ export class NightPage {
   protected retry(): void {
     if (this.night.error() !== undefined) this.night.reload();
     if (this.team.error() !== undefined) this.team.reload();
+    if (this.venueTables.error() !== undefined) this.venueTables.reload();
+    if (this.nightTables.error() !== undefined) this.nightTables.reload();
   }
 
   protected save(night: NewNight): void {
