@@ -12,6 +12,6 @@ internal sealed class TableQueries(DrinkItDbContext context) : ITableQueries
         await context.Tables
             .AsNoTracking()
             .OrderBy(table => table.Number)
-            .Select(table => new TableSummary(table.Id, table.Number, table.IsActive, new AuditInfo(table.CreatedAt, table.CreatedBy, table.LastModifiedAt, table.LastModifiedBy)))
+            .Select(table => new TableSummary(table.Id, table.Number, table.Capacity, table.Location, table.IsActive, new AuditInfo(table.CreatedAt, table.CreatedBy, table.LastModifiedAt, table.LastModifiedBy)))
             .ToListAsync(cancellationToken);
 }

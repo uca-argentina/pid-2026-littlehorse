@@ -47,7 +47,7 @@ async function logInAsTheAdministrator(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/staff\/products$/);
 }
 
-async function addATable(page: Page, number: number): Promise<void> {
+async function addATable(page: Page, number: number, location = ''): Promise<void> {
   await page.getByRole('link', { name: /nueva mesa/i }).click();
 
   const field = page.getByRole('textbox', { name: /^número/i });
@@ -57,12 +57,20 @@ async function addATable(page: Page, number: number): Promise<void> {
   // binding is done; nobody types that fast, so this is a wait of the test.
   await expect(field).toHaveClass(/ng-pristine/);
   await field.fill(`${number}`);
+  await page.getByRole('textbox', { name: /^personas/i }).fill('10');
+  await page.getByRole('textbox', { name: /^ubicación/i }).fill(location);
   await page.getByRole('button', { name: /crear mesa/i }).click();
 }
 
-/** The row of one table, not of 5 when looking for 55. */
+/**
+ * The row of one table, not of 5 when looking for 55. Matched on the exact
+ * "Mesa N" text and not on the row's: Angular drops the whitespace between the
+ * number and the people under it, so the row reads "Mesa 5510 personas".
+ */
 function rowOf(page: Page, number: number): Locator {
-  return page.getByRole('listitem').filter({ hasText: new RegExp(`Mesa ${number}(?!\\d)`) });
+  return page
+    .getByRole('listitem')
+    .filter({ has: page.getByText(`Mesa ${number}`, { exact: true }) });
 }
 
 test.describe('VIP tables', () => {
@@ -71,11 +79,11 @@ test.describe('VIP tables', () => {
 
     await logInAsTheAdministrator(page);
     await page.goto(tablesPath);
-    await addATable(page, number);
+    await addATable(page, number, 'Al lado de la cabina');
 
     // Saving lands back on the listing, where the new table is.
     await expect(page).toHaveURL(new RegExp(`${tablesPath}$`));
-    await expect(rowOf(page, number)).toBeVisible();
+    await expect(rowOf(page, number)).toContainText('10 personas · Al lado de la cabina');
 
     await page
       .getByRole('button', { name: new RegExp(`dar de baja la mesa ${number}$`, 'i') })

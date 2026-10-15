@@ -13,16 +13,26 @@ public sealed class Table : AuditStamps, IBelongsToVenue
     {
         public const string VenueRequired = "table.venue_required";
         public const string NumberOutOfRange = "table.number_out_of_range";
+        public const string CapacityOutOfRange = "table.capacity_out_of_range";
+        public const string LocationLength = "table.location_length";
     }
 
     /// <summary>The highest number a venue can give a table: three digits fit the label a waiter reads.</summary>
     public const int NumberMaxValue = 999;
 
-    private Table(Guid id, Guid venueId, int number)
+    /// <summary>The most people a package can be sold for: a VIP table, not a whole sector.</summary>
+    public const int CapacityMaxValue = 50;
+
+    /// <summary>Short enough for the line under "Mesa 5" in the listing and the night's tables.</summary>
+    public const int LocationMaxLength = 60;
+
+    private Table(Guid id, Guid venueId, int number, int capacity, string? location)
     {
         Id = id;
         VenueId = venueId;
         Number = number;
+        Capacity = capacity;
+        Location = location;
         IsActive = true;
     }
 
@@ -32,14 +42,25 @@ public sealed class Table : AuditStamps, IBelongsToVenue
 
     public int Number { get; }
 
+    /// <summary>How many people the package is sold for.</summary>
+    public int Capacity { get; private set; }
+
+    /// <summary>Where it sits, in the venue's own words ("Al lado de la cabina"). Optional.</summary>
+    public string? Location { get; private set; }
+
     public bool IsActive { get; private set; }
 
-    public static Table Create(Guid venueId, int number, DateTimeOffset createdAt)
+    public static Table Create(Guid venueId, int number, int capacity, string? location, DateTimeOffset createdAt)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Tables must belong to a venue.");
         if (number is < 1 or > NumberMaxValue) throw new DomainException(ErrorCodes.NumberOutOfRange, $"The table number has to be between 1 and {NumberMaxValue}.");
+        if (capacity is < 1 or > CapacityMaxValue) throw new DomainException(ErrorCodes.CapacityOutOfRange, $"A table seats between 1 and {CapacityMaxValue} people.");
 
-        return new Table(Guid.CreateVersion7(), venueId, number)
+        string? cleanLocation = string.IsNullOrWhiteSpace(location) ? null : location.Trim();
+
+        if (cleanLocation?.Length > LocationMaxLength) throw new DomainException(ErrorCodes.LocationLength, $"The location cannot be longer than {LocationMaxLength} characters.");
+
+        return new Table(Guid.CreateVersion7(), venueId, number, capacity, cleanLocation)
         {
             CreatedAt = createdAt,
         };

@@ -407,7 +407,7 @@ export interface paths {
     /** Lists the venue's VIP tables by number, the ones put away included. */
     get: operations['ListTables'];
     put?: never;
-    /** Adds a VIP table with its number. */
+    /** Adds a VIP table with its number, how many people it seats and where it is. */
     post: operations['CreateTable'];
     delete?: never;
     options?: never;
@@ -881,6 +881,9 @@ export interface components {
     CreateTableRequest: {
       /** Format: int32 */
       number: number;
+      /** Format: int32 */
+      capacity: number;
+      location: null | string;
     };
     /**
      * @description Where an order is, as the customer's phone reads it.
@@ -1117,6 +1120,9 @@ export interface components {
       id: string;
       /** Format: int32 */
       number: number;
+      /** Format: int32 */
+      capacity: number;
+      location: null | string;
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
     };

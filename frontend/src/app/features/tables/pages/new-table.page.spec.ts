@@ -11,7 +11,14 @@ import { NewTablePage } from './new-table.page';
 
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
 
-const created: VipTable = { id: 'id-1', number: 5, isActive: true, audit: noAudit };
+const created: VipTable = {
+  id: 'id-1',
+  number: 5,
+  capacity: 8,
+  location: null,
+  isActive: true,
+  audit: noAudit,
+};
 
 const rejectedWith = (status: number, type: string) =>
   vi.fn().mockReturnValue(throwError(() => new HttpErrorResponse({ status, error: { type } })));
@@ -33,8 +40,22 @@ function numberField(): HTMLInputElement {
   return screen.getByLabelText(/^número/i) as HTMLInputElement;
 }
 
+function capacityField(): HTMLInputElement {
+  return screen.getByLabelText(/^personas/i) as HTMLInputElement;
+}
+
+function locationField(): HTMLInputElement {
+  return screen.getByLabelText(/^ubicación/i) as HTMLInputElement;
+}
+
+function fill(field: HTMLInputElement, value: string): void {
+  fireEvent.input(field, { target: { value } });
+}
+
+/** Types the number with a valid capacity, so the case is only about the number. */
 function type(value: string): void {
-  fireEvent.input(numberField(), { target: { value } });
+  fill(numberField(), value);
+  fill(capacityField(), '8');
 }
 
 function save(): void {
@@ -42,13 +63,65 @@ function save(): void {
 }
 
 describe('NewTablePage', () => {
-  it('sends the number that was typed, as a number', async () => {
+  it('sends the number, the people and the location that were typed', async () => {
     const { create } = await openScreen();
 
-    type(' 5 ');
+    fill(numberField(), ' 5 ');
+    fill(capacityField(), ' 10 ');
+    fill(locationField(), '  Al lado de la cabina  ');
     save();
 
-    expect(create).toHaveBeenCalledWith({ number: 5 });
+    expect(create).toHaveBeenCalledWith({
+      number: 5,
+      capacity: 10,
+      location: 'Al lado de la cabina',
+    });
+  });
+
+  it('sends no location when it was left blank', async () => {
+    const { create } = await openScreen();
+
+    type('5');
+    fill(locationField(), '   ');
+    save();
+
+    expect(create).toHaveBeenCalledWith({ number: 5, capacity: 8, location: null });
+  });
+
+  it.each([
+    ['no people', ''],
+    ['zero people', '0'],
+    ['more people than a table seats', '51'],
+    ['people with decimals', '4.5'],
+  ])('refuses to save with %s', async (_case, value) => {
+    const { create } = await openScreen();
+
+    type('5');
+    fill(capacityField(), value);
+    save();
+
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('says how many people a table can seat, next to the people', async () => {
+    const { rendered } = await openScreen();
+
+    fill(numberField(), '5');
+    save();
+    await rendered.fixture.whenStable();
+
+    expect(screen.getByText(/entre 1 y 50 personas/i)).not.toBeNull();
+    expect(capacityField().getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('refuses a location longer than the listing can show', async () => {
+    const { create } = await openScreen();
+
+    type('5');
+    fill(locationField(), 'a'.repeat(61));
+    save();
+
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('goes back to the listing once the table exists', async () => {

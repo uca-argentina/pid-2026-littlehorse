@@ -224,7 +224,7 @@ Está en el diseño funcional y **se modela más adelante**, no ahora:
 
 | Entidad | Por qué se posterga |
 |---|---|
-| `Table` | **Modelada en el Sprint 3 (US-39)**: número único por boliche y baja lógica. |
+| `Table` | **Modelada en el Sprint 3 (US-39)**: número único por boliche, personas, ubicación y baja lógica. |
 | `VipAccount` | El Sprint 1 es sólo retiro en barra. |
 | `PushSubscription` | Las notificaciones se simulan con cambios de estado. |
 | `BarStation` | Una sola barra en el MVP; el KDS no se reparte por estación. |

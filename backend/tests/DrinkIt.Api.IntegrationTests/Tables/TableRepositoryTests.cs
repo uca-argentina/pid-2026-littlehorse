@@ -58,7 +58,7 @@ public sealed class TableRepositoryTests(SqlServerFixture sql)
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
         TableRepository repository = new(asMine);
 
-        Assert.True(await repository.TryAddAsync(Table.Create(mine.Id, 5, DateTimeOffset.UtcNow), CancellationToken.None));
+        Assert.True(await repository.TryAddAsync(Table.Create(mine.Id, 5, 8, null, DateTimeOffset.UtcNow), CancellationToken.None));
         Assert.True(await repository.NumberExistsAsync(5, CancellationToken.None));
     }
 
@@ -73,7 +73,7 @@ public sealed class TableRepositoryTests(SqlServerFixture sql)
         await using DrinkItDbContext asMine = sql.CreateContext(mine.Id);
 
         bool added = await new TableRepository(asMine).TryAddAsync(
-            Table.Create(mine.Id, 5, DateTimeOffset.UtcNow),
+            Table.Create(mine.Id, 5, 8, null, DateTimeOffset.UtcNow),
             CancellationToken.None);
 
         Assert.False(added);
@@ -134,8 +134,8 @@ public sealed class TableRepositoryTests(SqlServerFixture sql)
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.AddRange(mine, theirs);
-        seed.Tables.Add(Table.Create(mine.Id, mineNumber, DateTimeOffset.UtcNow));
-        seed.Tables.Add(Table.Create(theirs.Id, theirsNumber, DateTimeOffset.UtcNow));
+        seed.Tables.Add(Table.Create(mine.Id, mineNumber, 8, null, DateTimeOffset.UtcNow));
+        seed.Tables.Add(Table.Create(theirs.Id, theirsNumber, 8, null, DateTimeOffset.UtcNow));
         await seed.SaveChangesAsync();
 
         return (mine, theirs);

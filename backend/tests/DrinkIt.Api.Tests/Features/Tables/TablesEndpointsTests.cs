@@ -14,7 +14,7 @@ public class TablesEndpointsTests
 
     private static readonly Guid TheVenue = Guid.CreateVersion7();
 
-    private static Table ATable(int number = 5) => Table.Create(TheVenue, number, DateTimeOffset.UtcNow);
+    private static Table ATable(int number = 5) => Table.Create(TheVenue, number, 8, null, DateTimeOffset.UtcNow);
 
     // Pins the success shape: the Angular client is generated from it, so
     // renaming a property here breaks the screen silently.
@@ -23,13 +23,15 @@ public class TablesEndpointsTests
     {
         CreateTableHandler handler = new(new FakeTables(), new Fake.CurrentVenue(), TimeProvider.System);
 
-        IResult result = await TablesEndpoints.CreateAsync(new CreateTableRequest(5), handler, CancellationToken.None);
+        IResult result = await TablesEndpoints.CreateAsync(new CreateTableRequest(5, 10, "Next to the DJ booth"), handler, CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Post);
 
         Assert.Equal(StatusCodes.Status201Created, response.StatusCode);
         Assert.StartsWith("application/json", response.ContentType, StringComparison.Ordinal);
         Assert.NotEqual(Guid.Empty, response.Body.GetProperty("id").GetGuid());
         Assert.Equal(5, response.Body.GetProperty("number").GetInt32());
+        Assert.Equal(10, response.Body.GetProperty("capacity").GetInt32());
+        Assert.Equal("Next to the DJ booth", response.Text("location"));
         Assert.True(response.Body.GetProperty("isActive").GetBoolean());
         Assert.True(response.Body.TryGetProperty("audit", out _));
     }
@@ -41,7 +43,7 @@ public class TablesEndpointsTests
     {
         CreateTableHandler handler = new(new FakeTables(taken: 5), new Fake.CurrentVenue(), TimeProvider.System);
 
-        IResult result = await TablesEndpoints.CreateAsync(new CreateTableRequest(5), handler, CancellationToken.None);
+        IResult result = await TablesEndpoints.CreateAsync(new CreateTableRequest(5, 8, null), handler, CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Post);
 
         Assert.Equal(StatusCodes.Status409Conflict, response.StatusCode);
@@ -57,7 +59,7 @@ public class TablesEndpointsTests
         CreateTableHandler handler = new(new FakeTables(), new Fake.CurrentVenue(), TimeProvider.System);
 
         DomainException error = await Assert.ThrowsAsync<DomainException>(
-            () => TablesEndpoints.CreateAsync(new CreateTableRequest(0), handler, CancellationToken.None));
+            () => TablesEndpoints.CreateAsync(new CreateTableRequest(0, 8, null), handler, CancellationToken.None));
 
         Assert.Equal(Table.ErrorCodes.NumberOutOfRange, error.Code);
     }
@@ -66,8 +68,8 @@ public class TablesEndpointsTests
     public async Task ListAsync_WhenTheVenueHasTables_RespondsWithAllOfThemPutAwayOnesIncluded()
     {
         FakeTableQueries queries = new(
-            new TableSummary(Guid.CreateVersion7(), 2, true, new AuditInfo(null, null, null, null)),
-            new TableSummary(Guid.CreateVersion7(), 7, false, new AuditInfo(null, null, null, null)));
+            new TableSummary(Guid.CreateVersion7(), 2, 8, null, true, new AuditInfo(null, null, null, null)),
+            new TableSummary(Guid.CreateVersion7(), 7, 8, null, false, new AuditInfo(null, null, null, null)));
 
         IResult result = await TablesEndpoints.ListAsync(queries, CancellationToken.None);
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Get);

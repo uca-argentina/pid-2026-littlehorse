@@ -358,7 +358,18 @@ una KDS.
 - **El alta y el listado son páginas separadas** (`/staff/tables` y `/staff/tables/new`), con
   la pestaña "Mesas" en el header de administración.
 
+**Ampliada el 2026-10-15.** La mesa se carga una sola vez, fuera de las noches, con lo que la
+describe:
+
+- **Personas (`Capacity`)**, obligatoria, de 1 a 50: para cuántas personas se vende el paquete.
+- **Ubicación (`Location`)**, opcional, hasta 60 caracteres ("Al lado de la cabina"): para que
+  el mozo la encuentre. En el listado se lee completa debajo del número, sin cortarse.
+- Las mesas que ya existían quedan con capacidad 1 (la migración no puede dejar un valor que el
+  dominio rechaza).
+
 ### US-40 · Abrir la cuenta de una mesa con su saldo
+
+> **Decidido el 2026-10-15** (ver al final de la story).
 
 > **Como** administrador
 > **quiero** abrir la cuenta de una mesa para la noche con el saldo del paquete que se vendió
@@ -389,6 +400,26 @@ una KDS.
   el local quiere otra cosa, es una decisión de producto para otro sprint.
 - **Diseño: no está dibujado.** La ficha de la mesa con "Abrir cuenta", el saldo y el QR para
   mostrar o compartir.
+
+**Decidido el 2026-10-15:**
+
+- **La mesa es fija; la cuenta es de una noche.** `VipAccount` lleva `VenueId`, `NightId`,
+  `TableId`, `Balance`, `AccessCode` y un `rowversion`. Índice único `(VenueId, NightId, TableId)`:
+  una mesa tiene a lo sumo una cuenta por noche. No hay acción de "cerrar": la cierra el fin de
+  la noche (criterio 3, y §8.2: no se modela apertura/cierre de sesión).
+- **Se agregan desde la ficha de la noche, todas o las que se elijan**, cada una con su saldo.
+  Es una sección nueva debajo del stock de la noche, armada igual. Sólo ofrece mesas activas
+  (completa el criterio 2 de US-39). Se pueden agregar antes de que la noche empiece, porque
+  los paquetes se venden antes; el código sirve sólo mientras la noche está en curso.
+- **El paquete se paga siempre en el boliche.** El sistema registra el saldo, no cobra la carga.
+- **Con mesas, la noche necesita un mozo.** Agregar una mesa a una noche sin mozo se rechaza, y
+  también sacar al último mozo de una noche que tiene mesas (la nota de US-35).
+- **Dar de baja una mesa con cuenta en una noche no terminada se rechaza** (el borde de US-39),
+  en `DeactivateTableHandler`.
+- **El código es un secreto como `TrackingToken`.** El QR abre `/{venueSlug}/table/{code}`.
+  Regenerarlo mata el anterior y no toca el saldo.
+- **Cargar saldo** (`TopUp`) usa el `rowversion`: si choca con un pedido que descontó en el
+  medio, relee y vuelve a sumar.
 
 ### US-41 · Pedir desde la mesa VIP con el saldo
 
@@ -427,6 +458,27 @@ una KDS.
   donde estás").
 - **Multi-tenancy:** el código de una mesa de otro local da el mismo error que uno inventado,
   como pasa con el QR de retiro (US-20).
+
+**Decidido el 2026-10-15:**
+
+- **Entrada:** el QR lleva a `/{venueSlug}/table/{code}`. El front consulta
+  `GET /api/{venueSlug}/vip-accounts/{code}` (número de mesa y saldo), guarda el código en
+  `sessionStorage` y pasa a la carta. Vencido, regenerado, inventado o de otro local: un solo
+  error, con "Pedir para retirar en la barra".
+- **`IPaymentStrategy` cambia una vez:** de `Settle(Order)` a
+  `SettleAsync(Order, PaymentRequest, ct)` con `Result`, porque la estrategia de saldo tiene que
+  cargar la cuenta. `ConfirmOrderHandler` no cambia: el pedido pagado se encola en la barra
+  elegida, como el digital.
+- **Concurrencia (criterio 3):** la cuenta se trackea en el mismo `DbContext` que el pedido y un
+  solo `SaveChanges` guarda los dos. El que choca con el `rowversion` recibe
+  `vip_account.balance_moved` con el saldo actualizado, sin descontar nada.
+- **El pedido guarda `TableId` y `TableNumber`** (copia, para que los viejos sigan diciendo
+  "Mesa 5") y cuánto pagó con saldo (`BalanceAmount`), así US-42 suma el importe digital sin
+  migrar pedidos viejos.
+- **En los reportes (US-48) todo cuenta como venta.** Si hace falta, se diferencia lo pagado con
+  saldo de lo demás más adelante.
+- **Pendiente:** sin US-43/44, un pedido de mesa queda en "Listo" para siempre (el KDS no lo
+  entrega). Conviene que entren junto con esta story o enseguida después.
 
 ### US-42 · Cubrir la diferencia si el saldo no alcanza
 

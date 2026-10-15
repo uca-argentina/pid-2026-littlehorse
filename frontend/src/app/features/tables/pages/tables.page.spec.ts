@@ -11,8 +11,22 @@ import { TablesPage } from './tables.page';
 
 const noAudit = { createdAt: null, createdBy: null, lastModifiedAt: null, lastModifiedBy: null };
 
-const tableTwo: VipTable = { id: 'two', number: 2, isActive: true, audit: noAudit };
-const tableSeven: VipTable = { id: 'seven', number: 7, isActive: false, audit: noAudit };
+const tableTwo: VipTable = {
+  id: 'two',
+  number: 2,
+  capacity: 10,
+  location: 'Al lado de la cabina',
+  isActive: true,
+  audit: noAudit,
+};
+const tableSeven: VipTable = {
+  id: 'seven',
+  number: 7,
+  capacity: 1,
+  location: null,
+  isActive: false,
+  audit: noAudit,
+};
 
 async function openScreen(service: Partial<Record<'deactivate' | 'reactivate', unknown>> = {}) {
   const rendered = await render(TablesPage, {
@@ -57,6 +71,16 @@ describe('TablesPage', () => {
 
     expect(rows[0].textContent).toContain('Mesa 2');
     expect(rows[1].textContent).toContain('Mesa 7');
+  });
+
+  it('says how many people each table seats and where it is', async () => {
+    await openScreenShowing([tableTwo, tableSeven]);
+
+    const [withLocation, withoutLocation] = screen.getAllByRole('listitem');
+
+    expect(withLocation.textContent).toContain('10 personas · Al lado de la cabina');
+    expect(withoutLocation.textContent).toContain('1 persona');
+    expect(withoutLocation.textContent).not.toContain('·');
   });
 
   it('says which tables are put away', async () => {

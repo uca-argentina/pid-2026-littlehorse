@@ -4,10 +4,10 @@ using DrinkIt.Domain.Tables;
 namespace DrinkIt.Application.Tables;
 
 /// <summary>One table as the administration screen lists it and gets it back after a change.</summary>
-public sealed record TableSummary(Guid Id, int Number, bool IsActive, AuditInfo Audit)
+public sealed record TableSummary(Guid Id, int Number, int Capacity, string? Location, bool IsActive, AuditInfo Audit)
 {
     internal static TableSummary Of(Table table) =>
-        new(table.Id, table.Number, table.IsActive, AuditInfo.Of(table));
+        new(table.Id, table.Number, table.Capacity, table.Location, table.IsActive, AuditInfo.Of(table));
 }
 
 public static class TableErrors

@@ -41,7 +41,10 @@
       <ul class="rows" aria-label="Mesas VIP">
         @for (table of rows(); track table.id) {
           <li class="row" [class.row-off]="!table.isActive">
-            <span class="number">Mesa {{ table.number }}</span>
+            <span class="who">
+              <span class="number">Mesa {{ table.number }}</span>
+              <span class="details">{{ detailsOf(table) }}</span>
+            </span>
             @if (!table.isActive) {
               <span class="chip chip-off">Dada de baja</span>
             }

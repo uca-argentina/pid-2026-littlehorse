@@ -1,25 +1,34 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { AbstractControl, ValidationErrors } from '@angular/forms';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AdminHeader } from '../../../shared/admin-header/admin-header';
 import { NewTableStore } from '../new-table.store';
-import { TABLE_NUMBER_MAX } from '../tables.service';
+import { TABLE_CAPACITY_MAX, TABLE_LOCATION_MAX_LENGTH, TABLE_NUMBER_MAX } from '../tables.service';
 
 /**
  * Whole digits only, between 1 and the domain's limit. Judged on the trimmed
  * text and not through Number(): "5.5", "1e2" and "0x10" all parse, and none of
- * them is a table number.
+ * them is a table number or a head count.
  */
-function validNumber(control: AbstractControl): ValidationErrors | null {
+function wholeBetweenOneAnd(max: number) {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const text = typeof control.value === 'string' ? control.value.trim() : '';
+
+    if (!/^\d+$/.test(text)) return { notANumber: true };
+
+    const value = Number(text);
+
+    return value >= 1 && value <= max ? null : { outOfRange: true };
+  };
+}
+
+/** Counted on the trimmed text, which is what the domain keeps. */
+function locationFits(control: AbstractControl): ValidationErrors | null {
   const text = typeof control.value === 'string' ? control.value.trim() : '';
 
-  if (!/^\d+$/.test(text)) return { notANumber: true };
-
-  const value = Number(text);
-
-  return value >= 1 && value <= TABLE_NUMBER_MAX ? null : { outOfRange: true };
+  return Validators.maxLength(TABLE_LOCATION_MAX_LENGTH)({ value: text } as AbstractControl);
 }
 
 @Component({
@@ -40,8 +49,20 @@ export class NewTablePage {
 
   protected readonly numberMax = TABLE_NUMBER_MAX;
 
+  protected readonly capacityMax = TABLE_CAPACITY_MAX;
+
+  protected readonly locationMaxLength = TABLE_LOCATION_MAX_LENGTH;
+
   protected readonly form = new FormGroup({
-    number: new FormControl('', { nonNullable: true, validators: [validNumber] }),
+    number: new FormControl('', {
+      nonNullable: true,
+      validators: [wholeBetweenOneAnd(TABLE_NUMBER_MAX)],
+    }),
+    capacity: new FormControl('', {
+      nonNullable: true,
+      validators: [wholeBetweenOneAnd(TABLE_CAPACITY_MAX)],
+    }),
+    location: new FormControl('', { nonNullable: true, validators: [locationFits] }),
   });
 
   /**
@@ -69,6 +90,26 @@ export class NewTablePage {
       : null;
   });
 
+  protected readonly capacityError = computed(() => {
+    this.typed();
+
+    if (!this.attempted() || this.store.isSending()) return null;
+
+    return this.form.controls.capacity.invalid
+      ? `Tiene que ser un número entero, entre 1 y ${TABLE_CAPACITY_MAX} personas.`
+      : null;
+  });
+
+  protected readonly locationError = computed(() => {
+    this.typed();
+
+    if (!this.attempted() || this.store.isSending()) return null;
+
+    return this.form.controls.location.invalid
+      ? `La ubicación puede tener hasta ${TABLE_LOCATION_MAX_LENGTH} caracteres.`
+      : null;
+  });
+
   constructor() {
     // Reactive forms are not signal-aware, so enabling and disabling is driven
     // from here rather than bound in the template.
@@ -83,6 +124,12 @@ export class NewTablePage {
 
     if (this.form.invalid || this.store.isSending()) return;
 
-    this.store.submit(this.venueSlug(), { number: Number(this.form.getRawValue().number.trim()) });
+    const { number, capacity, location } = this.form.getRawValue();
+
+    this.store.submit(this.venueSlug(), {
+      number: Number(number.trim()),
+      capacity: Number(capacity.trim()),
+      location: location.trim() === '' ? null : location.trim(),
+    });
   }
 }

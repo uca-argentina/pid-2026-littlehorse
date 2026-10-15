@@ -42,6 +42,51 @@
       }
     </div>
 
+    <div class="field">
+      <label class="label" for="capacity">Personas</label>
+      <input
+        id="capacity"
+        class="input"
+        [class.input-bad]="capacityError() !== null"
+        [attr.aria-invalid]="capacityError() !== null ? 'true' : null"
+        [attr.aria-describedby]="capacityError() !== null ? 'capacity-error' : 'capacity-help'"
+        formControlName="capacity"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="10"
+      />
+      @if (capacityError() !== null) {
+        <p id="capacity-error" class="bad">{{ capacityError() }}</p>
+      } @else {
+        <p id="capacity-help" class="help">
+          Para cuántas personas se vende el paquete, entre 1 y {{ capacityMax }}.
+        </p>
+      }
+    </div>
+
+    <div class="field">
+      <label class="label" for="location">Ubicación <span class="optional">(opcional)</span></label>
+      <input
+        id="location"
+        class="input"
+        [class.input-bad]="locationError() !== null"
+        [attr.aria-invalid]="locationError() !== null ? 'true' : null"
+        [attr.aria-describedby]="locationError() !== null ? 'location-error' : 'location-help'"
+        formControlName="location"
+        type="text"
+        autocomplete="off"
+        placeholder="Al lado de la cabina"
+      />
+      @if (locationError() !== null) {
+        <p id="location-error" class="bad">{{ locationError() }}</p>
+      } @else {
+        <p id="location-help" class="help">
+          Para que el mozo la encuentre rápido. Hasta {{ locationMaxLength }} caracteres.
+        </p>
+      }
+    </div>
+
     <button class="cta" type="submit" [disabled]="store.isSending()">
       @if (store.isSending()) {
         Creando

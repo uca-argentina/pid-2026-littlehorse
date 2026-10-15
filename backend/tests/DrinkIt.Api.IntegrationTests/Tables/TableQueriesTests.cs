@@ -22,9 +22,9 @@ public sealed class TableQueriesTests(SqlServerFixture sql)
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.Add(mine);
         seed.Tables.AddRange(
-            Table.Create(mine.Id, 12, Evening),
-            Table.Create(mine.Id, 2, Evening.AddMinutes(1)),
-            Table.Create(mine.Id, 7, Evening.AddMinutes(2)));
+            Table.Create(mine.Id, 12, 8, null, Evening),
+            Table.Create(mine.Id, 2, 8, null, Evening.AddMinutes(1)),
+            Table.Create(mine.Id, 7, 8, null, Evening.AddMinutes(2)));
         await seed.SaveChangesAsync();
 
         IReadOnlyList<TableSummary> listed = await new TableQueries(seed).ListAsync(CancellationToken.None);
@@ -32,17 +32,34 @@ public sealed class TableQueriesTests(SqlServerFixture sql)
         Assert.Equal([2, 7, 12], listed.Select(table => table.Number));
     }
 
+    [Fact]
+    public async Task ListAsync_WhenATableHasCapacityAndLocation_ReturnsBoth()
+    {
+        Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
+
+        await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
+        seed.Venues.Add(mine);
+        seed.Tables.Add(Table.Create(mine.Id, 4, 12, "Next to the DJ booth", Evening));
+        await seed.SaveChangesAsync();
+
+        await using DrinkItDbContext reopened = sql.CreateContext(mine.Id);
+        TableSummary listed = Assert.Single(await new TableQueries(reopened).ListAsync(CancellationToken.None));
+
+        Assert.Equal(12, listed.Capacity);
+        Assert.Equal("Next to the DJ booth", listed.Location);
+    }
+
     // Put-away tables are listed, flagged: they are the ones to bring back.
     [Fact]
     public async Task ListAsync_WhenATableIsPutAway_ListsItInactive()
     {
         Venue mine = Venue.Create("Bar Mine", $"bar-{Guid.NewGuid():N}");
-        Table away = Table.Create(mine.Id, 3, Evening);
+        Table away = Table.Create(mine.Id, 3, 8, null, Evening);
         away.Deactivate();
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.Add(mine);
-        seed.Tables.AddRange(Table.Create(mine.Id, 1, Evening), away);
+        seed.Tables.AddRange(Table.Create(mine.Id, 1, 8, null, Evening), away);
         await seed.SaveChangesAsync();
 
         IReadOnlyList<TableSummary> listed = await new TableQueries(seed).ListAsync(CancellationToken.None);
@@ -60,8 +77,8 @@ public sealed class TableQueriesTests(SqlServerFixture sql)
 
         await using DrinkItDbContext seed = sql.CreateContext(mine.Id);
         seed.Venues.AddRange(mine, theirs);
-        seed.Tables.Add(Table.Create(mine.Id, 1, Evening));
-        seed.Tables.Add(Table.Create(theirs.Id, 9, Evening));
+        seed.Tables.Add(Table.Create(mine.Id, 1, 8, null, Evening));
+        seed.Tables.Add(Table.Create(theirs.Id, 9, 8, null, Evening));
         await seed.SaveChangesAsync();
 
         IReadOnlyList<TableSummary> listed = await new TableQueries(seed).ListAsync(CancellationToken.None);

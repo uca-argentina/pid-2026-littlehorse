@@ -30,7 +30,7 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
         Venue venue = await SeedVenue();
         using HttpClient admin = ClientFor(venue, StaffRole.Administrator);
 
-        using HttpResponseMessage created = await admin.PostAsJsonAsync("/staff/tables", new { number = 5 });
+        using HttpResponseMessage created = await admin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 });
         JsonElement listed = await admin.GetFromJsonAsync<JsonElement>("/staff/tables");
 
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
@@ -43,9 +43,9 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
     {
         Venue venue = await SeedVenue();
         using HttpClient admin = ClientFor(venue, StaffRole.Administrator);
-        await admin.PostAsJsonAsync("/staff/tables", new { number = 5 });
+        await admin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 });
 
-        using HttpResponseMessage again = await admin.PostAsJsonAsync("/staff/tables", new { number = 5 });
+        using HttpResponseMessage again = await admin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 });
 
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
     }
@@ -57,12 +57,12 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
     {
         Venue venue = await SeedVenue();
         using HttpClient admin = ClientFor(venue, StaffRole.Administrator);
-        JsonElement table = await (await admin.PostAsJsonAsync("/staff/tables", new { number = 5 }))
+        JsonElement table = await (await admin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 }))
             .Content.ReadFromJsonAsync<JsonElement>();
         string id = table.GetProperty("id").GetString()!;
 
         using HttpResponseMessage away = await admin.PostAsync($"/staff/tables/{id}/deactivate", content: null);
-        using HttpResponseMessage again = await admin.PostAsJsonAsync("/staff/tables", new { number = 5 });
+        using HttpResponseMessage again = await admin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 });
         using HttpResponseMessage back = await admin.PostAsync($"/staff/tables/{id}/reactivate", content: null);
 
         Assert.Equal(HttpStatusCode.OK, away.StatusCode);
@@ -78,9 +78,25 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
         Venue venue = await SeedVenue();
         using HttpClient admin = ClientFor(venue, StaffRole.Administrator);
 
-        using HttpResponseMessage response = await admin.PostAsJsonAsync("/staff/tables", new { number });
+        using HttpResponseMessage response = await admin.PostAsJsonAsync("/staff/tables", new { number, capacity = 8 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    // A table is sold for a number of people: leaving it out is not a table
+    // that seats nobody, it is a request the domain refuses.
+    [Fact]
+    public async Task Create_WhenTheCapacityIsMissing_RespondsWithTheCapacityProblem()
+    {
+        Venue venue = await SeedVenue();
+        using HttpClient admin = ClientFor(venue, StaffRole.Administrator);
+
+        using HttpResponseMessage response = await admin.PostAsJsonAsync("/staff/tables", new { number = 5 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(
+            "urn:drinkit:problem:table:capacity-out-of-range",
+            (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("type").GetString());
     }
 
     [Theory]
@@ -92,7 +108,7 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
         Venue venue = await SeedVenue();
         using HttpClient staff = ClientFor(venue, role);
 
-        using HttpResponseMessage response = await staff.PostAsJsonAsync("/staff/tables", new { number = 5 });
+        using HttpResponseMessage response = await staff.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -116,7 +132,7 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
         Venue theirs = await SeedVenue();
         using HttpClient myAdmin = ClientFor(mine, StaffRole.Administrator);
         using HttpClient theirAdmin = ClientFor(theirs, StaffRole.Administrator);
-        JsonElement table = await (await theirAdmin.PostAsJsonAsync("/staff/tables", new { number = 5 }))
+        JsonElement table = await (await theirAdmin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 }))
             .Content.ReadFromJsonAsync<JsonElement>();
         string id = table.GetProperty("id").GetString()!;
 
@@ -137,9 +153,9 @@ public sealed class TablesOverHttpTests(SqlServerFixture sql) : IAsyncDisposable
         Venue theirs = await SeedVenue();
         using HttpClient myAdmin = ClientFor(mine, StaffRole.Administrator);
         using HttpClient theirAdmin = ClientFor(theirs, StaffRole.Administrator);
-        await theirAdmin.PostAsJsonAsync("/staff/tables", new { number = 5 });
+        await theirAdmin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 });
 
-        using HttpResponseMessage response = await myAdmin.PostAsJsonAsync("/staff/tables", new { number = 5 });
+        using HttpResponseMessage response = await myAdmin.PostAsJsonAsync("/staff/tables", new { number = 5, capacity = 8 });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }

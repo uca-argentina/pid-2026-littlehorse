@@ -68,6 +68,7 @@ describe('tablesRoutes', () => {
 
     await harness.navigateByUrl('/bar-alfa/staff/tables/new');
     fireEvent.input(screen.getByLabelText(/^número/i), { target: { value: '5' } });
+    fireEvent.input(screen.getByLabelText(/^personas/i), { target: { value: '8' } });
     screen.getByRole('button', { name: /crear mesa/i }).click();
     await harness.fixture.whenStable();
 

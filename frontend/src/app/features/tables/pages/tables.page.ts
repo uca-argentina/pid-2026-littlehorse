@@ -56,6 +56,13 @@ export class TablesPage {
   /** Why the last put-away or reactivation did not go through. */
   protected readonly changeFailure = signal<Failure>('none');
 
+  /** "10 personas · Al lado de la cabina", or just the people when it has no location. */
+  protected detailsOf(table: VipTable): string {
+    const people = `${table.capacity} ${table.capacity === 1 ? 'persona' : 'personas'}`;
+
+    return table.location ? `${people} · ${table.location}` : people;
+  }
+
   protected putAway(table: VipTable): void {
     this.change(this.service.deactivate(table.id));
   }

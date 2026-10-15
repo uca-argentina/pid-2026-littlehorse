@@ -12,6 +12,7 @@ internal sealed class TableConfiguration : IEntityTypeConfiguration<Table>
         builder.ToTable("Tables");
         builder.HasAuditColumns();
         builder.HasKey(table => table.Id);
+        builder.Property(table => table.Location).HasMaxLength(Table.LocationMaxLength);
 
         // Composite with VenueId, not global: two venues must be able to have
         // their own "Mesa 5". It holds for put-away tables too, on purpose: the

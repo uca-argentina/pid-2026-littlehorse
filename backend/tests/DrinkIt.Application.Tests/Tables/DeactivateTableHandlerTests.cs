@@ -6,7 +6,7 @@ namespace DrinkIt.Application.Tests.Tables;
 
 public class DeactivateTableHandlerTests
 {
-    private static Table ATable() => Table.Create(Guid.CreateVersion7(), 5, new DateTimeOffset(2026, 10, 14, 21, 0, 0, TimeSpan.Zero));
+    private static Table ATable() => Table.Create(Guid.CreateVersion7(), 5, 8, null, new DateTimeOffset(2026, 10, 14, 21, 0, 0, TimeSpan.Zero));
 
     [Fact]
     public async Task HandleAsync_WhenTheTableExists_PutsItAwayAndSaves()

@@ -18,6 +18,12 @@ export const TABLES_URL = '/api/staff/tables';
 /** Kept in step with Table.NumberMaxValue in the domain. */
 export const TABLE_NUMBER_MAX = 999;
 
+/** Kept in step with Table.CapacityMaxValue in the domain. */
+export const TABLE_CAPACITY_MAX = 50;
+
+/** Kept in step with Table.LocationMaxLength in the domain. */
+export const TABLE_LOCATION_MAX_LENGTH = 60;
+
 @Injectable({ providedIn: 'root' })
 export class TablesService {
   private readonly http = inject(HttpClient);

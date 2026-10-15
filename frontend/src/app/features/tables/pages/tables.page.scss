@@ -76,12 +76,26 @@
   opacity: 0.65;
 }
 
-.number {
+.who {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
+}
+
+.number {
   font-size: 17px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+// Wraps instead of cutting: the location is how the waiter finds the table,
+// and "Al lado de la cab…" does not get them there.
+.details {
+  color: var(--dk-text-muted);
+  font-size: var(--dk-text-min);
+  overflow-wrap: anywhere;
 }
 
 .chip {

@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace DrinkIt.Api.Features.Tables;
 
 /// <summary>What the administration screen posts to add a table.</summary>
-public sealed record CreateTableRequest(int Number);
+public sealed record CreateTableRequest(int Number, int Capacity, string? Location);
 
-public sealed record TableResponse(Guid Id, int Number, bool IsActive, AuditResponse Audit);
+public sealed record TableResponse(Guid Id, int Number, int Capacity, string? Location, bool IsActive, AuditResponse Audit);
 
 internal static class TablesEndpoints
 {
@@ -31,7 +31,7 @@ internal static class TablesEndpoints
         group
             .MapPost("/", CreateAsync)
             .WithName("CreateTable")
-            .WithSummary("Adds a VIP table with its number.")
+            .WithSummary("Adds a VIP table with its number, how many people it seats and where it is.")
             .Produces<TableResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
@@ -68,9 +68,9 @@ internal static class TablesEndpoints
         CreateTableHandler handler,
         CancellationToken cancellationToken)
     {
-        // A number out of range is not caught here: the domain throws and the
+        // A number or a capacity out of range is not caught here: the domain throws and the
         // global handler turns it into a 400 with the rule's own problem type.
-        Result<TableSummary> result = await handler.HandleAsync(new CreateTableCommand(request.Number), cancellationToken);
+        Result<TableSummary> result = await handler.HandleAsync(new CreateTableCommand(request.Number, request.Capacity, request.Location), cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
 
@@ -97,7 +97,7 @@ internal static class TablesEndpoints
         result.IsSuccess ? TypedResults.Ok(Respond(result.Value)) : Rejected(result.Error!);
 
     private static TableResponse Respond(TableSummary table) =>
-        new(table.Id, table.Number, table.IsActive, AuditResponse.Of(table.Audit));
+        new(table.Id, table.Number, table.Capacity, table.Location, table.IsActive, AuditResponse.Of(table.Audit));
 
     /// <summary>
     /// A taken number is a conflict with the venue's tables, and a missing one a

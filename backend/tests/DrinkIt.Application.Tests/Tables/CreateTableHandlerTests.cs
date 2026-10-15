@@ -17,11 +17,15 @@ public class CreateTableHandlerTests
         FakeTables tables = new();
 
         Result<TableSummary> result = await HandlerOver(tables).HandleAsync(
-            new CreateTableCommand(5), CancellationToken.None);
+            new CreateTableCommand(5, 10, "Next to the DJ booth"), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal(TheVenue, tables.Added!.VenueId);
         Assert.Equal(5, tables.Added.Number);
+        Assert.Equal(10, tables.Added.Capacity);
+        Assert.Equal("Next to the DJ booth", tables.Added.Location);
+        Assert.Equal(10, result.Value.Capacity);
+        Assert.Equal("Next to the DJ booth", result.Value.Location);
         Assert.Equal(Now, tables.Added.CreatedAt);
         Assert.Equal(tables.Added.Id, result.Value.Id);
         Assert.Equal(5, result.Value.Number);
@@ -34,7 +38,7 @@ public class CreateTableHandlerTests
         FakeTables tables = new(taken: 5);
 
         Result<TableSummary> result = await HandlerOver(tables).HandleAsync(
-            new CreateTableCommand(5), CancellationToken.None);
+            new CreateTableCommand(5, 8, null), CancellationToken.None);
 
         Assert.Equal(TableErrors.NumberTaken, result.Error);
         Assert.Null(tables.Added);
@@ -48,7 +52,7 @@ public class CreateTableHandlerTests
         FakeTables tables = new(takenOnInsert: 5);
 
         Result<TableSummary> result = await HandlerOver(tables).HandleAsync(
-            new CreateTableCommand(5), CancellationToken.None);
+            new CreateTableCommand(5, 8, null), CancellationToken.None);
 
         Assert.Equal(TableErrors.NumberTaken, result.Error);
     }
@@ -61,7 +65,7 @@ public class CreateTableHandlerTests
         FakeTables tables = new();
 
         DomainException error = await Assert.ThrowsAsync<DomainException>(
-            () => HandlerOver(tables).HandleAsync(new CreateTableCommand(0), CancellationToken.None));
+            () => HandlerOver(tables).HandleAsync(new CreateTableCommand(0, 8, null), CancellationToken.None));
 
         Assert.Equal(Table.ErrorCodes.NumberOutOfRange, error.Code);
         Assert.Null(tables.Added);

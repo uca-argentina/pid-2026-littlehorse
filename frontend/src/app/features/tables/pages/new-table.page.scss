@@ -48,6 +48,13 @@
   text-transform: uppercase;
 }
 
+.optional {
+  color: var(--dk-text-faint);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .input {
   min-height: 54px;
   padding: 0 var(--dk-space-4);
