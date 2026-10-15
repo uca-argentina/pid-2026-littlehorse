@@ -99,19 +99,32 @@ export class CheckoutPage {
     return error !== undefined && problemTypeOf(error) === ProblemTypes.vipAccountNotFound;
   });
 
-  /** What the balance does not cover, or 0. US-42 will pay it; until then, the order has to fit. */
-  private readonly shortBy = computed(() =>
-    this.table.hasValue() ? Math.max(0, this.cart.total() - this.table.value().balance) : 0,
+  /** What the table's balance gives: all of it, up to the total. */
+  private readonly fromBalance = computed(() =>
+    this.table.hasValue() ? Math.min(this.cart.total(), this.table.value().balance) : 0,
   );
 
-  protected readonly shortfall = computed(() =>
-    this.shortBy() > 0 ? formatPrice(this.shortBy()) : null,
+  /**
+   * What the balance does not cover, or 0: the phone pays it (US-42). To the
+   * cent, because the server checks it is exactly the difference, and a float
+   * left over from the subtraction would never be.
+   */
+  private readonly shortBy = computed(() =>
+    this.table.hasValue() ? Math.round((this.cart.total() - this.fromBalance()) * 100) / 100 : 0,
   );
+
+  /** Criterion 1: what the balance covers and what is left to pay, when it falls short. */
+  protected readonly split = computed(() =>
+    this.shortBy() > 0
+      ? { fromBalance: formatPrice(this.fromBalance()), fromPhone: formatPrice(this.shortBy()) }
+      : null,
+  );
+
+  /** What the button charges: the difference when there is one, the total otherwise. */
+  protected readonly charged = computed(() => this.split()?.fromPhone ?? this.total());
 
   protected readonly canPay = computed(
-    () =>
-      FULL_NAME.test(this.typed().trim()) &&
-      (!this.forTable() || (this.table.hasValue() && this.shortBy() === 0)),
+    () => FULL_NAME.test(this.typed().trim()) && (!this.forTable() || this.table.hasValue()),
   );
 
   protected readonly lines = computed<PayingFor[]>(() =>
@@ -177,10 +190,11 @@ export class CheckoutPage {
   constructor() {
     effect(() => this.cart.open(this.venueSlug()));
 
-    // Criterion 3: another phone of the table spent first. The balance on
-    // screen is old, so it is asked for again.
+    // Another phone of the table spent first (US-41, criterion 3): the
+    // balance on screen and the difference it gives are old, so it is asked
+    // for again.
     effect(() => {
-      if (this.store.whatWentWrong()?.type === ProblemTypes.vipAccountBalanceShort)
+      if (this.store.whatWentWrong()?.type === ProblemTypes.vipAccountBalanceChanged)
         this.table.reload();
     });
   }
@@ -197,6 +211,12 @@ export class CheckoutPage {
   protected pay(): void {
     if (!this.canPay()) return;
 
-    this.store.pay(this.venueSlug(), this.typed().trim(), this.method(), this.tableCode());
+    this.store.pay(
+      this.venueSlug(),
+      this.typed().trim(),
+      this.method(),
+      this.tableCode(),
+      this.shortBy() > 0 ? this.shortBy() : null,
+    );
   }
 }

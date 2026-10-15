@@ -906,6 +906,8 @@ export interface components {
       idempotencyKey: null | string;
       lines: null | components['schemas']['OrderLineRequestBody'][];
       tableCode?: null | string;
+      /** Format: double */
+      digitalAmount?: null | number;
     };
     /** @description What the administration screen posts to add a category. */
     CreateCategoryRequest: {

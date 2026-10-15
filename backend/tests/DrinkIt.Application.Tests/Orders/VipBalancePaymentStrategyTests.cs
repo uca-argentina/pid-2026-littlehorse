@@ -83,19 +83,77 @@ public class VipBalancePaymentStrategyTests
         Assert.Equal(VipAccountErrors.NotFound, refusal);
     }
 
-    // US-42 pays the difference; until then, the order is not placed and nothing is spent.
+    // US-42, criterion 2: the balance gives all it has and the phone pays the rest.
     [Fact]
-    public async Task SettleAsync_WhenTheBalanceFallsShort_FailsBalanceShortAndSpendsNothing()
+    public async Task SettleAsync_WhenTheDifferenceIsPaid_EmptiesTheBalanceAndPaysTheOrderForTheTable()
     {
         Night night = ANight();
         VipAccount account = VipAccount.Open(night, TableFive, 5_000m, Opening.AddHours(-3));
         Order order = AnOrderIn(night);
 
-        Error? refusal = await StrategyOver(account).SettleAsync(order, new PaymentRequest(account.AccessCode), CancellationToken.None);
+        Error? refusal = await StrategyOver(account).SettleAsync(order, new PaymentRequest(account.AccessCode, 4_000m), CancellationToken.None);
 
-        Assert.Equal(VipAccountErrors.BalanceShort, refusal);
+        Assert.Null(refusal);
+        Assert.Equal(OrderStatus.Paid, order.Status);
+        Assert.Equal(PaymentMethod.VipBalance, order.Method);
+        Assert.Equal((TableFive.Id, 5), (order.TableId, order.TableNumber));
+        Assert.Equal(5_000m, order.BalanceAmount);
+        Assert.Equal(0m, account.Balance);
+    }
+
+    // US-42, a balance at zero: the difference is the whole order, still the table's.
+    [Fact]
+    public async Task SettleAsync_WhenTheBalanceIsEmptyAndTheWholeOrderIsPaid_PaysItForTheTable()
+    {
+        Night night = ANight();
+        VipAccount account = VipAccount.Open(night, TableFive, 5_000m, Opening.AddHours(-3));
+        account.Spend(5_000m);
+        Order order = AnOrderIn(night);
+
+        Error? refusal = await StrategyOver(account).SettleAsync(order, new PaymentRequest(account.AccessCode, 9_000m), CancellationToken.None);
+
+        Assert.Null(refusal);
+        Assert.Equal(OrderStatus.Paid, order.Status);
+        Assert.Equal(5, order.TableNumber);
+        Assert.Equal(0m, order.BalanceAmount);
+        Assert.Equal(5_000m, account.Spent);
+    }
+
+    // US-42, the edge: another phone of the table spent between seeing the
+    // difference and paying it. What the customer agreed to no longer adds up,
+    // so nothing is charged and they see the new difference. Also when the
+    // balance grew, and when they agreed to nothing at all (null).
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    [InlineData(3_000)]
+    [InlineData(5_000)]
+    public async Task SettleAsync_WhenTheAgreedDifferenceIsNotTheDifference_FailsBalanceChangedAndSpendsNothing(int? agreed)
+    {
+        Night night = ANight();
+        VipAccount account = VipAccount.Open(night, TableFive, 5_000m, Opening.AddHours(-3));
+        Order order = AnOrderIn(night);
+
+        Error? refusal = await StrategyOver(account).SettleAsync(order, new PaymentRequest(account.AccessCode, agreed), CancellationToken.None);
+
+        Assert.Equal(VipAccountErrors.BalanceChanged, refusal);
         Assert.Equal(OrderStatus.Cart, order.Status);
         Assert.Equal(5_000m, account.Balance);
+    }
+
+    // The balance grew (the admin raised the package) after the phone showed a
+    // difference: paying it would charge the phone for what the balance covers.
+    [Fact]
+    public async Task SettleAsync_WhenADifferenceIsAgreedButTheBalanceCoversIt_FailsBalanceChanged()
+    {
+        Night night = ANight();
+        VipAccount account = VipAccount.Open(night, TableFive, 20_000m, Opening.AddHours(-3));
+        Order order = AnOrderIn(night);
+
+        Error? refusal = await StrategyOver(account).SettleAsync(order, new PaymentRequest(account.AccessCode, 1_000m), CancellationToken.None);
+
+        Assert.Equal(VipAccountErrors.BalanceChanged, refusal);
+        Assert.Equal(20_000m, account.Balance);
     }
 
     private static VipBalancePaymentStrategy StrategyOver(VipAccount account) =>

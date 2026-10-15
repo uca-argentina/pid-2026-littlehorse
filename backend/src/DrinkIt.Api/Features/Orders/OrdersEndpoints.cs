@@ -19,13 +19,18 @@ public sealed record OrderLineRequestBody(Guid ProductId, int Quantity, string? 
 /// sent with every attempt: the signal in a venue is bad, browsers retry, and
 /// the same key has to come back with the same order rather than a second one.
 /// Criterion 6 of US-11.
+///
+/// <see cref="DigitalAmount"/> is what a VIP table's phone agreed to pay on top
+/// of the balance (US-42): the difference it showed. Left out when the balance
+/// covers the order, and by every order picked up at the bar.
 /// </remarks>
 public sealed record ConfirmOrderRequest(
     string? CustomerName,
     [property: JsonRequired] PaymentMethodName Method,
     string? IdempotencyKey,
     IReadOnlyList<OrderLineRequestBody>? Lines,
-    string? TableCode = null);
+    string? TableCode = null,
+    decimal? DigitalAmount = null);
 
 /// <summary>The order as the confirmation screen shows it.</summary>
 /// <remarks>
@@ -78,7 +83,8 @@ internal static class OrdersEndpoints
                 request.Method.ToDomain(),
                 request.IdempotencyKey,
                 [.. (request.Lines ?? []).Select(line => new OrderLineRequest(line.ProductId, line.Quantity, line.Note))],
-                request.TableCode),
+                request.TableCode,
+                request.DigitalAmount),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -113,8 +119,8 @@ internal static class OrdersEndpoints
         [OrderErrors.NotTakingOrders.Code] = StatusCodes.Status409Conflict,
         // US-41: a table code that opens nothing tonight, like a tracking link.
         [VipAccountErrors.NotFound.Code] = StatusCodes.Status404NotFound,
-        // The balance was enough when the menu showed it; the world moved.
-        [VipAccountErrors.BalanceShort.Code] = StatusCodes.Status409Conflict,
+        // The difference was right when the screen showed it; the world moved.
+        [VipAccountErrors.BalanceChanged.Code] = StatusCodes.Status409Conflict,
         [VipAccountErrors.BalanceMoved.Code] = StatusCodes.Status409Conflict,
     };
 
