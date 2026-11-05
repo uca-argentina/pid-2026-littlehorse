@@ -8,8 +8,20 @@ import { BrowserStore } from '../../../core/storage/browser-store';
 import { StoreInMemory } from '../../../core/storage/store-in-memory';
 import { PROCESSING_PAUSE_MS } from '../checkout.store';
 import { ordersUrl } from '../checkout.service';
+import { menuUrl } from '../../menu/menu.service';
 import { VIP_TABLE_KEY_PREFIX, vipTableUrl } from '../../../core/vip-table/vip-tables';
+import { stampCardUrl } from '../../../core/stamp-card/stamp-cards';
+import type { StampCardView } from '../../../core/stamp-card/stamp-cards';
 import { CheckoutPage } from './checkout.page';
+
+const NO_CARD: StampCardView = {
+  isActive: false,
+  stampsForReward: 0,
+  rewardProductId: null,
+  rewardName: null,
+  stamps: 0,
+  canRedeem: false,
+};
 
 let store: StoreInMemory;
 
@@ -33,9 +45,17 @@ async function openScreenWith(fill: (cart: Cart) => void) {
   const cart = TestBed.inject(Cart);
   cart.open('bar-alfa');
   fill(cart);
+
+  // US-58: the screen asks for the stamp card, and a venue without one answers
+  // that it is off. Answered here so nothing waits on it.
+  TestBed.tick();
+  await Promise.resolve();
+
+  const http = TestBed.inject(HttpTestingController);
+  http.expectOne((request) => request.url === stampCardUrl('bar-alfa')).flush(NO_CARD);
   await rendered.fixture.whenStable();
 
-  return { rendered, http: TestBed.inject(HttpTestingController) };
+  return { rendered, http };
 }
 
 function anOrderOfTwoGins(cart: Cart): void {
@@ -182,6 +202,37 @@ describe('CheckoutPage', () => {
     ).toBe('/bar-alfa/order');
   });
 
+  // US-55, criterion 4: a promotion ended while the cart was open. Nothing was
+  // charged, and the customer sees the new total before deciding again.
+  it('says the price changed, shows the new total and takes the new prices', async () => {
+    const { rendered, http } = await openScreenWith(anOrderOfTwoGins);
+
+    fireEvent.input(name(), { target: { value: 'María Quadro' } });
+    await rendered.fixture.whenStable();
+    payButton().click();
+    await rendered.fixture.whenStable();
+
+    http
+      .expectOne(ordersUrl('bar-alfa'))
+      .flush(
+        { type: 'urn:drinkit:problem:order:price-changed', newTotal: 6300 },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await rendered.fixture.whenStable();
+    http.expectOne(menuUrl('bar-alfa')).flush({
+      venueName: 'Bar Alfa',
+      isTakingOrders: true,
+      categories: [],
+      items: [{ id: 'id-1', price: 3150 }],
+    });
+    await rendered.fixture.whenStable();
+    rendered.fixture.detectChanges();
+
+    expect(screen.getByRole('alert').textContent).toContain('Los precios cambiaron');
+    expect(screen.getByRole('alert').textContent).toContain('$ 6.300,00');
+    expect(screen.getByTestId('total').textContent).toContain('6.300,00');
+  });
+
   // The API's detail is English, for developers: a customer in a boliche reads
   // Spanish, whatever went wrong, and never the sentence meant for the logs.
   describe('when the order is refused', () => {
@@ -284,6 +335,9 @@ describe('CheckoutPage', () => {
       const http = TestBed.inject(HttpTestingController);
 
       // Answered before waiting: the screen is not stable while it asks.
+      TestBed.tick();
+      await Promise.resolve();
+      http.expectOne((request) => request.url === stampCardUrl('bar-alfa')).flush(NO_CARD);
       http.expectOne(vipTableUrl('bar-alfa', CODE)).flush({ tableNumber: 5, balance });
       await rendered.fixture.whenStable();
 

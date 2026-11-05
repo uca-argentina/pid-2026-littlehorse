@@ -7,7 +7,9 @@ using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Features.Orders;
+using DrinkIt.Api.Features.Promotions;
 using DrinkIt.Api.Features.Staff;
+using DrinkIt.Api.Features.StampCards;
 using DrinkIt.Api.Features.Tables;
 using DrinkIt.Api.Features.VipAccounts;
 using DrinkIt.Api.Features.Waiter;
@@ -30,6 +32,8 @@ builder.Services.AddLoginHandlers();
 builder.Services.AddStaffHandlers();
 builder.Services.AddNightHandlers();
 builder.Services.AddMenuHandlers();
+builder.Services.AddPromotionHandlers();
+builder.Services.AddStampCardHandlers();
 builder.Services.AddOrderHandlers();
 builder.Services.AddKdsHandlers();
 builder.Services.AddCashierHandlers();
@@ -129,6 +133,8 @@ app.MapCategories();
 app.MapTables();
 app.MapWaiter();
 app.MapProducts();
+app.MapPromotions();
+app.MapStampCards();
 app.MapKds();
 // The hubs carry their role in [Authorize]; the policy adds the night's crew
 // (US-35), so a tablet outside it hears nothing either. The customer's

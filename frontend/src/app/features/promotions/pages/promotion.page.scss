@@ -1,0 +1,36 @@
+.grow {
+  flex: 3;
+}
+
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+}
+
+.day {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  max-height: 340px;
+  padding: 0;
+  margin: var(--dk-space-3) 0 0;
+  overflow-y: auto;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  list-style: none;
+}
+
+.choice {
+  display: flex;
+  gap: var(--dk-space-3);
+  align-items: center;
+  padding: 7px var(--dk-space-3);
+  font-size: 14px;
+}

@@ -16,6 +16,8 @@ using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
+using DrinkIt.Infrastructure.Promotions;
+using DrinkIt.Infrastructure.StampCards;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -272,7 +274,10 @@ public sealed class ComboOrderTests(SqlServerFixture sql)
             [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
             current,
             new UnderwayNightLookup(context),
-            new FixedClock(Tonight))
+            new FixedClock(Tonight),
+            new ActivePromotions(context),
+            new StampCardRepository(context),
+            new StampCardQueries(context))
             .HandleAsync(new ConfirmOrderCommand("María Quadro", method, key, lines), CancellationToken.None);
     }
 

@@ -44,6 +44,18 @@ export const routes: Routes = [
     loadChildren: () => import('./features/products/products.routes').then((m) => m.productsRoutes),
   },
   {
+    path: ':venueSlug/staff/promotions',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () =>
+      import('./features/promotions/promotions.routes').then((m) => m.promotionsRoutes),
+  },
+  {
+    path: ':venueSlug/staff/stamp-card',
+    canActivate: [rememberVenueGuard],
+    loadChildren: () =>
+      import('./features/stamp-card/stamp-card.routes').then((m) => m.stampCardRoutes),
+  },
+  {
     path: ':venueSlug/staff/categories',
     canActivate: [rememberVenueGuard],
     loadChildren: () =>

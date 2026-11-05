@@ -5,6 +5,8 @@ import type { StaffSection } from '../staff-header/staff-header';
 /** The administration screens, reachable from each other. */
 const ADMINISTRATION: readonly StaffSection[] = [
   { label: 'Productos', path: 'products' },
+  { label: 'Promociones', path: 'promotions' },
+  { label: 'Tarjeta', path: 'stamp-card' },
   { label: 'Staff', path: 'users' },
   { label: 'Noches', path: 'nights' },
   { label: 'Mesas', path: 'tables' },

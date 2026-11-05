@@ -8,6 +8,7 @@ import { BrowserStore } from '../../core/storage/browser-store';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { problemProductNameOf } from '../../core/api/problem-product-name-of';
 import { problemTypeOf } from '../../core/api/problem-type-of';
+import { StampCards } from '../../core/stamp-card/stamp-cards';
 import { CheckoutService } from './checkout.service';
 import type { ConfirmedOrder, PaymentMethod } from './checkout.service';
 
@@ -28,7 +29,8 @@ export const PROCESSING_PAUSE_MS = new InjectionToken<number>('PROCESSING_PAUSE_
  * What the screen is doing. One value rather than a set of booleans, so
  * "paying" and "that drink ran out" cannot both be true at once.
  */
-export type CheckoutStatus = 'idle' | 'paying' | 'soldOut' | 'rejected' | 'unreachable';
+export type CheckoutStatus =
+  'idle' | 'paying' | 'soldOut' | 'priceChanged' | 'rewardRefused' | 'rejected' | 'unreachable';
 
 export const CHECKOUT_KEY_PREFIX = 'drinkit.checkout-key.';
 
@@ -45,6 +47,8 @@ export class CheckoutStore {
   private readonly pause = inject(PROCESSING_PAUSE_MS);
 
   private readonly store = inject(BrowserStore);
+
+  private readonly stampCards = inject(StampCards);
 
   private readonly state = signal<CheckoutStatus>('idle');
 
@@ -87,6 +91,8 @@ export class CheckoutStore {
    * tableCode: the VIP table this phone orders for (US-41), or null at the bar.
    * digitalAmount: what the phone pays on top of the table's balance (US-42),
    * or null when the balance covers it.
+   * redeemReward: add the reward of the stamp card at zero (US-59). The phone
+   * only asks: what it costs in stamps is the rule's, read by the server.
    */
   pay(
     venueSlug: string,
@@ -94,6 +100,7 @@ export class CheckoutStore {
     method: PaymentMethod,
     tableCode: string | null = null,
     digitalAmount: number | null = null,
+    redeemReward = false,
   ): void {
     if (this.isPaying()) return;
 
@@ -115,12 +122,18 @@ export class CheckoutStore {
         })),
         tableCode,
         digitalAmount,
+        // US-55: what the screen showed. If a promotion started or ended since,
+        // the server answers with the new total instead of charging another.
+        expectedTotal: Math.round(this.cart.total() * 100) / 100,
+        // US-58: the card the phone holds, in the body and never in an address.
+        stampCardToken: this.stampCards.tokenOf(venueSlug),
+        redeemReward,
       }),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ({ order }) => this.showTheConfirmation(venueSlug, order),
-        error: (error: unknown) => this.explain(error),
+        error: (error: unknown) => this.explain(venueSlug, error),
       });
   }
 
@@ -140,6 +153,14 @@ export class CheckoutStore {
   private showTheConfirmation(venueSlug: string, order: ConfirmedOrder): void {
     this.state.set('idle');
 
+    // US-58: the first order hands the phone its card, and it is kept.
+    // The card on screen is from before this order: a reward spent stamps and a
+    // first order brought a card, so the next screen reads it again.
+    if (order.stampCardToken !== null) {
+      this.stampCards.remember(venueSlug, order.stampCardToken);
+      this.stampCards.refresh();
+    }
+
     void this.router
       .navigate(['/', venueSlug, 'orders', order.code, order.trackingToken])
       .then(() => {
@@ -148,7 +169,23 @@ export class CheckoutStore {
       });
   }
 
-  private explain(error: unknown): void {
+  /**
+   * US-55: the prices as the menu has them now, so the total on screen is the
+   * one the server said. Without the menu the message still carries the new
+   * total, and paying again would be refused again, which is honest.
+   */
+  private takeCurrentPrices(venueSlug: string): void {
+    this.checkout
+      .menu(venueSlug)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (menu) =>
+          this.cart.reprice(menu.items.map((item) => ({ id: item.id, price: item.price }))),
+        error: () => undefined,
+      });
+  }
+
+  private explain(venueSlug: string, error: unknown): void {
     // Status 0 is what a request that never got an answer looks like: the
     // venue's wifi, a phone that walked out of range. There is no document to
     // read and nothing our rules can explain.
@@ -169,6 +206,28 @@ export class CheckoutStore {
       return;
     }
 
+    // US-55: a promotion started or ended while the cart was open. Nothing was
+    // charged: the lines stay with the current prices, and the customer sees
+    // the new total and decides.
+    if (problem === ProblemTypes.orderPriceChanged) {
+      this.refusal.set(refusalOf(error, problem));
+      this.state.set('priceChanged');
+      this.takeCurrentPrices(venueSlug);
+
+      return;
+    }
+
+    // US-59: the reward cannot be given — not enough stamps, switched off, or
+    // another phone spent the card first. Nothing was charged and no stamp was
+    // spent; the card is read again so the screen shows it as it is now.
+    if (rewardWasRefused(problem)) {
+      this.refusal.set(refusalOf(error, problem));
+      this.state.set('rewardRefused');
+      this.stampCards.refresh();
+
+      return;
+    }
+
     // An answer that carries no problem document at all — a proxy, a gateway.
     // Nothing of ours refused this, so it is not something to explain.
     if (problem === undefined) {
@@ -180,6 +239,16 @@ export class CheckoutStore {
     this.refusal.set(refusalOf(error, problem));
     this.state.set('rejected');
   }
+}
+
+/** The four reasons a reward is refused (US-59), all of them with nothing charged. */
+function rewardWasRefused(problem: string | undefined): boolean {
+  return (
+    problem === ProblemTypes.stampCardNotEnoughStamps ||
+    problem === ProblemTypes.stampCardNotActive ||
+    problem === ProblemTypes.stampCardRewardUnavailable ||
+    problem === ProblemTypes.stampCardCardMoved
+  );
 }
 
 /** The three that mean the order has to be looked at again, not rewritten. */
@@ -195,9 +264,27 @@ function theMenuMoved(problem: string | undefined): boolean {
 export interface Refusal {
   readonly type: string | undefined;
   readonly productName: string | null;
+
+  /** US-55: the total now, when the refusal is a price that moved. */
+  readonly newTotal?: number;
 }
 
 /** The problem's type, and the drink it names when the menu moved underneath. */
 function refusalOf(error: HttpErrorResponse, type: string | undefined): Refusal {
-  return { type, productName: problemProductNameOf(error) };
+  const newTotal = newTotalOf(error);
+
+  return {
+    type,
+    productName: problemProductNameOf(error),
+    ...(newTotal === null ? {} : { newTotal }),
+  };
+}
+
+/** The total the API says the order costs now, when it refused one that moved. */
+function newTotalOf(error: HttpErrorResponse): number | null {
+  const body: unknown = error.error;
+
+  return typeof body === 'object' && body !== null && 'newTotal' in body
+    ? Number((body as { newTotal: unknown }).newTotal)
+    : null;
 }

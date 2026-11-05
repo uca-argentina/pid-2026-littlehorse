@@ -70,6 +70,11 @@
         </p>
       }
 
+      <!-- US-56: what the promotions took off, derived from the order's lines. -->
+      @if (savings(); as saved) {
+        <p class="saved" data-testid="savings">Te ahorraste $ {{ saved }}</p>
+      }
+
       <!--
         US-20. Only the token goes in it, and not the tracking link: a phone
         that happens to point its camera at it opens nothing, and a reader that
@@ -103,6 +108,20 @@
       }
 
       <p class="what what-now" role="status">{{ whatIsHappening() }}</p>
+
+      <!-- US-59: the reward is a line of its own, at zero, and says so. -->
+      @if (items().length > 0) {
+        <div class="items" role="group" aria-label="Tu pedido">
+          @for (item of items(); track $index) {
+            <p class="item" [attr.data-testid]="item.isReward ? 'reward-item' : 'paid-item'">
+              <span>{{ item.quantity }}× {{ item.productName }}</span>
+              @if (item.isReward) {
+                <span class="gift">Regalo</span>
+              }
+            </p>
+          }
+        </div>
+      }
 
       <ol class="journey">
         @for (step of steps(); track step.name) {
@@ -164,6 +183,11 @@
         <p class="stale" role="status">
           Sin señal. Lo que ves es de hace un momento y se pone al día solo.
         </p>
+      }
+
+      <!-- US-58: the stamps this phone has, with the one this order gives once it is handed over. -->
+      @if (stampCard(); as card) {
+        <drinkit-stamp-progress class="card" [card]="card" />
       }
 
       <a class="ghost" [routerLink]="menuLink()">Pedir algo más</a>

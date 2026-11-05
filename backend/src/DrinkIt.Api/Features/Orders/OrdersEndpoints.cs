@@ -3,6 +3,7 @@ using DrinkIt.Api.Common;
 using DrinkIt.Api.Tenancy;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.StampCards;
 using DrinkIt.Application.VipAccounts;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -30,7 +31,10 @@ public sealed record ConfirmOrderRequest(
     string? IdempotencyKey,
     IReadOnlyList<OrderLineRequestBody>? Lines,
     string? TableCode = null,
-    decimal? DigitalAmount = null);
+    decimal? DigitalAmount = null,
+    decimal? ExpectedTotal = null,
+    string? StampCardToken = null,
+    bool RedeemReward = false);
 
 /// <summary>The order as the confirmation screen shows it.</summary>
 /// <remarks>
@@ -45,7 +49,8 @@ public sealed record ConfirmedOrderResponse(
     string CustomerName,
     decimal Total,
     CustomerOrderStatus Status,
-    DateTimeOffset? PaidAt);
+    DateTimeOffset? PaidAt,
+    string? StampCardToken);
 
 internal static class OrdersEndpoints
 {
@@ -84,7 +89,10 @@ internal static class OrdersEndpoints
                 request.IdempotencyKey,
                 [.. (request.Lines ?? []).Select(line => new OrderLineRequest(line.ProductId, line.Quantity, line.Note))],
                 request.TableCode,
-                request.DigitalAmount),
+                request.DigitalAmount,
+                request.ExpectedTotal,
+                request.StampCardToken,
+                request.RedeemReward),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -102,7 +110,8 @@ internal static class OrdersEndpoints
                 order.CustomerName,
                 order.Total,
                 order.Status.ToCustomerStatus(),
-                order.PaidAt));
+                order.PaidAt,
+                order.StampCardToken));
     }
 
     /// <summary>
@@ -122,6 +131,14 @@ internal static class OrdersEndpoints
         // The difference was right when the screen showed it; the world moved.
         [VipAccountErrors.BalanceChanged.Code] = StatusCodes.Status409Conflict,
         [VipAccountErrors.BalanceMoved.Code] = StatusCodes.Status409Conflict,
+        // US-55: a promotion started or ended while the cart was open.
+        [OrderErrors.PriceChangedCode] = StatusCodes.Status409Conflict,
+        // US-59: the card has not enough stamps, or the reward is off, or
+        // another phone spent it first: the world moved, the screen reads the card again.
+        [StampCardErrors.NotEnoughStamps.Code] = StatusCodes.Status409Conflict,
+        [StampCardErrors.NotActive.Code] = StatusCodes.Status409Conflict,
+        [StampCardErrors.RewardUnavailable.Code] = StatusCodes.Status409Conflict,
+        [StampCardErrors.CardMoved.Code] = StatusCodes.Status409Conflict,
     };
 
     private static readonly Dictionary<int, string> TitleByStatus = new()
@@ -142,10 +159,17 @@ internal static class OrdersEndpoints
             type: ProblemTypes.For(error.Code),
             // The detail is English, for developers. The customer's screen
             // names the drink itself, in Spanish, so it travels on its own.
-            extensions: error.Subject is null
-                ? null
-                : new Dictionary<string, object?> { ["productName"] = error.Subject });
+            extensions: ExtensionsOf(error));
     }
+
+    // The price that changed travels as a number the screen can show and ask
+    // about; the drink's name as text.
+    private static Dictionary<string, object?>? ExtensionsOf(Error error) =>
+        error.Subject is null
+            ? null
+            : error.Code == OrderErrors.PriceChangedCode
+                ? new Dictionary<string, object?> { ["newTotal"] = decimal.Parse(error.Subject, System.Globalization.CultureInfo.InvariantCulture) }
+                : new Dictionary<string, object?> { ["productName"] = error.Subject };
 
     private static ProblemHttpResult NoSuchVenue(string slug) =>
         TypedResults.Problem(

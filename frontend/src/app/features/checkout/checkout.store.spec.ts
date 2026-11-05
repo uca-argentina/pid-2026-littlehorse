@@ -5,6 +5,8 @@ import { Router, provideRouter } from '@angular/router';
 import { Cart } from '../../core/cart/cart';
 import { BrowserStore } from '../../core/storage/browser-store';
 import { StoreInMemory } from '../../core/storage/store-in-memory';
+import { ProblemTypes } from '../../core/api/problem-types';
+import { menuUrl } from '../menu/menu.service';
 import { ordersUrl } from './checkout.service';
 import { PROCESSING_PAUSE_MS, CheckoutStore } from './checkout.store';
 import type { ConfirmedOrder } from './checkout.service';
@@ -17,6 +19,7 @@ const confirmed: ConfirmedOrder = {
   total: 9000,
   status: 'Queued',
   paidAt: '2026-09-17T02:30:00Z',
+  stampCardToken: null,
 };
 
 let store: StoreInMemory;
@@ -82,6 +85,42 @@ describe('CheckoutStore', () => {
     expect(sent.request.body.customerName).toBe('María Quadro');
     expect(sent.request.body.lines).toEqual([{ productId: 'id-1', quantity: 2, note: null }]);
     expect(JSON.stringify(sent.request.body)).not.toContain('4500');
+  });
+
+  // US-55, criterion 4: what the screen showed travels, so a price that moved
+  // meanwhile is noticed by the server and not charged.
+  it('sends the total the order showed', () => {
+    const { checkout, http } = aStore();
+
+    checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+
+    expect(http.expectOne(ordersUrl('bar-alfa')).request.body.expectedTotal).toBe(9000);
+  });
+
+  it('keeps the order, says the new total and takes the new prices when the price changed', async () => {
+    const { checkout, http, cart } = aStore();
+
+    checkout.pay('bar-alfa', 'María Quadro', 'Digital');
+    http
+      .expectOne(ordersUrl('bar-alfa'))
+      .flush(
+        { type: ProblemTypes.orderPriceChanged, newTotal: 6300 },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await itAllSettles();
+
+    expect(checkout.status()).toBe('priceChanged');
+    expect(checkout.whatWentWrong()?.newTotal).toBe(6300);
+
+    http.expectOne(menuUrl('bar-alfa')).flush({
+      venueName: 'Bar Alfa',
+      isTakingOrders: true,
+      categories: [],
+      items: [{ id: 'id-1', price: 3150 }],
+    });
+
+    expect(cart.total()).toBe(6300);
+    expect(cart.lines()).toHaveLength(1);
   });
 
   // Criterion 6: the browser retries on its own, and the same key has to mean

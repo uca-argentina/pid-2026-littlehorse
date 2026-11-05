@@ -5,9 +5,13 @@ using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Promotions;
+using DrinkIt.Application.StampCards;
 using DrinkIt.Application.Venues;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Promotions;
+using DrinkIt.Domain.StampCards;
 using Microsoft.AspNetCore.Http;
 
 namespace DrinkIt.Api.Tests.Features.Orders;
@@ -210,10 +214,35 @@ public class OrdersEndpointsTests
         [new DigitalPaymentStrategy(TimeProvider.System), new CashPaymentStrategy()],
         new Fake.Venue(),
         new Fake.Tonight(nightIsOn),
-        TimeProvider.System);
+        TimeProvider.System,
+        new Fake.NoPromotions(),
+        new Fake.NoCards(),
+        new Fake.NoCards());
 
     private static class Fake
     {
+        /// <summary>A venue without a stamp card: nothing is issued and nothing is counted.</summary>
+        public sealed class NoCards : IStampCardRepository, IStampCardQueries
+        {
+            public Task<StampCard?> GetForUpdateAsync(string? token, CancellationToken cancellationToken) => Task.FromResult<StampCard?>(null);
+
+            public void Add(StampCard card) => throw new NotSupportedException();
+
+            public Task<StampCardRule?> GetRuleAsync(CancellationToken cancellationToken) => Task.FromResult<StampCardRule?>(null);
+
+            public Task<StampBalance> GetBalanceAsync(Guid cardId, Guid? currentNight, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+            public Task<Guid?> FindCardIdAsync(string? token, CancellationToken cancellationToken) => Task.FromResult<Guid?>(null);
+
+            public Task<string?> GetTokenAsync(Guid cardId, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
+        }
+
+        public sealed class NoPromotions : IActivePromotions
+        {
+            public Task<IReadOnlyList<Promotion>> ListAsync(CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<Promotion>>([]);
+        }
+
         public sealed class Venue : Application.Common.ICurrentVenue
         {
             public Guid Id => TheVenue;

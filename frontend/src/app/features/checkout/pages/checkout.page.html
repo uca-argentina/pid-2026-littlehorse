@@ -47,6 +47,30 @@
         </ul>
       </section>
 
+      <!--
+        US-59: the card is complete. Offered and not added on its own: the
+        reward is shown at zero and can be taken out again.
+      -->
+      @if (reward(); as card) {
+        @if (redeemsTheReward()) {
+          <div class="reward reward-on" data-testid="reward-line">
+            <p class="reward-what">
+              <span class="reward-tag">Regalo</span>
+              1× {{ card.rewardName }}
+            </p>
+            <p class="line-total">$ 0,00</p>
+            <button class="ghost" type="button" (click)="takeTheRewardOut()">Quitar regalo</button>
+          </div>
+        } @else {
+          <div class="reward" data-testid="reward-offer">
+            <p class="reward-what">
+              ¡Tu tarjeta está completa! Tenés un <strong>{{ card.rewardName }}</strong> de regalo.
+            </p>
+            <button class="ghost" type="button" (click)="addTheReward()">Agregar mi regalo</button>
+          </div>
+        }
+      }
+
       <section class="who">
         <h2 class="who-ttl">¿A nombre de quién?</h2>
 
@@ -136,6 +160,29 @@
         </div>
       }
 
+      <!--
+        US-55: a promotion started or ended while the order was open. Nothing
+        was charged; the lines above already show the current prices, and the
+        button is still there for whoever decides to go on.
+      -->
+      @if (store.status() === 'priceChanged') {
+        <p class="note note-bad" role="alert">
+          Los precios cambiaron mientras armabas el pedido. Ahora el total es
+          <strong>$ {{ newTotal() }}</strong
+          >. No se cobró nada: revisalo y, si te sirve, confirmalo de nuevo.
+        </p>
+      }
+
+      <!--
+        US-59: the reward was refused and nothing was charged or spent. It is
+        said apart from the order: the drinks are fine, the card is what moved.
+      -->
+      @if (store.status() === 'rewardRefused') {
+        <p class="note note-bad" role="alert">
+          <ng-container [ngTemplateOutlet]="rewardRefusal" />
+        </p>
+      }
+
       @if (store.status() === 'rejected') {
         <p class="note note-bad" role="alert"><ng-container [ngTemplateOutlet]="refusal" /></p>
       }
@@ -183,6 +230,26 @@
   and written for developers, so it is never shown: the type says which rule,
   and the drink travels on its own when there is one to name.
 -->
+<ng-template #rewardRefusal>
+  @switch (store.whatWentWrong()?.type) {
+    @case (problems.stampCardCardMoved) {
+      Tu tarjeta se usó en otro celular al mismo tiempo y ya no alcanza para el regalo. No se cobró
+      nada: mirá tu tarjeta actualizada y confirmá el pedido de nuevo.
+    }
+    @case (problems.stampCardNotEnoughStamps) {
+      Ya no tenés los sellos para el regalo. No se cobró nada: mirá tu tarjeta actualizada y
+      confirmá el pedido de nuevo.
+    }
+    @case (problems.stampCardNotActive) {
+      La tarjeta de sellos ya no está activa. No se cobró nada ni se gastaron tus sellos.
+    }
+    @default {
+      El regalo no está disponible ahora. No se cobró nada y no se gastaron tus sellos: podés
+      confirmar el pedido sin él.
+    }
+  }
+</ng-template>
+
 <ng-template #refusal>
   @let drink = store.whatWentWrong()?.productName;
   @switch (store.whatWentWrong()?.type) {

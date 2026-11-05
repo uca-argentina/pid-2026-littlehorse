@@ -13,6 +13,8 @@ using DrinkIt.Domain.VipAccounts;
 using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
+using DrinkIt.Infrastructure.Promotions;
+using DrinkIt.Infrastructure.StampCards;
 using DrinkIt.Infrastructure.Tables;
 using DrinkIt.Infrastructure.VipAccounts;
 using Microsoft.EntityFrameworkCore;
@@ -186,7 +188,10 @@ public sealed class VipTableOrderTests(SqlServerFixture sql)
             [new VipBalancePaymentStrategy(new VipAccountRepository(context), new TableRepository(context), clock)],
             current,
             new UnderwayNightLookup(context),
-            clock);
+            clock,
+            new ActivePromotions(context),
+            new StampCardRepository(context),
+            new StampCardQueries(context));
 
         return await handler.HandleAsync(
             new ConfirmOrderCommand("María Quadro", PaymentMethod.VipBalance, key, [new OrderLineRequest(seeded.Gin.Id, 2, null)], seeded.AccessCode, digitalAmount),

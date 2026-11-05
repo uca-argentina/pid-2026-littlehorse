@@ -27,7 +27,15 @@ function aMockedOrder(code: string, status: string, minutesAgo: number) {
     paidAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
     lastModifiedAt: status === 'Queued' ? null : new Date(Date.now() - 60_000).toISOString(),
     isForTable: false,
-    orderItems: [{ productName: 'Aperol Spritz', quantity: 1, note: 'con mucho hielo' }],
+    orderItems: [
+      {
+        productName: 'Aperol Spritz',
+        quantity: 1,
+        note: 'con mucho hielo',
+        isReward: false,
+        components: [],
+      },
+    ],
   };
 }
 

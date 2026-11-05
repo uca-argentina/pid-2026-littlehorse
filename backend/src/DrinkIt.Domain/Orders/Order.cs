@@ -39,6 +39,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         public const string AlreadyTaken = "order.already_taken";
         public const string NotAtATable = "order.not_at_a_table";
         public const string WaiterRequired = "order.waiter_required";
+        public const string RewardNeedsAPaidLine = "order.reward_needs_a_paid_line";
+        public const string RewardCostNotPositive = "order.reward_cost_not_positive";
     }
 
     /// <summary>Room for a full name on a ticket, and no more.</summary>
@@ -54,8 +56,9 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// parameter, so a constructor that asked for them would make the aggregate
     /// unloadable.
     /// </summary>
-    private Order(Guid id, Guid venueId, Guid? nightId, string customerName, OrderCode code, TrackingToken trackingToken)
+    private Order(Guid id, Guid venueId, Guid? nightId, string customerName, OrderCode code, TrackingToken trackingToken, Guid? stampCardId)
     {
+        StampCardId = stampCardId;
         Id = id;
         VenueId = venueId;
         NightId = nightId;
@@ -83,6 +86,12 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// a stock of their own, for the same reason as <see cref="NightId"/>.
     /// </summary>
     public Guid? KdsId { get; private set; }
+
+    /// <summary>
+    /// The stamp card it counts for (US-58), or null when it came without one
+    /// and on every order from before cards. Stamps are derived from it.
+    /// </summary>
+    public Guid? StampCardId { get; }
 
     /// <summary>
     /// What came out of a VIP table's balance (US-41), or null when none did.
@@ -178,6 +187,9 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// <summary>Derived, never stored: a total kept apart from the lines is one that can disagree with them.</summary>
     public decimal Total => _items.Sum(item => item.Total);
 
+    /// <summary>US-56: how much less than list price the promotions made it.</summary>
+    public decimal Savings => _items.Sum(item => item.Saved);
+
     /// <summary>Nobody is waiting on it any more, so its link stops working.</summary>
     public bool IsFinished => Status.IsFinished();
 
@@ -216,7 +228,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         Guid nightId,
         string customerName,
         OrderCode code,
-        IReadOnlyCollection<NewOrderItem> items)
+        IReadOnlyCollection<NewOrderItem> items,
+        Guid? stampCardId = null)
     {
         if (venueId == Guid.Empty) throw new DomainException(ErrorCodes.VenueRequired, "Orders must belong to a venue.");
         if (nightId == Guid.Empty) throw new DomainException(ErrorCodes.NightRequired, "Orders are placed during a night of the venue.");
@@ -226,9 +239,13 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         if (cleanName.Length > CustomerNameMaxLength) throw new DomainException(ErrorCodes.NameLength, $"The name cannot be longer than {CustomerNameMaxLength} characters.");
         if (items.Count == 0) throw new DomainException(ErrorCodes.Empty, "An order with nothing in it cannot be placed.");
-        if (items.Select(item => item.ProductId).Distinct().Count() != items.Count) throw new DomainException(ErrorCodes.DuplicateItem, "Each drink goes on one line, with a quantity beside it.");
 
-        Order order = new(Guid.CreateVersion7(), venueId, nightId, cleanName, code, TrackingToken.New());
+        // A reward may sit beside a paid line of the same product (US-59): they
+        // are two lines because one is free. What may not repeat is a kind of line.
+        if (items.Select(item => (item.ProductId, item.IsReward)).Distinct().Count() != items.Count) throw new DomainException(ErrorCodes.DuplicateItem, "Each drink goes on one line, with a quantity beside it.");
+        if (items.All(item => item.IsReward)) throw new DomainException(ErrorCodes.RewardNeedsAPaidLine, "A reward goes with something that is paid.");
+
+        Order order = new(Guid.CreateVersion7(), venueId, nightId, cleanName, code, TrackingToken.New(), stampCardId);
 
         order._items.AddRange(items.Select(ToItem));
 
@@ -490,13 +507,14 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     private static OrderItem ToItem(NewOrderItem item)
     {
         if (item.Quantity <= 0) throw new DomainException(ErrorCodes.QuantityNotPositive, "Every drink in the order needs a quantity of at least one.");
-        if (item.UnitPrice <= 0) throw new DomainException(ErrorCodes.PriceNotPositive, "A drink cannot be ordered at a price of zero.");
+        if (item.IsReward && item.StampsSpent <= 0) throw new DomainException(ErrorCodes.RewardCostNotPositive, "A reward has to cost stamps.");
+        if (!item.IsReward && item.UnitPrice <= 0) throw new DomainException(ErrorCodes.PriceNotPositive, "A drink cannot be ordered at a price of zero.");
 
         string? note = string.IsNullOrWhiteSpace(item.Note) ? null : item.Note.Trim();
 
         if (note?.Length > OrderItem.NoteMaxLength) throw new DomainException(ErrorCodes.NoteLength, $"A note cannot be longer than {OrderItem.NoteMaxLength} characters.");
 
-        OrderItem frozen = new(Guid.CreateVersion7(), item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, note);
+        OrderItem frozen = new(Guid.CreateVersion7(), item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, note, item.RegularPrice, item.PromotionName, item.StampsSpent);
 
         frozen.Freeze(item.Components);
 

@@ -25,6 +25,38 @@ export const ProblemTypes = {
 
   categoryNameTaken: 'urn:drinkit:problem:category:name-taken',
 
+  /** US-54: a product of the promotion is not on the venue's menu. */
+  promotionProductNotFound: 'urn:drinkit:problem:promotion:product-not-found',
+
+  promotionNameRequired: 'urn:drinkit:problem:promotion:name-required',
+
+  promotionNameLength: 'urn:drinkit:problem:promotion:name-length',
+
+  promotionDiscountOutOfRange: 'urn:drinkit:problem:promotion:discount-out-of-range',
+
+  promotionDaysRequired: 'urn:drinkit:problem:promotion:days-required',
+
+  promotionWindowEmpty: 'urn:drinkit:problem:promotion:window-empty',
+
+  promotionProductsRequired: 'urn:drinkit:problem:promotion:products-required',
+
+  /** US-59: the card does not have the stamps the reward costs, or the venue switched it off. */
+  stampCardNotEnoughStamps: 'urn:drinkit:problem:stamp-card:not-enough-stamps',
+  stampCardNotActive: 'urn:drinkit:problem:stamp-card:not-active',
+
+  /** US-59: the reward is off the menu or switched off for tonight. Sold out is the order's own. */
+  stampCardRewardUnavailable: 'urn:drinkit:problem:stamp-card:reward-unavailable',
+
+  /** US-59, criterion 4: another phone spent the card first. Nothing was saved. */
+  stampCardCardMoved: 'urn:drinkit:problem:stamp-card:card-moved',
+
+  /** US-57: the reward product is not on the venue's menu, or is a combo. */
+  stampCardRewardProductNotFound: 'urn:drinkit:problem:stamp-card:reward-product-not-found',
+  stampCardRewardIsACombo: 'urn:drinkit:problem:stamp-card:reward-is-a-combo',
+
+  /** US-57: fewer than two stamps, or more than the card can hold. */
+  stampCardRuleStampsOutOfRange: 'urn:drinkit:problem:stamp-card-rule:stamps-out-of-range',
+
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
   /** US-50: one of the combo's products is not on the venue's menu any more. */
@@ -43,6 +75,12 @@ export const ProblemTypes = {
   orderSoldOut: 'urn:drinkit:problem:order:sold-out',
   orderNotOnTheMenu: 'urn:drinkit:problem:order:not-on-the-menu',
   orderStockMoved: 'urn:drinkit:problem:order:stock-moved',
+
+  /**
+   * US-55: the total the customer saw is not the total now — a promotion
+   * started or ended while the cart was open. Nothing was charged.
+   */
+  orderPriceChanged: 'urn:drinkit:problem:order:price-changed',
 
   orderNameRequired: 'urn:drinkit:problem:order:name-required',
   orderNameNeedsSurname: 'urn:drinkit:problem:order:name-needs-surname',

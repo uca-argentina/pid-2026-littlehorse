@@ -17,7 +17,7 @@ public sealed class OrderItem
 
     private readonly List<OrderItemComponent> _components = [];
 
-    internal OrderItem(Guid id, Guid productId, string productName, decimal unitPrice, int quantity, string? note)
+    internal OrderItem(Guid id, Guid productId, string productName, decimal unitPrice, int quantity, string? note, decimal? regularPrice = null, string? promotionName = null, int stampsSpent = 0)
     {
         Id = id;
         ProductId = productId;
@@ -25,6 +25,9 @@ public sealed class OrderItem
         UnitPrice = unitPrice;
         Quantity = quantity;
         Note = note;
+        RegularPrice = regularPrice;
+        PromotionName = promotionName;
+        StampsSpent = stampsSpent;
     }
 
     public Guid Id { get; }
@@ -39,6 +42,16 @@ public sealed class OrderItem
 
     public int Quantity { get; }
 
+    /// <summary>
+    /// What it costs without the promotion (US-55), when one lowered
+    /// <see cref="UnitPrice"/>. Null on orders without one and on every order
+    /// from before promotions.
+    /// </summary>
+    public decimal? RegularPrice { get; }
+
+    /// <summary>The promotion that lowered the price, as it was called that night. Null otherwise.</summary>
+    public string? PromotionName { get; }
+
     /// <summary>"sin hielo". Belongs to this drink and not to the whole order.</summary>
     public string? Note { get; }
 
@@ -49,7 +62,20 @@ public sealed class OrderItem
     /// </summary>
     public IReadOnlyList<OrderItemComponent> Components => _components;
 
+    /// <summary>
+    /// The stamps this line cost (US-59), as the rule had them when it was
+    /// confirmed: a later change to the rule must not rewrite what was spent.
+    /// Zero on everything that is not a reward.
+    /// </summary>
+    public int StampsSpent { get; }
+
+    /// <summary>The line the stamp card gave, at zero.</summary>
+    public bool IsReward => StampsSpent > 0;
+
     public decimal Total => UnitPrice * Quantity;
+
+    /// <summary>What the promotion took off this line (US-56). Zero without one.</summary>
+    public decimal Saved => ((RegularPrice ?? UnitPrice) - UnitPrice) * Quantity;
 
     internal void Freeze(IEnumerable<NewOrderItemComponent> components) =>
         _components.AddRange(components.Select(component => new OrderItemComponent(component.ProductId, component.ProductName, component.Quantity)));

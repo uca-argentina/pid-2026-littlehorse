@@ -1,4 +1,5 @@
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.StampCards;
 using DrinkIt.Domain.Tables;
 using DrinkIt.Domain.Venues;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,12 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // waits for cash and on orders from before bars kept stock; no foreign
         // key, for the same reason as the night.
         builder.Property(order => order.KdsId);
+
+        // US-58: the card it counts for. Null on every order from before cards
+        // and on any placed while the card was off. Stamps are derived from it.
+        builder.Property(order => order.StampCardId);
+        builder.HasOne<StampCard>().WithMany().HasForeignKey(order => order.StampCardId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(order => order.StampCardId);
 
         // US-41: the VIP table it is carried to. Tables are never deleted, only
         // put away, so the foreign key always has a row to point at.
@@ -104,6 +111,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // derived from.
         builder.Ignore(order => order.Total);
         builder.Ignore(order => order.IsFinished);
+        builder.Ignore(order => order.Savings);
 
         // The lines are the order's own and reachable only through it, which is
         // what makes this an aggregate: they load with it and die with it.
@@ -139,7 +147,17 @@ internal sealed class OrderItemConfiguration : IEntityTypeConfiguration<OrderIte
         builder.Property(item => item.Quantity).IsRequired();
         builder.Property(item => item.Note).HasMaxLength(OrderItem.NoteMaxLength);
 
+        // US-55: the list price and the promotion that lowered UnitPrice. Null
+        // on every order from before promotions and on any without one.
+        builder.Property(item => item.RegularPrice).HasPrecision(10, 2);
+        builder.Property(item => item.PromotionName).HasMaxLength(Domain.Promotions.Promotion.NameMaxLength);
+
+        // US-59: what a reward line cost in stamps; zero on every other line.
+        builder.Property(item => item.StampsSpent).IsRequired();
+        builder.Ignore(item => item.IsReward);
+
         builder.Ignore(item => item.Total);
+        builder.Ignore(item => item.Saved);
 
         // US-51: what a combo was made of when it was confirmed. They load
         // with the item and die with it; no foreign key to the product, as with
