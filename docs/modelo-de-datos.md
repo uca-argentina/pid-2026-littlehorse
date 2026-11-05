@@ -218,6 +218,25 @@ el administrador, se normaliza en ese momento.
 **`CUSTOMER_ORDER` y no `ORDER`.** `ORDER` y `USER` son palabras reservadas en SQL Server y
 obligan a escribir `[Order]` en cada consulta escrita a mano.
 
+**`COMBO_COMPONENT` y `ORDER_ITEM_COMPONENT` (Sprint 4, US-50 a US-53).** Un combo es un
+`PRODUCT` con componentes y no una entidad aparte: así reutiliza la carta, el carrito, la foto, la
+categoría, el interruptor de disponibilidad y `ORDER_ITEM.product_id`. No hay una columna que diga
+"combo": lo es el producto que tiene filas en `combo_component`, con clave
+`(combo_id, product_id)` para que uno no se repita y `quantity` con cuántos entran en un combo.
+Las dos claves foráneas apuntan a `PRODUCT`, que nunca se borra, así que siempre tienen fila.
+Un combo no tiene stock propio: no se ajusta, no se carga en la noche ni figura en su hoja, y
+nunca es un agotado. Si se puede armar lo dicen las barras de la noche, mirando el stock de sus
+componentes. Qué puede ir adentro lo validan el dominio (dos unidades en total, cantidades
+positivas, sin repetidos) y el alta (productos activos de este boliche que no sean combos), no la
+base. Al confirmar, el ítem guarda lo que el combo traía **en ese momento** en
+`order_item_component` (`order_item_id`, `product_id`, `product_name`, `quantity`), con clave
+`(order_item_id, product_id)` y sin clave foránea a `PRODUCT`, como el `product_id` del ítem y por
+la misma razón que `unit_price`: un pedido en efectivo descuenta el stock recién al cobrar, y para
+entonces el administrador pudo haber cambiado el combo. Para el stock un combo no existe:
+`Order.UnitsByProduct` lo desarma y lo suma con los productos sueltos, y de ahí salen la elección
+de barra, el descuento y la devolución al cancelar. El tablero de la barra lee esas filas
+congeladas, no el combo de hoy.
+
 **`PROMOTION` (Sprint 4, US-54 a US-56).** Un porcentaje de descuento sobre productos elegidos,
 en ciertos días de la semana y en una franja horaria. Tiene `venue_id` y filtro global como todo
 agregado raíz. Los días van en una sola columna, `days_mask`, un bit por día de la semana
