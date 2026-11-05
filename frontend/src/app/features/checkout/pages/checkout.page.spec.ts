@@ -10,7 +10,18 @@ import { PROCESSING_PAUSE_MS } from '../checkout.store';
 import { ordersUrl } from '../checkout.service';
 import { menuUrl } from '../../menu/menu.service';
 import { VIP_TABLE_KEY_PREFIX, vipTableUrl } from '../../../core/vip-table/vip-tables';
+import { stampCardUrl } from '../../../core/stamp-card/stamp-cards';
+import type { StampCardView } from '../../../core/stamp-card/stamp-cards';
 import { CheckoutPage } from './checkout.page';
+
+const NO_CARD: StampCardView = {
+  isActive: false,
+  stampsForReward: 0,
+  rewardProductId: null,
+  rewardName: null,
+  stamps: 0,
+  canRedeem: false,
+};
 
 let store: StoreInMemory;
 
@@ -34,9 +45,17 @@ async function openScreenWith(fill: (cart: Cart) => void) {
   const cart = TestBed.inject(Cart);
   cart.open('bar-alfa');
   fill(cart);
+
+  // US-58: the screen asks for the stamp card, and a venue without one answers
+  // that it is off. Answered here so nothing waits on it.
+  TestBed.tick();
+  await Promise.resolve();
+
+  const http = TestBed.inject(HttpTestingController);
+  http.expectOne((request) => request.url === stampCardUrl('bar-alfa')).flush(NO_CARD);
   await rendered.fixture.whenStable();
 
-  return { rendered, http: TestBed.inject(HttpTestingController) };
+  return { rendered, http };
 }
 
 function anOrderOfTwoGins(cart: Cart): void {
@@ -316,6 +335,9 @@ describe('CheckoutPage', () => {
       const http = TestBed.inject(HttpTestingController);
 
       // Answered before waiting: the screen is not stable while it asks.
+      TestBed.tick();
+      await Promise.resolve();
+      http.expectOne((request) => request.url === stampCardUrl('bar-alfa')).flush(NO_CARD);
       http.expectOne(vipTableUrl('bar-alfa', CODE)).flush({ tableNumber: 5, balance });
       await rendered.fixture.whenStable();
 

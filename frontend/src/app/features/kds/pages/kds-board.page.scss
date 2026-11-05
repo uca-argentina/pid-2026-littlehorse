@@ -458,3 +458,15 @@
   font-size: 15px;
   list-style: none;
 }
+
+// US-59: the free drink of a stamp card, told apart from what was paid.
+.gift {
+  padding: 2px 9px;
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

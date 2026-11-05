@@ -11,6 +11,8 @@ import { TrackingStore } from '../tracking.store';
 import { cancelOrderUrl, trackingUrl } from '../tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { noStampCard } from '../../../core/stamp-card/no-stamp-card';
+import { StampCards } from '../../../core/stamp-card/stamp-cards';
 import { TrackingPage } from './tracking.page';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
@@ -32,7 +34,7 @@ function anOrder(
     savings,
     paidAt: '2026-09-17T02:30:00Z',
     barName,
-    items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo' }],
+    items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo', isReward: false }],
     tableNumber,
     waiterName,
   };
@@ -63,6 +65,7 @@ async function openScreenShowing(
       // Never says the order moved: what these tests are about is what each
       // answer draws, so the answers are handed over by hand.
       { provide: TrackingChannel, useValue: aQuietChannel() },
+      { provide: StampCards, useValue: noStampCard() },
     ],
   });
 
@@ -299,6 +302,7 @@ describe('TrackingPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: TrackingChannel, useValue: aQuietChannel() },
+        { provide: StampCards, useValue: noStampCard() },
       ],
     });
 
@@ -428,6 +432,7 @@ describe('TrackingPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: TrackingChannel, useValue: aQuietChannel() },
+        { provide: StampCards, useValue: noStampCard() },
       ],
     });
 

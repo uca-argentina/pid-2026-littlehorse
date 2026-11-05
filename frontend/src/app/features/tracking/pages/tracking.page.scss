@@ -219,3 +219,38 @@
   opacity: 0.6;
   cursor: default;
 }
+
+// US-59: what was ordered, with the reward told apart from what was paid.
+.items {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 14px;
+}
+
+.gift {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+// US-58: the card, drawn left-aligned inside a centered column.
+.card {
+  width: 100%;
+  text-align: left;
+}

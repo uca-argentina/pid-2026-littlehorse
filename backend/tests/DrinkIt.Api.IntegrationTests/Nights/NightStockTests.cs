@@ -15,6 +15,7 @@ using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Promotions;
 using DrinkIt.Infrastructure.Staff;
+using DrinkIt.Infrastructure.StampCards;
 using DrinkIt.Infrastructure.Tables;
 using DrinkIt.Infrastructure.VipAccounts;
 using Microsoft.EntityFrameworkCore;
@@ -517,7 +518,9 @@ public sealed class NightStockTests(SqlServerFixture sql)
                 venue,
                 new UnderwayNightLookup(context),
                 clock,
-                new ActivePromotions(context))
+                new ActivePromotions(context),
+            new StampCardRepository(context),
+            new StampCardQueries(context))
             .HandleAsync(new ConfirmOrderCommand("María Quadro", method, Guid.NewGuid().ToString(), lines), CancellationToken.None);
     }
 

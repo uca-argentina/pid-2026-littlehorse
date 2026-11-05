@@ -1,7 +1,9 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { QRCodeComponent } from 'angularx-qrcode';
+import { StampCards } from '../../../core/stamp-card/stamp-cards';
 import { formatPrice } from '../../../shared/money/price';
+import { StampProgress } from '../../../shared/stamp-progress/stamp-progress';
 import type { CustomerOrderStatus } from '../tracking.service';
 import { TrackingStore } from '../tracking.store';
 
@@ -76,13 +78,21 @@ const QR_INK = '#12100e';
  */
 @Component({
   selector: 'drinkit-tracking-page',
-  imports: [RouterLink, QRCodeComponent],
+  imports: [RouterLink, QRCodeComponent, StampProgress],
   providers: [TrackingStore],
   styleUrl: './tracking.page.scss',
   templateUrl: './tracking.page.html',
 })
 export class TrackingPage {
   protected readonly store = inject(TrackingStore);
+
+  private readonly stampCards = inject(StampCards);
+
+  /** US-58: the card with its stamps, or null while unknown and when the venue has it off. */
+  protected readonly stampCard = this.stampCards.view;
+
+  /** What was ordered, with the reward told apart from what was paid (US-59). */
+  protected readonly items = computed(() => this.store.order()?.items ?? []);
 
   readonly venueSlug = input.required<string>();
 
@@ -172,6 +182,14 @@ export class TrackingPage {
   );
 
   constructor() {
+    effect(() => this.stampCards.open(this.venueSlug()));
+
+    // The stamp is earned when the order is handed over, which is also when its
+    // link stops working: the card is read again to show the one just earned.
+    effect(() => {
+      if (this.store.status() === 'over') this.stampCards.refresh();
+    });
+
     effect(() => {
       const venueSlug = this.venueSlug();
       const code = this.code();

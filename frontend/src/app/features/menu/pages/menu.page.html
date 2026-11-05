@@ -12,6 +12,11 @@
     <!-- US-34: the way back to an order, for whoever left its tracking screen. -->
     <drinkit-orders-in-progress [venueSlug]="venueSlug()" />
 
+    <!-- US-58: the stamps of this phone's card, when the venue has one. -->
+    @if (stampCard(); as card) {
+      <drinkit-stamp-progress [card]="card" />
+    }
+
     <!-- US-41: ordering for a VIP table, from the QR the waiter handed over. -->
     @if (tableLine(); as line) {
       <p class="table" role="status" aria-label="Tu mesa">{{ line }}</p>

@@ -35,6 +35,25 @@ public sealed record NewOrderItem
         PromotionName = promotionName;
     }
 
+    private NewOrderItem(Guid productId, string productName, int stampsSpent)
+        : this(productId, productName, 0m, 1, null)
+    {
+        StampsSpent = stampsSpent;
+        IsReward = true;
+    }
+
+    /// <summary>
+    /// The reward of a stamp card (US-59): one unit, at zero, and what it cost
+    /// in stamps. The only line that may be free, and it is built here so no
+    /// caller can say "free" any other way.
+    /// </summary>
+    public static NewOrderItem Reward(Guid productId, string productName, int stampsSpent) => new(productId, productName, stampsSpent);
+
+    /// <summary>Stamps this line spends. Zero on everything that is not a reward.</summary>
+    public int StampsSpent { get; }
+
+    public bool IsReward { get; }
+
     public Guid ProductId { get; }
 
     public string ProductName { get; }

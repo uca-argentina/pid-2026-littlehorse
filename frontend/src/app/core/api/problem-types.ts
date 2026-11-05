@@ -40,6 +40,23 @@ export const ProblemTypes = {
 
   promotionProductsRequired: 'urn:drinkit:problem:promotion:products-required',
 
+  /** US-59: the card does not have the stamps the reward costs, or the venue switched it off. */
+  stampCardNotEnoughStamps: 'urn:drinkit:problem:stamp-card:not-enough-stamps',
+  stampCardNotActive: 'urn:drinkit:problem:stamp-card:not-active',
+
+  /** US-59: the reward is off the menu or switched off for tonight. Sold out is the order's own. */
+  stampCardRewardUnavailable: 'urn:drinkit:problem:stamp-card:reward-unavailable',
+
+  /** US-59, criterion 4: another phone spent the card first. Nothing was saved. */
+  stampCardCardMoved: 'urn:drinkit:problem:stamp-card:card-moved',
+
+  /** US-57: the reward product is not on the venue's menu, or is a combo. */
+  stampCardRewardProductNotFound: 'urn:drinkit:problem:stamp-card:reward-product-not-found',
+  stampCardRewardIsACombo: 'urn:drinkit:problem:stamp-card:reward-is-a-combo',
+
+  /** US-57: fewer than two stamps, or more than the card can hold. */
+  stampCardRuleStampsOutOfRange: 'urn:drinkit:problem:stamp-card-rule:stamps-out-of-range',
+
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
   /** US-50: one of the combo's products is not on the venue's menu any more. */

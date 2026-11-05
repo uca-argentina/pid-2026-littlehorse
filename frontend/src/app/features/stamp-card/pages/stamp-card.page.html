@@ -1,0 +1,146 @@
+<div class="desk-frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <form class="desk" novalidate (submit)="$event.preventDefault(); submit()">
+    <div class="desk-head">
+      <div>
+        <h1 class="desk-title">Tarjeta de sellos</h1>
+        <p class="desk-lede">
+          Cada trago que el cliente retira suma un sello, sin crear una cuenta. Al juntar los que
+          pedís, puede sumar a su pedido el regalo que elegiste.
+        </p>
+      </div>
+      <div class="desk-actions">
+        <button class="desk-btn desk-btn-primary" type="submit" [disabled]="isSending()">
+          {{ isSending() ? 'Guardando' : 'Guardar tarjeta' }}
+        </button>
+      </div>
+    </div>
+
+    @if (hasNoCardYet()) {
+      <p class="desk-note">
+        Todavía no tenés una tarjeta de sellos. Elegí el regalo y cuántos sellos hacen falta, y
+        guardala para que los clientes empiecen a sumar.
+      </p>
+    }
+
+    @switch (outcome()) {
+      @case ('saved') {
+        <p class="desk-note" role="status">
+          Guardamos la tarjeta.
+          @if (isActive()) {
+            Los clientes ya suman sellos con esta regla.
+          } @else {
+            Está desactivada: no se ve en la carta ni suma, y los clientes conservan sus sellos.
+          }
+        </p>
+      }
+      @case ('productGone') {
+        <p class="desk-note desk-note-bad" role="alert">
+          El producto de regalo ya no está en la carta. Elegí otro.
+        </p>
+      }
+      @case ('combo') {
+        <p class="desk-note desk-note-bad" role="alert">
+          Un combo no puede ser el regalo. Elegí un producto suelto.
+        </p>
+      }
+      @case ('invalid') {
+        <p class="desk-note desk-note-bad" role="alert">
+          La tarjeta no es válida. Revisá la cantidad de sellos y el producto de regalo.
+        </p>
+      }
+      @case ('unreachable') {
+        <p class="desk-note desk-note-bad" role="alert">
+          No pudimos guardarla. Fijate la conexión y probá de nuevo.
+        </p>
+      }
+    }
+
+    <div class="desk-columns">
+      <section class="desk-panel" aria-labelledby="rule-title">
+        <h2 id="rule-title" class="desk-panel-title">Regla</h2>
+
+        <div class="desk-row">
+          <div class="desk-field">
+            <label class="desk-label" for="stamps">Sellos para el regalo</label>
+            <input
+              id="stamps"
+              class="desk-input"
+              type="number"
+              min="2"
+              max="50"
+              step="1"
+              [value]="stamps()"
+              [attr.aria-invalid]="stampsError() !== null ? 'true' : null"
+              (input)="stamps.set(read($event))"
+            />
+            @if (stampsError(); as error) {
+              <p class="desk-bad" role="alert">{{ error }}</p>
+            } @else {
+              <p class="desk-help">De 2 a 50. Un sello por cada trago retirado.</p>
+            }
+          </div>
+
+          <div class="desk-field grow">
+            <label class="desk-label" for="reward">Producto de regalo</label>
+            <select
+              id="reward"
+              class="desk-input"
+              [value]="rewardId()"
+              [attr.aria-invalid]="rewardError() !== null ? 'true' : null"
+              (change)="rewardId.set(read($event))"
+            >
+              <option value="">Elegí un producto</option>
+              @for (choice of choices(); track choice.id) {
+                <option [value]="choice.id" [selected]="choice.id === rewardId()">
+                  {{ choice.name }}
+                </option>
+              }
+            </select>
+            @if (rewardError(); as error) {
+              <p class="desk-bad" role="alert">{{ error }}</p>
+            } @else {
+              <p class="desk-help">Un combo no puede ser el regalo.</p>
+            }
+          </div>
+        </div>
+
+        <label class="active">
+          <input type="checkbox" [checked]="isActive()" (change)="toggleActive()" />
+          Tarjeta activa
+        </label>
+        <p class="desk-help">
+          Desactivada, los clientes no la ven ni suman ni canjean, pero conservan sus sellos por si
+          la volvés a activar.
+        </p>
+
+        <ul class="rules">
+          <li>
+            Cambiar los sellos o el regalo no borra los sellos: la regla nueva rige sobre lo que
+            cada cliente ya tiene.
+          </li>
+          <li>
+            Los sellos se cuentan de los pedidos entregados; un pedido cancelado o con la entrega
+            deshecha no suma.
+          </li>
+          <li>El regalo sale a $0 y descuenta el stock de la barra como cualquier trago.</li>
+        </ul>
+      </section>
+
+      <section class="desk-panel" aria-labelledby="preview-title">
+        <h2 id="preview-title" class="desk-panel-title">Así la ve el cliente</h2>
+
+        @if (preview(); as card) {
+          <div class="phone">
+            <drinkit-stamp-progress [card]="card" />
+          </div>
+        } @else {
+          <p class="desk-help">Elegí el regalo y la cantidad de sellos para ver la tarjeta.</p>
+        }
+
+        <drinkit-audit-note [audit]="saved()?.audit" />
+      </section>
+    </div>
+  </form>
+</div>
