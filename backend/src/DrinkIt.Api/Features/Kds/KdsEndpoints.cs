@@ -8,7 +8,10 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace DrinkIt.Api.Features.Kds;
 
 /// <summary>One drink on a card of the board, as the bar's tablet reads it.</summary>
-public sealed record KdsQueueOrderItemResponse(string ProductName, int Quantity, string? Note);
+public sealed record KdsQueueOrderItemResponse(string ProductName, int Quantity, string? Note, IReadOnlyList<KdsQueueOrderItemPartResponse> Components, bool IsReward);
+
+/// <summary>One product of a combo on a card of the board, and how many of it go in one combo.</summary>
+public sealed record KdsQueueOrderItemPartResponse(string ProductName, int Quantity);
 
 /// <summary>One order on the bar's board: who asked, what for, since when, and where it is.</summary>
 public sealed record KdsQueueOrderResponse(
@@ -226,7 +229,12 @@ internal static class KdsEndpoints
                 order.PaidAt,
                 order.LastModifiedAt,
                 order.IsForTable,
-                [.. order.OrderItems.Select(item => new KdsQueueOrderItemResponse(item.ProductName, item.Quantity, item.Note))],
+                [.. order.OrderItems.Select(item => new KdsQueueOrderItemResponse(
+                    item.ProductName,
+                    item.Quantity,
+                    item.Note,
+                    [.. item.Components.Select(part => new KdsQueueOrderItemPartResponse(part.ProductName, part.Quantity))],
+                    item.IsReward))],
                 order.TableNumber))]);
     }
 }

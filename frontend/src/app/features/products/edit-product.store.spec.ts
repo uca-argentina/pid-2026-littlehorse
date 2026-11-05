@@ -23,6 +23,8 @@ const ginTonic: Product = {
   isActive: true,
 
   audit: noAudit,
+  isCombo: false,
+  components: [],
 };
 
 const onlyTheCorrection: ProductChanges = {

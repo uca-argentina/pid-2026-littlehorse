@@ -1,7 +1,11 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
+using DrinkIt.Application.Promotions;
+using DrinkIt.Application.StampCards;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Promotions;
+using DrinkIt.Domain.StampCards;
 
 namespace DrinkIt.Application.Orders;
 
@@ -14,7 +18,10 @@ public sealed record ConfirmOrderCommand(
     string? IdempotencyKey,
     IReadOnlyCollection<OrderLineRequest> Lines,
     string? TableCode = null,
-    decimal? DigitalAmount = null);
+    decimal? DigitalAmount = null,
+    decimal? ExpectedTotal = null,
+    string? StampCardToken = null,
+    bool RedeemReward = false);
 
 /// <summary>
 /// The order as the confirmation screen shows it.
@@ -32,7 +39,8 @@ public sealed record ConfirmedOrder(
     string CustomerName,
     decimal Total,
     OrderStatus Status,
-    DateTimeOffset? PaidAt);
+    DateTimeOffset? PaidAt,
+    string? StampCardToken = null);
 
 /// <summary>
 /// Turns what somebody put together on their phone into an order of this venue:
@@ -51,7 +59,10 @@ public sealed class ConfirmOrderHandler(
     IEnumerable<IPaymentStrategy> paymentStrategies,
     ICurrentVenue currentVenue,
     IUnderwayNightLookup nights,
-    TimeProvider clock)
+    TimeProvider clock,
+    IActivePromotions promotions,
+    IStampCardRepository stampCards,
+    IStampCardQueries stampCardQueries)
 {
     public static readonly Error Empty =
         new("order.empty", "There is nothing in the order.");
@@ -85,7 +96,7 @@ public sealed class ConfirmOrderHandler(
         // Before anything else, and before any validation: an attempt that
         // already produced an order is answered with that order, whatever the
         // menu looks like now. Criterion 6.
-        if (await orders.FindByIdempotencyKeyAsync(key, cancellationToken) is Order already) return Confirmation(already);
+        if (await orders.FindByIdempotencyKeyAsync(key, cancellationToken) is Order already) return await ConfirmationAsync(already, cancellationToken);
 
         // After the retry above, so an order confirmed at 05:59 and retried at
         // 06:01 is still that order; before anything else, so a closed venue
@@ -144,27 +155,66 @@ public sealed class ConfirmOrderHandler(
     {
         IReadOnlyList<Product> menu = await products.GetForOrderingAsync(wanted, cancellationToken);
 
-        Result<List<NewOrderItem>> items = Price(command.Lines, menu);
+        // US-51: what the combos are made of, read as they are now and frozen
+        // in the order below.
+        Guid[] componentIds = [.. menu.SelectMany(product => product.Components).Select(component => component.ProductId).Distinct()];
+        IReadOnlyList<Product> parts = componentIds.Length == 0 ? [] : await products.GetForOrderingAsync(componentIds, cancellationToken);
+
+        // US-55: the promotions on right now, by the server's clock.
+        IReadOnlyList<Promotion> active = await promotions.ListAsync(cancellationToken);
+
+        Result<List<NewOrderItem>> items = Price(command.Lines, menu, parts, active, clock.GetUtcNow());
 
         if (!items.IsSuccess) return items.Error!;
+
+        // US-58: the phone's card, or a new one when it has none, when the
+        // venue's card is on. Read again on every go-round, since a refused
+        // write forgets what was tracked.
+        StampCardRule? rule = await stampCardQueries.GetRuleAsync(cancellationToken);
+        StampCard? card = null;
+        bool isNew = false;
+
+        if (rule is { IsActive: true })
+        {
+            card = await stampCards.GetForUpdateAsync(command.StampCardToken, cancellationToken);
+
+            if (card is null)
+            {
+                card = StampCard.Issue(currentVenue.Id);
+                isNew = true;
+            }
+        }
+
+        // US-59: the reward is added by the server, at what the rule says. The
+        // phone only asked for it.
+        if (command.RedeemReward)
+        {
+            Result<NewOrderItem> reward = await RewardAsync(rule, card, isNew, night, cancellationToken);
+
+            if (!reward.IsSuccess) return reward.Error!;
+
+            items.Value.Add(reward.Value);
+            card!.Claim();
+        }
+
+        Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value, card?.Id);
+
+        // US-55, criterion 4: the customer pays what the screen showed or
+        // decides again. Before the payment and before any stock moves, so a
+        // refusal leaves nothing behind. Left out, nothing is compared: a
+        // retry of an order already written never gets here.
+        if (command.ExpectedTotal is decimal expected && expected != order.Total) return OrderErrors.PriceChangedTo(order.Total);
 
         // US-37: each bar keeps a stock of its own, and a paid order is taken
         // from one of them. Asked even for cash, which pays later: nobody
         // should walk to the till for something no bar has. Like the menu
         // above, a few seconds old by the write: the conditional statement in
         // the repository is what settles a race.
-        OrderLine[] lines = [.. command.Lines.Select(line => new OrderLine(line.ProductId, line.Quantity))];
-        IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, wanted, cancellationToken);
+        OrderLine[] lines = OrderLine.Of(order);
+        IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, [.. lines.Select(line => line.ProductId)], cancellationToken);
         BarSupply? bar = BarChooser.Choose(nightsBars, lines, clock.GetUtcNow());
 
-        if (bar is null)
-        {
-            Guid missing = BarChooser.Missing(nightsBars, lines);
-
-            return OutOfStock(menu.First(product => product.Id == missing));
-        }
-
-        Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
+        if (bar is null) return OutOfStock(order.ItemThatNeeds(BarChooser.Missing(nightsBars, lines)).ProductName);
 
         // Whether the money is in is the payment method's call: digital pays
         // here, cash stops at the till. What follows once it is in is the same
@@ -175,13 +225,45 @@ public sealed class ConfirmOrderHandler(
 
         if (order.Status == OrderStatus.Paid) order.Enqueue(bar.KdsId);
 
+        // Written by the same save as the order, so a card never exists
+        // without the order that issued it.
+        if (isNew) stampCards.Add(card!);
+
         // The one write of the use case: the order and the stock it sold. It
         // can come back refused, because somebody else sold from the same
         // product while this order was being priced, or carrying the order that
         // a retry of this very request wrote first.
         Result<Order> written = await orders.AddAsync(order, TheKeyOf(command), cancellationToken);
 
-        return written.IsSuccess ? Confirmation(written.Value) : written.Error!;
+        return written.IsSuccess ? await ConfirmationAsync(written.Value, cancellationToken) : written.Error!;
+    }
+
+    /// <summary>
+    /// The reward line, or why it cannot be given. Each refusal comes before
+    /// anything is written, so no stamps are spent and nothing is confirmed.
+    /// </summary>
+    private async Task<Result<NewOrderItem>> RewardAsync(
+        StampCardRule? rule,
+        StampCard? card,
+        bool isNew,
+        Guid night,
+        CancellationToken cancellationToken)
+    {
+        if (rule is not { IsActive: true }) return StampCardErrors.NotActive;
+
+        // A card issued by this very order has nothing earned yet.
+        if (isNew) return StampCardErrors.NotEnoughStamps;
+
+        StampBalance balance = await stampCardQueries.GetBalanceAsync(card!.Id, night, cancellationToken);
+
+        if (balance.Available < rule.StampsForReward) return StampCardErrors.NotEnoughStamps;
+
+        Product? reward = (await products.GetForOrderingAsync([rule.RewardProductId], cancellationToken))
+            .FirstOrDefault(found => found.Id == rule.RewardProductId);
+
+        if (reward is not { IsActive: true, IsAvailable: true, IsCombo: false }) return StampCardErrors.RewardUnavailable;
+
+        return NewOrderItem.Reward(reward.Id, reward.Name, rule.StampsForReward);
     }
 
     /// <summary>
@@ -195,7 +277,10 @@ public sealed class ConfirmOrderHandler(
     /// </remarks>
     private static Result<List<NewOrderItem>> Price(
         IReadOnlyCollection<OrderLineRequest> lines,
-        IReadOnlyList<Product> menu)
+        IReadOnlyList<Product> menu,
+        IReadOnlyList<Product> parts,
+        IReadOnlyList<Promotion> active,
+        DateTimeOffset now)
     {
         List<NewOrderItem> items = [];
 
@@ -208,7 +293,19 @@ public sealed class ConfirmOrderHandler(
             // are standing it is the same thing.
             if (product is not { IsActive: true, IsAvailable: true }) return NotOnTheMenuFor(product);
 
-            items.Add(new NewOrderItem(product.Id, product.Name, product.Price, line.Quantity, line.Note));
+            // A combo with a part taken off the menu cannot be made tonight,
+            // and it is the combo the customer asked for.
+            NewOrderItemComponent[] components = [.. product.Components
+                .Select(component => (Component: component, Part: parts.FirstOrDefault(part => part.Id == component.ProductId)))
+                .Where(pair => pair.Part is { IsActive: true, IsAvailable: true })
+                .Select(pair => new NewOrderItemComponent(pair.Part!.Id, pair.Part.Name, pair.Component.Quantity))];
+
+            if (components.Length != product.Components.Count) return NotOnTheMenuFor(product);
+
+            // The same rule the menu uses, so the card and the charge agree.
+            PricedProduct priced = PromotionPricing.PriceOf(active, now, product.Id, product.Price);
+
+            items.Add(new NewOrderItem(product.Id, product.Name, priced.Price, line.Quantity, line.Note, components, priced.RegularPrice, priced.PromotionName));
         }
 
         return items;
@@ -221,18 +318,21 @@ public sealed class ConfirmOrderHandler(
         ? NotOnTheMenu
         : new Error(NotOnTheMenu.Code, $"{product.Name} is not on the menu any more.", product.Name);
 
-    private static Error OutOfStock(Product product) =>
-        new(SoldOut.Code, $"{product.Name} ran out while you were ordering.", product.Name);
+    private static Error OutOfStock(string name) =>
+        new(SoldOut.Code, $"{name} ran out while you were ordering.", name);
 
     private static string TheKeyOf(ConfirmOrderCommand command) =>
         (command.IdempotencyKey ?? string.Empty).Trim();
 
-    private static ConfirmedOrder Confirmation(Order order) => new(
+    // The token of the card is handed over here and nowhere else the phone does
+    // not already hold it: the first order is the only moment it can learn it.
+    private async Task<ConfirmedOrder> ConfirmationAsync(Order order, CancellationToken cancellationToken) => new(
         order.Id,
         order.Code.Value,
         order.TrackingToken.Value,
         order.CustomerName,
         order.Total,
         order.Status,
-        order.PaidAt);
+        order.PaidAt,
+        order.StampCardId is Guid card ? await stampCardQueries.GetTokenAsync(card, cancellationToken) : null);
 }

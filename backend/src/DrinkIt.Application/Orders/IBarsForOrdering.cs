@@ -1,3 +1,5 @@
+using DrinkIt.Domain.Orders;
+
 namespace DrinkIt.Application.Orders;
 
 /// <summary>
@@ -23,7 +25,12 @@ public sealed record BarSupply(Guid KdsId, int Load, IReadOnlyDictionary<Guid, i
 }
 
 /// <summary>A drink and how many of it, as the bars are asked for them.</summary>
-public sealed record OrderLine(Guid ProductId, int Quantity);
+public sealed record OrderLine(Guid ProductId, int Quantity)
+{
+    /// <summary>What the order takes from a bar (US-51): combos taken apart, and every product once.</summary>
+    public static OrderLine[] Of(Order order) =>
+        [.. order.UnitsByProduct().Select(units => new OrderLine(units.Key, units.Value))];
+}
 
 /// <summary>
 /// The bars an order can go to. Read-only, like IProductsForOrdering: the

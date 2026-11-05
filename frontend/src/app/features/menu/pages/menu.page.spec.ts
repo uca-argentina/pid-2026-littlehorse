@@ -7,6 +7,8 @@ import { BrowserStore } from '../../../core/storage/browser-store';
 import { StoreInMemory } from '../../../core/storage/store-in-memory';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { noStampCard } from '../../../core/stamp-card/no-stamp-card';
+import { StampCards } from '../../../core/stamp-card/stamp-cards';
 import { MY_ORDERS_STORAGE_PREFIX } from '../../../core/orders/my-orders';
 import { trackingUrl } from '../../tracking/tracking.service';
 import { OrdersInProgressChannel } from '../components/orders-in-progress-channel';
@@ -28,6 +30,9 @@ const carta: Menu = {
       price: 4500,
       categoryId: 'category-drinks',
       isOrderable: true,
+      components: [],
+      regularPrice: null,
+      promotionName: null,
     },
     {
       id: 'id-2',
@@ -37,6 +42,9 @@ const carta: Menu = {
       price: 4000,
       categoryId: 'category-drinks',
       isOrderable: true,
+      components: [],
+      regularPrice: null,
+      promotionName: null,
     },
     {
       id: 'id-3',
@@ -46,6 +54,9 @@ const carta: Menu = {
       price: 6000,
       categoryId: 'category-drinks',
       isOrderable: false,
+      components: [],
+      regularPrice: null,
+      promotionName: null,
     },
   ],
 };
@@ -58,6 +69,7 @@ async function openScreen() {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: BrowserStore, useValue: store },
+      { provide: StampCards, useValue: noStampCard() },
       // The live link has its own spec (OrdersInProgress); here it stays quiet.
       {
         provide: OrdersInProgressChannel,
@@ -141,6 +153,25 @@ describe('MenuPage', () => {
     await openScreenShowing(carta);
 
     expect(screen.getByText('$ 4.500,00')).not.toBeNull();
+  });
+
+  // US-56, criterion 1: the price with the promotion, the list price struck
+  // through and the promotion's name.
+  it('shows the promotion price, the struck list price and the promotion name', async () => {
+    await openScreenShowing({
+      ...carta,
+      items: [{ ...carta.items[0], price: 3150, regularPrice: 4500, promotionName: 'Happy hour' }],
+    });
+
+    expect(screen.getByText('$ 3.150,00')).not.toBeNull();
+    expect(screen.getByText('$ 4.500,00').closest('s')).not.toBeNull();
+    expect(screen.getByText('Happy hour')).not.toBeNull();
+  });
+
+  it('shows no struck price on a drink without promotion', async () => {
+    await openScreenShowing(carta);
+
+    expect(document.querySelector('s')).toBeNull();
   });
 
   // Criterion 2: nothing on this path asks for an account or an install.
@@ -328,6 +359,9 @@ describe('MenuPage', () => {
           price: 4500,
           categoryId: 'category-drinks',
           isOrderable: true,
+          components: [],
+          regularPrice: null,
+          promotionName: null,
         },
         {
           id: 'id-2',
@@ -337,6 +371,9 @@ describe('MenuPage', () => {
           price: 3000,
           categoryId: 'category-beer',
           isOrderable: true,
+          components: [],
+          regularPrice: null,
+          promotionName: null,
         },
         {
           id: 'id-3',
@@ -346,6 +383,9 @@ describe('MenuPage', () => {
           price: 2000,
           categoryId: 'category-soft',
           isOrderable: false,
+          components: [],
+          regularPrice: null,
+          promotionName: null,
         },
       ],
     };

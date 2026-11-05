@@ -449,3 +449,24 @@
   width: 112px;
   height: var(--dk-tap-min);
 }
+
+// US-53: what a combo brings, under its line and quieter than it.
+.parts {
+  padding: 0 0 0 38px;
+  margin: 2px 0 6px;
+  color: var(--dk-text-muted);
+  font-size: 15px;
+  list-style: none;
+}
+
+// US-59: the free drink of a stamp card, told apart from what was paid.
+.gift {
+  padding: 2px 9px;
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

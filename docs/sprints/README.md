@@ -12,8 +12,9 @@ Al lado de cada consigna puede vivir su **backlog**: `sprint-N-backlog.md`. Eso 
 interpretación nuestra —qué se compromete, en qué orden y qué se recorta— y por eso va en un
 archivo aparte del enunciado, nunca mezclado con él.
 
-| Sprint | Consigna | Backlog | Estado |
-|---|---|---|---|
-| 1 | `sprint-1.md` | `sprint-1-backlog.md` | entregado el 2026-09-17 |
-| 2 | `sprint-2.md` | `sprint-2-backlog.md` | en curso — la consigna fija el formato, el alcance es nuestro |
-| 3 | `sprint-3.md` | `sprint-3-backlog.md` | en planificación — la consigna fija el alcance |
+| Sprint | Consigna      | Backlog               | Estado                                         |
+| ------ | ------------- | --------------------- | ---------------------------------------------- |
+| 1      | `sprint-1.md` | `sprint-1-backlog.md` | terminado — entregado el 2026-09-17            |
+| 2      | `sprint-2.md` | `sprint-2-backlog.md` | terminado                                      |
+| 3      | `sprint-3.md` | `sprint-3-backlog.md` | terminado                                      |
+| 4      | `sprint-4.md` | `sprint-4-backlog.md` | en planificación — la consigna fija el alcance |

@@ -2,7 +2,9 @@ using DrinkIt.Application.Common;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Nights;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Promotions;
 using DrinkIt.Domain.Staff;
+using DrinkIt.Domain.StampCards;
 using DrinkIt.Domain.Tables;
 using DrinkIt.Domain.Venues;
 using DrinkIt.Domain.VipAccounts;
@@ -20,6 +22,12 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<Category> Categories => Set<Category>();
+
+    public DbSet<Promotion> Promotions => Set<Promotion>();
+
+    public DbSet<StampCardRule> StampCardRules => Set<StampCardRule>();
+
+    public DbSet<StampCard> StampCards => Set<StampCard>();
 
     public DbSet<Table> Tables => Set<Table>();
 
@@ -56,6 +64,9 @@ public sealed class DrinkItDbContext(DbContextOptions<DrinkItDbContext> options,
         modelBuilder.Entity<StaffUser>().HasQueryFilter(user => user.VenueId == CurrentVenueId);
         modelBuilder.Entity<Product>().HasQueryFilter(product => product.VenueId == CurrentVenueId);
         modelBuilder.Entity<Category>().HasQueryFilter(category => category.VenueId == CurrentVenueId);
+        modelBuilder.Entity<Promotion>().HasQueryFilter(promotion => promotion.VenueId == CurrentVenueId);
+        modelBuilder.Entity<StampCardRule>().HasQueryFilter(rule => rule.VenueId == CurrentVenueId);
+        modelBuilder.Entity<StampCard>().HasQueryFilter(card => card.VenueId == CurrentVenueId);
         modelBuilder.Entity<Table>().HasQueryFilter(table => table.VenueId == CurrentVenueId);
         modelBuilder.Entity<Order>().HasQueryFilter(order => order.VenueId == CurrentVenueId);
         modelBuilder.Entity<Night>().HasQueryFilter(night => night.VenueId == CurrentVenueId);

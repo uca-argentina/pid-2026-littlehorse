@@ -278,6 +278,9 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ReadyAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid?>("StampCardId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -311,6 +314,8 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("StampCardId");
 
                     b.HasIndex("TableId");
 
@@ -353,7 +358,18 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
 
+                    b.Property<string>("PromotionName")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
                     b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("RegularPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("StampsSpent")
                         .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")
@@ -365,6 +381,57 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItems", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Promotions.Promotion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("EndsAt")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<TimeOnly>("StartsAt")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("_days")
+                        .HasColumnType("int")
+                        .HasColumnName("DaysMask");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId");
+
+                    b.ToTable("Promotions", (string)null);
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>
@@ -416,6 +483,82 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("StaffUsers", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.StampCards.StampCard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("RewardsClaimed")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId", "Token")
+                        .IsUnique();
+
+                    b.ToTable("StampCards", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.StampCards.StampCardRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("RewardProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("StampsForReward")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RewardProductId");
+
+                    b.HasIndex("VenueId")
+                        .IsUnique();
+
+                    b.ToTable("StampCardRules", (string)null);
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Tables.Table", b =>
@@ -639,6 +782,35 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasForeignKey("VenueId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.OwnsMany("DrinkIt.Domain.Menu.ComboComponent", "Components", b1 =>
+                        {
+                            b1.Property<Guid>("ComboId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<Guid>("ProductId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<int>("Quantity")
+                                .HasColumnType("int");
+
+                            b1.HasKey("ComboId", "ProductId");
+
+                            b1.HasIndex("ProductId");
+
+                            b1.ToTable("ComboComponents", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ComboId");
+
+                            b1.HasOne("DrinkIt.Domain.Menu.Product", null)
+                                .WithMany()
+                                .HasForeignKey("ProductId")
+                                .OnDelete(DeleteBehavior.Restrict)
+                                .IsRequired();
+                        });
+
+                    b.Navigation("Components");
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Nights.Night", b =>
@@ -679,6 +851,11 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DrinkIt.Domain.Orders.Order", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.StampCards.StampCard", null)
+                        .WithMany()
+                        .HasForeignKey("StampCardId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DrinkIt.Domain.Tables.Table", null)
                         .WithMany()
                         .HasForeignKey("TableId")
@@ -697,10 +874,96 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.OwnsMany("DrinkIt.Domain.Orders.OrderItemComponent", "Components", b1 =>
+                        {
+                            b1.Property<Guid>("OrderItemId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<Guid>("ProductId")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("ProductName")
+                                .IsRequired()
+                                .HasMaxLength(80)
+                                .HasColumnType("nvarchar(80)");
+
+                            b1.Property<int>("Quantity")
+                                .HasColumnType("int");
+
+                            b1.HasKey("OrderItemId", "ProductId");
+
+                            b1.ToTable("OrderItemComponents", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderItemId");
+                        });
+
+                    b.Navigation("Components");
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Promotions.Promotion", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("DrinkIt.Domain.Promotions.PromotionProduct", "Products", b1 =>
+                        {
+                            b1.Property<Guid>("PromotionId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<Guid>("ProductId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.HasKey("PromotionId", "ProductId");
+
+                            b1.HasIndex("ProductId");
+
+                            b1.ToTable("PromotionProducts", (string)null);
+
+                            b1.HasOne("DrinkIt.Domain.Menu.Product", null)
+                                .WithMany()
+                                .HasForeignKey("ProductId")
+                                .OnDelete(DeleteBehavior.Restrict)
+                                .IsRequired();
+
+                            b1.WithOwner()
+                                .HasForeignKey("PromotionId");
+                        });
+
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.StampCards.StampCard", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.StampCards.StampCardRule", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Menu.Product", null)
+                        .WithMany()
+                        .HasForeignKey("RewardProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
                         .HasForeignKey("VenueId")

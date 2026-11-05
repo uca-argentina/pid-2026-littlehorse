@@ -14,7 +14,13 @@ public sealed record MenuItemResponse(
     string? ImageUrl,
     decimal Price,
     Guid CategoryId,
-    bool IsOrderable);
+    bool IsOrderable,
+    IReadOnlyList<MenuItemPartResponse> Components,
+    decimal? RegularPrice,
+    string? PromotionName);
+
+/// <summary>One product of a combo as its card lists it, with how many of it come in one combo.</summary>
+public sealed record MenuItemPartResponse(string Name, int Quantity);
 
 /// <summary>The venue's menu: its name, its categories and its products.</summary>
 /// <remarks>
@@ -62,7 +68,7 @@ internal static class MenuEndpoint
     internal static async Task<IResult> GetAsync(
         string venueSlug,
         CurrentVenue venue,
-        IProductQueries products,
+        ListMenuHandler menu,
         ICategoryQueries categories,
         IUnderwayNightLookup nights,
         TimeProvider clock,
@@ -75,21 +81,24 @@ internal static class MenuEndpoint
 
         // The cards say what tonight's bars can serve (US-37).
         Guid? tonight = await nights.FindIdAsync(clock.GetUtcNow(), cancellationToken);
-        IReadOnlyList<MenuItem> menu = await products.ListForMenuAsync(tonight, cancellationToken);
+        IReadOnlyList<MenuItem> items = await menu.HandleAsync(tonight, cancellationToken);
         IReadOnlyList<CategoryListItem> tabs = await categories.ListAsync(cancellationToken);
 
         return TypedResults.Ok(new MenuResponse(
             venue.Identity.Name,
             tonight is not null,
             [.. tabs.Select(category => new CategoryResponse(category.Id, category.Name))],
-            [.. menu.Select(item => new MenuItemResponse(
+            [.. items.Select(item => new MenuItemResponse(
                 item.Id,
                 item.Name,
                 item.Description,
                 item.ImageUrl,
                 item.Price,
                 item.CategoryId,
-                item.IsOrderable))]));
+                item.IsOrderable,
+                [.. item.Components.Select(part => new MenuItemPartResponse(part.Name, part.Quantity))],
+                item.RegularPrice,
+                item.PromotionName))]));
     }
 
     private static ProblemHttpResult NoSuchVenue(string slug) =>

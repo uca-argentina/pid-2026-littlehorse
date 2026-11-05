@@ -21,11 +21,12 @@ function anOrder(code: string, status: CustomerOrderStatus): TrackedOrder {
     customerName: 'María Quadro',
     status,
     total: 9000,
+    savings: 0,
     paidAt: null,
     barName: null,
     tableNumber: null,
     waiterName: null,
-    items: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
+    items: [{ productName: 'Gin Tonic', quantity: 2, note: null, isReward: false }],
   };
 }
 

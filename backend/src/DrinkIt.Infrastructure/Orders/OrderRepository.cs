@@ -1,7 +1,9 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.StampCards;
 using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.StampCards;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
@@ -78,16 +80,18 @@ internal sealed partial class OrderRepository(
 
             return order;
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException exception)
         {
-            // US-41: the only tracked row with a concurrency token an order
-            // writes is the VIP table it spent from. Another phone of the same
-            // table spent first; nothing is written, and the order is built
-            // again against the balance as it is now.
+            // Two rows with a concurrency token can be written along with an
+            // order. US-41: the VIP table it spent from; US-59: the stamp card
+            // that claimed a reward. Another phone spent first; nothing is
+            // written, and the screen reads what it spent from again.
+            bool wasTheCard = exception.Entries.Any(entry => entry.Entity is StampCard);
+
             await transaction.RollbackAsync(cancellationToken);
             context.ChangeTracker.Clear();
 
-            return VipAccountErrors.BalanceMoved;
+            return wasTheCard ? StampCardErrors.CardMoved : VipAccountErrors.BalanceMoved;
         }
         catch (DbUpdateException)
         {
@@ -218,13 +222,13 @@ internal sealed partial class OrderRepository(
             return order;
         }
 
+        IReadOnlyDictionary<Guid, int> units = order.UnitsByProduct();
+
         // Products before bars, as everywhere else that writes both.
-        await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
+        await Storeroom.LockProductsAsync(context, units.Keys, cancellationToken);
 
-        foreach (OrderItem item in order.Items)
+        foreach ((Guid productId, int quantity) in units)
         {
-            int quantity = item.Quantity;
-
             // Back to the bar and night it was taken from (US-37), and the
             // general stock with it. The venue filter applies here too. An
             // order from before bars kept stock has none to go back to but the
@@ -232,14 +236,14 @@ internal sealed partial class OrderRepository(
             if (bar is not null)
             {
                 await context.BarStocks
-                    .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == item.ProductId)
+                    .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == productId)
                     .ExecuteUpdateAsync(
                         row => row.SetProperty(stock => stock.Units, stock => stock.Units + quantity),
                         cancellationToken);
             }
 
             await context.Products
-                .Where(product => product.Id == item.ProductId)
+                .Where(product => product.Id == productId)
                 .ExecuteUpdateAsync(
                     row => row.SetProperty(product => product.Stock, product => product.Stock + quantity),
                     cancellationToken);
@@ -291,17 +295,19 @@ internal sealed partial class OrderRepository(
     {
         (Guid? night, Guid? bar) = (order.NightId, order.KdsId);
 
-        await Storeroom.LockProductsAsync(context, order.Items.Select(item => item.ProductId), cancellationToken);
+        IReadOnlyDictionary<Guid, int> units = order.UnitsByProduct();
 
-        foreach (OrderItem item in order.Items)
+        await Storeroom.LockProductsAsync(context, units.Keys, cancellationToken);
+
+        // US-51: by product, combos taken apart, so a combo and a loose drink
+        // of the same product are asked for together.
+        foreach ((Guid productId, int quantity) in units)
         {
-            int quantity = item.Quantity;
-
             // Taken from what the bar the order goes to holds for its night
             // (US-37). The venue filter applies to this too, so no order can
             // take stock off a product or a bar that is not its venue's.
             int sold = await context.BarStocks
-                .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == item.ProductId && stock.Units >= quantity)
+                .Where(stock => stock.NightId == night && stock.KdsId == bar && stock.ProductId == productId && stock.Units >= quantity)
                 .ExecuteUpdateAsync(
                     row => row.SetProperty(stock => stock.Units, stock => stock.Units - quantity),
                     cancellationToken);
@@ -310,7 +316,7 @@ internal sealed partial class OrderRepository(
 
             // The bar's units are part of the general stock: it follows.
             await context.Products
-                .Where(product => product.Id == item.ProductId)
+                .Where(product => product.Id == productId)
                 .ExecuteUpdateAsync(
                     row => row.SetProperty(product => product.Stock, product => product.Stock - quantity),
                     cancellationToken);

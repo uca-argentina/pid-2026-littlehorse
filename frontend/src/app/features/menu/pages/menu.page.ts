@@ -5,7 +5,9 @@ import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
+import { StampCards } from '../../../core/stamp-card/stamp-cards';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
+import { StampProgress } from '../../../shared/stamp-progress/stamp-progress';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 import { formatPrice } from '../../../shared/money/price';
 import { slowLoading } from '../../../shared/loading/slow-loading';
@@ -24,7 +26,16 @@ interface MenuCard {
   readonly image: string;
   readonly amount: number;
   readonly price: string;
+
+  /** US-56: the list price, struck through, while a promotion lowers the price. Null otherwise. */
+  readonly regularPrice: string | null;
+
+  /** US-56: the promotion that lowers it. */
+  readonly promotion: string | null;
   readonly isOrderable: boolean;
+
+  /** US-52: "2 × Fernet, 1 × Hielo" when it is a combo, or null. */
+  readonly brings: string | null;
 }
 
 /** US-14: the tab the menu opens on. A category's id is a guid and never equals it. */
@@ -42,12 +53,17 @@ interface CategoryTab {
  */
 @Component({
   selector: 'drinkit-menu-page',
-  imports: [GlassMark, OrdersInProgress, RouterLink, ThemeToggle],
+  imports: [GlassMark, OrdersInProgress, RouterLink, StampProgress, ThemeToggle],
   styleUrl: './menu.page.scss',
   templateUrl: './menu.page.html',
 })
 export class MenuPage {
   protected readonly cart = inject(Cart);
+
+  private readonly stampCards = inject(StampCards);
+
+  /** US-58: the customer's card, or null while it is unknown and when the venue has it off. */
+  protected readonly stampCard = this.stampCards.view;
 
   /** From the path. Bound by the router, so the screen never asks for a venue. */
   readonly venueSlug = input.required<string>();
@@ -164,9 +180,15 @@ export class MenuPage {
           image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
           amount: item.price,
           price: formatPrice(item.price),
+          regularPrice: item.regularPrice === null ? null : formatPrice(item.regularPrice),
+          promotion: item.promotionName,
           // With no night on, every drink reads like one that ran out: on
           // the menu, with no way to add it (US-35, criterion 3).
           isOrderable: item.isOrderable && this.isTakingOrders(),
+          brings:
+            item.components.length === 0
+              ? null
+              : item.components.map((part) => `${part.quantity} × ${part.name}`).join(', '),
         }))
     );
   });
@@ -209,6 +231,7 @@ export class MenuPage {
     // The order belongs to the venue whose address is open, and switching
     // venues has to switch orders rather than carry one into the other.
     effect(() => this.cart.open(this.venueSlug()));
+    effect(() => this.stampCards.open(this.venueSlug()));
 
     effect(() => {
       if (this.menu.hasValue()) this.lastVenueName.set(this.menu.value().venueName);

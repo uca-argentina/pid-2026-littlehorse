@@ -127,10 +127,10 @@ construcción, en vez de dejarlo librado a un `if` en la capa de aplicación que
 puede olvidar.
 
 El corte además elimina trabajo que no vamos a hacer: sin devoluciones no hace falta una
-pantalla de reintegro en la caja, ni integrar *refunds* con la pasarela (que cobra comisión
+pantalla de reintegro en la caja, ni integrar _refunds_ con la pasarela (que cobra comisión
 por devolver), ni un reintegro al saldo de la mesa VIP cuando esa parte entre.
 
-La cancelación automática por *timeout* de un pedido en efectivo nunca pagado usa esta
+La cancelación automática por _timeout_ de un pedido en efectivo nunca pagado usa esta
 misma transición desde `AwaitingPayment`; falta definir a los cuántos minutos (§15).
 
 Queda **sin modelar** el caso inverso: que el local no pueda entregar un pedido ya pagado
@@ -160,8 +160,8 @@ toda tabla nueva tenga `created_at` o esté en esa lista con su motivo.
 obligatorio; `CUSTOMER` es una persona que puede pedir en cualquier local y no
 pertenece a ninguno.
 
-Si fueran una sola tabla, `venue_id` tendría que admitir `NULL`, y ahí se rompe el *global
-query filter* de EF Core que aplica el filtro por boliche automáticamente: o filtra estricto
+Si fueran una sola tabla, `venue_id` tendría que admitir `NULL`, y ahí se rompe el _global
+query filter_ de EF Core que aplica el filtro por boliche automáticamente: o filtra estricto
 y los clientes desaparecen de toda consulta, o contempla el `NULL` y entonces las consultas
 de personal interno pueden traer clientes, con lo que el aislamiento entre locales deja de
 ser verificable. Además el enum de roles pasaría a mezclar `Customer` con roles internos,
@@ -175,8 +175,8 @@ autenticación para resolver un caso que puede no ocurrir nunca.
 **Quién es el cliente: `customer_id` nullable + `customer_name` obligatorio.** Son dos campos
 que parecen redundantes y no lo son.
 
-`customer_id` en `NULL` es un pedido anónimo, que es lo que pide la consigna: *"los clientes
-podrán pedir sin crear una cuenta permanente"*.
+`customer_id` en `NULL` es un pedido anónimo, que es lo que pide la consigna: _"los clientes
+podrán pedir sin crear una cuenta permanente"_.
 
 `customer_name` está **siempre** cargado, esté logueado el cliente o no. Si tiene cuenta se
 copia de ella al confirmar; si no, sale del input del checkout. Es un snapshot, por la misma
@@ -218,18 +218,69 @@ el administrador, se normaliza en ese momento.
 **`CUSTOMER_ORDER` y no `ORDER`.** `ORDER` y `USER` son palabras reservadas en SQL Server y
 obligan a escribir `[Order]` en cada consulta escrita a mano.
 
+**`COMBO_COMPONENT` y `ORDER_ITEM_COMPONENT` (Sprint 4, US-50 a US-53).** Un combo es un
+`PRODUCT` con componentes y no una entidad aparte: así reutiliza la carta, el carrito, la foto, la
+categoría, el interruptor de disponibilidad y `ORDER_ITEM.product_id`. No hay una columna que diga
+"combo": lo es el producto que tiene filas en `combo_component`, con clave
+`(combo_id, product_id)` para que uno no se repita y `quantity` con cuántos entran en un combo.
+Las dos claves foráneas apuntan a `PRODUCT`, que nunca se borra, así que siempre tienen fila.
+Un combo no tiene stock propio: no se ajusta, no se carga en la noche ni figura en su hoja, y
+nunca es un agotado. Si se puede armar lo dicen las barras de la noche, mirando el stock de sus
+componentes. Qué puede ir adentro lo validan el dominio (dos unidades en total, cantidades
+positivas, sin repetidos) y el alta (productos activos de este boliche que no sean combos), no la
+base. Al confirmar, el ítem guarda lo que el combo traía **en ese momento** en
+`order_item_component` (`order_item_id`, `product_id`, `product_name`, `quantity`), con clave
+`(order_item_id, product_id)` y sin clave foránea a `PRODUCT`, como el `product_id` del ítem y por
+la misma razón que `unit_price`: un pedido en efectivo descuenta el stock recién al cobrar, y para
+entonces el administrador pudo haber cambiado el combo. Para el stock un combo no existe:
+`Order.UnitsByProduct` lo desarma y lo suma con los productos sueltos, y de ahí salen la elección
+de barra, el descuento y la devolución al cancelar. El tablero de la barra lee esas filas
+congeladas, no el combo de hoy.
+
+**`PROMOTION` (Sprint 4, US-54 a US-56).** Un porcentaje de descuento sobre productos elegidos,
+en ciertos días de la semana y en una franja horaria. Tiene `venue_id` y filtro global como todo
+agregado raíz. Los días van en una sola columna, `days_mask`, un bit por día de la semana
+(domingo es el bit 0): son siete valores como máximo y una tabla aparte sólo agregaría un join.
+Los productos sí van en tabla propia, `promotion_product`, con clave `(promotion_id, product_id)`
+para que uno no se repita. La franja que cruza la medianoche **pertenece al día en que empieza**.
+Las horas son locales del boliche (`America/Argentina/Buenos_Aires`, constante en
+`VenueClock`): con un local en otro huso, pasa a ser una columna de `Venue`.
+`ORDER_ITEM` guarda además `regular_price` y `promotion_name`, nulos en los pedidos anteriores o
+sin promoción: `unit_price` sigue siendo lo que se cobró, congelado, y el ahorro del seguimiento
+se deriva de las líneas. Hay una única regla de precio (`PromotionPricing`): entre las
+promociones vigentes que cubren el producto gana la de mayor descuento, sin acumular, y la usan
+la carta y la confirmación por igual.
+
+**`STAMP_CARD_RULE` y `STAMP_CARD` (Sprint 4, US-57 a US-59).** La regla es una sola por boliche
+(índice único sobre `venue_id`): cuántos sellos hacen falta (2 a 50), qué producto se regala (que no
+sea un combo) y un interruptor. Sin esa fila no hay tarjeta; apagarla la oculta y no borra nada.
+La tarjeta es el agregado que lleva el celular: `token` de 64 caracteres hexadecimales generado por
+el servidor (como `tracking_token`, nunca en una URL: viaja en el header `X-Stamp-Card` o en el
+cuerpo del pedido), único **junto con** `venue_id`, así el token de otro boliche no encuentra nada.
+**Los sellos no se guardan, se derivan:** son las unidades de los pedidos `Delivered` de esa tarjeta,
+sin contar las líneas de regalo (un combo suma uno por unidad de combo). Por eso deshacer una
+entrega o cancelar un efectivo no necesita compensar nada. `CUSTOMER_ORDER` guarda el
+`stamp_card_id` (nulo en los pedidos anteriores y en los que se hicieron con la tarjeta apagada).
+`ORDER_ITEM` guarda `stamps_spent`: lo que costó el regalo **con la regla de ese momento**, así
+cambiar la regla no reescribe lo gastado y la regla nueva rige sobre el saldo que queda. Es el
+regalo cuando es mayor que cero y sale a $0. El saldo es sellos ganados menos `stamps_spent` de los
+pedidos de la tarjeta que no están cancelados; un efectivo sin cobrar de una noche pasada no retiene
+sellos (nota de US-59, hasta que se cierre la pregunta abierta del §15). `stamp_card` tiene un
+`rowversion` y un contador `rewards_claimed` que sube al canjear: dos celulares con la misma
+tarjeta compiten por la misma fila y sólo uno escribe, el otro recibe `stamp_card.card_moved`.
+
 ## Fuera del alcance del Sprint 1
 
 Está en el diseño funcional y **se modela más adelante**, no ahora:
 
-| Entidad | Por qué se posterga |
-|---|---|
-| `Table` | **Modelada en el Sprint 3 (US-39)**: número único por boliche, personas, ubicación y baja lógica. |
-| `VipAccount` | El Sprint 1 es sólo retiro en barra. |
-| `PushSubscription` | Las notificaciones se simulan con cambios de estado. |
-| `BarStation` | Una sola barra en el MVP; el KDS no se reparte por estación. |
-| `PaymentMethod`, pasarela | El pago se simula. |
-| Rol `Cashier` | Este sprint es sólo retiro en barra, y la caja llega con el efectivo. |
+| Entidad                   | Por qué se posterga                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `Table`                   | **Modelada en el Sprint 3 (US-39)**: número único por boliche, personas, ubicación y baja lógica. |
+| `VipAccount`              | El Sprint 1 es sólo retiro en barra.                                                              |
+| `PushSubscription`        | Las notificaciones se simulan con cambios de estado.                                              |
+| `BarStation`              | Una sola barra en el MVP; el KDS no se reparte por estación.                                      |
+| `PaymentMethod`, pasarela | El pago se simula.                                                                                |
+| Rol `Cashier`             | Este sprint es sólo retiro en barra, y la caja llega con el efectivo.                             |
 
 Caso aparte, `CUSTOMER`: **la tabla está en el modelo, el login no se construye todavía.**
 La consigna pide explícitamente que el cliente pueda pedir sin cuenta y sólo exige

@@ -1,0 +1,95 @@
+<div class="desk-frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <section class="desk" [attr.aria-busy]="promotions.isLoading()">
+    <div class="desk-head">
+      <div>
+        <h1 class="desk-title">Promociones</h1>
+        <p class="desk-lede">
+          Un descuento para ciertos productos, días y franjas. Si hay dos a la vez, se aplica la de
+          mayor descuento.
+        </p>
+      </div>
+      <div class="desk-actions">
+        <a class="desk-btn desk-btn-primary" routerLink="new">Nueva promoción</a>
+      </div>
+    </div>
+
+    @if (promotions.error()) {
+      <p class="desk-note desk-note-bad" role="alert">
+        No pudimos traer las promociones. Fijate la conexión y probá de nuevo.
+      </p>
+    }
+
+    @if (failed()) {
+      <p class="desk-note desk-note-bad" role="alert">
+        No pudimos cambiar la promoción. Probá de nuevo.
+      </p>
+    }
+
+    @if (promotions.isLoading()) {
+      <p class="desk-note" role="status">Cargando las promociones…</p>
+    } @else if (rows().length === 0 && !promotions.error()) {
+      <p class="desk-note">Todavía no hay promociones.</p>
+    } @else if (rows().length > 0) {
+      <table class="desk-table" aria-label="Promociones">
+        <thead>
+          <tr>
+            <th scope="col">Nombre</th>
+            <th scope="col" class="desk-num">Descuento</th>
+            <th scope="col">Días</th>
+            <th scope="col">Franja</th>
+            <th scope="col">Productos</th>
+            <th scope="col">Estado</th>
+            <th scope="col"><span class="dk-sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr>
+              <td>{{ row.name }}</td>
+              <td class="desk-num">{{ row.discount }}</td>
+              <td>{{ row.days }}</td>
+              <td>{{ row.window }}</td>
+              <td>{{ row.products }}</td>
+              <td>
+                <span class="desk-chip" [class.desk-chip-on]="row.isActive">{{
+                  row.isActive ? 'Activa' : 'Inactiva'
+                }}</span>
+              </td>
+              <td class="desk-num">
+                <div class="desk-actions">
+                  <a
+                    class="desk-btn"
+                    [routerLink]="[row.id]"
+                    [attr.aria-label]="'Editar ' + row.name"
+                    >Editar</a
+                  >
+                  @if (row.isActive) {
+                    <button
+                      class="desk-btn desk-btn-danger"
+                      type="button"
+                      [attr.aria-label]="'Desactivar ' + row.name"
+                      (click)="deactivate(row.id)"
+                    >
+                      Desactivar
+                    </button>
+                  } @else {
+                    <button
+                      class="desk-btn"
+                      type="button"
+                      [attr.aria-label]="'Activar ' + row.name"
+                      (click)="activate(row.id)"
+                    >
+                      Activar
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</div>

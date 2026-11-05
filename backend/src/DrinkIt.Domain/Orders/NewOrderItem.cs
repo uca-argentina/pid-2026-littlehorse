@@ -15,14 +15,44 @@ namespace DrinkIt.Domain.Orders;
 /// </remarks>
 public sealed record NewOrderItem
 {
-    public NewOrderItem(Guid productId, string productName, decimal unitPrice, int quantity, string? note)
+    public NewOrderItem(
+        Guid productId,
+        string productName,
+        decimal unitPrice,
+        int quantity,
+        string? note,
+        IReadOnlyList<NewOrderItemComponent>? components = null,
+        decimal? regularPrice = null,
+        string? promotionName = null)
     {
         ProductId = productId;
         ProductName = productName;
         UnitPrice = unitPrice;
         Quantity = quantity;
         Note = note;
+        Components = components ?? [];
+        RegularPrice = regularPrice;
+        PromotionName = promotionName;
     }
+
+    private NewOrderItem(Guid productId, string productName, int stampsSpent)
+        : this(productId, productName, 0m, 1, null)
+    {
+        StampsSpent = stampsSpent;
+        IsReward = true;
+    }
+
+    /// <summary>
+    /// The reward of a stamp card (US-59): one unit, at zero, and what it cost
+    /// in stamps. The only line that may be free, and it is built here so no
+    /// caller can say "free" any other way.
+    /// </summary>
+    public static NewOrderItem Reward(Guid productId, string productName, int stampsSpent) => new(productId, productName, stampsSpent);
+
+    /// <summary>Stamps this line spends. Zero on everything that is not a reward.</summary>
+    public int StampsSpent { get; }
+
+    public bool IsReward { get; }
 
     public Guid ProductId { get; }
 
@@ -33,4 +63,30 @@ public sealed record NewOrderItem
     public int Quantity { get; }
 
     public string? Note { get; }
+
+    /// <summary>What one unit is made of, when it is a combo (US-51). Empty otherwise.</summary>
+    public IReadOnlyList<NewOrderItemComponent> Components { get; }
+
+    /// <summary>The list price, when a promotion lowered <see cref="UnitPrice"/> (US-55). Null otherwise.</summary>
+    public decimal? RegularPrice { get; }
+
+    /// <summary>The promotion that lowered it, by name. Null otherwise.</summary>
+    public string? PromotionName { get; }
+}
+
+/// <summary>One product of a combo as the menu has it right now. Longhand for the same reason.</summary>
+public sealed record NewOrderItemComponent
+{
+    public NewOrderItemComponent(Guid productId, string productName, int quantity)
+    {
+        ProductId = productId;
+        ProductName = productName;
+        Quantity = quantity;
+    }
+
+    public Guid ProductId { get; }
+
+    public string ProductName { get; }
+
+    public int Quantity { get; }
 }

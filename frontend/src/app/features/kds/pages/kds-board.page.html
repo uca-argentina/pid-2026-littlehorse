@@ -117,14 +117,26 @@
                     </div>
                   }
                   <div class="items">
-                    @for (item of order.orderItems; track item.productName) {
+                    @for (item of order.orderItems; track $index) {
                       <div class="it">
                         <span class="q">{{ item.quantity }}×</span>
                         <span>{{ item.productName }}</span>
+                        <!-- US-59: the free drink of a stamp card, told apart from the paid one. -->
+                        @if (item.isReward) {
+                          <span class="gift">Regalo</span>
+                        }
                         @if (item.note) {
                           <span class="note">{{ item.note }}</span>
                         }
                       </div>
+                      <!-- US-53: what one combo brings, as it was frozen in this order. -->
+                      @if (item.components.length > 0) {
+                        <ul class="parts" [attr.aria-label]="'Qué trae ' + item.productName">
+                          @for (part of item.components; track part.productName) {
+                            <li>{{ part.quantity * item.quantity }}× {{ part.productName }}</li>
+                          }
+                        </ul>
+                      }
                     }
                   </div>
 

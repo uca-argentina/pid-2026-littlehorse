@@ -9,6 +9,10 @@
           <ng-container [ngTemplateOutlet]="plus" />
           <span>Nueva categoría</span>
         </a>
+        <a class="cta" routerLink="combos/new">
+          <ng-container [ngTemplateOutlet]="plus" />
+          <span>Nuevo combo</span>
+        </a>
         <a class="cta" routerLink="new">
           <ng-container [ngTemplateOutlet]="plus" />
           <span>Nuevo producto</span>
@@ -109,6 +113,9 @@
               @if (row.description !== null) {
                 <span class="description">{{ row.description }}</span>
               }
+              @if (row.brings !== null) {
+                <span class="description">Trae {{ row.brings }}</span>
+              }
             </span>
             <span class="price">{{ row.price }}</span>
             <!--
@@ -116,7 +123,11 @@
               del interruptor, una sola vez: repetirlo acá y en un chip hacía
               que la misma fila dijera "sin stock" tres veces.
             -->
-            <span class="stock">{{ row.stock }} en stock</span>
+            @if (row.isCombo) {
+              <span class="stock">Combo</span>
+            } @else {
+              <span class="stock">{{ row.stock }} en stock</span>
+            }
             <!--
               "Disponible esta noche" del wireframe: un interruptor y, al lado,
               por qué está donde está. Ese rótulo es el único lugar de la fila
@@ -148,9 +159,7 @@
               <span class="chip chip-off">Dado de baja</span>
             }
             @if (row.isActive) {
-              <a class="edit" [routerLink]="['/', venueSlug(), 'staff', 'products', row.id]"
-                >Editar</a
-              >
+              <a class="edit" [routerLink]="row.editLink">Editar</a>
             }
             @if (row.toggleFailed) {
               <span class="switch-bad" role="alert">

@@ -6,8 +6,11 @@ namespace DrinkIt.Api.Features.Menu;
 internal static class MenuHandlers
 {
     public static IServiceCollection AddMenuHandlers(this IServiceCollection services) => services
+        .AddScoped<ListMenuHandler>()
         .AddScoped<CreateCategoryHandler>()
         .AddScoped<CreateProductHandler>()
+        .AddScoped<CreateComboHandler>()
+        .AddScoped<ReplaceComboComponentsHandler>()
         .AddScoped<UpdateProductHandler>()
         .AddScoped<DeactivateProductHandler>()
         .AddScoped<AdjustProductStockHandler>()

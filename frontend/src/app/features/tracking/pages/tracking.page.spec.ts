@@ -11,6 +11,8 @@ import { TrackingStore } from '../tracking.store';
 import { cancelOrderUrl, trackingUrl } from '../tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { noStampCard } from '../../../core/stamp-card/no-stamp-card';
+import { StampCards } from '../../../core/stamp-card/stamp-cards';
 import { TrackingPage } from './tracking.page';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
@@ -22,15 +24,17 @@ function anOrder(
   barName: string | null = null,
   tableNumber: number | null = null,
   waiterName: string | null = null,
+  savings = 0,
 ): TrackedOrder {
   return {
     code: 'K-4821',
     customerName: 'María Quadro',
     status,
     total: 9000,
+    savings,
     paidAt: '2026-09-17T02:30:00Z',
     barName,
-    items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo' }],
+    items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo', isReward: false }],
     tableNumber,
     waiterName,
   };
@@ -50,6 +54,7 @@ async function openScreenShowing(
   barName: string | null = null,
   tableNumber: number | null = null,
   waiterName: string | null = null,
+  savings = 0,
 ) {
   const rendered = await render(TrackingPage, {
     inputs: { venueSlug: 'bar-alfa', code: 'K-4821', token },
@@ -60,11 +65,12 @@ async function openScreenShowing(
       // Never says the order moved: what these tests are about is what each
       // answer draws, so the answers are handed over by hand.
       { provide: TrackingChannel, useValue: aQuietChannel() },
+      { provide: StampCards, useValue: noStampCard() },
     ],
   });
 
   const http = TestBed.inject(HttpTestingController);
-  http.expectOne(url).flush(anOrder(status, barName, tableNumber, waiterName));
+  http.expectOne(url).flush(anOrder(status, barName, tableNumber, waiterName, savings));
   await rendered.fixture.whenStable();
 
   // The store belongs to the component, not to the TestBed: a test that needs a
@@ -83,6 +89,19 @@ function steps(): { name: string; reached: boolean }[] {
 }
 
 describe('TrackingPage', () => {
+  // US-56, criterion 2.
+  it('says how much the promotions saved', async () => {
+    await openScreenShowing('Queued', null, null, null, 2700);
+
+    expect(screen.getByTestId('savings').textContent).toContain('Te ahorraste $ 2.700,00');
+  });
+
+  it('says nothing about savings when there was no promotion', async () => {
+    await openScreenShowing('Queued');
+
+    expect(screen.queryByTestId('savings')).toBeNull();
+  });
+
   // Criterion 1: the number, which is what the bar will call out.
   it('shows the code of the order', async () => {
     await openScreenShowing('Queued');
@@ -283,6 +302,7 @@ describe('TrackingPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: TrackingChannel, useValue: aQuietChannel() },
+        { provide: StampCards, useValue: noStampCard() },
       ],
     });
 
@@ -412,6 +432,7 @@ describe('TrackingPage', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: TrackingChannel, useValue: aQuietChannel() },
+        { provide: StampCards, useValue: noStampCard() },
       ],
     });
 

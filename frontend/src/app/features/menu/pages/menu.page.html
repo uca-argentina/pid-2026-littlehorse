@@ -12,6 +12,11 @@
     <!-- US-34: the way back to an order, for whoever left its tracking screen. -->
     <drinkit-orders-in-progress [venueSlug]="venueSlug()" />
 
+    <!-- US-58: the stamps of this phone's card, when the venue has one. -->
+    @if (stampCard(); as card) {
+      <drinkit-stamp-progress [card]="card" />
+    }
+
     <!-- US-41: ordering for a VIP table, from the QR the waiter handed over. -->
     @if (tableLine(); as line) {
       <p class="table" role="status" aria-label="Tu mesa">{{ line }}</p>
@@ -162,11 +167,26 @@
                     <p class="card-note" [attr.data-testid]="'note-' + card.name">{{ note }}</p>
                   }
 
+                  <!-- US-52: said even when it cannot be ordered: it explains the card. -->
+                  @if (card.brings; as brings) {
+                    <p class="brings">Trae {{ brings }}</p>
+                  }
+
                   @if (card.isOrderable) {
                     @if (card.description !== null) {
                       <p class="dsc">{{ card.description }}</p>
                     }
-                    <p class="price">$ {{ card.price }}</p>
+                    <p class="price">
+                      $ {{ card.price }}
+                      @if (card.regularPrice; as regular) {
+                        <s class="was"
+                          ><span class="dk-sr-only">Precio de lista </span>$ {{ regular }}</s
+                        >
+                      }
+                    </p>
+                    @if (card.promotion; as promotion) {
+                      <p class="promo">{{ promotion }}</p>
+                    }
                   } @else {
                     <!-- In place of the description, and with no price: the
                          design puts no number on something nobody can buy

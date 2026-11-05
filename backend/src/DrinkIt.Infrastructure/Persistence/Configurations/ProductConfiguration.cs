@@ -29,6 +29,26 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(product => product.IsAvailable).IsRequired();
         builder.Property(product => product.IsActive).IsRequired();
 
+        // Derived from Stock and Components, never stored.
+        builder.Ignore(product => product.IsCombo);
+
+        // US-50: what a combo is made of. Its own table, keyed by the product
+        // so one cannot be listed twice. A component's product is never deleted,
+        // so the foreign key always has a row, and it restricts.
+        builder.OwnsMany(product => product.Components, component =>
+        {
+            component.ToTable("ComboComponents");
+            component.WithOwner().HasForeignKey("ComboId");
+            component.Property<Guid>("ComboId");
+            component.HasKey("ComboId", nameof(ComboComponent.ProductId));
+            component.Property(part => part.Quantity).IsRequired();
+            component.HasOne<Product>().WithMany().HasForeignKey(part => part.ProductId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Navigation(product => product.Components)
+            .HasField("_components")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         // Composite with VenueId, not global: two venues must be able to sell
         // their own "Gin Tonic". CLAUDE.md, multi-tenancy section.
         builder.HasIndex(product => new { product.VenueId, product.Name }).IsUnique();

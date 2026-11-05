@@ -1,0 +1,234 @@
+<div class="desk-frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <form class="desk" novalidate (submit)="$event.preventDefault(); submit()">
+    <a class="desk-back" [routerLink]="['/', venueSlug(), 'staff', 'products']"
+      >Volver a productos</a
+    >
+
+    <div class="desk-head">
+      <div>
+        <h1 class="desk-title">{{ isEditing() ? 'Editar combo' : 'Nuevo combo' }}</h1>
+        <p class="desk-lede">
+          Se vende desde el stock de sus productos: confirmar un combo los descuenta de la barra que
+          lo prepara.
+        </p>
+      </div>
+      <div class="desk-actions">
+        @if (isEditing()) {
+          <button
+            class="desk-btn desk-btn-danger"
+            type="button"
+            [disabled]="isSending()"
+            (click)="deactivate()"
+          >
+            Dar de baja
+          </button>
+        }
+        <a class="desk-btn" [routerLink]="['/', venueSlug(), 'staff', 'products']">Cancelar</a>
+        <button class="desk-btn desk-btn-primary" type="submit" [disabled]="isSending()">
+          {{ isSending() ? 'Guardando' : 'Guardar combo' }}
+        </button>
+      </div>
+    </div>
+
+    @switch (refusal()) {
+      @case ('nameTaken') {
+        <p class="desk-note desk-note-bad" role="alert">Ya hay un producto con ese nombre.</p>
+      }
+      @case ('partGone') {
+        <p class="desk-note desk-note-bad" role="alert">
+          Uno de los productos ya no está en la carta. Sacalo del combo.
+        </p>
+      }
+      @case ('comboInside') {
+        <p class="desk-note desk-note-bad" role="alert">
+          Un combo no puede tener otro combo adentro.
+        </p>
+      }
+      @case ('imageBad') {
+        <p class="desk-note desk-note-bad" role="alert">
+          La foto tiene que ser JPEG, PNG o WebP, de hasta 5 MB.
+        </p>
+      }
+      @case ('unreachable') {
+        <p class="desk-note desk-note-bad" role="alert">
+          No pudimos guardarlo. Fijate la conexión y probá de nuevo.
+        </p>
+      }
+    }
+
+    <div class="desk-columns">
+      <section class="desk-panel" aria-labelledby="data-title">
+        <h2 id="data-title" class="desk-panel-title">Datos</h2>
+
+        <div class="desk-field">
+          <label class="desk-label" for="name">Nombre</label>
+          <input
+            id="name"
+            class="desk-input"
+            type="text"
+            maxlength="80"
+            autocomplete="off"
+            [value]="name()"
+            [attr.aria-invalid]="nameError() !== null ? 'true' : null"
+            (input)="name.set(read($event))"
+          />
+          @if (nameError(); as error) {
+            <p class="desk-bad">{{ error }}</p>
+          }
+        </div>
+
+        <div class="desk-row">
+          <div class="desk-field">
+            <label class="desk-label" for="price">Precio del combo</label>
+            <input
+              id="price"
+              class="desk-input"
+              type="number"
+              min="0"
+              step="0.01"
+              [value]="price()"
+              [attr.aria-invalid]="priceError() !== null ? 'true' : null"
+              (input)="price.set(read($event))"
+            />
+            @if (priceError(); as error) {
+              <p class="desk-bad">{{ error }}</p>
+            }
+          </div>
+
+          <div class="desk-field">
+            <label class="desk-label" for="category">Categoría</label>
+            <select
+              id="category"
+              class="desk-input"
+              [value]="categoryId()"
+              [attr.aria-invalid]="categoryError() !== null ? 'true' : null"
+              (change)="categoryId.set(read($event))"
+            >
+              <option value="">Elegí una</option>
+              @if (categories.hasValue()) {
+                @for (category of categories.value(); track category.id) {
+                  <option [value]="category.id" [selected]="category.id === categoryId()">
+                    {{ category.name }}
+                  </option>
+                }
+              }
+            </select>
+            @if (categoryError(); as error) {
+              <p class="desk-bad">{{ error }}</p>
+            }
+          </div>
+        </div>
+
+        <div class="desk-field">
+          <label class="desk-label" for="description">Descripción (opcional)</label>
+          <textarea
+            id="description"
+            class="desk-input"
+            maxlength="200"
+            [value]="description()"
+            (input)="description.set(read($event))"
+          ></textarea>
+        </div>
+
+        <div class="desk-field">
+          <label class="desk-label" for="image">Foto (opcional)</label>
+          <input
+            id="image"
+            class="desk-input image"
+            type="file"
+            [accept]="acceptedImages"
+            (change)="pickImage($event)"
+          />
+          <p class="desk-help">JPEG, PNG o WebP, de hasta 5 MB.</p>
+        </div>
+      </section>
+
+      <section class="desk-panel" aria-labelledby="parts-title">
+        <h2 id="parts-title" class="desk-panel-title">Productos del combo</h2>
+
+        <div class="desk-row">
+          <div class="desk-field grow">
+            <label class="desk-label" for="pick">Producto</label>
+            <select
+              id="pick"
+              class="desk-input"
+              [value]="picked()"
+              (change)="picked.set(read($event))"
+            >
+              <option value="">Elegí un producto</option>
+              @for (choice of choices(); track choice.id) {
+                <option [value]="choice.id" [selected]="choice.id === picked()">
+                  {{ choice.name }}
+                </option>
+              }
+            </select>
+          </div>
+          <div class="desk-field small">
+            <label class="desk-label" for="pick-quantity">Cantidad</label>
+            <input
+              id="pick-quantity"
+              class="desk-input"
+              type="number"
+              min="1"
+              step="1"
+              [value]="pickedQuantity()"
+              (input)="pickedQuantity.set(read($event))"
+            />
+          </div>
+          <button class="desk-btn" type="button" [disabled]="picked() === ''" (click)="addPart()">
+            Agregar
+          </button>
+        </div>
+
+        @if (rows().length > 0) {
+          <table class="desk-table" aria-label="Productos del combo">
+            <thead>
+              <tr>
+                <th scope="col">Producto</th>
+                <th scope="col" class="desk-num">Cantidad</th>
+                <th scope="col"><span class="dk-sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.productId) {
+                <tr>
+                  <td>{{ row.name }}</td>
+                  <td class="desk-num">
+                    <input
+                      class="desk-input quantity"
+                      type="number"
+                      min="1"
+                      step="1"
+                      [value]="row.quantity"
+                      [attr.aria-label]="'Cantidad de ' + row.name"
+                      (input)="setQuantity(row.productId, $event)"
+                    />
+                  </td>
+                  <td class="desk-num">
+                    <button
+                      class="desk-btn desk-btn-danger"
+                      type="button"
+                      [attr.aria-label]="'Sacar ' + row.name"
+                      (click)="removePart(row.productId)"
+                    >
+                      Sacar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <p class="desk-help">Por separado cuesta $ {{ separatelyText() }}.</p>
+        } @else {
+          <p class="desk-note">Todavía no agregaste ningún producto.</p>
+        }
+
+        @if (partsError(); as error) {
+          <p class="desk-bad" role="alert">{{ error }}</p>
+        }
+      </section>
+    </div>
+  </form>
+</div>
