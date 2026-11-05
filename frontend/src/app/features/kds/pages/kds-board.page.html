@@ -125,6 +125,14 @@
                           <span class="note">{{ item.note }}</span>
                         }
                       </div>
+                      <!-- US-53: what one combo brings, as it was frozen in this order. -->
+                      @if (item.components.length > 0) {
+                        <ul class="parts" [attr.aria-label]="'Qué trae ' + item.productName">
+                          @for (part of item.components; track part.productName) {
+                            <li>{{ part.quantity * item.quantity }}× {{ part.productName }}</li>
+                          }
+                        </ul>
+                      }
                     }
                   </div>
 

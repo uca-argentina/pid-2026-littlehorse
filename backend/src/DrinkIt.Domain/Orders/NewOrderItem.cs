@@ -15,13 +15,20 @@ namespace DrinkIt.Domain.Orders;
 /// </remarks>
 public sealed record NewOrderItem
 {
-    public NewOrderItem(Guid productId, string productName, decimal unitPrice, int quantity, string? note)
+    public NewOrderItem(
+        Guid productId,
+        string productName,
+        decimal unitPrice,
+        int quantity,
+        string? note,
+        IReadOnlyList<NewOrderItemComponent>? components = null)
     {
         ProductId = productId;
         ProductName = productName;
         UnitPrice = unitPrice;
         Quantity = quantity;
         Note = note;
+        Components = components ?? [];
     }
 
     public Guid ProductId { get; }
@@ -33,4 +40,24 @@ public sealed record NewOrderItem
     public int Quantity { get; }
 
     public string? Note { get; }
+
+    /// <summary>What one unit is made of, when it is a combo (US-51). Empty otherwise.</summary>
+    public IReadOnlyList<NewOrderItemComponent> Components { get; }
+}
+
+/// <summary>One product of a combo as the menu has it right now. Longhand for the same reason.</summary>
+public sealed record NewOrderItemComponent
+{
+    public NewOrderItemComponent(Guid productId, string productName, int quantity)
+    {
+        ProductId = productId;
+        ProductName = productName;
+        Quantity = quantity;
+    }
+
+    public Guid ProductId { get; }
+
+    public string ProductName { get; }
+
+    public int Quantity { get; }
 }

@@ -251,6 +251,9 @@ falta, preguntá antes de inventar el término.
 | Usuario interno | `StaffUser` | | Rol | `StaffRole` |
 | Administrador | `Administrator` | | Baja lógica | `IsActive` |
 | Noche / evento | `Night` | | Alerta / métricas | `Alert` / `Metrics` |
+| Combo | `Combo` | | Componente del combo | `ComboComponent` |
+| Promoción | `Promotion` | | Tarjeta de sellos | `StampCard` |
+| Sello | `Stamp` | | Regalo / canje | `Reward` |
 
 > **`Night`, no `Event` ni `Shift`.** Decidido el 2026-10-07: `Event` se confunde con los
 > eventos de dominio, y `Shift` ya nombra la ventana de cobros de la caja.

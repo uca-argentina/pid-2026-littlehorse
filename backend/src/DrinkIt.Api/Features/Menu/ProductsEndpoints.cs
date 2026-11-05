@@ -41,6 +41,24 @@ public sealed record UpdateProductRequest(string Name, string? Description, deci
 /// </remarks>
 public sealed record AdjustProductStockRequest(int Change);
 
+/// <summary>One product a combo is made of, and how many of it go in one combo.</summary>
+public sealed record ComboPartRequest(Guid ProductId, int Quantity);
+
+/// <summary>A combo: a product with a price of its own, sold from the stock of the ones it is made of.</summary>
+public sealed record CreateComboRequest(
+    string Name,
+    string? Description,
+    string? ImageUrl,
+    decimal Price,
+    Guid CategoryId,
+    IReadOnlyList<ComboPartRequest> Components);
+
+/// <summary>What a combo is made of from now on. Orders already confirmed keep what they had.</summary>
+public sealed record ReplaceComboComponentsRequest(IReadOnlyList<ComboPartRequest> Components);
+
+/// <summary>One product a combo is made of, and how many of it go in one combo.</summary>
+public sealed record ComboPartResponse(Guid ProductId, int Quantity);
+
 public sealed record ProductResponse(
     Guid Id,
     string Name,
@@ -52,7 +70,9 @@ public sealed record ProductResponse(
     bool IsAvailable,
     bool IsSoldOut,
     bool IsActive,
-    AuditResponse Audit);
+    AuditResponse Audit,
+    bool IsCombo,
+    IReadOnlyList<ComboPartResponse> Components);
 
 internal static class ProductsEndpoints
 {
@@ -79,6 +99,22 @@ internal static class ProductsEndpoints
             .Produces<ProductResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
+            .MapPost("/combos", CreateComboAsync)
+            .WithName("CreateCombo")
+            .WithSummary("Adds a combo to the venue's menu.")
+            .Produces<ProductResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group
+            .MapPut("/{id:guid}/components", ReplaceComponentsAsync)
+            .WithName("ReplaceComboComponents")
+            .WithSummary("Changes what a combo is made of, for the orders to come.")
+            .Produces<ProductResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         // POST and not DELETE or PUT: nothing is deleted, and the state is a
         // switch, not a field the screen posts a new value for. Same shape as
@@ -159,9 +195,37 @@ internal static class ProductsEndpoints
                 product.IsAvailable,
                 product.IsSoldOut,
                 product.IsActive,
-                AuditResponse.Of(product.Audit)))
+                AuditResponse.Of(product.Audit),
+                product.IsCombo,
+                PartsOf(product.Components)))
             .ToArray());
     }
+
+    internal static async Task<IResult> CreateComboAsync(
+        CreateComboRequest request,
+        CreateComboHandler handler,
+        CancellationToken cancellationToken)
+    {
+        Result<ProductSummary> result = await handler.HandleAsync(
+            new CreateComboCommand(request.Name, request.Description, request.ImageUrl, request.Price, request.CategoryId, [.. request.Components.Select(part => new ComboPart(part.ProductId, part.Quantity))]),
+            cancellationToken);
+
+        if (!result.IsSuccess) return Rejected(result.Error!);
+
+        return TypedResults.Created((string?)null, Shown(result.Value));
+    }
+
+    internal static async Task<IResult> ReplaceComponentsAsync(
+        Guid id,
+        ReplaceComboComponentsRequest request,
+        ReplaceComboComponentsHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(
+            new ReplaceComboComponentsCommand(id, [.. request.Components.Select(part => new ComboPart(part.ProductId, part.Quantity))]),
+            cancellationToken));
+
+    private static ComboPartResponse[] PartsOf(IReadOnlyList<ComboPart> parts) =>
+        [.. parts.Select(part => new ComboPartResponse(part.ProductId, part.Quantity))];
 
     internal static async Task<IResult> CreateAsync(
         CreateProductRequest request,
@@ -242,7 +306,9 @@ internal static class ProductsEndpoints
         product.IsAvailable,
         product.IsSoldOut,
         product.IsActive,
-        AuditResponse.Of(product.Audit));
+        AuditResponse.Of(product.Audit),
+        product.IsCombo,
+        PartsOf(product.Components));
 
     internal static async Task<IResult> UploadImageAsync(
         Guid id,

@@ -25,8 +25,14 @@ public sealed record ProductSummary(
     bool IsAvailable,
     bool IsSoldOut,
     bool IsActive,
-    AuditInfo Audit)
+    AuditInfo Audit,
+    IReadOnlyList<ComboPart>? Parts = null)
 {
+    /// <summary>What it is made of when it is a combo (US-50). Empty otherwise.</summary>
+    public IReadOnlyList<ComboPart> Components => Parts ?? [];
+
+    public bool IsCombo => Components.Count > 0;
+
     internal static ProductSummary Of(Product product) => new(
         product.Id,
         product.Name,
@@ -38,5 +44,6 @@ public sealed record ProductSummary(
         product.IsAvailable,
         product.IsSoldOut,
         product.IsActive,
-        AuditInfo.Of(product));
+        AuditInfo.Of(product),
+        [.. product.Components.Select(component => new ComboPart(component.ProductId, component.Quantity))]);
 }

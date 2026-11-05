@@ -138,6 +138,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
     {
         if (HasEndedAt(now)) throw new DomainException(ErrorCodes.NightOver, "The night is over and its stock can no longer change.");
         if (product.VenueId != VenueId) throw new DomainException(ErrorCodes.ProductFromAnotherVenue, "Only the venue's own products can be loaded into its night.");
+        if (product.IsCombo) throw new DomainException(Product.ErrorCodes.ComboHasNoStock, "A combo has no stock of its own: load its products.");
         if (bar.Role != StaffRole.Kds) throw new DomainException(ErrorCodes.BarRequired, "Stock is loaded into a bar, and a bar is a KDS.");
         if (!IsWorkedBy(bar.Id)) throw new DomainException(ErrorCodes.BarNotInNight, $"'{bar.Username}' does not work this night.");
         if (change == 0) throw new DomainException(ErrorCodes.StockChangeZero, "The stock has to change by at least one unit.");

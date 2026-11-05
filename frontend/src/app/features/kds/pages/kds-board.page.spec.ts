@@ -44,7 +44,7 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     lastModifiedAt: null,
     isForTable: false,
     tableNumber: null,
-    orderItems: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
+    orderItems: [{ productName: 'Gin Tonic', quantity: 2, note: null, components: [] }],
     ...overrides,
   };
 }
@@ -133,7 +133,9 @@ describe('KdsBoardPage', () => {
     await openScreenShowing([
       anOrder({
         customerName: 'Nico',
-        orderItems: [{ productName: 'Aperol Spritz', quantity: 1, note: 'con mucho hielo' }],
+        orderItems: [
+          { productName: 'Aperol Spritz', quantity: 1, note: 'con mucho hielo', components: [] },
+        ],
       }),
     ]);
 
@@ -470,8 +472,18 @@ describe('KdsBoardPage', () => {
 
   // US-16: taking orders off Nuevos, one or several, and handing one back.
   describe('taking orders', () => {
-    const gin = (quantity: number) => ({ productName: 'Gin Tonic', quantity, note: null });
-    const fernet = (quantity: number) => ({ productName: 'Fernet con Coca', quantity, note: null });
+    const gin = (quantity: number) => ({
+      productName: 'Gin Tonic',
+      quantity,
+      note: null,
+      components: [],
+    });
+    const fernet = (quantity: number) => ({
+      productName: 'Fernet con Coca',
+      quantity,
+      note: null,
+      components: [],
+    });
 
     async function settle(fixture: { whenStable(): Promise<unknown> }) {
       await fixture.whenStable();

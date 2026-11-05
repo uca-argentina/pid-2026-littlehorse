@@ -22,6 +22,17 @@ public static class ProductErrors
     public static readonly Error CategoryNotFound =
         new("product.category_not_found", "This venue has no category with that id.");
 
+    /// <summary>US-50: a component is not on this venue's menu, for the same reason as <see cref="NotFound"/>.</summary>
+    public static readonly Error ComboComponentNotFound =
+        new("product.combo_component_not_found", "One of the combo's products is not on this venue's menu.");
+
+    public static readonly Error ComboInsideCombo =
+        new("product.combo_inside_combo", "A combo cannot have another combo among its products.");
+
+    /// <summary>US-50: only its components have a stock to move.</summary>
+    public static readonly Error ComboHasNoStock =
+        new("product.combo_has_no_stock", "A combo has no stock of its own: adjust its products.");
+
     /// <summary>
     /// Sales since the screen was opened left less stock than the change takes
     /// away. Worth its own answer: looking again at the stock is the fix.

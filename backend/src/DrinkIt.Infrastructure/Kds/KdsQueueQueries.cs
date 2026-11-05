@@ -37,7 +37,11 @@ internal sealed class KdsQueueQueries(DrinkItDbContext context, ICurrentStaffUse
                 order.Method,
                 order.TableNumber,
                 OrderItems = order.Items
-                    .Select(item => new KdsQueueOrderItem(item.ProductName, item.Quantity, item.Note))
+                    .Select(item => new KdsQueueOrderItem(
+                        item.ProductName,
+                        item.Quantity,
+                        item.Note,
+                        item.Components.Select(part => new KdsQueueOrderItemPart(part.ProductName, part.Quantity)).ToList()))
                     .ToList(),
             })
             .ToListAsync(cancellationToken);

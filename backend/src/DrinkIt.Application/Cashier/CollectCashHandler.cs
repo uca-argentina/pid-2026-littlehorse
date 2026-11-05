@@ -45,7 +45,7 @@ public sealed class CollectCashHandler(
         // none, and reads the same.
         if (order.NightId is not Guid night || await nights.FindIdAsync(now, cancellationToken) != night) return CashierErrors.NightOver;
 
-        OrderLine[] lines = [.. order.Items.Select(item => new OrderLine(item.ProductId, item.Quantity))];
+        OrderLine[] lines = OrderLine.Of(order);
         IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, [.. lines.Select(line => line.ProductId)], cancellationToken);
         BarSupply? bar = BarChooser.Choose(nightsBars, lines, now);
 
@@ -71,7 +71,7 @@ public sealed class CollectCashHandler(
     // asked for, whatever the menu calls it now.
     private static Error SoldOut(Order order, Guid missing)
     {
-        string name = order.Items.First(item => item.ProductId == missing).ProductName;
+        string name = order.ItemThatNeeds(missing).ProductName;
 
         return new Error(CashierErrors.SoldOut.Code, $"{name} ran out at every bar.", name);
     }

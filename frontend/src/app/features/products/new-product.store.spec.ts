@@ -26,6 +26,8 @@ const created: Product = {
   isActive: true,
 
   audit: noAudit,
+  isCombo: false,
+  components: [],
 };
 
 const aNewProduct: NewProduct = {

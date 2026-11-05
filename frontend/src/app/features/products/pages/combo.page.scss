@@ -1,0 +1,17 @@
+.grow {
+  flex: 3;
+}
+
+.desk-row > .small {
+  flex: 0 0 90px;
+  min-width: 90px;
+}
+
+.quantity {
+  width: 76px;
+  text-align: right;
+}
+
+.image {
+  padding: 6px var(--dk-space-3);
+}

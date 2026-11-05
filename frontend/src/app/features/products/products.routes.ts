@@ -21,6 +21,14 @@ export const productsRoutes: Routes = [
         path: 'new',
         loadComponent: () => import('./pages/new-product.page').then((m) => m.NewProductPage),
       },
+      {
+        path: 'combos/new',
+        loadComponent: () => import('./pages/combo.page').then((m) => m.ComboPage),
+      },
+      {
+        path: 'combos/:id',
+        loadComponent: () => import('./pages/combo.page').then((m) => m.ComboPage),
+      },
       // After 'new', which would otherwise be read as somebody's id.
       {
         path: ':id',

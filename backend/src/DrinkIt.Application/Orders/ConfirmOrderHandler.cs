@@ -144,27 +144,27 @@ public sealed class ConfirmOrderHandler(
     {
         IReadOnlyList<Product> menu = await products.GetForOrderingAsync(wanted, cancellationToken);
 
-        Result<List<NewOrderItem>> items = Price(command.Lines, menu);
+        // US-51: what the combos are made of, read as they are now and frozen
+        // in the order below.
+        Guid[] componentIds = [.. menu.SelectMany(product => product.Components).Select(component => component.ProductId).Distinct()];
+        IReadOnlyList<Product> parts = componentIds.Length == 0 ? [] : await products.GetForOrderingAsync(componentIds, cancellationToken);
+
+        Result<List<NewOrderItem>> items = Price(command.Lines, menu, parts);
 
         if (!items.IsSuccess) return items.Error!;
+
+        Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
 
         // US-37: each bar keeps a stock of its own, and a paid order is taken
         // from one of them. Asked even for cash, which pays later: nobody
         // should walk to the till for something no bar has. Like the menu
         // above, a few seconds old by the write: the conditional statement in
         // the repository is what settles a race.
-        OrderLine[] lines = [.. command.Lines.Select(line => new OrderLine(line.ProductId, line.Quantity))];
-        IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, wanted, cancellationToken);
+        OrderLine[] lines = OrderLine.Of(order);
+        IReadOnlyList<BarSupply> nightsBars = await bars.GetAsync(night, [.. lines.Select(line => line.ProductId)], cancellationToken);
         BarSupply? bar = BarChooser.Choose(nightsBars, lines, clock.GetUtcNow());
 
-        if (bar is null)
-        {
-            Guid missing = BarChooser.Missing(nightsBars, lines);
-
-            return OutOfStock(menu.First(product => product.Id == missing));
-        }
-
-        Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
+        if (bar is null) return OutOfStock(order.ItemThatNeeds(BarChooser.Missing(nightsBars, lines)).ProductName);
 
         // Whether the money is in is the payment method's call: digital pays
         // here, cash stops at the till. What follows once it is in is the same
@@ -195,7 +195,8 @@ public sealed class ConfirmOrderHandler(
     /// </remarks>
     private static Result<List<NewOrderItem>> Price(
         IReadOnlyCollection<OrderLineRequest> lines,
-        IReadOnlyList<Product> menu)
+        IReadOnlyList<Product> menu,
+        IReadOnlyList<Product> parts)
     {
         List<NewOrderItem> items = [];
 
@@ -208,7 +209,16 @@ public sealed class ConfirmOrderHandler(
             // are standing it is the same thing.
             if (product is not { IsActive: true, IsAvailable: true }) return NotOnTheMenuFor(product);
 
-            items.Add(new NewOrderItem(product.Id, product.Name, product.Price, line.Quantity, line.Note));
+            // A combo with a part taken off the menu cannot be made tonight,
+            // and it is the combo the customer asked for.
+            NewOrderItemComponent[] components = [.. product.Components
+                .Select(component => (Component: component, Part: parts.FirstOrDefault(part => part.Id == component.ProductId)))
+                .Where(pair => pair.Part is { IsActive: true, IsAvailable: true })
+                .Select(pair => new NewOrderItemComponent(pair.Part!.Id, pair.Part.Name, pair.Component.Quantity))];
+
+            if (components.Length != product.Components.Count) return NotOnTheMenuFor(product);
+
+            items.Add(new NewOrderItem(product.Id, product.Name, product.Price, line.Quantity, line.Note, components));
         }
 
         return items;
@@ -221,8 +231,8 @@ public sealed class ConfirmOrderHandler(
         ? NotOnTheMenu
         : new Error(NotOnTheMenu.Code, $"{product.Name} is not on the menu any more.", product.Name);
 
-    private static Error OutOfStock(Product product) =>
-        new(SoldOut.Code, $"{product.Name} ran out while you were ordering.", product.Name);
+    private static Error OutOfStock(string name) =>
+        new(SoldOut.Code, $"{name} ran out while you were ordering.", name);
 
     private static string TheKeyOf(ConfirmOrderCommand command) =>
         (command.IdempotencyKey ?? string.Empty).Trim();

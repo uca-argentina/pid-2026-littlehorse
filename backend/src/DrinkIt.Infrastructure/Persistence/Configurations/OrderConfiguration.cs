@@ -140,5 +140,22 @@ internal sealed class OrderItemConfiguration : IEntityTypeConfiguration<OrderIte
         builder.Property(item => item.Note).HasMaxLength(OrderItem.NoteMaxLength);
 
         builder.Ignore(item => item.Total);
+
+        // US-51: what a combo was made of when it was confirmed. They load
+        // with the item and die with it; no foreign key to the product, as with
+        // the item's own ProductId.
+        builder.OwnsMany(item => item.Components, component =>
+        {
+            component.ToTable("OrderItemComponents");
+            component.WithOwner().HasForeignKey("OrderItemId");
+            component.Property<Guid>("OrderItemId");
+            component.HasKey("OrderItemId", nameof(OrderItemComponent.ProductId));
+            component.Property(part => part.ProductName).HasMaxLength(Domain.Menu.Product.NameMaxLength).IsRequired();
+            component.Property(part => part.Quantity).IsRequired();
+        });
+
+        builder.Navigation(item => item.Components)
+            .HasField("_components")
+            .UsePropertyAccessMode(Microsoft.EntityFrameworkCore.PropertyAccessMode.Field);
     }
 }

@@ -607,6 +607,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/products/combos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Adds a combo to the venue's menu. */
+    post: operations['CreateCombo'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/products/{id}/components': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Changes what a combo is made of, for the orders to come. */
+    put: operations['ReplaceComboComponents'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/staff/products/{id}/mark-unavailable': {
     parameters: {
       query?: never;
@@ -976,6 +1010,20 @@ export interface components {
     ChangeStaffUserRoleRequest: {
       role: components['schemas']['StaffRoleName'];
     };
+    /** @description One product a combo is made of, and how many of it go in one combo. */
+    ComboPartRequest: {
+      /** Format: uuid */
+      productId: string;
+      /** Format: int32 */
+      quantity: number;
+    };
+    /** @description One product a combo is made of, and how many of it go in one combo. */
+    ComboPartResponse: {
+      /** Format: uuid */
+      productId: string;
+      /** Format: int32 */
+      quantity: number;
+    };
     /** @description The order as the confirmation screen shows it. */
     ConfirmedOrderResponse: {
       /** Format: uuid */
@@ -1002,6 +1050,17 @@ export interface components {
     /** @description What the administration screen posts to add a category. */
     CreateCategoryRequest: {
       name: string;
+    };
+    /** @description A combo: a product with a price of its own, sold from the stock of the ones it is made of. */
+    CreateComboRequest: {
+      name: string;
+      description: null | string;
+      imageUrl: null | string;
+      /** Format: double */
+      price: number;
+      /** Format: uuid */
+      categoryId: string;
+      components: components['schemas']['ComboPartRequest'][];
     };
     CreateNightRequest: {
       name: string;
@@ -1059,12 +1118,19 @@ export interface components {
      * @enum {string}
      */
     KdsOrderStatus: 'Queued' | 'InPreparation' | 'Ready';
+    /** @description One product of a combo on a card of the board, and how many of it go in one combo. */
+    KdsQueueOrderItemPartResponse: {
+      productName: string;
+      /** Format: int32 */
+      quantity: number;
+    };
     /** @description One drink on a card of the board, as the bar's tablet reads it. */
     KdsQueueOrderItemResponse: {
       productName: string;
       /** Format: int32 */
       quantity: number;
       note: null | string;
+      components: components['schemas']['KdsQueueOrderItemPartResponse'][];
     };
     /** @description One order on the bar's board: who asked, what for, since when, and where it is. */
     KdsQueueOrderResponse: {
@@ -1097,6 +1163,12 @@ export interface components {
       role: components['schemas']['StaffRoleName'];
       displayName: null | string;
     };
+    /** @description One product of a combo as its card lists it, with how many of it come in one combo. */
+    MenuItemPartResponse: {
+      name: string;
+      /** Format: int32 */
+      quantity: number;
+    };
     /** @description One card of the menu, as the customer's phone receives it. */
     MenuItemResponse: {
       /** Format: uuid */
@@ -1109,6 +1181,7 @@ export interface components {
       /** Format: uuid */
       categoryId: string;
       isOrderable: boolean;
+      components: components['schemas']['MenuItemPartResponse'][];
     };
     /** @description The venue's menu: its name, its categories and its products. */
     MenuResponse: {
@@ -1256,10 +1329,16 @@ export interface components {
       isSoldOut: boolean;
       isActive: boolean;
       audit: components['schemas']['AuditResponse'];
+      isCombo: boolean;
+      components: components['schemas']['ComboPartResponse'][];
     };
     /** @description What it sends to give somebody the name people read. Blank takes it away. */
     RenameStaffUserRequest: {
       displayName: null | string;
+    };
+    /** @description What a combo is made of from now on. Orders already confirmed keep what they had. */
+    ReplaceComboComponentsRequest: {
+      components: components['schemas']['ComboPartRequest'][];
     };
     /** @description What it sends to hand somebody a new password. */
     ResetStaffUserPasswordRequest: {
@@ -2831,6 +2910,92 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  CreateCombo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateComboRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReplaceComboComponents: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReplaceComboComponentsRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ProductResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

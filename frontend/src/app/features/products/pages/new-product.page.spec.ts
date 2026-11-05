@@ -27,6 +27,8 @@ const created: Product = {
   isActive: true,
 
   audit: noAudit,
+  isCombo: false,
+  components: [],
 };
 
 const rejectedWith = (status: number, type: string) =>

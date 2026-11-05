@@ -1,0 +1,278 @@
+// The administration screens are used on a computer, with a mouse and a
+// keyboard: wide, dense and with tables. Nothing here is sized for a thumb on
+// purpose. Added to a page next to its own stylesheet, and only the customer's
+// and the bar's screens keep the big targets.
+
+.desk {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--dk-space-4);
+  width: 100%;
+  max-width: 1280px;
+  padding: var(--dk-space-5) 32px;
+  margin: 0 auto;
+}
+
+.desk-frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.desk-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.desk-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.desk-lede {
+  margin: 4px 0 0;
+  color: var(--dk-text-muted);
+  font-size: 14px;
+}
+
+.desk-back {
+  align-self: flex-start;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+}
+
+.desk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 var(--dk-space-4);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: none;
+  color: var(--dk-text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.desk-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.desk-btn:hover:not(:disabled) {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}
+
+.desk-btn-primary {
+  border-color: var(--dk-accent);
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-weight: 700;
+}
+
+.desk-btn-primary:hover:not(:disabled) {
+  border-color: var(--dk-accent-hover);
+  background: var(--dk-accent-hover);
+  color: var(--dk-on-accent);
+}
+
+.desk-btn-danger:hover:not(:disabled) {
+  border-color: var(--dk-danger);
+  color: var(--dk-danger);
+}
+
+.desk-table {
+  width: 100%;
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+.desk-table th {
+  padding: 10px var(--dk-space-3);
+  border-bottom: 1px solid var(--dk-border);
+  color: var(--dk-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.desk-table td {
+  padding: 8px var(--dk-space-3);
+  border-bottom: 1px solid var(--dk-border-subtle);
+  vertical-align: middle;
+}
+
+.desk-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.desk-table tbody tr:hover {
+  background: var(--dk-surface-raised);
+}
+
+.desk-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.desk-table th.desk-num {
+  text-align: right;
+}
+
+// Two columns while there is room, and one on a narrow window.
+.desk-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--dk-space-5);
+  align-items: start;
+}
+
+@media (width <= 900px) {
+  .desk-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.desk-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dk-space-3);
+  padding: var(--dk-space-4);
+  border: 1px solid var(--dk-border-subtle);
+  border-radius: var(--dk-radius-md);
+  background: var(--dk-surface);
+}
+
+.desk-panel-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.desk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.desk-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: flex-end;
+}
+
+.desk-row > .desk-field {
+  flex: 1;
+  min-width: 140px;
+}
+
+.desk-label {
+  padding: 0;
+  color: var(--dk-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.desk-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 var(--dk-space-3);
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-ink);
+  color: var(--dk-text);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+textarea.desk-input {
+  min-height: 72px;
+  padding: var(--dk-space-2) var(--dk-space-3);
+  resize: vertical;
+}
+
+.desk-input:focus-visible {
+  border-color: var(--dk-accent);
+  outline: 1px solid var(--dk-accent);
+}
+
+.desk-input[aria-invalid='true'] {
+  border-color: var(--dk-danger);
+}
+
+.desk-help {
+  margin: 0;
+  color: var(--dk-text-muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.desk-bad {
+  margin: 0;
+  color: var(--dk-danger);
+  font-size: 13px;
+}
+
+.desk-note {
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-sm);
+  background: var(--dk-note-surface);
+  color: var(--dk-text-muted);
+  font-size: 14px;
+}
+
+.desk-note-bad {
+  border-color: var(--dk-danger);
+  background: var(--dk-danger-surface);
+  color: var(--dk-text);
+}
+
+.desk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dk-space-3);
+  align-items: center;
+}
+
+.desk-chip {
+  display: inline-block;
+  padding: 2px 9px;
+  border: 1px solid var(--dk-border);
+  border-radius: var(--dk-radius-pill);
+  color: var(--dk-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.desk-chip-on {
+  border-color: var(--dk-accent);
+  color: var(--dk-accent);
+}

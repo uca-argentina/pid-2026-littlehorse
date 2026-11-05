@@ -14,7 +14,11 @@ public sealed record MenuItemResponse(
     string? ImageUrl,
     decimal Price,
     Guid CategoryId,
-    bool IsOrderable);
+    bool IsOrderable,
+    IReadOnlyList<MenuItemPartResponse> Components);
+
+/// <summary>One product of a combo as its card lists it, with how many of it come in one combo.</summary>
+public sealed record MenuItemPartResponse(string Name, int Quantity);
 
 /// <summary>The venue's menu: its name, its categories and its products.</summary>
 /// <remarks>
@@ -89,7 +93,8 @@ internal static class MenuEndpoint
                 item.ImageUrl,
                 item.Price,
                 item.CategoryId,
-                item.IsOrderable))]));
+                item.IsOrderable,
+                [.. item.Components.Select(part => new MenuItemPartResponse(part.Name, part.Quantity))]))]));
     }
 
     private static ProblemHttpResult NoSuchVenue(string slug) =>

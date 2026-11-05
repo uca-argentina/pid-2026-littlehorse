@@ -28,6 +28,7 @@ const carta: Menu = {
       price: 4500,
       categoryId: 'category-drinks',
       isOrderable: true,
+      components: [],
     },
     {
       id: 'id-2',
@@ -37,6 +38,7 @@ const carta: Menu = {
       price: 4000,
       categoryId: 'category-drinks',
       isOrderable: true,
+      components: [],
     },
     {
       id: 'id-3',
@@ -46,6 +48,7 @@ const carta: Menu = {
       price: 6000,
       categoryId: 'category-drinks',
       isOrderable: false,
+      components: [],
     },
   ],
 };
@@ -328,6 +331,7 @@ describe('MenuPage', () => {
           price: 4500,
           categoryId: 'category-drinks',
           isOrderable: true,
+          components: [],
         },
         {
           id: 'id-2',
@@ -337,6 +341,7 @@ describe('MenuPage', () => {
           price: 3000,
           categoryId: 'category-beer',
           isOrderable: true,
+          components: [],
         },
         {
           id: 'id-3',
@@ -346,6 +351,7 @@ describe('MenuPage', () => {
           price: 2000,
           categoryId: 'category-soft',
           isOrderable: false,
+          components: [],
         },
       ],
     };
