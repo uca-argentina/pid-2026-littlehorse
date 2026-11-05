@@ -181,6 +181,36 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// <summary>Nobody is waiting on it any more, so its link stops working.</summary>
     public bool IsFinished => Status.IsFinished();
 
+    /// <summary>
+    /// What it takes from a bar, product by product (US-51): combos taken apart
+    /// and added to whatever is ordered loose. Everything that asks about stock
+    /// or moves it reads this, so the units cannot be worked out two ways.
+    /// </summary>
+    public IReadOnlyDictionary<Guid, int> UnitsByProduct()
+    {
+        Dictionary<Guid, int> units = [];
+
+        foreach (OrderItem item in _items)
+        {
+            if (item.Components.Count == 0) Add(item.ProductId, item.Quantity);
+
+            foreach (OrderItemComponent component in item.Components) Add(component.ProductId, component.Quantity * item.Quantity);
+        }
+
+        return units;
+
+        void Add(Guid productId, int quantity) => units[productId] = units.GetValueOrDefault(productId) + quantity;
+    }
+
+    /// <summary>
+    /// The line that asks for a product (US-51): itself when ordered loose, or
+    /// else the combo that carries it. It is what the customer asked for, so
+    /// it is what they get told to take out.
+    /// </summary>
+    public OrderItem ItemThatNeeds(Guid productId) =>
+        _items.Find(item => item.ProductId == productId)
+        ?? _items.First(item => item.Components.Any(component => component.ProductId == productId));
+
     public static Order Place(
         Guid venueId,
         Guid nightId,
@@ -466,7 +496,11 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         if (note?.Length > OrderItem.NoteMaxLength) throw new DomainException(ErrorCodes.NoteLength, $"A note cannot be longer than {OrderItem.NoteMaxLength} characters.");
 
-        return new OrderItem(Guid.CreateVersion7(), item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, note);
+        OrderItem frozen = new(Guid.CreateVersion7(), item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, note);
+
+        frozen.Freeze(item.Components);
+
+        return frozen;
     }
 
     /// <summary>

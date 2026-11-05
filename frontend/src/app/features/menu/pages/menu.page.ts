@@ -25,6 +25,9 @@ interface MenuCard {
   readonly amount: number;
   readonly price: string;
   readonly isOrderable: boolean;
+
+  /** US-52: "2 × Fernet, 1 × Hielo" when it is a combo, or null. */
+  readonly brings: string | null;
 }
 
 /** US-14: the tab the menu opens on. A category's id is a guid and never equals it. */
@@ -167,6 +170,10 @@ export class MenuPage {
           // With no night on, every drink reads like one that ran out: on
           // the menu, with no way to add it (US-35, criterion 3).
           isOrderable: item.isOrderable && this.isTakingOrders(),
+          brings:
+            item.components.length === 0
+              ? null
+              : item.components.map((part) => `${part.quantity} × ${part.name}`).join(', '),
         }))
     );
   });

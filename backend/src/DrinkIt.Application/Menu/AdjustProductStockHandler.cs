@@ -24,6 +24,7 @@ public sealed class AdjustProductStockHandler(IProductRepository products, TimeP
         Product? product = await products.GetForUpdateAsync(command.ProductId, cancellationToken);
 
         if (product is null) return ProductErrors.NotFound;
+        if (product.IsCombo) return ProductErrors.ComboHasNoStock;
 
         // The screen worked the change out from the stock it showed when it
         // opened. Sales since then leaving too little is expected, and gets the

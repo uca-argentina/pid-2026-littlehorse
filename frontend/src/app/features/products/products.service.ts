@@ -12,6 +12,10 @@ export type ProductCorrection = components['schemas']['UpdateProductRequest'];
 
 export type ProductImage = components['schemas']['ProductImageResponse'];
 
+export type NewCombo = components['schemas']['CreateComboRequest'];
+
+export type ComboPart = components['schemas']['ComboPartRequest'];
+
 /**
  * What the form lets through before a byte goes up. Kept in step with
  * UploadProductImageHandler on the server, which decides the same by the
@@ -36,6 +40,16 @@ export class ProductsService {
 
   create(product: NewProduct): Observable<Product> {
     return this.http.post<Product>(PRODUCTS_URL, product);
+  }
+
+  /** US-50: a product sold from the stock of the ones it is made of. */
+  createCombo(combo: NewCombo): Observable<Product> {
+    return this.http.post<Product>(`${PRODUCTS_URL}/combos`, combo);
+  }
+
+  /** US-50: what it is made of from now on. Orders already confirmed keep what they had. */
+  replaceComponents(comboId: string, components: ComboPart[]): Observable<Product> {
+    return this.http.put<Product>(`${PRODUCTS_URL}/${comboId}/components`, { components });
   }
 
   /** Multipart, with the file in the "image" part, as the API expects it. */

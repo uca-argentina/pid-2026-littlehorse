@@ -30,7 +30,17 @@ public sealed class Product : AuditStamps, IBelongsToVenue
         public const string ImageUrlInvalid = "product.image_url_invalid";
         public const string SoldOutCannotBeAvailable = "product.sold_out_cannot_be_available";
         public const string CategoryRequired = "product.category_required";
+        public const string ComboTooFewUnits = "product.combo_too_few_units";
+        public const string ComboQuantityNotPositive = "product.combo_quantity_not_positive";
+        public const string ComboDuplicateComponent = "product.combo_duplicate_component";
+        public const string ComboHasNoStock = "product.combo_has_no_stock";
+        public const string NotACombo = "product.not_a_combo";
     }
+
+    /// <summary>"Varios productos": two units at least, which lets a bucket of equal beers be one.</summary>
+    public const int ComboMinUnits = 2;
+
+    private readonly List<ComboComponent> _components = [];
 
     /// <summary>Read on a phone, at night, in a hurry: a name has to fit on one line of a card.</summary>
     public const int NameMaxLength = 80;
@@ -90,8 +100,21 @@ public sealed class Product : AuditStamps, IBelongsToVenue
     /// <summary>False after the ABM's soft delete. Rows are never removed.</summary>
     public bool IsActive { get; private set; }
 
-    /// <summary>Nothing left to sell. Derived, never stored: it cannot disagree with <see cref="Stock"/>.</summary>
-    public bool IsSoldOut => Stock == 0;
+    /// <summary>
+    /// What it is made of when it is a combo (US-50), and empty when it is sold
+    /// from its own stock.
+    /// </summary>
+    public IReadOnlyList<ComboComponent> Components => _components;
+
+    /// <summary>Sold from the stock of its components, never from its own.</summary>
+    public bool IsCombo => _components.Count > 0;
+
+    /// <summary>
+    /// Nothing left to sell. Derived, never stored: it cannot disagree with
+    /// <see cref="Stock"/>. A combo holds no stock to run out of: whether one
+    /// can be made is a question for the bars, about its components.
+    /// </summary>
+    public bool IsSoldOut => !IsCombo && Stock == 0;
 
     /// <summary>
     /// What the customer's menu is allowed to offer: the switch says yes and
@@ -128,6 +151,51 @@ public sealed class Product : AuditStamps, IBelongsToVenue
         if (cleanImageUrl is not null) EnsureAbsoluteHttpUrl(cleanImageUrl);
 
         return new Product(Guid.CreateVersion7(), venueId, cleanName, cleanDescription, cleanImageUrl, price, stock, categoryId);
+    }
+
+    /// <summary>
+    /// US-50: a product made of others, at a price of its own that nothing
+    /// compares with theirs. It starts with no stock and never gets any.
+    /// </summary>
+    public static Product CreateCombo(
+        Guid venueId,
+        string name,
+        string? description,
+        string? imageUrl,
+        decimal price,
+        Guid categoryId,
+        IReadOnlyCollection<(Guid ProductId, int Quantity)> components)
+    {
+        EnsureItMakesACombo(components);
+
+        Product combo = Create(venueId, name, description, imageUrl, price, 0, categoryId);
+
+        combo._components.AddRange(components.Select(component => new ComboComponent(component.ProductId, component.Quantity)));
+
+        return combo;
+    }
+
+    /// <summary>
+    /// US-50: changes what it is made of, for the orders to come. Those already
+    /// confirmed keep what they froze (<see cref="Orders.OrderItem"/>). Changed
+    /// in place and not replaced whole: the database keys a component by its
+    /// product, and removing and adding the same one in one save collides.
+    /// </summary>
+    public void ReplaceComponents(IReadOnlyCollection<(Guid ProductId, int Quantity)> components)
+    {
+        if (!IsCombo) throw new DomainException(ErrorCodes.NotACombo, "Only a combo is made of other products.");
+
+        EnsureItMakesACombo(components);
+
+        _components.RemoveAll(current => components.All(component => component.ProductId != current.ProductId));
+
+        foreach ((Guid productId, int quantity) in components)
+        {
+            ComboComponent? existing = _components.Find(current => current.ProductId == productId);
+
+            if (existing is null) _components.Add(new ComboComponent(productId, quantity));
+            else existing.Quantity = quantity;
+        }
     }
 
     /// <summary>
@@ -178,6 +246,7 @@ public sealed class Product : AuditStamps, IBelongsToVenue
     /// </summary>
     public void AdjustStock(int change)
     {
+        if (IsCombo) throw new DomainException(ErrorCodes.ComboHasNoStock, "A combo has no stock of its own: adjust its products.");
         if (change == 0) throw new DomainException(ErrorCodes.StockChangeZero, "The stock has to change by at least one unit.");
         if (!CanAdjustStock(change)) throw new DomainException(ErrorCodes.StockNegative, "The stock cannot be negative.");
 
@@ -193,6 +262,13 @@ public sealed class Product : AuditStamps, IBelongsToVenue
 
     /// <summary>US-08: off the menu for good. The row stays for the orders that already point at it.</summary>
     public void Deactivate() => IsActive = false;
+
+    private static void EnsureItMakesACombo(IReadOnlyCollection<(Guid ProductId, int Quantity)> components)
+    {
+        if (components.Any(component => component.Quantity <= 0)) throw new DomainException(ErrorCodes.ComboQuantityNotPositive, "Every product in a combo needs a quantity of at least one.");
+        if (components.Select(component => component.ProductId).Distinct().Count() != components.Count) throw new DomainException(ErrorCodes.ComboDuplicateComponent, "Each product goes once in a combo, with a quantity beside it.");
+        if (components.Sum(component => component.Quantity) < ComboMinUnits) throw new DomainException(ErrorCodes.ComboTooFewUnits, $"A combo needs at least {ComboMinUnits} units.");
+    }
 
     private static string ValidateName(string name)
     {

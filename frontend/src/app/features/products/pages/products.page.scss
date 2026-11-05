@@ -1,5 +1,6 @@
 // Same header and column as the staff listing: the administration screens are
-// one place with two tabs, not two products.
+// one place with two tabs, not two products. Used on a computer, so on a wide
+// window the rows get denser and the column wider (see the end of this file).
 
 .frame {
   display: flex;
@@ -377,4 +378,73 @@
   width: 52px;
   height: 30px;
   border-radius: var(--dk-radius-pill);
+}
+
+// A computer: a mouse does not need the tablet's big targets, and a whole menu
+// should fit on one screen without scrolling past photos.
+@media (width >= 1024px) {
+  .body {
+    max-width: 1280px;
+    padding: var(--dk-space-5) 32px;
+  }
+
+  .cta {
+    min-height: 40px;
+    padding: 0 var(--dk-space-4);
+    font-size: 14px;
+  }
+
+  .search,
+  .pill {
+    min-height: 38px;
+  }
+
+  .search {
+    font-size: 14px;
+  }
+
+  .row {
+    flex-wrap: nowrap;
+    gap: var(--dk-space-3);
+    padding: 8px var(--dk-space-3);
+  }
+
+  .thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--dk-radius-sm);
+  }
+
+  .name {
+    font-size: 15px;
+  }
+
+  .description {
+    font-size: 13px;
+  }
+
+  .price {
+    min-width: 100px;
+    font-size: 15px;
+    text-align: right;
+  }
+
+  .stock {
+    font-size: 14px;
+    text-align: right;
+  }
+
+  .sw,
+  .edit {
+    min-height: 36px;
+  }
+
+  .edit {
+    font-size: 13.5px;
+  }
+
+  .chip {
+    padding: 3px 9px;
+    font-size: 12px;
+  }
 }

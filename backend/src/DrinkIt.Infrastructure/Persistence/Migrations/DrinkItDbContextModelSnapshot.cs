@@ -639,6 +639,35 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasForeignKey("VenueId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.OwnsMany("DrinkIt.Domain.Menu.ComboComponent", "Components", b1 =>
+                        {
+                            b1.Property<Guid>("ComboId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<Guid>("ProductId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<int>("Quantity")
+                                .HasColumnType("int");
+
+                            b1.HasKey("ComboId", "ProductId");
+
+                            b1.HasIndex("ProductId");
+
+                            b1.ToTable("ComboComponents", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ComboId");
+
+                            b1.HasOne("DrinkIt.Domain.Menu.Product", null)
+                                .WithMany()
+                                .HasForeignKey("ProductId")
+                                .OnDelete(DeleteBehavior.Restrict)
+                                .IsRequired();
+                        });
+
+                    b.Navigation("Components");
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Nights.Night", b =>
@@ -697,6 +726,33 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.OwnsMany("DrinkIt.Domain.Orders.OrderItemComponent", "Components", b1 =>
+                        {
+                            b1.Property<Guid>("OrderItemId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<Guid>("ProductId")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("ProductName")
+                                .IsRequired()
+                                .HasMaxLength(80)
+                                .HasColumnType("nvarchar(80)");
+
+                            b1.Property<int>("Quantity")
+                                .HasColumnType("int");
+
+                            b1.HasKey("OrderItemId", "ProductId");
+
+                            b1.ToTable("OrderItemComponents", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderItemId");
+                        });
+
+                    b.Navigation("Components");
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>

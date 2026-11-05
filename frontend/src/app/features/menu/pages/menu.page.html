@@ -162,6 +162,11 @@
                     <p class="card-note" [attr.data-testid]="'note-' + card.name">{{ note }}</p>
                   }
 
+                  <!-- US-52: said even when it cannot be ordered: it explains the card. -->
+                  @if (card.brings; as brings) {
+                    <p class="brings">Trae {{ brings }}</p>
+                  }
+
                   @if (card.isOrderable) {
                     @if (card.description !== null) {
                       <p class="dsc">{{ card.description }}</p>

@@ -40,13 +40,24 @@ internal sealed class NightStockQueries(DrinkItDbContext context, TimeProvider c
             .ToDictionaryAsync(movement => (movement.KdsId, movement.ProductId), movement => movement.Units, cancellationToken);
 
         // A canceled order gave its units back, so it sold nothing.
-        Dictionary<(Guid KdsId, Guid ProductId), int> sold = await context.Orders
+        // US-51: a combo holds nothing, so what it sold is its components'.
+        var sales = context.Orders
             .AsNoTracking()
             .Where(order => order.NightId == nightId && order.KdsId != null && order.Status != OrderStatus.Canceled)
-            .SelectMany(order => order.Items, (order, item) => new { KdsId = order.KdsId!.Value, item.ProductId, item.Quantity })
-            .GroupBy(line => new { line.KdsId, line.ProductId })
-            .Select(group => new { group.Key.KdsId, group.Key.ProductId, Units = group.Sum(line => line.Quantity) })
-            .ToDictionaryAsync(movement => (movement.KdsId, movement.ProductId), movement => movement.Units, cancellationToken);
+            .SelectMany(order => order.Items, (order, item) => new { KdsId = order.KdsId!.Value, Item = item });
+
+        var loose = await sales
+            .Where(sale => !sale.Item.Components.Any())
+            .Select(sale => new { sale.KdsId, sale.Item.ProductId, Units = sale.Item.Quantity })
+            .ToListAsync(cancellationToken);
+
+        var inCombos = await sales
+            .SelectMany(sale => sale.Item.Components, (sale, part) => new { sale.KdsId, part.ProductId, Units = sale.Item.Quantity * part.Quantity })
+            .ToListAsync(cancellationToken);
+
+        Dictionary<(Guid KdsId, Guid ProductId), int> sold = loose.Concat(inCombos)
+            .GroupBy(line => (line.KdsId, line.ProductId))
+            .ToDictionary(group => group.Key, group => group.Sum(line => line.Units));
 
         DateTimeOffset now = clock.GetUtcNow();
         Dictionary<Guid, int> heldInBars = await Storeroom.HeldInBarsAsync(context, now, cancellationToken);
@@ -57,7 +68,7 @@ internal sealed class NightStockQueries(DrinkItDbContext context, TimeProvider c
         // still moved: its record has to add up.
         var products = await context.Products
             .AsNoTracking()
-            .Where(product => product.IsActive || movedHere.Contains(product.Id))
+            .Where(product => (product.IsActive && !product.Components.Any()) || movedHere.Contains(product.Id))
             .OrderBy(product => product.Name)
             .Select(product => new { product.Id, product.Name, product.Stock })
             .ToListAsync(cancellationToken);

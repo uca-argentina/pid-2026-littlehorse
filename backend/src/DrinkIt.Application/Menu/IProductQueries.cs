@@ -14,7 +14,17 @@ public sealed record ProductListItem(
     bool IsAvailable,
     bool IsSoldOut,
     bool IsActive,
-    AuditInfo Audit);
+    AuditInfo Audit,
+    IReadOnlyList<ComboPart>? Parts = null)
+{
+    /// <summary>What it is made of when it is a combo (US-50). Empty otherwise.</summary>
+    public IReadOnlyList<ComboPart> Components => Parts ?? [];
+
+    public bool IsCombo => Components.Count > 0;
+}
+
+/// <summary>What a combo brings, as its card says it (US-52).</summary>
+public sealed record MenuItemPart(string Name, int Quantity);
 
 /// <summary>
 /// One card of the menu a customer reads on their phone.
@@ -33,7 +43,12 @@ public sealed record MenuItem(
     string? ImageUrl,
     decimal Price,
     Guid CategoryId,
-    bool IsOrderable);
+    bool IsOrderable,
+    IReadOnlyList<MenuItemPart>? Parts = null)
+{
+    /// <summary>What it brings when it is a combo (US-52). Empty otherwise.</summary>
+    public IReadOnlyList<MenuItemPart> Components => Parts ?? [];
+}
 
 /// <summary>
 /// The read side. No repository here: reads have no invariant to protect, so

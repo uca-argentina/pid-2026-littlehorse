@@ -31,6 +31,11 @@ interface ProductRow {
   readonly canSwitch: boolean;
   readonly state: ProductState;
   readonly switchLabel: string;
+
+  /** US-50: a combo has no stock to show and is corrected on its own screen. */
+  readonly isCombo: boolean;
+  readonly brings: string | null;
+  readonly editLink: readonly string[];
 }
 
 /**
@@ -159,8 +164,33 @@ export class ProductsPage {
       canSwitch: product.isActive && !product.isSoldOut,
       state: stateOf(product),
       switchLabel: SWITCH_LABEL[stateOf(product)],
+      isCombo: product.isCombo,
+      brings: this.bringsOf(product),
+      editLink: [
+        '/',
+        this.venueSlug(),
+        'staff',
+        'products',
+        ...(product.isCombo ? ['combos'] : []),
+        product.id,
+      ],
     })),
   );
+
+  /** "2 × Fernet, 1 × Hielo", from the names of the same listing. */
+  private bringsOf(product: Product): string | null {
+    if (!product.isCombo || !this.products.hasValue()) return null;
+
+    const all = this.products.value();
+
+    return product.components
+      .map((part) => {
+        const name = all.find((candidate) => candidate.id === part.productId)?.name ?? '';
+
+        return `${part.quantity} × ${name}`;
+      })
+      .join(', ');
+  }
 
   /** Whatever matches what was typed, before the state narrows it further. */
   private readonly matchingTheSearch = computed(() => {

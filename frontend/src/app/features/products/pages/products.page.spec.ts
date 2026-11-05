@@ -23,6 +23,8 @@ const theMenu: Product[] = [
     isActive: true,
 
     audit: noAudit,
+    isCombo: false,
+    components: [],
   },
   {
     id: 'id-2',
@@ -37,6 +39,8 @@ const theMenu: Product[] = [
     isActive: true,
 
     audit: noAudit,
+    isCombo: false,
+    components: [],
   },
   {
     id: 'id-3',
@@ -51,6 +55,8 @@ const theMenu: Product[] = [
     isActive: false,
 
     audit: noAudit,
+    isCombo: false,
+    components: [],
   },
 ];
 
@@ -228,6 +234,8 @@ describe('ProductsPage', () => {
       isActive: true,
 
       audit: noAudit,
+      isCombo: false,
+      components: [],
     };
 
     function theSwitch(): HTMLElement {

@@ -27,6 +27,11 @@ export const ProblemTypes = {
 
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
+  /** US-50: one of the combo's products is not on the venue's menu any more. */
+  productComboComponentNotFound: 'urn:drinkit:problem:product:combo-component-not-found',
+
+  productComboInsideCombo: 'urn:drinkit:problem:product:combo-inside-combo',
+
   /** US-39: the number belongs to a table of the venue, put away or not. */
   tableNumberTaken: 'urn:drinkit:problem:table:number-taken',
 
