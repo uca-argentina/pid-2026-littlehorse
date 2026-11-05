@@ -353,8 +353,16 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
 
+                    b.Property<string>("PromotionName")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("RegularPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(10, 2)
@@ -365,6 +373,57 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.HasIndex("OrderId");
 
                     b.ToTable("OrderItems", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Promotions.Promotion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("DiscountPercent")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("EndsAt")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<TimeOnly>("StartsAt")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("_days")
+                        .HasColumnType("int")
+                        .HasColumnName("DaysMask");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId");
+
+                    b.ToTable("Promotions", (string)null);
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>
@@ -753,6 +812,41 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Components");
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.Promotions.Promotion", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("DrinkIt.Domain.Promotions.PromotionProduct", "Products", b1 =>
+                        {
+                            b1.Property<Guid>("PromotionId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<Guid>("ProductId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.HasKey("PromotionId", "ProductId");
+
+                            b1.HasIndex("ProductId");
+
+                            b1.ToTable("PromotionProducts", (string)null);
+
+                            b1.HasOne("DrinkIt.Domain.Menu.Product", null)
+                                .WithMany()
+                                .HasForeignKey("ProductId")
+                                .OnDelete(DeleteBehavior.Restrict)
+                                .IsRequired();
+
+                            b1.WithOwner()
+                                .HasForeignKey("PromotionId");
+                        });
+
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>

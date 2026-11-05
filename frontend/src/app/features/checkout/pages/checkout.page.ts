@@ -138,6 +138,11 @@ export class CheckoutPage {
 
   protected readonly total = computed(() => formatPrice(this.cart.total()));
 
+  /** US-55: the total the server says it costs now, after a price moved. */
+  protected readonly newTotal = computed(() =>
+    formatPrice(this.store.whatWentWrong()?.newTotal ?? this.cart.total()),
+  );
+
   /**
    * The three of the wireframe. The VIP tables are out of this sprint, so the
    * table balance is drawn switched off rather than hidden: this is the screen

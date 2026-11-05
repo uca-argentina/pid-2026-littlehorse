@@ -5,9 +5,11 @@ using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Promotions;
 using DrinkIt.Application.Venues;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Promotions;
 using Microsoft.AspNetCore.Http;
 
 namespace DrinkIt.Api.Tests.Features.Orders;
@@ -210,10 +212,17 @@ public class OrdersEndpointsTests
         [new DigitalPaymentStrategy(TimeProvider.System), new CashPaymentStrategy()],
         new Fake.Venue(),
         new Fake.Tonight(nightIsOn),
-        TimeProvider.System);
+        TimeProvider.System,
+        new Fake.NoPromotions());
 
     private static class Fake
     {
+        public sealed class NoPromotions : IActivePromotions
+        {
+            public Task<IReadOnlyList<Promotion>> ListAsync(CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<Promotion>>([]);
+        }
+
         public sealed class Venue : Application.Common.ICurrentVenue
         {
             public Guid Id => TheVenue;

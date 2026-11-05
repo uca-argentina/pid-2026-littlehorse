@@ -23,6 +23,25 @@ class StoreThatForgets extends BrowserStore {
 
 let store: StoreInMemory;
 
+describe('Cart prices', () => {
+  beforeEach(() => {
+    store = new StoreInMemory();
+  });
+
+  it('takes the new price of the lines the menu has, and leaves the others alone', () => {
+    const cart = aCart();
+    cart.open('bar-alfa');
+    cart.add(ginTonic);
+    cart.add(fernet);
+
+    cart.reprice([{ id: 'id-1', price: 3150 }]);
+
+    expect(cart.lines().find((line) => line.productId === 'id-1')?.unitPrice).toBe(3150);
+    expect(cart.lines().find((line) => line.productId === 'id-2')?.unitPrice).toBe(4000);
+    expect(cart.total()).toBe(7150);
+  });
+});
+
 /** A cart that survived the app being closed keeps whatever the store holds. */
 function aCart(browserStore: BrowserStore = store): Cart {
   TestBed.resetTestingModule();

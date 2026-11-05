@@ -1,9 +1,11 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.Promotions;
 using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Promotions;
 
 namespace DrinkIt.Application.Tests.Orders;
 
@@ -18,6 +20,8 @@ public class ConfirmOrderHandlerTests
     private readonly Catalog _menu = new(gin: 20, fernet: 20);
 
     private readonly OrdersInMemory _orders = new();
+
+    private readonly PromotionsOn _promotions = new();
 
     private static readonly Guid TheNight = Guid.CreateVersion7();
 
@@ -476,6 +480,118 @@ public class ConfirmOrderHandlerTests
         Assert.NotNull(_orders.Added.KdsId);
     }
 
+    // Tonight is 23:30 of a Wednesday in Buenos Aires (02:30 of Thursday UTC).
+    private Promotion AWednesdayNightPromotion(int percent, string name = "Happy hour", params Product[] products) =>
+        Promotion.Create(TheVenue, name, percent, [DayOfWeek.Wednesday], new TimeOnly(22, 0), new TimeOnly(1, 0), products.Length == 0 ? [_menu.Gin.Id] : [.. products.Select(product => product.Id)]);
+
+    // US-55, criterion 1.
+    [Fact]
+    public async Task HandleAsync_WhenAPromotionIsOn_PricesTheItemAtTheDiscountAndKeepsTheListPrice()
+    {
+        _promotions.Add(AWednesdayNightPromotion(30));
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        OrderItem gin = _orders.Added!.Items.Single();
+
+        Assert.Equal(3150m, gin.UnitPrice);
+        Assert.Equal(4500m, gin.RegularPrice);
+        Assert.Equal("Happy hour", gin.PromotionName);
+        Assert.Equal(6300m, result.Value.Total);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenAPromotionCoversAnotherProduct_LeavesThePriceAlone()
+    {
+        _promotions.Add(AWednesdayNightPromotion(30, products: _menu.Fernet));
+
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(4500m, _orders.Added!.Items.Single().UnitPrice);
+        Assert.Null(_orders.Added.Items.Single().PromotionName);
+    }
+
+    // US-55, criterion 2: the biggest, never the two together.
+    [Fact]
+    public async Task HandleAsync_WhenTwoPromotionsAreOn_AppliesOnlyTheBiggerDiscount()
+    {
+        _promotions.Add(AWednesdayNightPromotion(20, "Twenty"));
+        _promotions.Add(AWednesdayNightPromotion(30, "Thirty"));
+
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        OrderItem gin = _orders.Added!.Items.Single();
+
+        Assert.Equal(3150m, gin.UnitPrice);
+        Assert.Equal("Thirty", gin.PromotionName);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenThePromotionWindowIsClosed_ChargesTheListPrice()
+    {
+        _promotions.Add(Promotion.Create(TheVenue, "Lunch", 30, [DayOfWeek.Wednesday], new TimeOnly(12, 0), new TimeOnly(15, 0), [_menu.Gin.Id]));
+
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(4500m, _orders.Added!.Items.Single().UnitPrice);
+        Assert.Null(_orders.Added.Items.Single().RegularPrice);
+    }
+
+    // The server runs in UTC: at 02:30 UTC it is Thursday there and still
+    // Wednesday in the venue. A Thursday-only promotion must not be on.
+    [Fact]
+    public async Task HandleAsync_WhenItIsAnotherDayInUtcButNotAtTheVenue_DecidesWithTheVenuesClock()
+    {
+        _promotions.Add(Promotion.Create(TheVenue, "Thursday", 30, [DayOfWeek.Thursday], new TimeOnly(0, 0), new TimeOnly(6, 0), [_menu.Gin.Id]));
+
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(4500m, _orders.Added!.Items.Single().UnitPrice);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenThePromotionIsDeactivated_ChargesTheListPrice()
+    {
+        Promotion promotion = AWednesdayNightPromotion(30);
+        promotion.Deactivate();
+        _promotions.Add(promotion);
+
+        await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Equal(4500m, _orders.Added!.Items.Single().UnitPrice);
+    }
+
+    // US-55, criterion 4: the cart said 9000, the price is now 6300.
+    [Fact]
+    public async Task HandleAsync_WhenTheTotalTheCustomerSawIsNotTheTotalNow_RefusesWithTheNewOneAndWritesNothing()
+    {
+        _promotions.Add(AWednesdayNightPromotion(30));
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder() with { ExpectedTotal = 9000m }, CancellationToken.None);
+
+        Assert.Equal(OrderErrors.PriceChangedCode, result.Error!.Code);
+        Assert.Contains("6300", result.Error.Message, StringComparison.Ordinal);
+        Assert.Null(_orders.Added);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheTotalTheCustomerSawIsTheTotalNow_Confirms()
+    {
+        _promotions.Add(AWednesdayNightPromotion(30));
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder() with { ExpectedTotal = 6300m }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenNoTotalIsSent_DoesNotCheckIt()
+    {
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+    }
+
     private static OrderLineRequest One(Product product) => new(product.Id, 1, null);
 
     private static OrderLineRequest Two(Product product) => new(product.Id, 2, null);
@@ -500,7 +616,8 @@ public class ConfirmOrderHandlerTests
             [payment],
             new TheVenueIsFixed(TheVenue),
             _nights,
-            new FixedClock(Tonight));
+            new FixedClock(Tonight),
+            _promotions);
 
     private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null, IBarsForOrdering? bars = null) =>
         new(_orders,
@@ -510,7 +627,8 @@ public class ConfirmOrderHandlerTests
             [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
             new TheVenueIsFixed(TheVenue),
             _nights,
-            new FixedClock(Tonight));
+            new FixedClock(Tonight),
+            _promotions);
 
     /// <summary>A method that only takes the money, as every method that pays on the spot does.</summary>
     private sealed class PaysOnTheSpot(DateTimeOffset now) : IPaymentStrategy
@@ -535,6 +653,16 @@ public class ConfirmOrderHandlerTests
 
         public Task<Error?> SettleAsync(Order order, PaymentRequest request, CancellationToken cancellationToken) =>
             Task.FromResult<Error?>(reason);
+    }
+
+    private sealed class PromotionsOn : IActivePromotions
+    {
+        private readonly List<Promotion> _promotions = [];
+
+        public void Add(Promotion promotion) => _promotions.Add(promotion);
+
+        public Task<IReadOnlyList<Promotion>> ListAsync(CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<Promotion>>([.. _promotions.Where(promotion => promotion.IsActive)]);
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

@@ -28,7 +28,8 @@ export const PROCESSING_PAUSE_MS = new InjectionToken<number>('PROCESSING_PAUSE_
  * What the screen is doing. One value rather than a set of booleans, so
  * "paying" and "that drink ran out" cannot both be true at once.
  */
-export type CheckoutStatus = 'idle' | 'paying' | 'soldOut' | 'rejected' | 'unreachable';
+export type CheckoutStatus =
+  'idle' | 'paying' | 'soldOut' | 'priceChanged' | 'rejected' | 'unreachable';
 
 export const CHECKOUT_KEY_PREFIX = 'drinkit.checkout-key.';
 
@@ -115,12 +116,15 @@ export class CheckoutStore {
         })),
         tableCode,
         digitalAmount,
+        // US-55: what the screen showed. If a promotion started or ended since,
+        // the server answers with the new total instead of charging another.
+        expectedTotal: Math.round(this.cart.total() * 100) / 100,
       }),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: ({ order }) => this.showTheConfirmation(venueSlug, order),
-        error: (error: unknown) => this.explain(error),
+        error: (error: unknown) => this.explain(venueSlug, error),
       });
   }
 
@@ -148,7 +152,23 @@ export class CheckoutStore {
       });
   }
 
-  private explain(error: unknown): void {
+  /**
+   * US-55: the prices as the menu has them now, so the total on screen is the
+   * one the server said. Without the menu the message still carries the new
+   * total, and paying again would be refused again, which is honest.
+   */
+  private takeCurrentPrices(venueSlug: string): void {
+    this.checkout
+      .menu(venueSlug)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (menu) =>
+          this.cart.reprice(menu.items.map((item) => ({ id: item.id, price: item.price }))),
+        error: () => undefined,
+      });
+  }
+
+  private explain(venueSlug: string, error: unknown): void {
     // Status 0 is what a request that never got an answer looks like: the
     // venue's wifi, a phone that walked out of range. There is no document to
     // read and nothing our rules can explain.
@@ -165,6 +185,17 @@ export class CheckoutStore {
     if (theMenuMoved(problem)) {
       this.refusal.set(refusalOf(error, problem));
       this.state.set('soldOut');
+
+      return;
+    }
+
+    // US-55: a promotion started or ended while the cart was open. Nothing was
+    // charged: the lines stay with the current prices, and the customer sees
+    // the new total and decides.
+    if (problem === ProblemTypes.orderPriceChanged) {
+      this.refusal.set(refusalOf(error, problem));
+      this.state.set('priceChanged');
+      this.takeCurrentPrices(venueSlug);
 
       return;
     }
@@ -195,9 +226,27 @@ function theMenuMoved(problem: string | undefined): boolean {
 export interface Refusal {
   readonly type: string | undefined;
   readonly productName: string | null;
+
+  /** US-55: the total now, when the refusal is a price that moved. */
+  readonly newTotal?: number;
 }
 
 /** The problem's type, and the drink it names when the menu moved underneath. */
 function refusalOf(error: HttpErrorResponse, type: string | undefined): Refusal {
-  return { type, productName: problemProductNameOf(error) };
+  const newTotal = newTotalOf(error);
+
+  return {
+    type,
+    productName: problemProductNameOf(error),
+    ...(newTotal === null ? {} : { newTotal }),
+  };
+}
+
+/** The total the API says the order costs now, when it refused one that moved. */
+function newTotalOf(error: HttpErrorResponse): number | null {
+  const body: unknown = error.error;
+
+  return typeof body === 'object' && body !== null && 'newTotal' in body
+    ? Number((body as { newTotal: unknown }).newTotal)
+    : null;
 }

@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { QRCodeComponent } from 'angularx-qrcode';
+import { formatPrice } from '../../../shared/money/price';
 import type { CustomerOrderStatus } from '../tracking.service';
 import { TrackingStore } from '../tracking.store';
 
@@ -106,6 +107,13 @@ export class TrackingPage {
   );
 
   /** Paying in cash: the code is for the cashier first, and the bar only after (US-25). */
+  /** US-56: "2.700,00" when promotions lowered the order, or null. */
+  protected readonly savings = computed(() => {
+    const saved = this.store.order()?.savings ?? 0;
+
+    return saved > 0 ? formatPrice(saved) : null;
+  });
+
   protected readonly paysAtTheTill = computed(() => this.status() === 'AwaitingPayment');
 
   /** US-23: nothing to pick up and nothing left to wait for, so the journey is not drawn. */

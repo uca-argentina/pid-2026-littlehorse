@@ -14,6 +14,16 @@ public static class OrderErrors
         new("order.not_taking_orders", "The venue is not taking orders right now.");
 
     /// <summary>
+    /// The total is not the one the customer saw (US-55): a promotion started or
+    /// ended while the cart was open. Nothing was charged. The subject carries
+    /// the total now, so the screen can show it and let them decide.
+    /// </summary>
+    public const string PriceChangedCode = "order.price_changed";
+
+    public static Error PriceChangedTo(decimal total) =>
+        new(PriceChangedCode, $"The price changed while you were ordering: the total is now {total.ToString(System.Globalization.CultureInfo.InvariantCulture)}.", total.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+    /// <summary>
     /// Somebody else's order changed the stock between it being read and this
     /// one being written. Nothing was saved. The customer is told to look at
     /// their order again rather than told a drink ran out, because it may not

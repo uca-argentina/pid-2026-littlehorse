@@ -1,0 +1,176 @@
+<div class="desk-frame">
+  <drinkit-admin-header [venueSlug]="venueSlug()" />
+
+  <form class="desk" novalidate (submit)="$event.preventDefault(); submit()">
+    <a class="desk-back" [routerLink]="['/', venueSlug(), 'staff', 'promotions']"
+      >Volver a promociones</a
+    >
+
+    <div class="desk-head">
+      <div>
+        <h1 class="desk-title">{{ isEditing() ? 'Editar promoción' : 'Nueva promoción' }}</h1>
+        <p class="desk-lede">
+          La franja que pasa de medianoche pertenece al día en que empieza: una promoción del
+          viernes de 23:00 a 01:00 sigue vigente el sábado a las 00:30. Las horas son las del
+          boliche.
+        </p>
+      </div>
+      <div class="desk-actions">
+        <a class="desk-btn" [routerLink]="['/', venueSlug(), 'staff', 'promotions']">Cancelar</a>
+        <button class="desk-btn desk-btn-primary" type="submit" [disabled]="isSending()">
+          {{ isSending() ? 'Guardando' : 'Guardar promoción' }}
+        </button>
+      </div>
+    </div>
+
+    @switch (refusal()) {
+      @case ('productGone') {
+        <p class="desk-note desk-note-bad" role="alert">
+          Uno de los productos ya no está en la carta. Sacalo de la promoción.
+        </p>
+      }
+      @case ('invalid') {
+        <p class="desk-note desk-note-bad" role="alert">
+          La promoción no es válida. Revisá el descuento, los días, la franja y los productos.
+        </p>
+      }
+      @case ('unreachable') {
+        <p class="desk-note desk-note-bad" role="alert">
+          No pudimos guardarla. Fijate la conexión y probá de nuevo.
+        </p>
+      }
+    }
+
+    <div class="desk-columns">
+      <section class="desk-panel" aria-labelledby="rule-title">
+        <h2 id="rule-title" class="desk-panel-title">Regla</h2>
+
+        <div class="desk-row">
+          <div class="desk-field grow">
+            <label class="desk-label" for="name">Nombre</label>
+            <input
+              id="name"
+              class="desk-input"
+              type="text"
+              maxlength="60"
+              autocomplete="off"
+              [value]="name()"
+              [attr.aria-invalid]="nameError() !== null ? 'true' : null"
+              (input)="name.set(read($event))"
+            />
+            @if (nameError(); as error) {
+              <p class="desk-bad" role="alert">{{ error }}</p>
+            }
+          </div>
+
+          <div class="desk-field">
+            <label class="desk-label" for="discount">Descuento (%)</label>
+            <input
+              id="discount"
+              class="desk-input"
+              type="number"
+              min="1"
+              max="99"
+              step="1"
+              [value]="discount()"
+              [attr.aria-invalid]="discountError() !== null ? 'true' : null"
+              (input)="discount.set(read($event))"
+            />
+            @if (discountError(); as error) {
+              <p class="desk-bad" role="alert">{{ error }}</p>
+            }
+          </div>
+        </div>
+
+        <fieldset class="desk-field">
+          <legend class="desk-label">Días en que empieza</legend>
+          <div class="days">
+            @for (entry of week; track entry.day) {
+              <label class="day">
+                <input
+                  type="checkbox"
+                  [checked]="days().includes(entry.day)"
+                  [attr.aria-label]="entry.long"
+                  (change)="toggleDay(entry.day)"
+                />
+                {{ entry.short }}
+              </label>
+            }
+          </div>
+          @if (daysError(); as error) {
+            <p class="desk-bad" role="alert">{{ error }}</p>
+          }
+        </fieldset>
+
+        <div class="desk-row">
+          <div class="desk-field">
+            <label class="desk-label" for="starts-at">Desde</label>
+            <input
+              id="starts-at"
+              class="desk-input"
+              type="time"
+              [value]="startsAt()"
+              [attr.aria-invalid]="windowError() !== null ? 'true' : null"
+              (input)="startsAt.set(read($event))"
+            />
+          </div>
+          <div class="desk-field">
+            <label class="desk-label" for="ends-at">Hasta</label>
+            <input
+              id="ends-at"
+              class="desk-input"
+              type="time"
+              [value]="endsAt()"
+              [attr.aria-invalid]="windowError() !== null ? 'true' : null"
+              (input)="endsAt.set(read($event))"
+            />
+          </div>
+        </div>
+        @if (windowError(); as error) {
+          <p class="desk-bad" role="alert">{{ error }}</p>
+        }
+      </section>
+
+      <section class="desk-panel" aria-labelledby="products-title">
+        <h2 id="products-title" class="desk-panel-title">
+          Productos en promoción ({{ chosen().length }})
+        </h2>
+
+        <div class="desk-field">
+          <label class="desk-label" for="search">Buscar producto</label>
+          <input
+            id="search"
+            class="desk-input"
+            type="search"
+            autocomplete="off"
+            spellcheck="false"
+            [value]="search()"
+            (input)="search.set(read($event))"
+          />
+        </div>
+
+        <ul class="choices">
+          @for (choice of choices(); track choice.id) {
+            <li>
+              <label class="choice">
+                <input
+                  type="checkbox"
+                  [checked]="chosen().includes(choice.id)"
+                  [attr.aria-label]="choice.name"
+                  (change)="toggleProduct(choice.id)"
+                />
+                {{ choice.name }}
+              </label>
+            </li>
+          } @empty {
+            <li class="choice">No hay productos con ese nombre.</li>
+          }
+        </ul>
+
+        @if (productsError(); as error) {
+          <p class="desk-bad" role="alert">{{ error }}</p>
+        }
+      </section>
+    </div>
+  </form>
+</div>

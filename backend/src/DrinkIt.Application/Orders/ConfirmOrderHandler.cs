@@ -1,7 +1,9 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
+using DrinkIt.Application.Promotions;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.Promotions;
 
 namespace DrinkIt.Application.Orders;
 
@@ -14,7 +16,8 @@ public sealed record ConfirmOrderCommand(
     string? IdempotencyKey,
     IReadOnlyCollection<OrderLineRequest> Lines,
     string? TableCode = null,
-    decimal? DigitalAmount = null);
+    decimal? DigitalAmount = null,
+    decimal? ExpectedTotal = null);
 
 /// <summary>
 /// The order as the confirmation screen shows it.
@@ -51,7 +54,8 @@ public sealed class ConfirmOrderHandler(
     IEnumerable<IPaymentStrategy> paymentStrategies,
     ICurrentVenue currentVenue,
     IUnderwayNightLookup nights,
-    TimeProvider clock)
+    TimeProvider clock,
+    IActivePromotions promotions)
 {
     public static readonly Error Empty =
         new("order.empty", "There is nothing in the order.");
@@ -149,11 +153,20 @@ public sealed class ConfirmOrderHandler(
         Guid[] componentIds = [.. menu.SelectMany(product => product.Components).Select(component => component.ProductId).Distinct()];
         IReadOnlyList<Product> parts = componentIds.Length == 0 ? [] : await products.GetForOrderingAsync(componentIds, cancellationToken);
 
-        Result<List<NewOrderItem>> items = Price(command.Lines, menu, parts);
+        // US-55: the promotions on right now, by the server's clock.
+        IReadOnlyList<Promotion> active = await promotions.ListAsync(cancellationToken);
+
+        Result<List<NewOrderItem>> items = Price(command.Lines, menu, parts, active, clock.GetUtcNow());
 
         if (!items.IsSuccess) return items.Error!;
 
         Order order = Order.Place(currentVenue.Id, night, customerName, code, items.Value);
+
+        // US-55, criterion 4: the customer pays what the screen showed or
+        // decides again. Before the payment and before any stock moves, so a
+        // refusal leaves nothing behind. Left out, nothing is compared: a
+        // retry of an order already written never gets here.
+        if (command.ExpectedTotal is decimal expected && expected != order.Total) return OrderErrors.PriceChangedTo(order.Total);
 
         // US-37: each bar keeps a stock of its own, and a paid order is taken
         // from one of them. Asked even for cash, which pays later: nobody
@@ -196,7 +209,9 @@ public sealed class ConfirmOrderHandler(
     private static Result<List<NewOrderItem>> Price(
         IReadOnlyCollection<OrderLineRequest> lines,
         IReadOnlyList<Product> menu,
-        IReadOnlyList<Product> parts)
+        IReadOnlyList<Product> parts,
+        IReadOnlyList<Promotion> active,
+        DateTimeOffset now)
     {
         List<NewOrderItem> items = [];
 
@@ -218,7 +233,10 @@ public sealed class ConfirmOrderHandler(
 
             if (components.Length != product.Components.Count) return NotOnTheMenuFor(product);
 
-            items.Add(new NewOrderItem(product.Id, product.Name, product.Price, line.Quantity, line.Note, components));
+            // The same rule the menu uses, so the card and the charge agree.
+            PricedProduct priced = PromotionPricing.PriceOf(active, now, product.Id, product.Price);
+
+            items.Add(new NewOrderItem(product.Id, product.Name, priced.Price, line.Quantity, line.Note, components, priced.RegularPrice, priced.PromotionName));
         }
 
         return items;

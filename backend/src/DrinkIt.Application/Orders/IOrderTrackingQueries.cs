@@ -23,7 +23,8 @@ public sealed record TrackedOrder(
     string? BarName,
     IReadOnlyList<TrackedOrderItem> Items,
     int? TableNumber = null,
-    string? WaiterName = null);
+    string? WaiterName = null,
+    decimal Savings = 0);
 
 /// <summary>
 /// The read side of an order, for the customer who placed it.
