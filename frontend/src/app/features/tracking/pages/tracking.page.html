@@ -70,6 +70,11 @@
         </p>
       }
 
+      <!-- US-56: what the promotions took off, derived from the order's lines. -->
+      @if (savings(); as saved) {
+        <p class="saved" data-testid="savings">Te ahorraste $ {{ saved }}</p>
+      }
+
       <!--
         US-20. Only the token goes in it, and not the tracking link: a phone
         that happens to point its camera at it opens nothing, and a reader that

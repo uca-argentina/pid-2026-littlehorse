@@ -3,7 +3,9 @@ using DrinkIt.Api.Tenancy;
 using DrinkIt.Api.Tests.Common;
 using DrinkIt.Application.Menu;
 using DrinkIt.Application.Nights;
+using DrinkIt.Application.Promotions;
 using DrinkIt.Application.Venues;
+using DrinkIt.Domain.Promotions;
 using Microsoft.AspNetCore.Http;
 
 namespace DrinkIt.Api.Tests.Features.Menu;
@@ -72,7 +74,7 @@ public class MenuEndpointTests
     public async Task GetAsync_WhenNoVenueHasThatSlug_RespondsWithNotFound()
     {
         IResult result = await MenuEndpoint.GetAsync(
-            "bar-que-no-existe", new CurrentVenue(), new Fake.Menu(), new FakeCategoryQueries(), new Fake.Tonight(true), TimeProvider.System, CancellationToken.None);
+            "bar-que-no-existe", new CurrentVenue(), Fake.Handler(new Fake.Menu()), new FakeCategoryQueries(), new Fake.Tonight(true), TimeProvider.System, CancellationToken.None);
 
         HttpResponseSnapshot response = await EndpointResponse.Execute(result, Path, HttpMethods.Get);
 
@@ -125,7 +127,7 @@ public class MenuEndpointTests
         CurrentVenue venue = new();
         venue.Resolve(new VenueIdentity(Guid.CreateVersion7(), "Bar Alfa", "bar-alfa"));
 
-        await MenuEndpoint.GetAsync("bar-alfa", venue, menu, new FakeCategoryQueries(), tonight, TimeProvider.System, CancellationToken.None);
+        await MenuEndpoint.GetAsync("bar-alfa", venue, Fake.Handler(menu), new FakeCategoryQueries(), tonight, TimeProvider.System, CancellationToken.None);
 
         Assert.True(menu.WasRead);
         Assert.Equal(tonight.Id, menu.ReadForNight);
@@ -152,7 +154,7 @@ public class MenuEndpointTests
         venue.Resolve(new VenueIdentity(Guid.CreateVersion7(), "Bar Alfa", "bar-alfa"));
 
         IResult result = await MenuEndpoint.GetAsync(
-            "bar-alfa", venue, new Fake.Menu(items), categories, new Fake.Tonight(nightIsOn), TimeProvider.System, CancellationToken.None);
+            "bar-alfa", venue, Fake.Handler(new Fake.Menu(items)), categories, new Fake.Tonight(nightIsOn), TimeProvider.System, CancellationToken.None);
 
         return await EndpointResponse.Execute(result, Path, HttpMethods.Get);
     }
@@ -165,6 +167,14 @@ public class MenuEndpointTests
 
             public Task<Guid?> FindIdAsync(DateTimeOffset at, CancellationToken cancellationToken) =>
                 Task.FromResult(Id);
+        }
+
+        public static ListMenuHandler Handler(IProductQueries menu) => new(menu, new NoPromotions(), TimeProvider.System);
+
+        private sealed class NoPromotions : IActivePromotions
+        {
+            public Task<IReadOnlyList<Promotion>> ListAsync(CancellationToken cancellationToken) =>
+                Task.FromResult<IReadOnlyList<Promotion>>([]);
         }
 
         public sealed class Menu(params MenuItem[] items) : IProductQueries

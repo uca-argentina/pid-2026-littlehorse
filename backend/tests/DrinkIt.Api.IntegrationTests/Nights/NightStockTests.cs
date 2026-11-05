@@ -13,6 +13,7 @@ using DrinkIt.Infrastructure.Menu;
 using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
+using DrinkIt.Infrastructure.Promotions;
 using DrinkIt.Infrastructure.Staff;
 using DrinkIt.Infrastructure.Tables;
 using DrinkIt.Infrastructure.VipAccounts;
@@ -515,7 +516,8 @@ public sealed class NightStockTests(SqlServerFixture sql)
                 [new DigitalPaymentStrategy(clock), new CashPaymentStrategy()],
                 venue,
                 new UnderwayNightLookup(context),
-                clock)
+                clock,
+                new ActivePromotions(context))
             .HandleAsync(new ConfirmOrderCommand("María Quadro", method, Guid.NewGuid().ToString(), lines), CancellationToken.None);
     }
 

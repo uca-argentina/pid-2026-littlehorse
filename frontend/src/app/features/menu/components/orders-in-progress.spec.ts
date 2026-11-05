@@ -21,6 +21,7 @@ function anOrder(code: string, status: CustomerOrderStatus): TrackedOrder {
     customerName: 'María Quadro',
     status,
     total: 9000,
+    savings: 0,
     paidAt: null,
     barName: null,
     tableNumber: null,

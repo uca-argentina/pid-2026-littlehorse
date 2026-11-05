@@ -743,6 +743,75 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/promotions': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists every promotion of the venue, deactivated ones included. */
+    get: operations['ListPromotions'];
+    put?: never;
+    /** Adds a promotion to the venue, active. */
+    post: operations['CreatePromotion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/promotions/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Replaces what a promotion is, for the orders to come. */
+    put: operations['UpdatePromotion'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/promotions/{id}/activate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Switches a promotion on. */
+    post: operations['ActivatePromotion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/staff/promotions/{id}/deactivate': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Switches a promotion off: new orders stop getting it, confirmed ones keep their price. */
+    post: operations['DeactivatePromotion'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/kds/orders/{code}/start-preparing': {
     parameters: {
       query?: never;
@@ -1046,6 +1115,8 @@ export interface components {
       tableCode?: null | string;
       /** Format: double */
       digitalAmount?: null | number;
+      /** Format: double */
+      expectedTotal?: null | number;
     };
     /** @description What the administration screen posts to add a category. */
     CreateCategoryRequest: {
@@ -1182,6 +1253,9 @@ export interface components {
       categoryId: string;
       isOrderable: boolean;
       components: components['schemas']['MenuItemPartResponse'][];
+      /** Format: double */
+      regularPrice: null | number;
+      promotionName: null | string;
     };
     /** @description The venue's menu: its name, its categories and its products. */
     MenuResponse: {
@@ -1332,6 +1406,33 @@ export interface components {
       isCombo: boolean;
       components: components['schemas']['ComboPartResponse'][];
     };
+    /** @description What the administration screen posts to define a promotion. */
+    PromotionRequest: {
+      name: string;
+      /** Format: int32 */
+      discountPercent: number;
+      days: null | number[];
+      /** Format: time */
+      startsAt: string;
+      /** Format: time */
+      endsAt: string;
+      productIds: null | string[];
+    };
+    PromotionResponse: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      /** Format: int32 */
+      discountPercent: number;
+      days: number[];
+      /** Format: time */
+      startsAt: string;
+      /** Format: time */
+      endsAt: string;
+      productIds: string[];
+      isActive: boolean;
+      audit: components['schemas']['AuditResponse'];
+    };
     /** @description What it sends to give somebody the name people read. Blank takes it away. */
     RenameStaffUserRequest: {
       displayName: null | string;
@@ -1446,6 +1547,8 @@ export interface components {
       /** Format: int32 */
       tableNumber: null | number;
       waiterName: null | string;
+      /** Format: double */
+      savings: number;
     };
     /** @description What the night's own screen saves: the whole form, as on creation. */
     UpdateNightRequest: {
@@ -3259,6 +3362,174 @@ export interface operations {
       };
       /** @description Unsupported Media Type */
       415: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListPromotions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PromotionResponse'][];
+        };
+      };
+    };
+  };
+  CreatePromotion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PromotionRequest'];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PromotionResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  UpdatePromotion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PromotionRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PromotionResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ActivatePromotion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PromotionResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  DeactivatePromotion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PromotionResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

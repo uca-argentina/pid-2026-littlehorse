@@ -30,7 +30,8 @@ public sealed record ConfirmOrderRequest(
     string? IdempotencyKey,
     IReadOnlyList<OrderLineRequestBody>? Lines,
     string? TableCode = null,
-    decimal? DigitalAmount = null);
+    decimal? DigitalAmount = null,
+    decimal? ExpectedTotal = null);
 
 /// <summary>The order as the confirmation screen shows it.</summary>
 /// <remarks>
@@ -84,7 +85,8 @@ internal static class OrdersEndpoints
                 request.IdempotencyKey,
                 [.. (request.Lines ?? []).Select(line => new OrderLineRequest(line.ProductId, line.Quantity, line.Note))],
                 request.TableCode,
-                request.DigitalAmount),
+                request.DigitalAmount,
+                request.ExpectedTotal),
             cancellationToken);
 
         if (!result.IsSuccess) return Rejected(result.Error!);
@@ -122,6 +124,8 @@ internal static class OrdersEndpoints
         // The difference was right when the screen showed it; the world moved.
         [VipAccountErrors.BalanceChanged.Code] = StatusCodes.Status409Conflict,
         [VipAccountErrors.BalanceMoved.Code] = StatusCodes.Status409Conflict,
+        // US-55: a promotion started or ended while the cart was open.
+        [OrderErrors.PriceChangedCode] = StatusCodes.Status409Conflict,
     };
 
     private static readonly Dictionary<int, string> TitleByStatus = new()
@@ -142,10 +146,17 @@ internal static class OrdersEndpoints
             type: ProblemTypes.For(error.Code),
             // The detail is English, for developers. The customer's screen
             // names the drink itself, in Spanish, so it travels on its own.
-            extensions: error.Subject is null
-                ? null
-                : new Dictionary<string, object?> { ["productName"] = error.Subject });
+            extensions: ExtensionsOf(error));
     }
+
+    // The price that changed travels as a number the screen can show and ask
+    // about; the drink's name as text.
+    private static Dictionary<string, object?>? ExtensionsOf(Error error) =>
+        error.Subject is null
+            ? null
+            : error.Code == OrderErrors.PriceChangedCode
+                ? new Dictionary<string, object?> { ["newTotal"] = decimal.Parse(error.Subject, System.Globalization.CultureInfo.InvariantCulture) }
+                : new Dictionary<string, object?> { ["productName"] = error.Subject };
 
     private static ProblemHttpResult NoSuchVenue(string slug) =>
         TypedResults.Problem(

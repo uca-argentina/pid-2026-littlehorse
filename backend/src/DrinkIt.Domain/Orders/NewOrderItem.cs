@@ -21,7 +21,9 @@ public sealed record NewOrderItem
         decimal unitPrice,
         int quantity,
         string? note,
-        IReadOnlyList<NewOrderItemComponent>? components = null)
+        IReadOnlyList<NewOrderItemComponent>? components = null,
+        decimal? regularPrice = null,
+        string? promotionName = null)
     {
         ProductId = productId;
         ProductName = productName;
@@ -29,6 +31,8 @@ public sealed record NewOrderItem
         Quantity = quantity;
         Note = note;
         Components = components ?? [];
+        RegularPrice = regularPrice;
+        PromotionName = promotionName;
     }
 
     public Guid ProductId { get; }
@@ -43,6 +47,12 @@ public sealed record NewOrderItem
 
     /// <summary>What one unit is made of, when it is a combo (US-51). Empty otherwise.</summary>
     public IReadOnlyList<NewOrderItemComponent> Components { get; }
+
+    /// <summary>The list price, when a promotion lowered <see cref="UnitPrice"/> (US-55). Null otherwise.</summary>
+    public decimal? RegularPrice { get; }
+
+    /// <summary>The promotion that lowered it, by name. Null otherwise.</summary>
+    public string? PromotionName { get; }
 }
 
 /// <summary>One product of a combo as the menu has it right now. Longhand for the same reason.</summary>

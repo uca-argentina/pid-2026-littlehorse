@@ -171,7 +171,17 @@
                     @if (card.description !== null) {
                       <p class="dsc">{{ card.description }}</p>
                     }
-                    <p class="price">$ {{ card.price }}</p>
+                    <p class="price">
+                      $ {{ card.price }}
+                      @if (card.regularPrice; as regular) {
+                        <s class="was"
+                          ><span class="dk-sr-only">Precio de lista </span>$ {{ regular }}</s
+                        >
+                      }
+                    </p>
+                    @if (card.promotion; as promotion) {
+                      <p class="promo">{{ promotion }}</p>
+                    }
                   } @else {
                     <!-- In place of the description, and with no price: the
                          design puts no number on something nobody can buy

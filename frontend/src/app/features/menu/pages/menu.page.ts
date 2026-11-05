@@ -24,6 +24,12 @@ interface MenuCard {
   readonly image: string;
   readonly amount: number;
   readonly price: string;
+
+  /** US-56: the list price, struck through, while a promotion lowers the price. Null otherwise. */
+  readonly regularPrice: string | null;
+
+  /** US-56: the promotion that lowers it. */
+  readonly promotion: string | null;
   readonly isOrderable: boolean;
 
   /** US-52: "2 × Fernet, 1 × Hielo" when it is a combo, or null. */
@@ -167,6 +173,8 @@ export class MenuPage {
           image: item.imageUrl ?? PRODUCT_PLACEHOLDER,
           amount: item.price,
           price: formatPrice(item.price),
+          regularPrice: item.regularPrice === null ? null : formatPrice(item.regularPrice),
+          promotion: item.promotionName,
           // With no night on, every drink reads like one that ran out: on
           // the menu, with no way to add it (US-35, criterion 3).
           isOrderable: item.isOrderable && this.isTakingOrders(),

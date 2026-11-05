@@ -178,6 +178,9 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// <summary>Derived, never stored: a total kept apart from the lines is one that can disagree with them.</summary>
     public decimal Total => _items.Sum(item => item.Total);
 
+    /// <summary>US-56: how much less than list price the promotions made it.</summary>
+    public decimal Savings => _items.Sum(item => item.Saved);
+
     /// <summary>Nobody is waiting on it any more, so its link stops working.</summary>
     public bool IsFinished => Status.IsFinished();
 
@@ -496,7 +499,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         if (note?.Length > OrderItem.NoteMaxLength) throw new DomainException(ErrorCodes.NoteLength, $"A note cannot be longer than {OrderItem.NoteMaxLength} characters.");
 
-        OrderItem frozen = new(Guid.CreateVersion7(), item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, note);
+        OrderItem frozen = new(Guid.CreateVersion7(), item.ProductId, item.ProductName, item.UnitPrice, item.Quantity, note, item.RegularPrice, item.PromotionName);
 
         frozen.Freeze(item.Components);
 

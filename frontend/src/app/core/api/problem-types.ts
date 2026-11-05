@@ -25,6 +25,21 @@ export const ProblemTypes = {
 
   categoryNameTaken: 'urn:drinkit:problem:category:name-taken',
 
+  /** US-54: a product of the promotion is not on the venue's menu. */
+  promotionProductNotFound: 'urn:drinkit:problem:promotion:product-not-found',
+
+  promotionNameRequired: 'urn:drinkit:problem:promotion:name-required',
+
+  promotionNameLength: 'urn:drinkit:problem:promotion:name-length',
+
+  promotionDiscountOutOfRange: 'urn:drinkit:problem:promotion:discount-out-of-range',
+
+  promotionDaysRequired: 'urn:drinkit:problem:promotion:days-required',
+
+  promotionWindowEmpty: 'urn:drinkit:problem:promotion:window-empty',
+
+  promotionProductsRequired: 'urn:drinkit:problem:promotion:products-required',
+
   productNameTaken: 'urn:drinkit:problem:product:name-taken',
 
   /** US-50: one of the combo's products is not on the venue's menu any more. */
@@ -43,6 +58,12 @@ export const ProblemTypes = {
   orderSoldOut: 'urn:drinkit:problem:order:sold-out',
   orderNotOnTheMenu: 'urn:drinkit:problem:order:not-on-the-menu',
   orderStockMoved: 'urn:drinkit:problem:order:stock-moved',
+
+  /**
+   * US-55: the total the customer saw is not the total now — a promotion
+   * started or ended while the cart was open. Nothing was charged.
+   */
+  orderPriceChanged: 'urn:drinkit:problem:order:price-changed',
 
   orderNameRequired: 'urn:drinkit:problem:order:name-required',
   orderNameNeedsSurname: 'urn:drinkit:problem:order:name-needs-surname',
