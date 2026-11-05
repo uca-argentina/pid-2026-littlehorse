@@ -10,6 +10,7 @@ using DrinkIt.Domain.Venues;
 using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
+using DrinkIt.Infrastructure.Promotions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -357,7 +358,8 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
             [new DigitalPaymentStrategy(new FixedClock(Tonight)), new CashPaymentStrategy()],
             current,
             new UnderwayNightLookup(context),
-            new FixedClock(Tonight));
+            new FixedClock(Tonight),
+            new ActivePromotions(context));
 
         return await handler.HandleAsync(
             new ConfirmOrderCommand(name, method, key, lines),

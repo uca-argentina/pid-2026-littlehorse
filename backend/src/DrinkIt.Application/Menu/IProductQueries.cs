@@ -44,7 +44,9 @@ public sealed record MenuItem(
     decimal Price,
     Guid CategoryId,
     bool IsOrderable,
-    IReadOnlyList<MenuItemPart>? Parts = null)
+    IReadOnlyList<MenuItemPart>? Parts = null,
+    decimal? RegularPrice = null,
+    string? PromotionName = null)
 {
     /// <summary>What it brings when it is a combo (US-52). Empty otherwise.</summary>
     public IReadOnlyList<MenuItemPart> Components => Parts ?? [];

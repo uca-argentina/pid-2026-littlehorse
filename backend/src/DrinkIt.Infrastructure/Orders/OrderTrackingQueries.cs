@@ -44,6 +44,8 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
                     .Select(item => new TrackedOrderItem(item.ProductName, item.Quantity, item.Note))
                     .ToList(),
                 Total = order.Items.Sum(item => item.UnitPrice * item.Quantity),
+                // US-56: what the promotions took off, derived from the lines.
+                Savings = order.Items.Sum(item => ((item.RegularPrice ?? item.UnitPrice) - item.UnitPrice) * item.Quantity),
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -63,6 +65,7 @@ internal sealed class OrderTrackingQueries(DrinkItDbContext context) : IOrderTra
             found.BarName,
             found.Items,
             found.TableNumber,
-            found.WaiterName);
+            found.WaiterName,
+            found.Savings);
     }
 }

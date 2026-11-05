@@ -40,6 +40,13 @@
 
 // Which bar has it (US-36): read across the room like the code above it, so
 // the bar's name carries the weight.
+.saved {
+  margin: 0;
+  color: var(--dk-accent);
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .where {
   margin: 0;
   color: var(--dk-text-muted);

@@ -104,6 +104,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // derived from.
         builder.Ignore(order => order.Total);
         builder.Ignore(order => order.IsFinished);
+        builder.Ignore(order => order.Savings);
 
         // The lines are the order's own and reachable only through it, which is
         // what makes this an aggregate: they load with it and die with it.
@@ -139,7 +140,13 @@ internal sealed class OrderItemConfiguration : IEntityTypeConfiguration<OrderIte
         builder.Property(item => item.Quantity).IsRequired();
         builder.Property(item => item.Note).HasMaxLength(OrderItem.NoteMaxLength);
 
+        // US-55: the list price and the promotion that lowered UnitPrice. Null
+        // on every order from before promotions and on any without one.
+        builder.Property(item => item.RegularPrice).HasPrecision(10, 2);
+        builder.Property(item => item.PromotionName).HasMaxLength(Domain.Promotions.Promotion.NameMaxLength);
+
         builder.Ignore(item => item.Total);
+        builder.Ignore(item => item.Saved);
 
         // US-51: what a combo was made of when it was confirmed. They load
         // with the item and die with it; no foreign key to the product, as with

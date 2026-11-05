@@ -212,6 +212,21 @@ drinkit-theme-toggle {
   font-variant-numeric: tabular-nums;
 }
 
+// US-56: the list price, struck and quiet beside the one that is charged.
+.was {
+  margin-left: 6px;
+  color: var(--dk-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.promo {
+  margin: 2px 0 0;
+  color: var(--dk-accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 // What was written on this drink, under its name and in the muted voice of the
 // description: part of what was ordered, not a second title.
 .card-note {

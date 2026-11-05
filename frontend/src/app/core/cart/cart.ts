@@ -140,6 +140,23 @@ export class Cart {
    * own: going back to the carta then starts a new one rather than showing the
    * one that was already paid for.
    */
+  /**
+   * US-55: takes the price the menu has now for each line it names. Used when
+   * the server refused a total the customer saw because a promotion started or
+   * ended: the lines stay, the prices are the current ones, and the customer
+   * decides again. Lines the menu no longer has are left for the server to
+   * name.
+   */
+  reprice(prices: readonly { readonly id: string; readonly price: number }[]): void {
+    this.save(
+      this.stored().map((line) => {
+        const current = prices.find((price) => price.id === line.productId);
+
+        return current === undefined ? line : { ...line, unitPrice: current.price };
+      }),
+    );
+  }
+
   clear(): void {
     this.save([]);
   }

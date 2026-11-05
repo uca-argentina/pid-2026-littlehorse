@@ -127,10 +127,10 @@ construcción, en vez de dejarlo librado a un `if` en la capa de aplicación que
 puede olvidar.
 
 El corte además elimina trabajo que no vamos a hacer: sin devoluciones no hace falta una
-pantalla de reintegro en la caja, ni integrar *refunds* con la pasarela (que cobra comisión
+pantalla de reintegro en la caja, ni integrar _refunds_ con la pasarela (que cobra comisión
 por devolver), ni un reintegro al saldo de la mesa VIP cuando esa parte entre.
 
-La cancelación automática por *timeout* de un pedido en efectivo nunca pagado usa esta
+La cancelación automática por _timeout_ de un pedido en efectivo nunca pagado usa esta
 misma transición desde `AwaitingPayment`; falta definir a los cuántos minutos (§15).
 
 Queda **sin modelar** el caso inverso: que el local no pueda entregar un pedido ya pagado
@@ -160,8 +160,8 @@ toda tabla nueva tenga `created_at` o esté en esa lista con su motivo.
 obligatorio; `CUSTOMER` es una persona que puede pedir en cualquier local y no
 pertenece a ninguno.
 
-Si fueran una sola tabla, `venue_id` tendría que admitir `NULL`, y ahí se rompe el *global
-query filter* de EF Core que aplica el filtro por boliche automáticamente: o filtra estricto
+Si fueran una sola tabla, `venue_id` tendría que admitir `NULL`, y ahí se rompe el _global
+query filter_ de EF Core que aplica el filtro por boliche automáticamente: o filtra estricto
 y los clientes desaparecen de toda consulta, o contempla el `NULL` y entonces las consultas
 de personal interno pueden traer clientes, con lo que el aislamiento entre locales deja de
 ser verificable. Además el enum de roles pasaría a mezclar `Customer` con roles internos,
@@ -175,8 +175,8 @@ autenticación para resolver un caso que puede no ocurrir nunca.
 **Quién es el cliente: `customer_id` nullable + `customer_name` obligatorio.** Son dos campos
 que parecen redundantes y no lo son.
 
-`customer_id` en `NULL` es un pedido anónimo, que es lo que pide la consigna: *"los clientes
-podrán pedir sin crear una cuenta permanente"*.
+`customer_id` en `NULL` es un pedido anónimo, que es lo que pide la consigna: _"los clientes
+podrán pedir sin crear una cuenta permanente"_.
 
 `customer_name` está **siempre** cargado, esté logueado el cliente o no. Si tiene cuenta se
 copia de ella al confirmar; si no, sale del input del checkout. Es un snapshot, por la misma
@@ -218,18 +218,32 @@ el administrador, se normaliza en ese momento.
 **`CUSTOMER_ORDER` y no `ORDER`.** `ORDER` y `USER` son palabras reservadas en SQL Server y
 obligan a escribir `[Order]` en cada consulta escrita a mano.
 
+**`PROMOTION` (Sprint 4, US-54 a US-56).** Un porcentaje de descuento sobre productos elegidos,
+en ciertos días de la semana y en una franja horaria. Tiene `venue_id` y filtro global como todo
+agregado raíz. Los días van en una sola columna, `days_mask`, un bit por día de la semana
+(domingo es el bit 0): son siete valores como máximo y una tabla aparte sólo agregaría un join.
+Los productos sí van en tabla propia, `promotion_product`, con clave `(promotion_id, product_id)`
+para que uno no se repita. La franja que cruza la medianoche **pertenece al día en que empieza**.
+Las horas son locales del boliche (`America/Argentina/Buenos_Aires`, constante en
+`VenueClock`): con un local en otro huso, pasa a ser una columna de `Venue`.
+`ORDER_ITEM` guarda además `regular_price` y `promotion_name`, nulos en los pedidos anteriores o
+sin promoción: `unit_price` sigue siendo lo que se cobró, congelado, y el ahorro del seguimiento
+se deriva de las líneas. Hay una única regla de precio (`PromotionPricing`): entre las
+promociones vigentes que cubren el producto gana la de mayor descuento, sin acumular, y la usan
+la carta y la confirmación por igual.
+
 ## Fuera del alcance del Sprint 1
 
 Está en el diseño funcional y **se modela más adelante**, no ahora:
 
-| Entidad | Por qué se posterga |
-|---|---|
-| `Table` | **Modelada en el Sprint 3 (US-39)**: número único por boliche, personas, ubicación y baja lógica. |
-| `VipAccount` | El Sprint 1 es sólo retiro en barra. |
-| `PushSubscription` | Las notificaciones se simulan con cambios de estado. |
-| `BarStation` | Una sola barra en el MVP; el KDS no se reparte por estación. |
-| `PaymentMethod`, pasarela | El pago se simula. |
-| Rol `Cashier` | Este sprint es sólo retiro en barra, y la caja llega con el efectivo. |
+| Entidad                   | Por qué se posterga                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| `Table`                   | **Modelada en el Sprint 3 (US-39)**: número único por boliche, personas, ubicación y baja lógica. |
+| `VipAccount`              | El Sprint 1 es sólo retiro en barra.                                                              |
+| `PushSubscription`        | Las notificaciones se simulan con cambios de estado.                                              |
+| `BarStation`              | Una sola barra en el MVP; el KDS no se reparte por estación.                                      |
+| `PaymentMethod`, pasarela | El pago se simula.                                                                                |
+| Rol `Cashier`             | Este sprint es sólo retiro en barra, y la caja llega con el efectivo.                             |
 
 Caso aparte, `CUSTOMER`: **la tabla está en el modelo, el login no se construye todavía.**
 La consigna pide explícitamente que el cliente pueda pedir sin cuenta y sólo exige

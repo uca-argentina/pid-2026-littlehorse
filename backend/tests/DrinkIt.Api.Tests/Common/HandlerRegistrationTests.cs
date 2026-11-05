@@ -4,6 +4,7 @@ using DrinkIt.Api.Features.Kds;
 using DrinkIt.Api.Features.Menu;
 using DrinkIt.Api.Features.Nights;
 using DrinkIt.Api.Features.Orders;
+using DrinkIt.Api.Features.Promotions;
 using DrinkIt.Api.Features.Staff;
 using DrinkIt.Api.Features.Tables;
 using DrinkIt.Api.Features.Waiter;
@@ -25,6 +26,7 @@ public class HandlerRegistrationTests
         services.AddLoginHandlers();
         services.AddStaffHandlers();
         services.AddMenuHandlers();
+        services.AddPromotionHandlers();
         services.AddOrderHandlers();
         services.AddKdsHandlers();
         services.AddCashierHandlers();
