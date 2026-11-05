@@ -106,10 +106,15 @@ test.describe('Stamp card', () => {
     await logIn(desk, seededAdminUsername, seededAdminPassword());
     // Through the header, not by address: a reload would drop the session.
     await desk.getByRole('link', { name: 'Tarjeta' }).click();
-    await desk.getByLabel('Sellos para el regalo').fill('2');
-    await desk.getByLabel('Producto de regalo').selectOption({ label: rewardName });
-    await desk.getByLabel('Tarjeta activa').check();
-    await expect(desk.getByTestId('stamps-progress')).toContainText('0 de 2 sellos');
+    // Retried: the rule a previous run saved can land in the form mid-typing.
+    await expect(async () => {
+      await desk.getByLabel('Sellos para el regalo').fill('2');
+      await desk.getByLabel('Producto de regalo').selectOption({ label: rewardName });
+      await desk.getByLabel('Tarjeta activa').check();
+      await expect(desk.getByTestId('stamps-progress')).toContainText('0 de 2 sellos', {
+        timeout: 1000,
+      });
+    }).toPass();
     await evidence(desk, '09-tarjeta-admin-escritorio');
 
     await desk.getByRole('button', { name: 'Guardar tarjeta' }).click();
@@ -152,6 +157,8 @@ test.describe('Stamp card', () => {
     await phone.goto(menuPath);
     await expect(phone.getByTestId('stamps-progress')).toContainText('2 de 2 sellos');
     await expect(phone.getByTestId('stamps-ready')).toContainText(rewardName);
+    // Narrowed so the picture shows the card and not every product of the shared venue.
+    await phone.getByRole('searchbox', { name: /buscar trago/i }).fill(paidName);
     await evidence(phone, '10-tarjeta-progreso-en-la-carta');
 
     // The next order brings the reward, shown at zero.
