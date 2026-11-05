@@ -5,7 +5,9 @@ import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
 import { anonymously } from '../../../core/auth/anonymous-request';
+import { StampCards } from '../../../core/stamp-card/stamp-cards';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
+import { StampProgress } from '../../../shared/stamp-progress/stamp-progress';
 import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
 import { formatPrice } from '../../../shared/money/price';
 import { slowLoading } from '../../../shared/loading/slow-loading';
@@ -51,12 +53,17 @@ interface CategoryTab {
  */
 @Component({
   selector: 'drinkit-menu-page',
-  imports: [GlassMark, OrdersInProgress, RouterLink, ThemeToggle],
+  imports: [GlassMark, OrdersInProgress, RouterLink, StampProgress, ThemeToggle],
   styleUrl: './menu.page.scss',
   templateUrl: './menu.page.html',
 })
 export class MenuPage {
   protected readonly cart = inject(Cart);
+
+  private readonly stampCards = inject(StampCards);
+
+  /** US-58: the customer's card, or null while it is unknown and when the venue has it off. */
+  protected readonly stampCard = this.stampCards.view;
 
   /** From the path. Bound by the router, so the screen never asks for a venue. */
   readonly venueSlug = input.required<string>();
@@ -224,6 +231,7 @@ export class MenuPage {
     // The order belongs to the venue whose address is open, and switching
     // venues has to switch orders rather than carry one into the other.
     effect(() => this.cart.open(this.venueSlug()));
+    effect(() => this.stampCards.open(this.venueSlug()));
 
     effect(() => {
       if (this.menu.hasValue()) this.lastVenueName.set(this.menu.value().venueName);

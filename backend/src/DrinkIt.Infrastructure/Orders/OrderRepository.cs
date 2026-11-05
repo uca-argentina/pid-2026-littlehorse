@@ -1,7 +1,9 @@
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Orders;
+using DrinkIt.Application.StampCards;
 using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Orders;
+using DrinkIt.Domain.StampCards;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
@@ -78,16 +80,18 @@ internal sealed partial class OrderRepository(
 
             return order;
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException exception)
         {
-            // US-41: the only tracked row with a concurrency token an order
-            // writes is the VIP table it spent from. Another phone of the same
-            // table spent first; nothing is written, and the order is built
-            // again against the balance as it is now.
+            // Two rows with a concurrency token can be written along with an
+            // order. US-41: the VIP table it spent from; US-59: the stamp card
+            // that claimed a reward. Another phone spent first; nothing is
+            // written, and the screen reads what it spent from again.
+            bool wasTheCard = exception.Entries.Any(entry => entry.Entity is StampCard);
+
             await transaction.RollbackAsync(cancellationToken);
             context.ChangeTracker.Clear();
 
-            return VipAccountErrors.BalanceMoved;
+            return wasTheCard ? StampCardErrors.CardMoved : VipAccountErrors.BalanceMoved;
         }
         catch (DbUpdateException)
         {

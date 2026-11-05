@@ -11,6 +11,7 @@ using DrinkIt.Infrastructure.Nights;
 using DrinkIt.Infrastructure.Orders;
 using DrinkIt.Infrastructure.Persistence;
 using DrinkIt.Infrastructure.Promotions;
+using DrinkIt.Infrastructure.StampCards;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -359,7 +360,9 @@ public sealed class ConfirmOrderTests(SqlServerFixture sql)
             current,
             new UnderwayNightLookup(context),
             new FixedClock(Tonight),
-            new ActivePromotions(context));
+            new ActivePromotions(context),
+            new StampCardRepository(context),
+            new StampCardQueries(context));
 
         return await handler.HandleAsync(
             new ConfirmOrderCommand(name, method, key, lines),

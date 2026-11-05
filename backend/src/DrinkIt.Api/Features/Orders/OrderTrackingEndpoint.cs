@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 namespace DrinkIt.Api.Features.Orders;
 
 /// <summary>One drink of the order, as the tracking screen draws it.</summary>
-public sealed record TrackedOrderItemResponse(string ProductName, int Quantity, string? Note);
+public sealed record TrackedOrderItemResponse(string ProductName, int Quantity, string? Note, bool IsReward);
 
 /// <summary>
 /// Where an order is, and which bar to pick it up at.
@@ -94,7 +94,7 @@ internal static class OrderTrackingEndpoint
             found.PaidAt,
             found.BarName,
             [.. found.Items.Select(item =>
-                new TrackedOrderItemResponse(item.ProductName, item.Quantity, item.Note))],
+                new TrackedOrderItemResponse(item.ProductName, item.Quantity, item.Note, item.IsReward))],
             found.TableNumber,
             found.WaiterName,
             found.Savings));

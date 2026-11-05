@@ -1,0 +1,27 @@
+.grow {
+  flex: 3;
+}
+
+.active {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: var(--dk-space-3);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rules {
+  padding-left: 18px;
+  margin: var(--dk-space-4, 16px) 0 0;
+  color: var(--dk-text-muted);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+// The card as a phone draws it: a phone-width column, so what is shown is what
+// the customer gets and not a stretched version of it.
+.phone {
+  max-width: 360px;
+  margin-bottom: var(--dk-space-4, 16px);
+}

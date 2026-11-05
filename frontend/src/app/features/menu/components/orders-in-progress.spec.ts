@@ -26,7 +26,7 @@ function anOrder(code: string, status: CustomerOrderStatus): TrackedOrder {
     barName: null,
     tableNumber: null,
     waiterName: null,
-    items: [{ productName: 'Gin Tonic', quantity: 2, note: null }],
+    items: [{ productName: 'Gin Tonic', quantity: 2, note: null, isReward: false }],
   };
 }
 

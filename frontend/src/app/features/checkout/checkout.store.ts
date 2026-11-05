@@ -8,6 +8,7 @@ import { BrowserStore } from '../../core/storage/browser-store';
 import { ProblemTypes } from '../../core/api/problem-types';
 import { problemProductNameOf } from '../../core/api/problem-product-name-of';
 import { problemTypeOf } from '../../core/api/problem-type-of';
+import { StampCards } from '../../core/stamp-card/stamp-cards';
 import { CheckoutService } from './checkout.service';
 import type { ConfirmedOrder, PaymentMethod } from './checkout.service';
 
@@ -29,7 +30,7 @@ export const PROCESSING_PAUSE_MS = new InjectionToken<number>('PROCESSING_PAUSE_
  * "paying" and "that drink ran out" cannot both be true at once.
  */
 export type CheckoutStatus =
-  'idle' | 'paying' | 'soldOut' | 'priceChanged' | 'rejected' | 'unreachable';
+  'idle' | 'paying' | 'soldOut' | 'priceChanged' | 'rewardRefused' | 'rejected' | 'unreachable';
 
 export const CHECKOUT_KEY_PREFIX = 'drinkit.checkout-key.';
 
@@ -46,6 +47,8 @@ export class CheckoutStore {
   private readonly pause = inject(PROCESSING_PAUSE_MS);
 
   private readonly store = inject(BrowserStore);
+
+  private readonly stampCards = inject(StampCards);
 
   private readonly state = signal<CheckoutStatus>('idle');
 
@@ -88,6 +91,8 @@ export class CheckoutStore {
    * tableCode: the VIP table this phone orders for (US-41), or null at the bar.
    * digitalAmount: what the phone pays on top of the table's balance (US-42),
    * or null when the balance covers it.
+   * redeemReward: add the reward of the stamp card at zero (US-59). The phone
+   * only asks: what it costs in stamps is the rule's, read by the server.
    */
   pay(
     venueSlug: string,
@@ -95,6 +100,7 @@ export class CheckoutStore {
     method: PaymentMethod,
     tableCode: string | null = null,
     digitalAmount: number | null = null,
+    redeemReward = false,
   ): void {
     if (this.isPaying()) return;
 
@@ -119,6 +125,9 @@ export class CheckoutStore {
         // US-55: what the screen showed. If a promotion started or ended since,
         // the server answers with the new total instead of charging another.
         expectedTotal: Math.round(this.cart.total() * 100) / 100,
+        // US-58: the card the phone holds, in the body and never in an address.
+        stampCardToken: this.stampCards.tokenOf(venueSlug),
+        redeemReward,
       }),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -143,6 +152,14 @@ export class CheckoutStore {
    */
   private showTheConfirmation(venueSlug: string, order: ConfirmedOrder): void {
     this.state.set('idle');
+
+    // US-58: the first order hands the phone its card, and it is kept.
+    // The card on screen is from before this order: a reward spent stamps and a
+    // first order brought a card, so the next screen reads it again.
+    if (order.stampCardToken !== null) {
+      this.stampCards.remember(venueSlug, order.stampCardToken);
+      this.stampCards.refresh();
+    }
 
     void this.router
       .navigate(['/', venueSlug, 'orders', order.code, order.trackingToken])
@@ -200,6 +217,17 @@ export class CheckoutStore {
       return;
     }
 
+    // US-59: the reward cannot be given — not enough stamps, switched off, or
+    // another phone spent the card first. Nothing was charged and no stamp was
+    // spent; the card is read again so the screen shows it as it is now.
+    if (rewardWasRefused(problem)) {
+      this.refusal.set(refusalOf(error, problem));
+      this.state.set('rewardRefused');
+      this.stampCards.refresh();
+
+      return;
+    }
+
     // An answer that carries no problem document at all — a proxy, a gateway.
     // Nothing of ours refused this, so it is not something to explain.
     if (problem === undefined) {
@@ -211,6 +239,16 @@ export class CheckoutStore {
     this.refusal.set(refusalOf(error, problem));
     this.state.set('rejected');
   }
+}
+
+/** The four reasons a reward is refused (US-59), all of them with nothing charged. */
+function rewardWasRefused(problem: string | undefined): boolean {
+  return (
+    problem === ProblemTypes.stampCardNotEnoughStamps ||
+    problem === ProblemTypes.stampCardNotActive ||
+    problem === ProblemTypes.stampCardRewardUnavailable ||
+    problem === ProblemTypes.stampCardCardMoved
+  );
 }
 
 /** The three that mean the order has to be looked at again, not rewritten. */

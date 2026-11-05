@@ -3,7 +3,8 @@ using DrinkIt.Domain.Orders;
 namespace DrinkIt.Application.Orders;
 
 /// <summary>One drink of an order, as the customer watching it sees it.</summary>
-public sealed record TrackedOrderItem(string ProductName, int Quantity, string? Note);
+/// <remarks><paramref name="IsReward"/> is the free drink of a stamp card (US-59): the screen says "Regalo" instead of a price.</remarks>
+public sealed record TrackedOrderItem(string ProductName, int Quantity, string? Note, bool IsReward = false);
 
 /// <summary>
 /// An order as its tracking screen draws it.

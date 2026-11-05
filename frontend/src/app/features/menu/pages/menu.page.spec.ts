@@ -7,6 +7,8 @@ import { BrowserStore } from '../../../core/storage/browser-store';
 import { StoreInMemory } from '../../../core/storage/store-in-memory';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { ProblemTypes } from '../../../core/api/problem-types';
+import { noStampCard } from '../../../core/stamp-card/no-stamp-card';
+import { StampCards } from '../../../core/stamp-card/stamp-cards';
 import { MY_ORDERS_STORAGE_PREFIX } from '../../../core/orders/my-orders';
 import { trackingUrl } from '../../tracking/tracking.service';
 import { OrdersInProgressChannel } from '../components/orders-in-progress-channel';
@@ -67,6 +69,7 @@ async function openScreen() {
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: BrowserStore, useValue: store },
+      { provide: StampCards, useValue: noStampCard() },
       // The live link has its own spec (OrdersInProgress); here it stays quiet.
       {
         provide: OrdersInProgressChannel,
