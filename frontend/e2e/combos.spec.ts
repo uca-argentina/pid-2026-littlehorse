@@ -110,7 +110,9 @@ test.describe('Combos', () => {
     await expect(desk).toHaveURL(new RegExp(`${productsPath}$`));
     await desk.getByRole('searchbox', { name: /buscar producto/i }).fill(comboName);
     const row = desk.getByRole('listitem', { name: comboName });
-    await expect(row).toContainText(`Trae 2 × ${fernetName}, 1 × ${iceName}`);
+    // Either order: the parts come back by key, and the key is a random id.
+    await expect(row).toContainText(`2 × ${fernetName}`);
+    await expect(row).toContainText(`1 × ${iceName}`);
     await evidence(desk, '02-combo-en-listado');
     await desk.close();
 
@@ -119,7 +121,8 @@ test.describe('Combos', () => {
     const phone = await phoneContext.newPage();
     await phone.goto(menuPath);
     await phone.getByRole('searchbox', { name: /buscar trago/i }).fill(comboName);
-    await expect(phone.getByText(`Trae 2 × ${fernetName}, 1 × ${iceName}`)).toBeVisible();
+    await expect(phone.getByText(`2 × ${fernetName}`)).toBeVisible();
+    await expect(phone.getByText(`1 × ${iceName}`)).toBeVisible();
     await evidence(phone, '03-combo-en-la-carta');
     await phone.getByRole('button', { name: new RegExp(`agregar ${comboName}`, 'i') }).click();
     await phone.getByTestId('order-summary').click();

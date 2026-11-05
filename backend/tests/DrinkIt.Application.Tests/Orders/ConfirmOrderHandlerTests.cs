@@ -2,10 +2,12 @@ using DrinkIt.Application.Common;
 using DrinkIt.Application.Nights;
 using DrinkIt.Application.Orders;
 using DrinkIt.Application.Promotions;
+using DrinkIt.Application.StampCards;
 using DrinkIt.Application.VipAccounts;
 using DrinkIt.Domain.Menu;
 using DrinkIt.Domain.Orders;
 using DrinkIt.Domain.Promotions;
+using DrinkIt.Domain.StampCards;
 
 namespace DrinkIt.Application.Tests.Orders;
 
@@ -22,6 +24,8 @@ public class ConfirmOrderHandlerTests
     private readonly OrdersInMemory _orders = new();
 
     private readonly PromotionsOn _promotions = new();
+
+    private readonly StampCardsInMemory _cards = new();
 
     private static readonly Guid TheNight = Guid.CreateVersion7();
 
@@ -592,6 +596,257 @@ public class ConfirmOrderHandlerTests
         Assert.True(result.IsSuccess);
     }
 
+    // US-58, criterion 1: the first order of a phone is given a card.
+    [Fact]
+    public async Task HandleAsync_WhenTheCardIsOnAndThePhoneHasNone_IssuesOneAndHandsOverItsToken()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        StampCard issued = Assert.Single(_cards.Issued);
+
+        Assert.Equal(issued.Token, result.Value.StampCardToken);
+        Assert.Equal(issued.Id, _orders.Added!.StampCardId);
+        Assert.Equal(TheVenue, issued.VenueId);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenThePhoneBringsItsCard_CountsTheOrderForThatCardAndIssuesNoOther()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        StampCard card = _cards.Has(earned: 2);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder() with { StampCardToken = card.Token }, CancellationToken.None);
+
+        Assert.Equal(card.Id, _orders.Added!.StampCardId);
+        Assert.Equal(card.Token, result.Value.StampCardToken);
+        Assert.Empty(_cards.Issued);
+    }
+
+    // US-58, criterion 4: a token that is not this venue's finds nothing, so it
+    // earns nothing anywhere; the phone is given a card of this venue.
+    [Fact]
+    public async Task HandleAsync_WhenTheTokenIsNotOfThisVenue_IssuesANewCardInsteadOfUsingIt()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        string foreign = StampCard.Issue(Guid.CreateVersion7()).Token;
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder() with { StampCardToken = foreign }, CancellationToken.None);
+
+        Assert.NotEqual(foreign, result.Value.StampCardToken);
+        Assert.Single(_cards.Issued);
+        Assert.Equal(_cards.Issued[0].Id, _orders.Added!.StampCardId);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheTokenIsMalformed_IssuesANewCard()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder() with { StampCardToken = "not-a-token" }, CancellationToken.None);
+
+        Assert.Single(_cards.Issued);
+        Assert.Equal(_cards.Issued[0].Token, result.Value.StampCardToken);
+    }
+
+    // US-57, criterion 3 and the note: without a rule there is no card.
+    [Fact]
+    public async Task HandleAsync_WhenTheVenueHasNoRule_GivesNoCard()
+    {
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder(), CancellationToken.None);
+
+        Assert.Null(result.Value.StampCardToken);
+        Assert.Null(_orders.Added!.StampCardId);
+        Assert.Empty(_cards.Issued);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheCardIsSwitchedOff_GivesNoCardAndEarnsNothing()
+    {
+        _cards.RuleIs(5, _menu.Fernet, active: false);
+        StampCard card = _cards.Has(earned: 2);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder() with { StampCardToken = card.Token }, CancellationToken.None);
+
+        Assert.Null(result.Value.StampCardToken);
+        Assert.Null(_orders.Added!.StampCardId);
+        Assert.Empty(_cards.Issued);
+    }
+
+    // US-59, criterion 1.
+    [Fact]
+    public async Task HandleAsync_WhenTheCardIsCompleteAndTheRewardIsAsked_AddsTheRewardAtZeroAndClaimsIt()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        StampCard card = _cards.Has(earned: 5);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true }, CancellationToken.None);
+
+        OrderItem reward = _orders.Added!.Items.Single(item => item.IsReward);
+
+        Assert.Equal(_menu.Fernet.Id, reward.ProductId);
+        Assert.Equal(0m, reward.UnitPrice);
+        Assert.Equal(5, reward.StampsSpent);
+        Assert.Equal(9000m, result.Value.Total);
+        Assert.Equal(1, card.RewardsClaimed);
+    }
+
+    // The reward is priced by the server: nothing in the request says what it costs.
+    [Fact]
+    public async Task HandleAsync_WhenTheRewardIsAsked_TheCostComesFromTheRuleNotFromThePhone()
+    {
+        _cards.RuleIs(8, _menu.Fernet);
+        StampCard card = _cards.Has(earned: 9);
+
+        await AHandler().HandleAsync(ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true }, CancellationToken.None);
+
+        Assert.Equal(8, _orders.Added!.Items.Single(item => item.IsReward).StampsSpent);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheRewardIsTheSameDrinkAsAPaidLine_KeepsBothLines()
+    {
+        _cards.RuleIs(5, _menu.Gin);
+        StampCard card = _cards.Has(earned: 5);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true }, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, _orders.Added!.Items.Count);
+        Assert.Equal(3, _orders.Added.UnitsByProduct()[_menu.Gin.Id]);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheCardHasMoreThanOneRewardWorth_SpendsOnlyOne()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        StampCard card = _cards.Has(earned: 12);
+
+        await AHandler().HandleAsync(ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true }, CancellationToken.None);
+
+        Assert.Equal(1, _orders.Added!.Items.Count(item => item.IsReward));
+        Assert.Equal(5, _orders.Added.Items.Single(item => item.IsReward).StampsSpent);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheRewardIsAskedWithoutEnoughStamps_RefusesWithoutSpendingOrConfirming()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        StampCard card = _cards.Has(earned: 4);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true }, CancellationToken.None);
+
+        Assert.Equal(StampCardErrors.NotEnoughStamps, result.Error);
+        Assert.Null(_orders.Added);
+        Assert.Equal(0, card.RewardsClaimed);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheRewardIsAskedWithoutACard_RefusesAndIssuesNothing()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(ATwoGinOrder() with { RedeemReward = true }, CancellationToken.None);
+
+        Assert.Equal(StampCardErrors.NotEnoughStamps, result.Error);
+        Assert.Null(_orders.Added);
+        Assert.Empty(_cards.Issued);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenTheRewardIsAskedAndTheCardIsOff_RefusesAndConfirmsNothing()
+    {
+        _cards.RuleIs(5, _menu.Fernet, active: false);
+        StampCard card = _cards.Has(earned: 9);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true }, CancellationToken.None);
+
+        Assert.Equal(StampCardErrors.NotActive, result.Error);
+        Assert.Null(_orders.Added);
+    }
+
+    // US-59, criterion 2: off the menu or switched off.
+    [Fact]
+    public async Task HandleAsync_WhenTheRewardIsSwitchedOff_RefusesWithoutSpendingOrConfirming()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        StampCard card = _cards.Has(earned: 5);
+        _menu.Fernet.MarkUnavailable();
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true }, CancellationToken.None);
+
+        Assert.Equal(StampCardErrors.RewardUnavailable, result.Error);
+        Assert.Null(_orders.Added);
+        Assert.Equal(0, card.RewardsClaimed);
+    }
+
+    // US-59, criterion 2: sold out is the order's own refusal, naming the drink.
+    [Fact]
+    public async Task HandleAsync_WhenTheRewardIsSoldOut_RefusesWithoutConfirming()
+    {
+        Catalog menu = new(gin: 20, fernet: 0);
+        _cards.RuleIs(5, menu.Fernet);
+        StampCard card = _cards.Has(earned: 5);
+
+        Result<ConfirmedOrder> result = await AHandlerOver(menu).HandleAsync(
+            new ConfirmOrderCommand("María Quadro", PaymentMethod.Digital, "abc-123", [new OrderLineRequest(menu.Gin.Id, 2, null)], StampCardToken: card.Token, RedeemReward: true),
+            CancellationToken.None);
+
+        Assert.Equal(ConfirmOrderHandler.SoldOut.Code, result.Error!.Code);
+        Assert.Equal("Fernet con Coca", result.Error.Subject);
+        Assert.Null(_orders.Added);
+    }
+
+    // US-59, criterion 4: the other phone spent the card in the same instant.
+    [Fact]
+    public async Task HandleAsync_WhenAnotherPhoneSpentTheCardFirst_AnswersThatTheCardMoved()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        StampCard card = _cards.Has(earned: 5);
+        _orders.RefusesAlways(StampCardErrors.CardMoved);
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true }, CancellationToken.None);
+
+        Assert.Equal(StampCardErrors.CardMoved, result.Error);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenAnOrderWithRewardIsRetried_HandsBackTheSameOrderAndToken()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        StampCard card = _cards.Has(earned: 5);
+        ConfirmOrderHandler handler = AHandler();
+        ConfirmOrderCommand command = ATwoGinOrder() with { StampCardToken = card.Token, RedeemReward = true };
+
+        Result<ConfirmedOrder> first = await handler.HandleAsync(command, CancellationToken.None);
+        Result<ConfirmedOrder> retry = await handler.HandleAsync(command, CancellationToken.None);
+
+        Assert.Equal(first.Value.Code, retry.Value.Code);
+        Assert.Equal(card.Token, retry.Value.StampCardToken);
+        Assert.Equal(1, card.RewardsClaimed);
+    }
+
+    // A fresh card of this order has no stamps to spend, whatever the phone asks.
+    [Fact]
+    public async Task HandleAsync_WhenTheRewardIsAskedByAPhoneWhoseTokenIsForeign_RefusesWithoutIssuingACard()
+    {
+        _cards.RuleIs(5, _menu.Fernet);
+        string foreign = StampCard.Issue(Guid.CreateVersion7()).Token;
+
+        Result<ConfirmedOrder> result = await AHandler().HandleAsync(
+            ATwoGinOrder() with { StampCardToken = foreign, RedeemReward = true }, CancellationToken.None);
+
+        Assert.Equal(StampCardErrors.NotEnoughStamps, result.Error);
+        Assert.Empty(_cards.Issued);
+    }
+
     private static OrderLineRequest One(Product product) => new(product.Id, 1, null);
 
     private static OrderLineRequest Two(Product product) => new(product.Id, 2, null);
@@ -617,7 +872,9 @@ public class ConfirmOrderHandlerTests
             new TheVenueIsFixed(TheVenue),
             _nights,
             new FixedClock(Tonight),
-            _promotions);
+            _promotions,
+            _cards,
+            _cards);
 
     private ConfirmOrderHandler AHandlerOver(Catalog menu, IOrderCodeSequence? codes = null, IBarsForOrdering? bars = null) =>
         new(_orders,
@@ -628,7 +885,9 @@ public class ConfirmOrderHandlerTests
             new TheVenueIsFixed(TheVenue),
             _nights,
             new FixedClock(Tonight),
-            _promotions);
+            _promotions,
+            _cards,
+            _cards);
 
     /// <summary>A method that only takes the money, as every method that pays on the spot does.</summary>
     private sealed class PaysOnTheSpot(DateTimeOffset now) : IPaymentStrategy
@@ -826,5 +1085,44 @@ public class ConfirmOrderHandlerTests
 
             return Task.FromResult<IReadOnlyList<BarSupply>>(bars);
         }
+    }
+
+    /// <summary>The cards and the rule of the venue, as the handler is allowed to see them.</summary>
+    private sealed class StampCardsInMemory : IStampCardRepository, IStampCardQueries
+    {
+        private readonly List<(StampCard Card, StampBalance Balance)> _known = [];
+
+        private StampCardRule? _rule;
+
+        /// <summary>The cards the handler added: they are written with the order.</summary>
+        public List<StampCard> Issued { get; } = [];
+
+        public void RuleIs(int stamps, Product reward, bool active = true) =>
+            _rule = StampCardRule.Create(TheVenue, stamps, reward.Id, active);
+
+        public StampCard Has(int earned, int spent = 0)
+        {
+            StampCard card = StampCard.Issue(TheVenue);
+
+            _known.Add((card, new StampBalance(earned, spent)));
+
+            return card;
+        }
+
+        public Task<StampCardRule?> GetRuleAsync(CancellationToken cancellationToken) => Task.FromResult(_rule);
+
+        public Task<StampBalance> GetBalanceAsync(Guid cardId, Guid? currentNight, CancellationToken cancellationToken) =>
+            Task.FromResult(_known.Single(known => known.Card.Id == cardId).Balance);
+
+        public Task<Guid?> FindCardIdAsync(string? token, CancellationToken cancellationToken) =>
+            Task.FromResult<Guid?>(_known.Select(known => known.Card).Concat(Issued).FirstOrDefault(card => card.Token == token)?.Id);
+
+        public Task<string?> GetTokenAsync(Guid cardId, CancellationToken cancellationToken) =>
+            Task.FromResult(_known.Select(known => known.Card).Concat(Issued).FirstOrDefault(card => card.Id == cardId)?.Token);
+
+        public Task<StampCard?> GetForUpdateAsync(string? token, CancellationToken cancellationToken) =>
+            Task.FromResult(_known.Select(known => known.Card).FirstOrDefault(card => card.Token == token));
+
+        public void Add(StampCard card) => Issued.Add(card);
     }
 }

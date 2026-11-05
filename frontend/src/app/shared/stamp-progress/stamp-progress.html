@@ -1,0 +1,32 @@
+<section class="stamps" aria-labelledby="stamps-title">
+  <div class="stamps-head">
+    <h2 class="stamps-title" id="stamps-title">Tarjeta de sellos</h2>
+    <p class="stamps-count" data-testid="stamps-progress">{{ progress() }}</p>
+  </div>
+
+  <!-- The slots are decoration: the numbers are the information. -->
+  <div
+    class="stamps-bar"
+    role="progressbar"
+    aria-label="Sellos de tu tarjeta"
+    aria-valuemin="0"
+    [attr.aria-valuemax]="card().stampsForReward"
+    [attr.aria-valuenow]="card().stamps"
+    [attr.aria-valuetext]="progress()"
+  >
+    @for (earned of slots(); track $index) {
+      <span class="slot" [class.slot-on]="earned"></span>
+    }
+  </div>
+
+  @if (card().canRedeem) {
+    <p class="stamps-ready" role="status" data-testid="stamps-ready">
+      ¡Completaste la tarjeta! Sumá tu {{ card().rewardName }} de regalo al pagar.
+    </p>
+  } @else {
+    <p class="stamps-goal">
+      Juntá {{ card().stampsForReward }} sellos y te regalamos un {{ card().rewardName }}. Cada
+      trago que retirás suma uno.
+    </p>
+  }
+</section>

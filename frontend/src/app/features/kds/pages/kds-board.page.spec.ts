@@ -44,7 +44,9 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     lastModifiedAt: null,
     isForTable: false,
     tableNumber: null,
-    orderItems: [{ productName: 'Gin Tonic', quantity: 2, note: null, components: [] }],
+    orderItems: [
+      { productName: 'Gin Tonic', quantity: 2, note: null, components: [], isReward: false },
+    ],
     ...overrides,
   };
 }
@@ -134,7 +136,13 @@ describe('KdsBoardPage', () => {
       anOrder({
         customerName: 'Nico',
         orderItems: [
-          { productName: 'Aperol Spritz', quantity: 1, note: 'con mucho hielo', components: [] },
+          {
+            productName: 'Aperol Spritz',
+            quantity: 1,
+            note: 'con mucho hielo',
+            components: [],
+            isReward: false,
+          },
         ],
       }),
     ]);
@@ -144,6 +152,22 @@ describe('KdsBoardPage', () => {
     expect(screen.getByText('Aperol Spritz')).not.toBeNull();
     expect(screen.getByText('con mucho hielo')).not.toBeNull();
     expect(screen.getByText('0 min')).not.toBeNull();
+  });
+
+  // US-59: the free drink is told apart, even when the same drink is also paid.
+  it('marks the reward line as a gift beside the same drink paid', async () => {
+    await openScreenShowing([
+      anOrder({
+        orderItems: [
+          { productName: 'Gin Tonic', quantity: 1, note: null, components: [], isReward: false },
+          { productName: 'Gin Tonic', quantity: 1, note: null, components: [], isReward: true },
+        ],
+      }),
+    ]);
+
+    expect(screen.getAllByText('Gin Tonic')).toHaveLength(2);
+    expect(await screen.findAllByText('Regalo')).toHaveLength(1);
+    expect(screen.getByText('Regalo').closest('.it')?.textContent).toContain('Gin Tonic');
   });
 
   // Criterion 1: barra vs. mesa, from the payment method.
@@ -477,12 +501,14 @@ describe('KdsBoardPage', () => {
       quantity,
       note: null,
       components: [],
+      isReward: false,
     });
     const fernet = (quantity: number) => ({
       productName: 'Fernet con Coca',
       quantity,
       note: null,
       components: [],
+      isReward: false,
     });
 
     async function settle(fixture: { whenStable(): Promise<unknown> }) {

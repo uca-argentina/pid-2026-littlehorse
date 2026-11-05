@@ -3,7 +3,7 @@ using DrinkIt.Domain.Orders;
 namespace DrinkIt.Application.Kds;
 
 /// <summary>One drink on a queued order, as the bar's tablet draws it.</summary>
-public sealed record KdsQueueOrderItem(string ProductName, int Quantity, string? Note, IReadOnlyList<KdsQueueOrderItemPart>? Parts = null)
+public sealed record KdsQueueOrderItem(string ProductName, int Quantity, string? Note, IReadOnlyList<KdsQueueOrderItemPart>? Parts = null, bool IsReward = false)
 {
     /// <summary>What one unit is made of when it is a combo (US-53), as it was frozen in the order.</summary>
     public IReadOnlyList<KdsQueueOrderItemPart> Components => Parts ?? [];

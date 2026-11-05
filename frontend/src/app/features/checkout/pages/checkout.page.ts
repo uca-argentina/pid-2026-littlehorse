@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { anonymously } from '../../../core/auth/anonymous-request';
 import { Cart } from '../../../core/cart/cart';
+import { StampCards } from '../../../core/stamp-card/stamp-cards';
 import { VipTables, vipTableUrl } from '../../../core/vip-table/vip-tables';
 import type { VipTableAccess } from '../../../core/vip-table/vip-tables';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
@@ -55,6 +56,8 @@ export class CheckoutPage {
   protected readonly cart = inject(Cart);
 
   protected readonly store = inject(CheckoutStore);
+
+  private readonly stampCards = inject(StampCards);
 
   /** For the template to tell one refusal from another. */
   protected readonly problems = ProblemTypes;
@@ -122,6 +125,21 @@ export class CheckoutPage {
 
   /** What the button charges: the difference when there is one, the total otherwise. */
   protected readonly charged = computed(() => this.split()?.fromPhone ?? this.total());
+
+  /**
+   * US-59: the card, when it is complete. The reward is offered, not added: a
+   * free drink nobody asked for is a drink somebody will not drink.
+   */
+  protected readonly reward = computed(() => {
+    const card = this.stampCards.view();
+
+    return card?.canRedeem === true ? card : null;
+  });
+
+  /** The reward was added to this order and is shown at zero. */
+  protected readonly redeeming = signal(false);
+
+  protected readonly redeemsTheReward = computed(() => this.redeeming() && this.reward() !== null);
 
   protected readonly canPay = computed(
     () => FULL_NAME.test(this.typed().trim()) && (!this.forTable() || this.table.hasValue()),
@@ -194,6 +212,13 @@ export class CheckoutPage {
 
   constructor() {
     effect(() => this.cart.open(this.venueSlug()));
+    effect(() => this.stampCards.open(this.venueSlug()));
+
+    // The reward was refused: the card is read again and the reward goes back
+    // to being an offer, which the customer decides on with the card as it is.
+    effect(() => {
+      if (this.store.status() === 'rewardRefused') this.redeeming.set(false);
+    });
 
     // Another phone of the table spent first (US-41, criterion 3): the
     // balance on screen and the difference it gives are old, so it is asked
@@ -213,6 +238,14 @@ export class CheckoutPage {
     this.vipTables.forget(this.venueSlug());
   }
 
+  protected addTheReward(): void {
+    this.redeeming.set(true);
+  }
+
+  protected takeTheRewardOut(): void {
+    this.redeeming.set(false);
+  }
+
   protected pay(): void {
     if (!this.canPay()) return;
 
@@ -222,6 +255,7 @@ export class CheckoutPage {
       this.method(),
       this.tableCode(),
       this.shortBy() > 0 ? this.shortBy() : null,
+      this.redeemsTheReward(),
     );
   }
 }

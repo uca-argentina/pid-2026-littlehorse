@@ -232,6 +232,24 @@ se deriva de las líneas. Hay una única regla de precio (`PromotionPricing`): e
 promociones vigentes que cubren el producto gana la de mayor descuento, sin acumular, y la usan
 la carta y la confirmación por igual.
 
+**`STAMP_CARD_RULE` y `STAMP_CARD` (Sprint 4, US-57 a US-59).** La regla es una sola por boliche
+(índice único sobre `venue_id`): cuántos sellos hacen falta (2 a 50), qué producto se regala (que no
+sea un combo) y un interruptor. Sin esa fila no hay tarjeta; apagarla la oculta y no borra nada.
+La tarjeta es el agregado que lleva el celular: `token` de 64 caracteres hexadecimales generado por
+el servidor (como `tracking_token`, nunca en una URL: viaja en el header `X-Stamp-Card` o en el
+cuerpo del pedido), único **junto con** `venue_id`, así el token de otro boliche no encuentra nada.
+**Los sellos no se guardan, se derivan:** son las unidades de los pedidos `Delivered` de esa tarjeta,
+sin contar las líneas de regalo (un combo suma uno por unidad de combo). Por eso deshacer una
+entrega o cancelar un efectivo no necesita compensar nada. `CUSTOMER_ORDER` guarda el
+`stamp_card_id` (nulo en los pedidos anteriores y en los que se hicieron con la tarjeta apagada).
+`ORDER_ITEM` guarda `stamps_spent`: lo que costó el regalo **con la regla de ese momento**, así
+cambiar la regla no reescribe lo gastado y la regla nueva rige sobre el saldo que queda. Es el
+regalo cuando es mayor que cero y sale a $0. El saldo es sellos ganados menos `stamps_spent` de los
+pedidos de la tarjeta que no están cancelados; un efectivo sin cobrar de una noche pasada no retiene
+sellos (nota de US-59, hasta que se cierre la pregunta abierta del §15). `stamp_card` tiene un
+`rowversion` y un contador `rewards_claimed` que sube al canjear: dos celulares con la misma
+tarjeta compiten por la misma fila y sólo uno escribe, el otro recibe `stamp_card.card_moved`.
+
 ## Fuera del alcance del Sprint 1
 
 Está en el diseño funcional y **se modela más adelante**, no ahora:

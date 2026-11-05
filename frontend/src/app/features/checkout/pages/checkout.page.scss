@@ -330,7 +330,10 @@
   justify-content: center;
   border: 1px dashed var(--dk-drop-border);
   border-radius: 14px;
+  background: transparent;
   color: var(--dk-text);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 14.5px;
   font-weight: 600;
   text-decoration: none;
@@ -338,4 +341,40 @@
 
 .ghost:hover {
   border-color: var(--dk-accent);
+}
+
+// US-59: the reward of a complete stamp card, offered and then shown at zero.
+.reward {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--dk-accent);
+  border-radius: 14px;
+  background: var(--dk-surface);
+}
+
+.reward-what {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.reward-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: var(--dk-accent);
+  color: var(--dk-on-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.reward .ghost {
+  width: 100%;
 }

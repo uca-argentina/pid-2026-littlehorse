@@ -278,6 +278,9 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ReadyAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid?>("StampCardId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -311,6 +314,8 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("StampCardId");
 
                     b.HasIndex("TableId");
 
@@ -363,6 +368,9 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("RegularPrice")
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("StampsSpent")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(10, 2)
@@ -475,6 +483,82 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("StaffUsers", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.StampCards.StampCard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("RewardsClaimed")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nchar(64)")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VenueId", "Token")
+                        .IsUnique();
+
+                    b.ToTable("StampCards", (string)null);
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.StampCards.StampCardRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("RewardProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("StampsForReward")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VenueId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RewardProductId");
+
+                    b.HasIndex("VenueId")
+                        .IsUnique();
+
+                    b.ToTable("StampCardRules", (string)null);
                 });
 
             modelBuilder.Entity("DrinkIt.Domain.Tables.Table", b =>
@@ -767,6 +851,11 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DrinkIt.Domain.Orders.Order", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.StampCards.StampCard", null)
+                        .WithMany()
+                        .HasForeignKey("StampCardId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("DrinkIt.Domain.Tables.Table", null)
                         .WithMany()
                         .HasForeignKey("TableId")
@@ -851,6 +940,30 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DrinkIt.Domain.Staff.StaffUser", b =>
                 {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.StampCards.StampCard", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Venues.Venue", null)
+                        .WithMany()
+                        .HasForeignKey("VenueId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DrinkIt.Domain.StampCards.StampCardRule", b =>
+                {
+                    b.HasOne("DrinkIt.Domain.Menu.Product", null)
+                        .WithMany()
+                        .HasForeignKey("RewardProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DrinkIt.Domain.Venues.Venue", null)
                         .WithMany()
                         .HasForeignKey("VenueId")

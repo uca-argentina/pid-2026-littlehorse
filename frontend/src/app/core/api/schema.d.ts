@@ -118,6 +118,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/{venueSlug}/stamp-card': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The customer's card: the rule and the stamps of the token in the X-Stamp-Card header. */
+    get: operations['GetStampCard'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/kds/queue': {
     parameters: {
       query?: never;
@@ -812,6 +829,24 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/staff/stamp-card': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** The venue's stamp card rule, or nothing when it was never set up. */
+    get: operations['GetStampCardRule'];
+    /** Sets the card up, or replaces its rule. Customers keep their stamps. */
+    put: operations['SaveStampCardRule'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/kds/orders/{code}/start-preparing': {
     parameters: {
       query?: never;
@@ -1105,6 +1140,7 @@ export interface components {
       status: components['schemas']['CustomerOrderStatus'];
       /** Format: date-time */
       paidAt: null | string;
+      stampCardToken: null | string;
     };
     /** @description An order somebody is confirming from their phone. */
     ConfirmOrderRequest: {
@@ -1117,6 +1153,9 @@ export interface components {
       digitalAmount?: null | number;
       /** Format: double */
       expectedTotal?: null | number;
+      stampCardToken?: null | string;
+      /** @default false */
+      redeemReward: boolean;
     };
     /** @description What the administration screen posts to add a category. */
     CreateCategoryRequest: {
@@ -1202,6 +1241,7 @@ export interface components {
       quantity: number;
       note: null | string;
       components: components['schemas']['KdsQueueOrderItemPartResponse'][];
+      isReward: boolean;
     };
     /** @description One order on the bar's board: who asked, what for, since when, and where it is. */
     KdsQueueOrderResponse: {
@@ -1489,6 +1529,32 @@ export interface components {
       /** Format: int32 */
       worstTenthSeconds: null | number;
     };
+    StampCardResponse: {
+      isActive: boolean;
+      /** Format: int32 */
+      stampsForReward: number;
+      /** Format: uuid */
+      rewardProductId: null | string;
+      rewardName: null | string;
+      /** Format: int32 */
+      stamps: number;
+      canRedeem: boolean;
+    };
+    StampCardRuleRequest: {
+      /** Format: int32 */
+      stampsForReward: number;
+      /** Format: uuid */
+      rewardProductId: string;
+      isActive: boolean;
+    };
+    StampCardRuleResponse: {
+      /** Format: int32 */
+      stampsForReward: number;
+      /** Format: uuid */
+      rewardProductId: string;
+      isActive: boolean;
+      audit: components['schemas']['AuditResponse'];
+    };
     TableResponse: {
       /** Format: uuid */
       id: string;
@@ -1532,6 +1598,7 @@ export interface components {
       /** Format: int32 */
       quantity: number;
       note: null | string;
+      isReward: boolean;
     };
     /** @description Where an order is, and which bar to pick it up at. */
     TrackedOrderResponse: {
@@ -1828,6 +1895,39 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['VipTableAccessResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetStampCard: {
+    parameters: {
+      query?: never;
+      header?: {
+        'X-Stamp-Card'?: string;
+      };
+      path: {
+        venueSlug: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StampCardResponse'];
         };
       };
       /** @description Not Found */
@@ -3526,6 +3626,75 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['PromotionResponse'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetStampCardRule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StampCardRuleResponse'];
+        };
+      };
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SaveStampCardRule: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['StampCardRuleRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['StampCardRuleResponse'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
         };
       };
       /** @description Not Found */

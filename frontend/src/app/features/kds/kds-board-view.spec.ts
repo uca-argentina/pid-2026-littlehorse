@@ -16,7 +16,9 @@ function anOrder(overrides: Partial<KdsQueueOrder> = {}): KdsQueueOrder {
     lastModifiedAt: null,
     isForTable: false,
     tableNumber: null,
-    orderItems: [{ productName: 'Gin Tonic', quantity: 1, note: null, components: [] }],
+    orderItems: [
+      { productName: 'Gin Tonic', quantity: 1, note: null, components: [], isReward: false },
+    ],
     ...overrides,
   };
 }

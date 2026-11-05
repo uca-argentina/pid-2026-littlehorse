@@ -117,10 +117,14 @@
                     </div>
                   }
                   <div class="items">
-                    @for (item of order.orderItems; track item.productName) {
+                    @for (item of order.orderItems; track $index) {
                       <div class="it">
                         <span class="q">{{ item.quantity }}×</span>
                         <span>{{ item.productName }}</span>
+                        <!-- US-59: the free drink of a stamp card, told apart from the paid one. -->
+                        @if (item.isReward) {
+                          <span class="gift">Regalo</span>
+                        }
                         @if (item.note) {
                           <span class="note">{{ item.note }}</span>
                         }

@@ -19,6 +19,7 @@ const confirmed: ConfirmedOrder = {
   total: 9000,
   status: 'Queued',
   paidAt: '2026-09-17T02:30:00Z',
+  stampCardToken: null,
 };
 
 let store: StoreInMemory;
