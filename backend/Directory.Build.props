@@ -21,6 +21,16 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!--
+      Exam branch only. NuGet's vulnerability audit needs the network: offline it
+      reports NU1900, and with TreatWarningsAsErrors that breaks every restore that
+      is not a no-op (fresh clone, deleted obj, forced restore). Do not bring this
+      to dev or main, where the audit is useful.
+    -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
