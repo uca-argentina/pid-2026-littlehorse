@@ -296,4 +296,14 @@ public class NightTests
     {
         Night.EnsureCrewCanServeTables([MainBar, Till, Martin]);
     }
+
+    /*public void Update_WhenTheNightIsUnderway_CanPauseTheRecepction()
+    {
+        Night night = ANight(MainBar, Till);
+
+        night.Update("Saturday, packed", Opening, Closing, [MainBar, Till, Martin], MidNight);
+
+        Assert.Equal("Saturday, packed", night.Name);
+        Assert.True(night.IsWorkedBy(Martin.Id));
+    }*/
 }

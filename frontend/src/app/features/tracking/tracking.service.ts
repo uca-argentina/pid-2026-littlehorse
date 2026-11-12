@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { anonymously } from '../../core/auth/anonymous-request';
 import type { components } from '../../core/api/schema';
+import { anonymously } from '../../core/auth/anonymous-request';
 
 /** Taken from the generated contract, so nothing here can drift from the API. */
 export type TrackedOrder = components['schemas']['TrackedOrderResponse'];
@@ -23,6 +23,14 @@ export function trackingUrl(venueSlug: string, code: string, token: string): str
 /** US-23: from the same link, and proven the same way — the token in it. */
 export function cancelOrderUrl(venueSlug: string, code: string, token: string): string {
   return `${trackingUrl(venueSlug, code, token)}/cancel`;
+}
+
+export function pausedOrderUrl(venueSlug: string, code: string, token: string): string {
+  return `${trackingUrl(venueSlug, code, token)}/paused`;
+}
+
+export function restartedOrderUrl(venueSlug: string, code: string, token: string): string {
+  return `${trackingUrl(venueSlug, code, token)}/restarted`;
 }
 
 @Injectable({ providedIn: 'root' })

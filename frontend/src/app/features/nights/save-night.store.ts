@@ -5,8 +5,8 @@ import { Router } from '@angular/router';
 import type { Observable } from 'rxjs';
 import { problemTypeOf } from '../../core/api/problem-type-of';
 import { ProblemTypes } from '../../core/api/problem-types';
-import { NightsService } from './nights.service';
 import type { NewNight, Night } from './nights.service';
+import { NightsService } from './nights.service';
 
 /** One value rather than a set of booleans, so two of them cannot be true at once. */
 export type SaveNightStatus =
@@ -21,7 +21,8 @@ export type SaveNightStatus =
   | 'tablesChanged'
   | 'tableSpent'
   | 'tablesMoved'
-  | 'unreachable';
+  | 'unreachable'
+  | 'paused';
 
 /**
  * Saving a night, new or edited: the same answers either way. Provided by the
@@ -96,6 +97,7 @@ const REASONS = new Map<string, SaveNightStatus>([
   [ProblemTypes.vipAccountTableInactive, 'tablesChanged'],
   [ProblemTypes.vipAccountHasSpending, 'tableSpent'],
   [ProblemTypes.nightTablesMoved, 'tablesMoved'],
+  [ProblemTypes.nightTablesMoved, 'paused'],
 ]);
 
 /**
@@ -123,6 +125,7 @@ const REFUSALS: Partial<Record<SaveNightStatus, string>> = {
   tablesMoved:
     'Una de las mesas pidió mientras guardabas y su saldo cambió. Recargá la pantalla y volvé a guardar.',
   unreachable: 'No pudimos guardarla. Fijate la señal y probá de nuevo.',
+  paused: 'La barra esta pausada',
 };
 
 /** What the form says next to its button for each refusal; null while there is none. */

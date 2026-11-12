@@ -489,6 +489,22 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         _domainEvents.Add(new OrderCanceled(VenueId, TrackingToken));
     }
 
+    public void Pause()
+    {
+        if (Status == OrderStatus.Paused) return;
+
+        Status = OrderStatus.Paused;
+        _domainEvents.Add(new OrderPaused(VenueId, TrackingToken));
+    }
+
+    public void Restart()
+    {
+        if (Status == OrderStatus.Restarted) return;
+
+        Status = OrderStatus.Restarted;
+        _domainEvents.Add(new OrderRestarted(VenueId, TrackingToken));
+    }
+
     /// <summary>
     /// Forgets what was raised, once whoever saved this aggregate has reacted
     /// to it. Never called from inside the domain itself.

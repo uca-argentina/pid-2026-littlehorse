@@ -29,6 +29,10 @@ public enum OrderStatus
     Delivered = 6,
 
     Canceled = 7,
+
+    Paused = 8,
+
+    Restarted = 9,
 }
 
 /// <summary>Questions about a status that more than one place asks.</summary>
