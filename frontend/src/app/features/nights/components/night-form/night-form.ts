@@ -1,10 +1,10 @@
 import { Component, computed, input, linkedSignal, output, signal } from '@angular/core';
-import type { StaffRole } from '../../../../core/staff/staff-roles';
+import { STAFF_ROLES, type StaffRole } from '../../../../core/staff/staff-roles';
 import type { StaffUser } from '../../../staff-users/staff-users.service';
 import type { VipTable } from '../../../tables/tables.service';
 import type { NewNight, Night, NightTable } from '../../nights.service';
-import { CrewPicker } from '../crew-picker/crew-picker';
 import type { CrewAccount } from '../crew-picker/crew-picker';
+import { CrewPicker } from '../crew-picker/crew-picker';
 
 /** The accounts of one role, as one dropdown of the form. */
 interface CrewGroup {
@@ -133,13 +133,14 @@ export class NightForm {
   private readonly attempted = signal(false);
 
   protected readonly groups = computed<CrewGroup[]>(() => {
-    const active = this.team().filter((user) => user.isActive);
+    const kdsRole = STAFF_ROLES[1];
+    const active = this.team().filter((user) => user.isActive || user.role == kdsRole);
 
     return CREW_ROLES.map((group) => ({
       ...group,
       accounts: active
         .filter((user) => user.role === group.role)
-        .map((user) => ({ id: user.id, username: user.username })),
+        .map((user) => ({ id: user.id, username: user.username, role: user.role, isActive: user.isActive })),
     }));
   });
 

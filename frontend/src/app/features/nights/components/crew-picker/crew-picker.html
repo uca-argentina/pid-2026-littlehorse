@@ -44,6 +44,12 @@
             (change)="toggled.emit(account.id)"
           />
           <span class="username">{{ account.username }}</span>
+          @if(account.role === KDS_ROLE && account.isActive){
+            <button type="button" (click)="deactivateKDS(account)">pausar</button>
+          }
+          @if (account.role === KDS_ROLE && !account.isActive) {
+            <button type="button" (click)="activateKDS(account)">reanudar</button>
+          }
         </label>
       } @empty {
         <p class="help">

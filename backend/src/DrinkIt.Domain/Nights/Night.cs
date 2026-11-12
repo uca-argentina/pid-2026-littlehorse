@@ -197,7 +197,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         foreach (StaffUser member in members)
         {
             if (member.VenueId != venueId) throw new DomainException(ErrorCodes.CrewMemberFromAnotherVenue, "Every account in the night has to belong to its venue.");
-            if (!member.IsActive) throw new DomainException(ErrorCodes.CrewMemberInactive, $"'{member.Username}' is deactivated and cannot work the night.");
+            if (!member.IsActive && member.Role != StaffRole.Kds) throw new DomainException(ErrorCodes.CrewMemberInactive, $"'{member.Username}' is deactivated and cannot work the night.");
             if (member.Role == StaffRole.Administrator) throw new DomainException(ErrorCodes.CrewRoleInvalid, "Administrators are not part of a night's crew: they always have access.");
         }
 

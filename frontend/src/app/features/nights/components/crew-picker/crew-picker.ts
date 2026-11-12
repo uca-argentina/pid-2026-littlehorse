@@ -1,9 +1,13 @@
-import { Component, computed, input, output, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { STAFF_ROLES, type StaffRole } from '../../../../core/staff/staff-roles';
+import { EditStaffUserStore } from '../../../staff-users/edit-staff-user.store';
 
 /** One account the picker offers. */
 export interface CrewAccount {
   readonly id: string;
   readonly username: string;
+  readonly role: StaffRole;
+  isActive: boolean;
 }
 
 /** Past this many accounts, the open list gets a search field. */
@@ -21,6 +25,7 @@ let nextId = 0;
   styleUrl: './crew-picker.scss',
   templateUrl: './crew-picker.html',
   host: { '(keydown.escape)': 'close()' },
+  providers: [EditStaffUserStore],
 })
 export class CrewPicker {
   readonly title = input.required<string>();
@@ -56,6 +61,10 @@ export class CrewPicker {
 
   protected readonly showsSearch = computed(() => this.accounts().length >= SEARCH_FROM);
 
+  readonly KDS_ROLE = STAFF_ROLES[1];
+
+  private readonly editStaffUserStore = inject(EditStaffUserStore);
+
   /** Closed, the button is all there is: it names who is in. */
   protected readonly summary = computed(() => {
     const names = this.accounts()
@@ -86,5 +95,15 @@ export class CrewPicker {
 
   protected searchFor(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
+  }
+
+  activateKDS(kds: CrewAccount): void {
+    kds.isActive = !kds.isActive;
+    this.editStaffUserStore.reactivate(kds.id);
+  }
+
+  deactivateKDS(kds: CrewAccount): void {
+    kds.isActive = !kds.isActive;
+    this.editStaffUserStore.deactivate(kds.id);
   }
 }
