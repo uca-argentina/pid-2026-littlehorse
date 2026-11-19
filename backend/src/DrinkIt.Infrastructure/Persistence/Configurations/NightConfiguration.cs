@@ -16,6 +16,7 @@ internal sealed class NightConfiguration : IEntityTypeConfiguration<Night>
         builder.Property(night => night.Name).HasMaxLength(Night.NameMaxLength).IsRequired();
         builder.Property(night => night.StartsAt).IsRequired();
         builder.Property(night => night.EndsAt).IsRequired();
+        builder.Property(night => night.IsActive);
 
         // A JSON column and not a join table: the crew is a handful of ids that
         // load and save with the night, staff are never hard-deleted so there is

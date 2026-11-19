@@ -341,6 +341,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         if (kdsId == Guid.Empty) throw new DomainException(ErrorCodes.KdsRequired, "A paid order goes to a bar, whose stock it is taken from.");
 
+
         Status = OrderStatus.Queued;
         KdsId = kdsId;
         _domainEvents.Add(new OrderQueued(VenueId, KdsId, TrackingToken));

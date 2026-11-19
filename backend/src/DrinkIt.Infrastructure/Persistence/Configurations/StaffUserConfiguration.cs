@@ -18,7 +18,7 @@ internal sealed class StaffUserConfiguration : IEntityTypeConfiguration<StaffUse
         builder.Property(user => user.PasswordHash).HasMaxLength(256).IsRequired();
         builder.Property(user => user.Role).IsRequired();
         builder.Property(user => user.IsActive).IsRequired();
-
+        builder.Property(user => user.IsAvailable);
         // Composite with VenueId, not global: two venues must be able to have
         // their own "euge". CLAUDE.md, multi-tenancy section.
         builder.HasIndex(user => new { user.VenueId, user.Username }).IsUnique();

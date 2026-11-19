@@ -215,7 +215,7 @@ public sealed class ConfirmOrderHandler(
         BarSupply? bar = BarChooser.Choose(nightsBars, lines, clock.GetUtcNow());
 
         if (bar is null) return OutOfStock(order.ItemThatNeeds(BarChooser.Missing(nightsBars, lines)).ProductName);
-
+        if (bar.isAvailable == false) return NotOnTheMenu(order.ItemThatNeeds(BarChooser.Missing(nightsBars, lines)).ProductName)
         // Whether the money is in is the payment method's call: digital pays
         // here, cash stops at the till. What follows once it is in is the same
         // for every method (US-36): into the queue of that bar.

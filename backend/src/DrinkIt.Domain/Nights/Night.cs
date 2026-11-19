@@ -46,6 +46,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
         Name = name;
         StartsAt = startsAt;
         EndsAt = endsAt;
+        IsActive = true;
     }
 
     public Guid Id { get; }
@@ -58,6 +59,7 @@ public sealed class Night : AuditStamps, IBelongsToVenue
 
     /// <summary>Exclusive: at this moment the night no longer takes orders.</summary>
     public DateTimeOffset EndsAt { get; private set; }
+    public bool IsActive { get; private set; }
 
     /// <summary>The staff accounts working the night. Only ids: their roles stay in <see cref="StaffUser"/>.</summary>
     public IReadOnlyList<Guid> CrewIds => _crewIds;
@@ -120,6 +122,16 @@ public sealed class Night : AuditStamps, IBelongsToVenue
 
     /// <summary>From its end on the night is over: it takes no orders and its stock is only read.</summary>
     public bool HasEndedAt(DateTimeOffset moment) => moment >= EndsAt;
+
+    public void MarkInactive() => IsActive = false;
+
+    public void MarkActive()
+    {
+        DateTimeOffset now = new DateTimeOffset();
+
+        if (HasEndedAt(now)) throw new DomainException(ErrorCodes.NightOver, "The night is over and can no longer change");
+        IsActive = true;
+    }
 
     /// <summary>
     /// US-37: units of a product moved from the storeroom into one bar for the

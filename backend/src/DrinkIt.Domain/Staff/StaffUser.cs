@@ -34,6 +34,7 @@ public sealed class StaffUser : AuditStamps, IBelongsToVenue
         PasswordHash = passwordHash;
         Role = role;
         IsActive = true;
+        IsAvailable = true;
     }
 
     public Guid Id { get; }
@@ -56,6 +57,7 @@ public sealed class StaffUser : AuditStamps, IBelongsToVenue
 
     /// <summary>False after the ABM's soft delete. Rows are never removed.</summary>
     public bool IsActive { get; private set; }
+    public bool IsAvailable { get; private set; }
 
     public static StaffUser Create(Guid venueId, string username, string passwordHash, StaffRole role, string? displayName = null)
     {
@@ -110,6 +112,18 @@ public sealed class StaffUser : AuditStamps, IBelongsToVenue
 
         PasswordHash = passwordHash;
     }
+    public void MarkUnavailable() => IsAvailable = false;
+
+    public void MarkAvailable() => IsAvailable = true;
+
+
+    /// <summary>
+    /// US-07: the switch back on, e.g. after the ice arrived. Refused when
+    /// there is nothing left to pour: running out is not something a switch can
+    /// undo, and the way back is restocking the product, which is US-08's job.
+    /// Until then the screen keeps the switch off and locked.
+    /// </summary>
+
 
     /// <summary>Gives the account the name people read, or takes it away with a blank one.</summary>
     public void Rename(string? displayName)

@@ -11,5 +11,7 @@ internal static class StaffHandlers
         .AddScoped<RenameStaffUserHandler>()
         .AddScoped<ResetStaffUserPasswordHandler>()
         .AddScoped<DeactivateStaffUserHandler>()
-        .AddScoped<ReactivateStaffUserHandler>();
+        .AddScoped<ReactivateStaffUserHandler>()
+        .AddScoped<MarkStaffUnavailableHandler>()
+        .AddScoped<MarkStaffAvailableHandler>();
 }

@@ -92,6 +92,20 @@ internal static class StaffUsersEndpoints
             .Produces<StaffUserResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group
+            .MapPost("/{id:guid}/mark-unavailable", MarkUnavailableAsync)
+            .WithName("MarkProductUnavailable")
+            .WithSummary("Turns a kds unavailable for the night. .")
+            .Produces<StaffUserResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group
+            .MapPost("/{id:guid}/mark-available", MarkAvailableAsync)
+            .WithName("MarkProductAvailable")
+            .WithSummary("Turns the kds back on. ")
+            .Produces<StaffUserResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         return endpoints;
     }
 
@@ -155,6 +169,18 @@ internal static class StaffUsersEndpoints
         CancellationToken cancellationToken) =>
         Answer(await handler.HandleAsync(id, cancellationToken));
 
+
+    internal static async Task<IResult> MarkUnavailableAsync(
+        Guid id,
+        MarkStaffUnavailableHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
+
+    internal static async Task<IResult> MarkAvailableAsync(
+        Guid id,
+        MarkStaffAvailableHandler handler,
+        CancellationToken cancellationToken) =>
+        Answer(await handler.HandleAsync(id, cancellationToken));
     internal static async Task<IResult> ReactivateAsync(
         Guid id,
         ReactivateStaffUserHandler handler,
