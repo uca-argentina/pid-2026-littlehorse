@@ -1,22 +1,22 @@
 import { httpResource } from '@angular/common/http';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ProblemTypes } from '../../../core/api/problem-types';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
-import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
+import { ProblemTypes } from '../../../core/api/problem-types';
 import { anonymously } from '../../../core/auth/anonymous-request';
+import { Cart, NOTE_MAX_LENGTH } from '../../../core/cart/cart';
 import { StampCards } from '../../../core/stamp-card/stamp-cards';
+import type { VipTableAccess } from '../../../core/vip-table/vip-tables';
+import { VipTables, vipTableUrl } from '../../../core/vip-table/vip-tables';
 import { GlassMark } from '../../../shared/glass-mark/glass-mark';
-import { StampProgress } from '../../../shared/stamp-progress/stamp-progress';
-import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
-import { formatPrice } from '../../../shared/money/price';
 import { slowLoading } from '../../../shared/loading/slow-loading';
+import { formatPrice } from '../../../shared/money/price';
+import { PRODUCT_PLACEHOLDER } from '../../../shared/product-image/product-placeholder';
+import { StampProgress } from '../../../shared/stamp-progress/stamp-progress';
 import { ThemeToggle } from '../../../shared/theme-toggle/theme-toggle';
 import { OrdersInProgress } from '../components/orders-in-progress';
-import { VipTables, vipTableUrl } from '../../../core/vip-table/vip-tables';
-import type { VipTableAccess } from '../../../core/vip-table/vip-tables';
-import { menuUrl } from '../menu.service';
 import type { Menu, MenuItem } from '../menu.service';
+import { menuUrl } from '../menu.service';
 
 /** One card, with everything already in the shape the template draws. */
 interface MenuCard {
@@ -26,6 +26,7 @@ interface MenuCard {
   readonly image: string;
   readonly amount: number;
   readonly price: string;
+  readonly priority: string | null;
 
   /** US-56: the list price, struck through, while a promotion lowers the price. Null otherwise. */
   readonly regularPrice: string | null;
@@ -239,7 +240,13 @@ export class MenuPage {
   }
 
   protected addToOrder(card: MenuCard): void {
-    this.cart.add({ id: card.id, name: card.name, price: card.amount, imageUrl: card.image });
+    this.cart.add({
+      id: card.id,
+      name: card.name,
+      price: card.amount,
+      imageUrl: card.image,
+      priority: card.priority,
+    });
   }
 
   protected takeOneOut(card: MenuCard): void {

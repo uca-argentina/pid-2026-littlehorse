@@ -4,11 +4,11 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { render, screen } from '@testing-library/angular';
-import { stampCardUrl } from '../../../core/stamp-card/stamp-cards';
 import type { StampCardView } from '../../../core/stamp-card/stamp-cards';
+import { stampCardUrl } from '../../../core/stamp-card/stamp-cards';
 import { TrackingChannel } from '../tracking-channel';
-import { trackingUrl } from '../tracking.service';
 import type { TrackedOrder } from '../tracking.service';
+import { trackingUrl } from '../tracking.service';
 import { TrackingStore } from '../tracking.store';
 import { TrackingPage } from './tracking.page';
 
@@ -39,6 +39,7 @@ const withAReward: TrackedOrder = {
   ],
   tableNumber: null,
   waiterName: null,
+  priority: null,
 };
 
 async function openScreen(order: TrackedOrder, view: StampCardView) {

@@ -6,13 +6,13 @@ import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { fireEvent, render, screen } from '@testing-library/angular';
 import { QRCodeComponent } from 'angularx-qrcode';
-import { TrackingChannel } from '../tracking-channel';
-import { TrackingStore } from '../tracking.store';
-import { cancelOrderUrl, trackingUrl } from '../tracking.service';
-import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
 import { ProblemTypes } from '../../../core/api/problem-types';
 import { noStampCard } from '../../../core/stamp-card/no-stamp-card';
 import { StampCards } from '../../../core/stamp-card/stamp-cards';
+import { TrackingChannel } from '../tracking-channel';
+import type { CustomerOrderStatus, TrackedOrder } from '../tracking.service';
+import { cancelOrderUrl, trackingUrl } from '../tracking.service';
+import { TrackingStore } from '../tracking.store';
 import { TrackingPage } from './tracking.page';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
@@ -25,6 +25,8 @@ function anOrder(
   tableNumber: number | null = null,
   waiterName: string | null = null,
   savings = 0,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  priority: string | null = null,
 ): TrackedOrder {
   return {
     code: 'K-4821',
@@ -37,6 +39,7 @@ function anOrder(
     items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo', isReward: false }],
     tableNumber,
     waiterName,
+    priority: null,
   };
 }
 

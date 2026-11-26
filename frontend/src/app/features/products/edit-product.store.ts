@@ -2,11 +2,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { concatMap, from, map, tap } from 'rxjs';
 import type { Observable } from 'rxjs';
+import { concatMap, from, map, tap } from 'rxjs';
 import { ProblemTypes } from '../../core/api/problem-types';
-import { ProductsService } from './products.service';
 import type { Product, ProductCorrection } from './products.service';
+import { ProductsService } from './products.service';
 
 /**
  * How saving ended up. 'partial' is the odd one: the correction went through

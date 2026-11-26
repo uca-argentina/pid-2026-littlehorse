@@ -13,6 +13,7 @@ interface OrderLine {
   readonly note: string;
   readonly quantity: number;
   readonly total: string;
+  readonly priority: string;
 }
 
 /**
@@ -48,6 +49,7 @@ export class OrderPage {
       note: line.note ?? '',
       quantity: line.quantity,
       total: formatPrice(line.quantity * line.unitPrice),
+      priority: line.priority,
     })),
   );
 
@@ -78,6 +80,7 @@ export class OrderPage {
       name: existing.name,
       price: existing.unitPrice,
       imageUrl: existing.imageUrl,
+      priority: existing.priority,
     });
   }
 

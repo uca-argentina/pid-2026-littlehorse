@@ -6,8 +6,8 @@ import { fireEvent, render, screen } from '@testing-library/angular';
 import { MY_ORDERS_STORAGE_PREFIX, MyOrders } from '../../../core/orders/my-orders';
 import { BrowserStore } from '../../../core/storage/browser-store';
 import { StoreInMemory } from '../../../core/storage/store-in-memory';
-import { trackingUrl } from '../../tracking/tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from '../../tracking/tracking.service';
+import { trackingUrl } from '../../tracking/tracking.service';
 import { OrdersInProgress } from './orders-in-progress';
 import { OrdersInProgressChannel } from './orders-in-progress-channel';
 
@@ -27,6 +27,7 @@ function anOrder(code: string, status: CustomerOrderStatus): TrackedOrder {
     tableNumber: null,
     waiterName: null,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: null, isReward: false }],
+    priority: null,
   };
 }
 

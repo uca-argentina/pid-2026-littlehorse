@@ -7,9 +7,9 @@ import type { HubLinkState } from '../../core/realtime/hub-channel';
 import { BrowserStore } from '../../core/storage/browser-store';
 import { StoreInMemory } from '../../core/storage/store-in-memory';
 import { TrackingChannel } from './tracking-channel';
-import { TRACKING_RETRY_MS, TrackingStore } from './tracking.store';
-import { trackingUrl } from './tracking.service';
 import type { CustomerOrderStatus, TrackedOrder } from './tracking.service';
+import { trackingUrl } from './tracking.service';
+import { TRACKING_RETRY_MS, TrackingStore } from './tracking.store';
 
 const token = '9f3c2ba7d81e4c06a1b2c3d4e5f60718';
 
@@ -29,6 +29,7 @@ function anOrder(status: CustomerOrderStatus): TrackedOrder {
     tableNumber: null,
     waiterName: null,
     items: [{ productName: 'Gin Tonic', quantity: 2, note: 'sin hielo', isReward: false }],
+    priority: null,
   };
 }
 

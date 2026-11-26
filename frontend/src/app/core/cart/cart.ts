@@ -10,10 +10,12 @@ export interface CartLine {
   readonly quantity: number;
   /** "sin hielo". Belongs to this drink and not to the whole order. */
   readonly note: string | null;
+  readonly priority: string | null;
 }
 
 /** What the menu hands over when somebody taps the plus on a card. */
 export interface CartAddition {
+  priority: string;
   readonly id: string;
   readonly name: string;
   readonly price: number;
@@ -61,6 +63,8 @@ export class Cart {
 
   readonly isEmpty = computed(() => this.count() === 0);
 
+  //readonly hasPriority =
+
   /** Called by a venue's screen when it opens. Loads that venue's order. */
   open(venueSlug: string): void {
     if (this.venue() === venueSlug) return;
@@ -87,6 +91,7 @@ export class Cart {
               unitPrice: product.price,
               quantity: 1,
               note: null,
+              priority: product.priority,
             },
           ]
         : this.stored().map((line) =>
@@ -235,5 +240,6 @@ function asCartLine(value: unknown): CartLine | null {
     unitPrice: line.unitPrice,
     quantity: line.quantity,
     note: typeof line.note === 'string' ? line.note : null,
+    priority: typeof line.priority,
   };
 }

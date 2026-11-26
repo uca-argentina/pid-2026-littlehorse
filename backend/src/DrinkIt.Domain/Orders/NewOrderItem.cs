@@ -23,7 +23,8 @@ public sealed record NewOrderItem
         string? note,
         IReadOnlyList<NewOrderItemComponent>? components = null,
         decimal? regularPrice = null,
-        string? promotionName = null)
+        string? promotionName = null,
+        priority? priority = null)
     {
         ProductId = productId;
         ProductName = productName;
@@ -33,6 +34,7 @@ public sealed record NewOrderItem
         Components = components ?? [];
         RegularPrice = regularPrice;
         PromotionName = promotionName;
+        Priority = priority;
     }
 
     private NewOrderItem(Guid productId, string productName, int stampsSpent)
@@ -72,6 +74,7 @@ public sealed record NewOrderItem
 
     /// <summary>The promotion that lowered it, by name. Null otherwise.</summary>
     public string? PromotionName { get; }
+    public string? Priority { get; }
 }
 
 /// <summary>One product of a combo as the menu has it right now. Longhand for the same reason.</summary>

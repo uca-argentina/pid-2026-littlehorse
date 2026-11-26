@@ -1616,6 +1616,7 @@ export interface components {
       waiterName: null | string;
       /** Format: double */
       savings: number;
+      priority: null;
     };
     /** @description What the night's own screen saves: the whole form, as on creation. */
     UpdateNightRequest: {

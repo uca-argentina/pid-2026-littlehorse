@@ -56,7 +56,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// parameter, so a constructor that asked for them would make the aggregate
     /// unloadable.
     /// </summary>
-    private Order(Guid id, Guid venueId, Guid? nightId, string customerName, OrderCode code, TrackingToken trackingToken, Guid? stampCardId)
+    private Order(Guid id, Guid venueId, Guid? nightId, string customerName, OrderCode code, TrackingToken trackingToken, Guid? stampCardId, Guid? priority)
     {
         StampCardId = stampCardId;
         Id = id;
@@ -66,6 +66,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         Code = code;
         TrackingToken = trackingToken;
         Status = OrderStatus.Cart;
+        Priority = priority;
     }
 
     public Guid Id { get; }
@@ -123,6 +124,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     public TrackingToken TrackingToken { get; }
 
     public OrderStatus Status { get; private set; }
+    public Guid? Priority { get; }
 
     /// <summary>When it was paid, or null while nobody has. Stamped once.</summary>
     public DateTimeOffset? PaidAt { get; private set; }
@@ -245,7 +247,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         if (items.Select(item => (item.ProductId, item.IsReward)).Distinct().Count() != items.Count) throw new DomainException(ErrorCodes.DuplicateItem, "Each drink goes on one line, with a quantity beside it.");
         if (items.All(item => item.IsReward)) throw new DomainException(ErrorCodes.RewardNeedsAPaidLine, "A reward goes with something that is paid.");
 
-        Order order = new(Guid.CreateVersion7(), venueId, nightId, cleanName, code, TrackingToken.New(), stampCardId);
+        Order order = new(Guid.CreateVersion7(), venueId, nightId, cleanName, code, TrackingToken.New(), stampCardId, priority);
 
         order._items.AddRange(items.Select(ToItem));
 
