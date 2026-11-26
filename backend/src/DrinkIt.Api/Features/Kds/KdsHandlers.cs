@@ -12,5 +12,8 @@ internal static class KdsHandlers
         .AddScoped<ReturnToPreparationHandler>()
         .AddScoped<DeliverHandler>()
         .AddScoped<UndoDeliveryHandler>()
-        .AddScoped<ScanHandler>();
+        .AddScoped<ScanHandler>()
+        .AddScoped<MarkOrderNotPriorityHandler>()
+        .AddScoped<MarkOrderPriorityHandler>();
+
 }

@@ -155,6 +155,20 @@
                           Preparar
                         </button>
                       }
+                      <span class="switch-cell">
+                        <button
+                          class="sw"
+                          type="button"
+                          role="switch"
+                          [class.sw-off]="!order.isPriority"
+                          [attr.aria-checked]="order.isPriority"
+                          [attr.aria-label]="'Priorizar: ' + order.code"
+                          [attr.aria-describedby]="'switch-label-' + order.code"
+                          (click)="toggleAvailability(order)"
+                        >
+                          <span class="sw-knob" aria-hidden="true"></span>
+                        </button>
+                      </span>
                     </div>
                   } @else if (order.status === 'InPreparation') {
                     <div class="acts">

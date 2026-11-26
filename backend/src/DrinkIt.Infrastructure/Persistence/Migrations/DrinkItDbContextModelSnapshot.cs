@@ -253,6 +253,9 @@ namespace DrinkIt.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("IsPriority")
+                        .HasColumnType("bit");
+
                     b.Property<Guid?>("KdsId")
                         .HasColumnType("uniqueidentifier");
 

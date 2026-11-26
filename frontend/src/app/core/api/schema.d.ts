@@ -4,4117 +4,4245 @@
  */
 
 export interface paths {
-  '/{venueSlug}/auth/login': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/{venueSlug}/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Signs a staff member in to one venue. */
+        post: operations["Login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Signs a staff member in to one venue. */
-    post: operations['Login'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/{venueSlug}/menu': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/{venueSlug}/menu": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The menu a customer reads after scanning the venue's QR.
+         * @description Both halves of the answer come from the one venue the middleware
+         *     resolved from the slug: the name from what it remembered, the products
+         *     from the query filter it set. Looking the venue up again here is how a
+         *     single response ends up naming one venue and listing another's drinks.
+         */
+        get: operations["GetMenu"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * The menu a customer reads after scanning the venue's QR.
-     * @description Both halves of the answer come from the one venue the middleware
-     *     resolved from the slug: the name from what it remembered, the products
-     *     from the query filter it set. Looking the venue up again here is how a
-     *     single response ends up naming one venue and listing another's drinks.
-     */
-    get: operations['GetMenu'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/{venueSlug}/orders': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/{venueSlug}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirms and pays for an order from the customer's phone. */
+        post: operations["ConfirmOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Confirms and pays for an order from the customer's phone. */
-    post: operations['ConfirmOrder'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/{venueSlug}/orders/{code}/{token}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/{venueSlug}/orders/{code}/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Answers 404 to every way of not getting in: a wrong token, a code that
+         *     belongs to nobody, another venue's order, and an order already handed
+         *     over.
+         * @description A 403 would confirm to somebody working through codes that this one
+         *     exists, which is the half of the answer worth hiding.
+         */
+        get: operations["FollowOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * Answers 404 to every way of not getting in: a wrong token, a code that
-     *     belongs to nobody, another venue's order, and an order already handed
-     *     over.
-     * @description A 403 would confirm to somebody working through codes that this one
-     *     exists, which is the half of the answer worth hiding.
-     */
-    get: operations['FollowOrder'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/{venueSlug}/orders/{code}/{token}/cancel': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/{venueSlug}/orders/{code}/{token}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancels an order still waiting to be paid at the till, for the customer holding its link. */
+        post: operations["CancelMyOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Cancels an order still waiting to be paid at the till, for the customer holding its link. */
-    post: operations['CancelMyOrder'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/{venueSlug}/vip-accounts/{code}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/{venueSlug}/vip-accounts/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The VIP table a code opens tonight, with what it has left to spend. */
+        get: operations["FindVipTable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The VIP table a code opens tonight, with what it has left to spend. */
-    get: operations['FindVipTable'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/{venueSlug}/stamp-card': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/{venueSlug}/stamp-card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The customer's card: the rule and the stamps of the token in the X-Stamp-Card header. */
+        get: operations["GetStampCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The customer's card: the rule and the stamps of the token in the X-Stamp-Card header. */
-    get: operations['GetStampCard'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/queue': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The bar's queue: every paid order still on its way, oldest paid first. */
+        get: operations["GetKdsQueue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The bar's queue: every paid order still on its way, oldest paid first. */
-    get: operations['GetKdsQueue'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/station': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/station": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which bar this tablet is, by the name it goes by now. */
+        get: operations["GetKdsStation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Which bar this tablet is, by the name it goes by now. */
-    get: operations['GetKdsStation'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/scan': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * "Not ready yet" and "already delivered" are answers, not failures: the
+         *     screen still needs whose order it was to say so.
+         */
+        post: operations["ScanOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * "Not ready yet" and "already delivered" are answers, not failures: the
-     *     screen still needs whose order it was to say so.
-     */
-    post: operations['ScanOrder'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cashier/scan': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cashier/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The order behind the QR on the customer's phone, whatever its state. */
+        post: operations["ScanAtTheTill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** The order behind the QR on the customer's phone, whatever its state. */
-    post: operations['ScanAtTheTill'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cashier/collections': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cashier/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the signed-in cashier collected during the shift, the latest first. */
+        get: operations["GetMyCollections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** What the signed-in cashier collected during the shift, the latest first. */
-    get: operations['GetMyCollections'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cashier/vip-deliveries': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cashier/vip-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tables ready to be carried, the one that has waited longest first.
+         *     The same list the waiters read, minus the waiter's id: the till only
+         *     needs to know who has it, to say it out loud.
+         */
+        get: operations["GetVipDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /**
-     * The tables ready to be carried, the one that has waited longest first.
-     *     The same list the waiters read, minus the waiter's id: the till only
-     *     needs to know who has it, to say it out loud.
-     */
-    get: operations['GetVipDeliveries'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/users': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists everyone working at the venue, deactivated staff included. */
+        get: operations["ListStaffUsers"];
+        put?: never;
+        /** Adds someone to the venue with a role. */
+        post: operations["CreateStaffUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Lists everyone working at the venue, deactivated staff included. */
-    get: operations['ListStaffUsers'];
-    put?: never;
-    /** Adds someone to the venue with a role. */
-    post: operations['CreateStaffUser'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/users/{id}/role': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/users/{id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Corrects the role somebody was given. */
+        put: operations["ChangeStaffUserRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Corrects the role somebody was given. */
-    put: operations['ChangeStaffUserRole'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/users/{id}/display-name': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/users/{id}/display-name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Gives somebody the name people read instead of their username. */
+        put: operations["RenameStaffUser"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Gives somebody the name people read instead of their username. */
-    put: operations['RenameStaffUser'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/users/{id}/password': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replaces a forgotten password with a new one. */
+        put: operations["ResetStaffUserPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Replaces a forgotten password with a new one. */
-    put: operations['ResetStaffUserPassword'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/users/{id}/deactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/users/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Takes away access without taking away the account. */
+        post: operations["DeactivateStaffUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Takes away access without taking away the account. */
-    post: operations['DeactivateStaffUser'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/users/{id}/reactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/users/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Gives somebody who came back the account they always had. */
+        post: operations["ReactivateStaffUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Gives somebody who came back the account they always had. */
-    post: operations['ReactivateStaffUser'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/nights': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/nights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists every night of the venue, the latest first. */
+        get: operations["ListNights"];
+        put?: never;
+        /** Sets up a night of the venue with its hours and the staff working it. */
+        post: operations["CreateNight"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Lists every night of the venue, the latest first. */
-    get: operations['ListNights'];
-    put?: never;
-    /** Sets up a night of the venue with its hours and the staff working it. */
-    post: operations['CreateNight'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/nights/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/nights/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One night of the venue, with its hours and its crew. */
+        get: operations["GetNight"];
+        /** Changes a night that has not ended. Once it started, its start stays; an end already past closes it now. */
+        put: operations["UpdateNight"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** One night of the venue, with its hours and its crew. */
-    get: operations['GetNight'];
-    /** Changes a night that has not ended. Once it started, its start stays; an end already past closes it now. */
-    put: operations['UpdateNight'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/nights/{id}/stock': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/nights/{id}/stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The night's stock, bar by bar: what was loaded of each product, sold and is left, and what the storeroom still has. */
+        get: operations["GetNightStock"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The night's stock, bar by bar: what was loaded of each product, sold and is left, and what the storeroom still has. */
-    get: operations['GetNightStock'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/nights/{id}/tables': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/nights/{id}/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The VIP tables the night sells, by number, with the budget of each package and what it spent. */
+        get: operations["GetNightTables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The VIP tables the night sells, by number, with the budget of each package and what it spent. */
-    get: operations['GetNightTables'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/nights/{id}/tables/{tableId}/access-code': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/nights/{id}/tables/{tableId}/access-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Gives a table of the night a new code for its QR. The old one stops working; the balance stays. */
+        post: operations["RegenerateNightTableCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Gives a table of the night a new code for its QR. The old one stops working; the balance stays. */
-    post: operations['RegenerateNightTableCode'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/nights/{id}/metrics': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/nights/{id}/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The night's report: what was sold and how it was paid, how long orders took, and the most ordered products against their stock. So far, for a night still underway. */
+        get: operations["GetNightMetrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The night's report: what was sold and how it was paid, how long orders took, and the most ordered products against their stock. So far, for a night still underway. */
-    get: operations['GetNightMetrics'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/nights/{id}/stock/{kdsId}/{productId}/adjust': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/nights/{id}/stock/{kdsId}/{productId}/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Moves units of a product from the storeroom into one bar of a night that has not ended, or back. */
+        post: operations["AdjustNightStock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Moves units of a product from the storeroom into one bar of a night that has not ended, or back. */
-    post: operations['AdjustNightStock'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/categories': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists the venue's categories, the first one created first. */
+        get: operations["ListCategories"];
+        put?: never;
+        /** Adds a category the venue's menu can be split by. */
+        post: operations["CreateCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Lists the venue's categories, the first one created first. */
-    get: operations['ListCategories'];
-    put?: never;
-    /** Adds a category the venue's menu can be split by. */
-    post: operations['CreateCategory'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/tables': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists the venue's VIP tables by number, the ones put away included. */
+        get: operations["ListTables"];
+        put?: never;
+        /** Adds a VIP table with its number, how many people it seats and where it is. */
+        post: operations["CreateTable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Lists the venue's VIP tables by number, the ones put away included. */
-    get: operations['ListTables'];
-    put?: never;
-    /** Adds a VIP table with its number, how many people it seats and where it is. */
-    post: operations['CreateTable'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/tables/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/tables/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Changes how many people a table seats and where it is. The number stays. */
+        put: operations["UpdateTable"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Changes how many people a table seats and where it is. The number stays. */
-    put: operations['UpdateTable'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/tables/{id}/deactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/tables/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Puts a table away without deleting it, unless a night that has not ended sells it. */
+        post: operations["DeactivateTable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Puts a table away without deleting it, unless a night that has not ended sells it. */
-    post: operations['DeactivateTable'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/tables/{id}/reactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/tables/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Brings back a table that was put away. */
+        post: operations["ReactivateTable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Brings back a table that was put away. */
-    post: operations['ReactivateTable'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/waiter/tables': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/waiter/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The venue's table orders that are ready, the one that has waited longest first. */
+        get: operations["ListWaiterTables"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The venue's table orders that are ready, the one that has waited longest first. */
-    get: operations['ListWaiterTables'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/waiter/tables/{orderId}/take': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/waiter/tables/{orderId}/take": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Takes a table's ready order to carry it. Taking it again changes nothing. */
+        post: operations["TakeTableOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Takes a table's ready order to carry it. Taking it again changes nothing. */
-    post: operations['TakeTableOrder'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/waiter/tables/{orderId}/deliver': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/waiter/tables/{orderId}/deliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hands over, at its table, an order the caller took. Delivering it again changes nothing. */
+        post: operations["DeliverTableOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Hands over, at its table, an order the caller took. Delivering it again changes nothing. */
-    post: operations['DeliverTableOrder'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists every product of the venue, deactivated ones included. */
+        get: operations["ListProducts"];
+        put?: never;
+        /** Adds a product to the venue's menu. */
+        post: operations["CreateProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Lists every product of the venue, deactivated ones included. */
-    get: operations['ListProducts'];
-    put?: never;
-    /** Adds a product to the venue's menu. */
-    post: operations['CreateProduct'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/combos': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products/combos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adds a combo to the venue's menu. */
+        post: operations["CreateCombo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Adds a combo to the venue's menu. */
-    post: operations['CreateCombo'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/{id}/components': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products/{id}/components": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Changes what a combo is made of, for the orders to come. */
+        put: operations["ReplaceComboComponents"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Changes what a combo is made of, for the orders to come. */
-    put: operations['ReplaceComboComponents'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/{id}/mark-unavailable': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products/{id}/mark-unavailable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turns a product's nightly switch off. The customer keeps seeing it, dimmed. */
+        post: operations["MarkProductUnavailable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Turns a product's nightly switch off. The customer keeps seeing it, dimmed. */
-    post: operations['MarkProductUnavailable'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/{id}/mark-available': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products/{id}/mark-available": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turns the switch back on. Does not touch stock. */
+        post: operations["MarkProductAvailable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Turns the switch back on. Does not touch stock. */
-    post: operations['MarkProductAvailable'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Corrects a product's name, description, price and category. */
+        put: operations["UpdateProduct"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Corrects a product's name, description, price and category. */
-    put: operations['UpdateProduct'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/{id}/adjust-stock': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products/{id}/adjust-stock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Moves a product's stock up or down by a number of units. */
+        post: operations["AdjustProductStock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Moves a product's stock up or down by a number of units. */
-    post: operations['AdjustProductStock'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/{id}/deactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Takes a product off the menu for good. Old orders keep pointing at it. */
+        post: operations["DeactivateProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Takes a product off the menu for good. Old orders keep pointing at it. */
-    post: operations['DeactivateProduct'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/products/{id}/image': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/products/{id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Puts a picture on a product, replacing the one it had. JPEG, PNG or WebP, up to 5 MB. */
+        put: operations["UploadProductImage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Puts a picture on a product, replacing the one it had. JPEG, PNG or WebP, up to 5 MB. */
-    put: operations['UploadProductImage'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/promotions': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/promotions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists every promotion of the venue, deactivated ones included. */
+        get: operations["ListPromotions"];
+        put?: never;
+        /** Adds a promotion to the venue, active. */
+        post: operations["CreatePromotion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Lists every promotion of the venue, deactivated ones included. */
-    get: operations['ListPromotions'];
-    put?: never;
-    /** Adds a promotion to the venue, active. */
-    post: operations['CreatePromotion'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/promotions/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/promotions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replaces what a promotion is, for the orders to come. */
+        put: operations["UpdatePromotion"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    /** Replaces what a promotion is, for the orders to come. */
-    put: operations['UpdatePromotion'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/promotions/{id}/activate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/promotions/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Switches a promotion on. */
+        post: operations["ActivatePromotion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Switches a promotion on. */
-    post: operations['ActivatePromotion'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/promotions/{id}/deactivate': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/promotions/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Switches a promotion off: new orders stop getting it, confirmed ones keep their price. */
+        post: operations["DeactivatePromotion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Switches a promotion off: new orders stop getting it, confirmed ones keep their price. */
-    post: operations['DeactivatePromotion'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/staff/stamp-card': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/staff/stamp-card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The venue's stamp card rule, or nothing when it was never set up. */
+        get: operations["GetStampCardRule"];
+        /** Sets the card up, or replaces its rule. Customers keep their stamps. */
+        put: operations["SaveStampCardRule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The venue's stamp card rule, or nothing when it was never set up. */
-    get: operations['GetStampCardRule'];
-    /** Sets the card up, or replaces its rule. Customers keep their stamps. */
-    put: operations['SaveStampCardRule'];
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/orders/{code}/start-preparing': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/orders/{code}/start-preparing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Takes a queued order into preparation. Taking it again changes nothing. */
+        post: operations["StartPreparingOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Takes a queued order into preparation. Taking it again changes nothing. */
-    post: operations['StartPreparingOrder'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/orders/{code}/return-to-queue': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/orders/{code}/return-to-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hands an order in preparation back to the queue, keeping when it was paid. */
+        post: operations["ReturnOrderToQueue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Hands an order in preparation back to the queue, keeping when it was paid. */
-    post: operations['ReturnOrderToQueue'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/orders/{code}/mark-ready': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/orders/{code}/mark-ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Marks an order in preparation ready. Marking it again changes nothing. */
+        post: operations["MarkOrderReady"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Marks an order in preparation ready. Marking it again changes nothing. */
-    post: operations['MarkOrderReady'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/orders/{code}/return-to-preparation': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/orders/{code}/return-to-preparation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sends an order marked ready by mistake back to preparation. */
+        post: operations["ReturnOrderToPreparation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Sends an order marked ready by mistake back to preparation. */
-    post: operations['ReturnOrderToPreparation'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/orders/{code}/deliver': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/orders/{code}/deliver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hands a ready order over at the bar, when it cannot be scanned. Delivering it again changes nothing. */
+        post: operations["DeliverOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Hands a ready order over at the bar, when it cannot be scanned. Delivering it again changes nothing. */
-    post: operations['DeliverOrder'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/kds/orders/{code}/undo-delivery': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/orders/{code}/undo-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Undoes a delivery made moments ago; the order is ready again. Refused once the grace has passed. */
+        post: operations["UndoOrderDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Undoes a delivery made moments ago; the order is ready again. Refused once the grace has passed. */
-    post: operations['UndoOrderDelivery'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cashier/orders': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/orders/{code}/make-priority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Makes an order a priority */
+        post: operations["MarkOrderPriority"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Every order waiting to be paid in cash, the one that has waited longest first. */
-    get: operations['GetOrdersAwaitingPayment'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cashier/orders/{code}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/kds/orders/{code}/make-not-priority": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Makes an order not apriority */
+        post: operations["MarkOrderNotPriority"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** The order behind a code, whatever its state, so the till can tell unpaid from already paid. */
-    get: operations['FindOrderAtTheTill'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cashier/orders/{code}/collect': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cashier/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every order waiting to be paid in cash, the one that has waited longest first. */
+        get: operations["GetOrdersAwaitingPayment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /**
-     * Nothing to hand back on success: the screen goes back to the list, and
-     *     the bar hears about it through its hub like any other queued order.
-     */
-    post: operations['CollectCashPayment'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cashier/orders/{code}/cancel': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cashier/orders/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The order behind a code, whatever its state, so the till can tell unpaid from already paid. */
+        get: operations["FindOrderAtTheTill"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    get?: never;
-    put?: never;
-    /** Cancels an order still waiting to be paid in cash, and puts its drinks back on the shelf. */
-    post: operations['CancelAtTheTill'];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
+    "/cashier/orders/{code}/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Nothing to hand back on success: the screen goes back to the list, and
+         *     the bar hears about it through its hub like any other queued order.
+         */
+        post: operations["CollectCashPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cashier/orders/{code}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancels an order still waiting to be paid in cash, and puts its drinks back on the shelf. */
+        post: operations["CancelAtTheTill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    /**
-     * @description How much a product's stock moves in one bar for the night: positive when
-     *     units go in from the storeroom, negative when they go back to it. A change,
-     *     never the new total, so a sale made while the screen was open is not
-     *     overwritten.
-     */
-    AdjustNightStockRequest: {
-      /** Format: int32 */
-      change: number;
-    };
-    /**
-     * @description How much the stock moves: positive when units arrived, negative when it was
-     *     loaded wrong. A change, never the new total.
-     */
-    AdjustProductStockRequest: {
-      /** Format: int32 */
-      change: number;
-    };
-    /**
-     * @description Who made something and who last touched it, and when. Every part is null
-     *     when it was never recorded.
-     */
-    AuditResponse: {
-      /** Format: date-time */
-      createdAt: null | string;
-      createdBy: null | string;
-      /** Format: date-time */
-      lastModifiedAt: null | string;
-      lastModifiedBy: null | string;
-    };
-    /** @description From paid to ready at one bar of the night, by the name its board shows. */
-    BarTimesResponse: {
-      /** Format: uuid */
-      kdsId: string;
-      name: string;
-      paidToReady: components['schemas']['StageTimesResponse'];
-    };
-    /** @description One drink of an order, as the till reads it back. */
-    CashierOrderItemResponse: {
-      productName: string;
-      /** Format: int32 */
-      quantity: number;
-      note: null | string;
-      /** Format: double */
-      unitPrice: number;
-    };
-    /** @description An order as the till shows it: who, what, and how much to charge. */
-    CashierOrderResponse: {
-      code: string;
-      customerName: string;
-      status: components['schemas']['CustomerOrderStatus'];
-      /** Format: double */
-      total: number;
-      /** Format: date-time */
-      placedAt: null | string;
-      /** Format: date-time */
-      paidAt: null | string;
-      items: components['schemas']['CashierOrderItemResponse'][];
-    };
-    /** @description What a reader or the camera read off the customer's phone. */
-    CashierScanRequest: {
-      read: null | string;
-    };
-    /**
-     * @description One table's order that is ready to be carried, as the till sees it: who has
-     *     it, if anybody, and since when. The till only looks: coordinating is done
-     *     out loud.
-     */
-    CashierVipDeliveryResponse: {
-      /** Format: uuid */
-      orderId: string;
-      /** Format: int32 */
-      tableNumber: number;
-      customerName: string;
-      /** Format: date-time */
-      readyAt: null | string;
-      takenByName: null | string;
-      /** Format: date-time */
-      takenAt: null | string;
-      items: components['schemas']['WaiterOrderItemResponse'][];
-    };
-    CategoryResponse: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-    };
-    /** @description What the administration screen sends to correct somebody's role. */
-    ChangeStaffUserRoleRequest: {
-      role: components['schemas']['StaffRoleName'];
-    };
-    /** @description One product a combo is made of, and how many of it go in one combo. */
-    ComboPartRequest: {
-      /** Format: uuid */
-      productId: string;
-      /** Format: int32 */
-      quantity: number;
-    };
-    /** @description One product a combo is made of, and how many of it go in one combo. */
-    ComboPartResponse: {
-      /** Format: uuid */
-      productId: string;
-      /** Format: int32 */
-      quantity: number;
-    };
-    /** @description The order as the confirmation screen shows it. */
-    ConfirmedOrderResponse: {
-      /** Format: uuid */
-      id: string;
-      code: string;
-      trackingToken: string;
-      customerName: string;
-      /** Format: double */
-      total: number;
-      status: components['schemas']['CustomerOrderStatus'];
-      /** Format: date-time */
-      paidAt: null | string;
-      stampCardToken: null | string;
-    };
-    /** @description An order somebody is confirming from their phone. */
-    ConfirmOrderRequest: {
-      customerName: null | string;
-      method: components['schemas']['PaymentMethodName'];
-      idempotencyKey: null | string;
-      lines: null | components['schemas']['OrderLineRequestBody'][];
-      tableCode?: null | string;
-      /** Format: double */
-      digitalAmount?: null | number;
-      /** Format: double */
-      expectedTotal?: null | number;
-      stampCardToken?: null | string;
-      /** @default false */
-      redeemReward: boolean;
-    };
-    /** @description What the administration screen posts to add a category. */
-    CreateCategoryRequest: {
-      name: string;
-    };
-    /** @description A combo: a product with a price of its own, sold from the stock of the ones it is made of. */
-    CreateComboRequest: {
-      name: string;
-      description: null | string;
-      imageUrl: null | string;
-      /** Format: double */
-      price: number;
-      /** Format: uuid */
-      categoryId: string;
-      components: components['schemas']['ComboPartRequest'][];
-    };
-    CreateNightRequest: {
-      name: string;
-      /** Format: date-time */
-      startsAt: string;
-      /** Format: date-time */
-      endsAt: string;
-      crewIds: string[];
-      tables?: null | components['schemas']['NightTableRequestBody'][];
-    };
-    /**
-     * @description What the administration screen posts. The image address is whatever the
-     *     upload returned, or null while there is none. The category is one of the
-     *     venue's, by id.
-     */
-    CreateProductRequest: {
-      name: string;
-      description: null | string;
-      imageUrl: null | string;
-      /** Format: double */
-      price: number;
-      /** Format: int32 */
-      stock: number;
-      /** Format: uuid */
-      categoryId: string;
-    };
-    /**
-     * @description What the administration screen posts. The role travels as its name; the
-     *     display name is optional, and a KDS shows it as its bar's.
-     */
-    CreateStaffUserRequest: {
-      username: string;
-      password: string;
-      role: components['schemas']['StaffRoleName'];
-      displayName?: null | string;
-    };
-    /** @description What the administration screen posts to add a table. */
-    CreateTableRequest: {
-      /** Format: int32 */
-      number: number;
-      /** Format: int32 */
-      capacity: number;
-      location: null | string;
-    };
-    /**
-     * @description Where an order is, as the customer's phone reads it.
-     * @enum {string}
-     */
-    CustomerOrderStatus:
-      'AwaitingPayment' | 'Paid' | 'Queued' | 'InPreparation' | 'Ready' | 'Delivered' | 'Canceled';
-    /** Format: binary */
-    IFormFile: string;
-    /**
-     * @description Which column of the bar's board an order is in.
-     * @enum {string}
-     */
-    KdsOrderStatus: 'Queued' | 'InPreparation' | 'Ready';
-    /** @description One product of a combo on a card of the board, and how many of it go in one combo. */
-    KdsQueueOrderItemPartResponse: {
-      productName: string;
-      /** Format: int32 */
-      quantity: number;
-    };
-    /** @description One drink on a card of the board, as the bar's tablet reads it. */
-    KdsQueueOrderItemResponse: {
-      productName: string;
-      /** Format: int32 */
-      quantity: number;
-      note: null | string;
-      components: components['schemas']['KdsQueueOrderItemPartResponse'][];
-      isReward: boolean;
-    };
-    /** @description One order on the bar's board: who asked, what for, since when, and where it is. */
-    KdsQueueOrderResponse: {
-      code: string;
-      customerName: string;
-      status: components['schemas']['KdsOrderStatus'];
-      /** Format: date-time */
-      paidAt: string;
-      /** Format: date-time */
-      lastModifiedAt: null | string;
-      isForTable: boolean;
-      orderItems: components['schemas']['KdsQueueOrderItemResponse'][];
-      /** Format: int32 */
-      tableNumber: null | number;
-    };
-    /** @description Which bar this tablet is, by the name it goes by now. */
-    KdsStationResponse: {
-      name: string;
-    };
-    /** @description The credentials a staff member signs in with. */
-    LoginRequest: {
-      username: string;
-      password: string;
-    };
-    LoginResponse: {
-      token: string;
-      /** Format: date-time */
-      expiresAt: string;
-      username: string;
-      role: components['schemas']['StaffRoleName'];
-      displayName: null | string;
-    };
-    /** @description One product of a combo as its card lists it, with how many of it come in one combo. */
-    MenuItemPartResponse: {
-      name: string;
-      /** Format: int32 */
-      quantity: number;
-    };
-    /** @description One card of the menu, as the customer's phone receives it. */
-    MenuItemResponse: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      description: null | string;
-      imageUrl: null | string;
-      /** Format: double */
-      price: number;
-      /** Format: uuid */
-      categoryId: string;
-      isOrderable: boolean;
-      components: components['schemas']['MenuItemPartResponse'][];
-      /** Format: double */
-      regularPrice: null | number;
-      promotionName: null | string;
-    };
-    /** @description The venue's menu: its name, its categories and its products. */
-    MenuResponse: {
-      venueName: string;
-      isTakingOrders: boolean;
-      categories: components['schemas']['CategoryResponse'][];
-      items: components['schemas']['MenuItemResponse'][];
-    };
-    /**
-     * @description A night's report. WorstTenthSeconds is the average of the slowest tenth of
-     *     the orders, not a percentile. Unmeasured counts the orders from before
-     *     ReadyAt was kept, which have no time to give.
-     */
-    NightMetricsResponse: {
-      /** Format: uuid */
-      nightId: string;
-      /** Format: double */
-      sold: number;
-      /** Format: int32 */
-      orders: number;
-      /** Format: double */
-      averageTicket: number;
-      /** Format: int32 */
-      units: number;
-      byMethod: components['schemas']['SalesByMethodResponse'][];
-      paidToReady: components['schemas']['StageTimesResponse'];
-      readyToDelivered: components['schemas']['StageTimesResponse'];
-      byBar: components['schemas']['BarTimesResponse'][];
-      /** Format: int32 */
-      unmeasured: number;
-      top: components['schemas']['TopProductResponse'][];
-      /** Format: int32 */
-      soldOutProducts: number;
-    };
-    NightResponse: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      /** Format: date-time */
-      startsAt: string;
-      /** Format: date-time */
-      endsAt: string;
-      crewIds: string[];
-      audit: components['schemas']['AuditResponse'];
-    };
-    /** @description One bar of the night: a KDS of its crew, with its own stock. */
-    NightStockBarResponse: {
-      /** Format: uuid */
-      kdsId: string;
-      name: string;
-      lines: components['schemas']['NightStockLineResponse'][];
-    };
-    /**
-     * @description One product in one bar for the night. Every night's bars start empty, so
-     *     Loaded is all that came in. InStoreroom is the product's, the same in every
-     *     bar: what is left to load.
-     */
-    NightStockLineResponse: {
-      /** Format: uuid */
-      productId: string;
-      productName: string;
-      /** Format: int32 */
-      loaded: number;
-      /** Format: int32 */
-      sold: number;
-      /** Format: int32 */
-      left: number;
-      /** Format: int32 */
-      inStoreroom: number;
-    };
-    NightStockResponse: {
-      /** Format: uuid */
-      nightId: string;
-      bars: components['schemas']['NightStockBarResponse'][];
-    };
-    /** @description The new code of a table after the old one leaked. */
-    NightTableCodeResponse: {
-      /** Format: uuid */
-      tableId: string;
-      accessCode: string;
-    };
-    /** @description What the administration screen posts to set up a night. */
-    NightTableRequestBody: {
-      /** Format: uuid */
-      tableId: string;
-      /** Format: double */
-      budget: number;
-    };
-    /**
-     * @description A table of the night with what was loaded onto it, what its orders took,
-     *     and the code of its QR for the waiter to hand over.
-     */
-    NightTableResponse: {
-      /** Format: uuid */
-      tableId: string;
-      /** Format: int32 */
-      number: number;
-      /** Format: int32 */
-      capacity: number;
-      location: null | string;
-      /** Format: double */
-      budget: number;
-      /** Format: double */
-      spent: number;
-      accessCode: string;
-    };
-    /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
-    OrderLineRequestBody: {
-      /** Format: uuid */
-      productId: string;
-      /** Format: int32 */
-      quantity: number;
-      note: null | string;
-    };
-    /**
-     * @description How the customer is paying, as the checkout sends it.
-     * @enum {string}
-     */
-    PaymentMethodName: 'Digital' | 'Cash' | 'VipBalance';
-    ProblemDetails: {
-      type?: null | string;
-      title?: null | string;
-      /** Format: int32 */
-      status?: null | number;
-      detail?: null | string;
-      instance?: null | string;
-    };
-    /** @description Where the picture ended up. The listing shows it from here on. */
-    ProductImageResponse: {
-      imageUrl: string;
-    };
-    ProductResponse: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      description: null | string;
-      imageUrl: null | string;
-      /** Format: double */
-      price: number;
-      /** Format: int32 */
-      stock: number;
-      /** Format: uuid */
-      categoryId: string;
-      isAvailable: boolean;
-      isSoldOut: boolean;
-      isActive: boolean;
-      audit: components['schemas']['AuditResponse'];
-      isCombo: boolean;
-      components: components['schemas']['ComboPartResponse'][];
-    };
-    /** @description What the administration screen posts to define a promotion. */
-    PromotionRequest: {
-      name: string;
-      /** Format: int32 */
-      discountPercent: number;
-      days: null | number[];
-      /** Format: time */
-      startsAt: string;
-      /** Format: time */
-      endsAt: string;
-      productIds: null | string[];
-    };
-    PromotionResponse: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      /** Format: int32 */
-      discountPercent: number;
-      days: number[];
-      /** Format: time */
-      startsAt: string;
-      /** Format: time */
-      endsAt: string;
-      productIds: string[];
-      isActive: boolean;
-      audit: components['schemas']['AuditResponse'];
-    };
-    /** @description What it sends to give somebody the name people read. Blank takes it away. */
-    RenameStaffUserRequest: {
-      displayName: null | string;
-    };
-    /** @description What a combo is made of from now on. Orders already confirmed keep what they had. */
-    ReplaceComboComponentsRequest: {
-      components: components['schemas']['ComboPartRequest'][];
-    };
-    /** @description What it sends to hand somebody a new password. */
-    ResetStaffUserPasswordRequest: {
-      password: string;
-    };
-    /** @description What was paid with one method. Every method has a row, even at zero. */
-    SalesByMethodResponse: {
-      method: components['schemas']['PaymentMethodName'];
-      /** Format: int32 */
-      orders: number;
-      /** Format: double */
-      amount: number;
-    };
-    /** @description Whose order a scan found, and what it did with it. */
-    ScannedOrderResponse: {
-      code: string;
-      customerName: string;
-      outcome: components['schemas']['ScanOutcomeName'];
-    };
-    /**
-     * @description What a scan at the bar did, or why it did nothing.
-     * @enum {string}
-     */
-    ScanOutcomeName: 'Delivered' | 'NotReadyYet' | 'AlreadyDelivered';
-    /** @description What the bar's camera or reader read off the customer's phone. */
-    ScanRequest: {
-      read: null | string;
-    };
-    /**
-     * @description A staff member's role, as the contract names it.
-     * @enum {string}
-     */
-    StaffRoleName: 'Administrator' | 'Kds' | 'Waiter' | 'Cashier';
-    StaffUserResponse: {
-      /** Format: uuid */
-      id: string;
-      username: string;
-      displayName: null | string;
-      role: components['schemas']['StaffRoleName'];
-      isActive: boolean;
-      audit: components['schemas']['AuditResponse'];
-    };
-    /** @description How long a stage took, in whole seconds. Null until some order has been through it. */
-    StageTimesResponse: {
-      /** Format: int32 */
-      averageSeconds: null | number;
-      /** Format: int32 */
-      worstTenthSeconds: null | number;
-    };
-    StampCardResponse: {
-      isActive: boolean;
-      /** Format: int32 */
-      stampsForReward: number;
-      /** Format: uuid */
-      rewardProductId: null | string;
-      rewardName: null | string;
-      /** Format: int32 */
-      stamps: number;
-      canRedeem: boolean;
-    };
-    StampCardRuleRequest: {
-      /** Format: int32 */
-      stampsForReward: number;
-      /** Format: uuid */
-      rewardProductId: string;
-      isActive: boolean;
-    };
-    StampCardRuleResponse: {
-      /** Format: int32 */
-      stampsForReward: number;
-      /** Format: uuid */
-      rewardProductId: string;
-      isActive: boolean;
-      audit: components['schemas']['AuditResponse'];
-    };
-    TableResponse: {
-      /** Format: uuid */
-      id: string;
-      /** Format: int32 */
-      number: number;
-      /** Format: int32 */
-      capacity: number;
-      location: null | string;
-      isActive: boolean;
-      audit: components['schemas']['AuditResponse'];
-    };
-    /** @description What the phone gets back once the order is the waiter's. */
-    TakenTableResponse: {
-      /** Format: uuid */
-      orderId: string;
-      /** Format: int32 */
-      tableNumber: number;
-      waiterName: string;
-      /** Format: date-time */
-      takenAt: string;
-    };
-    /**
-     * @description One of the most ordered products, with the name and what it billed as it
-     *     was ordered, beside what its bars were loaded with that night.
-     */
-    TopProductResponse: {
-      /** Format: uuid */
-      productId: string;
-      name: string;
-      /** Format: int32 */
-      units: number;
-      /** Format: double */
-      billed: number;
-      /** Format: int32 */
-      loaded: number;
-      soldOut: boolean;
-    };
-    /** @description One drink of the order, as the tracking screen draws it. */
-    TrackedOrderItemResponse: {
-      productName: string;
-      /** Format: int32 */
-      quantity: number;
-      note: null | string;
-      isReward: boolean;
-    };
-    /** @description Where an order is, and which bar to pick it up at. */
-    TrackedOrderResponse: {
-      code: string;
-      customerName: string;
-      status: components['schemas']['CustomerOrderStatus'];
-      /** Format: double */
-      total: number;
-      /** Format: date-time */
-      paidAt: null | string;
-      barName: null | string;
-      items: components['schemas']['TrackedOrderItemResponse'][];
-      /** Format: int32 */
-      tableNumber: null | number;
-      waiterName: null | string;
-      /** Format: double */
-      savings: number;
-    };
-    /** @description What the night's own screen saves: the whole form, as on creation. */
-    UpdateNightRequest: {
-      name: string;
-      /** Format: date-time */
-      startsAt: string;
-      /** Format: date-time */
-      endsAt: string;
-      crewIds: string[];
-      tables?: null | components['schemas']['NightTableRequestBody'][];
-    };
-    /**
-     * @description A product's name, description, price and category. Stock, picture and
-     *     availability each have their own action.
-     */
-    UpdateProductRequest: {
-      name: string;
-      description: null | string;
-      /** Format: double */
-      price: number;
-      /** Format: uuid */
-      categoryId: string;
-    };
-    /** @description What the edit screen puts. No number: it is what the orders placed from the table say. */
-    UpdateTableRequest: {
-      /** Format: int32 */
-      capacity: number;
-      location: null | string;
-    };
-    /** @description What the menu shows at the top for a VIP table: its number and what it has left to spend. */
-    VipTableAccessResponse: {
-      /** Format: int32 */
-      tableNumber: number;
-      /** Format: double */
-      balance: number;
-    };
-    /** @description One drink on a table's order, as the waiter's phone reads it. */
-    WaiterOrderItemResponse: {
-      productName: string;
-      /** Format: int32 */
-      quantity: number;
-      note: null | string;
-    };
-    /**
-     * @description One table's order that is ready to be carried. `TakenByName` is null
-     *     while nobody has it; `TakenByMe` says whether it is the caller.
-     */
-    WaiterTableResponse: {
-      /** Format: uuid */
-      orderId: string;
-      /** Format: int32 */
-      tableNumber: number;
-      customerName: string;
-      /** Format: date-time */
-      readyAt: null | string;
-      takenByName: null | string;
-      takenByMe: boolean;
-      /** Format: date-time */
-      takenAt: null | string;
-      items: components['schemas']['WaiterOrderItemResponse'][];
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    schemas: {
+        /**
+         * @description How much a product's stock moves in one bar for the night: positive when
+         *     units go in from the storeroom, negative when they go back to it. A change,
+         *     never the new total, so a sale made while the screen was open is not
+         *     overwritten.
+         */
+        AdjustNightStockRequest: {
+            /** Format: int32 */
+            change: number;
+        };
+        /**
+         * @description How much the stock moves: positive when units arrived, negative when it was
+         *     loaded wrong. A change, never the new total.
+         */
+        AdjustProductStockRequest: {
+            /** Format: int32 */
+            change: number;
+        };
+        /**
+         * @description Who made something and who last touched it, and when. Every part is null
+         *     when it was never recorded.
+         */
+        AuditResponse: {
+            /** Format: date-time */
+            createdAt: null | string;
+            createdBy: null | string;
+            /** Format: date-time */
+            lastModifiedAt: null | string;
+            lastModifiedBy: null | string;
+        };
+        /** @description From paid to ready at one bar of the night, by the name its board shows. */
+        BarTimesResponse: {
+            /** Format: uuid */
+            kdsId: string;
+            name: string;
+            paidToReady: components["schemas"]["StageTimesResponse"];
+        };
+        /** @description One drink of an order, as the till reads it back. */
+        CashierOrderItemResponse: {
+            productName: string;
+            /** Format: int32 */
+            quantity: number;
+            note: null | string;
+            /** Format: double */
+            unitPrice: number;
+        };
+        /** @description An order as the till shows it: who, what, and how much to charge. */
+        CashierOrderResponse: {
+            code: string;
+            customerName: string;
+            status: components["schemas"]["CustomerOrderStatus"];
+            /** Format: double */
+            total: number;
+            /** Format: date-time */
+            placedAt: null | string;
+            /** Format: date-time */
+            paidAt: null | string;
+            items: components["schemas"]["CashierOrderItemResponse"][];
+        };
+        /** @description What a reader or the camera read off the customer's phone. */
+        CashierScanRequest: {
+            read: null | string;
+        };
+        /**
+         * @description One table's order that is ready to be carried, as the till sees it: who has
+         *     it, if anybody, and since when. The till only looks: coordinating is done
+         *     out loud.
+         */
+        CashierVipDeliveryResponse: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: int32 */
+            tableNumber: number;
+            customerName: string;
+            /** Format: date-time */
+            readyAt: null | string;
+            takenByName: null | string;
+            /** Format: date-time */
+            takenAt: null | string;
+            items: components["schemas"]["WaiterOrderItemResponse"][];
+        };
+        CategoryResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @description What the administration screen sends to correct somebody's role. */
+        ChangeStaffUserRoleRequest: {
+            role: components["schemas"]["StaffRoleName"];
+        };
+        /** @description One product a combo is made of, and how many of it go in one combo. */
+        ComboPartRequest: {
+            /** Format: uuid */
+            productId: string;
+            /** Format: int32 */
+            quantity: number;
+        };
+        /** @description One product a combo is made of, and how many of it go in one combo. */
+        ComboPartResponse: {
+            /** Format: uuid */
+            productId: string;
+            /** Format: int32 */
+            quantity: number;
+        };
+        /** @description The order as the confirmation screen shows it. */
+        ConfirmedOrderResponse: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            trackingToken: string;
+            customerName: string;
+            /** Format: double */
+            total: number;
+            status: components["schemas"]["CustomerOrderStatus"];
+            /** Format: date-time */
+            paidAt: null | string;
+            stampCardToken: null | string;
+        };
+        /** @description An order somebody is confirming from their phone. */
+        ConfirmOrderRequest: {
+            customerName: null | string;
+            method: components["schemas"]["PaymentMethodName"];
+            idempotencyKey: null | string;
+            lines: null | components["schemas"]["OrderLineRequestBody"][];
+            tableCode?: null | string;
+            /** Format: double */
+            digitalAmount?: null | number;
+            /** Format: double */
+            expectedTotal?: null | number;
+            stampCardToken?: null | string;
+            /** @default false */
+            redeemReward: boolean;
+        };
+        /** @description What the administration screen posts to add a category. */
+        CreateCategoryRequest: {
+            name: string;
+        };
+        /** @description A combo: a product with a price of its own, sold from the stock of the ones it is made of. */
+        CreateComboRequest: {
+            name: string;
+            description: null | string;
+            imageUrl: null | string;
+            /** Format: double */
+            price: number;
+            /** Format: uuid */
+            categoryId: string;
+            components: components["schemas"]["ComboPartRequest"][];
+        };
+        CreateNightRequest: {
+            name: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            crewIds: string[];
+            tables?: null | components["schemas"]["NightTableRequestBody"][];
+        };
+        /**
+         * @description What the administration screen posts. The image address is whatever the
+         *     upload returned, or null while there is none. The category is one of the
+         *     venue's, by id.
+         */
+        CreateProductRequest: {
+            name: string;
+            description: null | string;
+            imageUrl: null | string;
+            /** Format: double */
+            price: number;
+            /** Format: int32 */
+            stock: number;
+            /** Format: uuid */
+            categoryId: string;
+        };
+        /**
+         * @description What the administration screen posts. The role travels as its name; the
+         *     display name is optional, and a KDS shows it as its bar's.
+         */
+        CreateStaffUserRequest: {
+            username: string;
+            password: string;
+            role: components["schemas"]["StaffRoleName"];
+            displayName?: null | string;
+        };
+        /** @description What the administration screen posts to add a table. */
+        CreateTableRequest: {
+            /** Format: int32 */
+            number: number;
+            /** Format: int32 */
+            capacity: number;
+            location: null | string;
+        };
+        /**
+         * @description Where an order is, as the customer's phone reads it.
+         * @enum {string}
+         */
+        CustomerOrderStatus: "AwaitingPayment" | "Paid" | "Queued" | "InPreparation" | "Ready" | "Delivered" | "Canceled";
+        /** Format: binary */
+        IFormFile: string;
+        /**
+         * @description Which column of the bar's board an order is in.
+         * @enum {string}
+         */
+        KdsOrderStatus: "Queued" | "InPreparation" | "Ready";
+        /** @description One product of a combo on a card of the board, and how many of it go in one combo. */
+        KdsQueueOrderItemPartResponse: {
+            productName: string;
+            /** Format: int32 */
+            quantity: number;
+        };
+        /** @description One drink on a card of the board, as the bar's tablet reads it. */
+        KdsQueueOrderItemResponse: {
+            productName: string;
+            /** Format: int32 */
+            quantity: number;
+            note: null | string;
+            components: components["schemas"]["KdsQueueOrderItemPartResponse"][];
+            isReward: boolean;
+        };
+        /** @description One order on the bar's board: who asked, what for, since when, and where it is. */
+        KdsQueueOrderResponse: {
+            code: string;
+            customerName: string;
+            status: components["schemas"]["KdsOrderStatus"];
+            /** Format: date-time */
+            paidAt: string;
+            /** Format: date-time */
+            lastModifiedAt: null | string;
+            isForTable: boolean;
+            isPriority: boolean;
+            orderItems: components["schemas"]["KdsQueueOrderItemResponse"][];
+            /** Format: int32 */
+            tableNumber: null | number;
+        };
+        /** @description Which bar this tablet is, by the name it goes by now. */
+        KdsStationResponse: {
+            name: string;
+        };
+        /** @description The credentials a staff member signs in with. */
+        LoginRequest: {
+            username: string;
+            password: string;
+        };
+        LoginResponse: {
+            token: string;
+            /** Format: date-time */
+            expiresAt: string;
+            username: string;
+            role: components["schemas"]["StaffRoleName"];
+            displayName: null | string;
+        };
+        /** @description One product of a combo as its card lists it, with how many of it come in one combo. */
+        MenuItemPartResponse: {
+            name: string;
+            /** Format: int32 */
+            quantity: number;
+        };
+        /** @description One card of the menu, as the customer's phone receives it. */
+        MenuItemResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: null | string;
+            imageUrl: null | string;
+            /** Format: double */
+            price: number;
+            /** Format: uuid */
+            categoryId: string;
+            isOrderable: boolean;
+            components: components["schemas"]["MenuItemPartResponse"][];
+            /** Format: double */
+            regularPrice: null | number;
+            promotionName: null | string;
+        };
+        /** @description The venue's menu: its name, its categories and its products. */
+        MenuResponse: {
+            venueName: string;
+            isTakingOrders: boolean;
+            categories: components["schemas"]["CategoryResponse"][];
+            items: components["schemas"]["MenuItemResponse"][];
+        };
+        /**
+         * @description A night's report. WorstTenthSeconds is the average of the slowest tenth of
+         *     the orders, not a percentile. Unmeasured counts the orders from before
+         *     ReadyAt was kept, which have no time to give.
+         */
+        NightMetricsResponse: {
+            /** Format: uuid */
+            nightId: string;
+            /** Format: double */
+            sold: number;
+            /** Format: int32 */
+            orders: number;
+            /** Format: double */
+            averageTicket: number;
+            /** Format: int32 */
+            units: number;
+            byMethod: components["schemas"]["SalesByMethodResponse"][];
+            paidToReady: components["schemas"]["StageTimesResponse"];
+            readyToDelivered: components["schemas"]["StageTimesResponse"];
+            byBar: components["schemas"]["BarTimesResponse"][];
+            /** Format: int32 */
+            unmeasured: number;
+            top: components["schemas"]["TopProductResponse"][];
+            /** Format: int32 */
+            soldOutProducts: number;
+        };
+        NightResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            crewIds: string[];
+            audit: components["schemas"]["AuditResponse"];
+        };
+        /** @description One bar of the night: a KDS of its crew, with its own stock. */
+        NightStockBarResponse: {
+            /** Format: uuid */
+            kdsId: string;
+            name: string;
+            lines: components["schemas"]["NightStockLineResponse"][];
+        };
+        /**
+         * @description One product in one bar for the night. Every night's bars start empty, so
+         *     Loaded is all that came in. InStoreroom is the product's, the same in every
+         *     bar: what is left to load.
+         */
+        NightStockLineResponse: {
+            /** Format: uuid */
+            productId: string;
+            productName: string;
+            /** Format: int32 */
+            loaded: number;
+            /** Format: int32 */
+            sold: number;
+            /** Format: int32 */
+            left: number;
+            /** Format: int32 */
+            inStoreroom: number;
+        };
+        NightStockResponse: {
+            /** Format: uuid */
+            nightId: string;
+            bars: components["schemas"]["NightStockBarResponse"][];
+        };
+        /** @description The new code of a table after the old one leaked. */
+        NightTableCodeResponse: {
+            /** Format: uuid */
+            tableId: string;
+            accessCode: string;
+        };
+        /** @description What the administration screen posts to set up a night. */
+        NightTableRequestBody: {
+            /** Format: uuid */
+            tableId: string;
+            /** Format: double */
+            budget: number;
+        };
+        /**
+         * @description A table of the night with what was loaded onto it, what its orders took,
+         *     and the code of its QR for the waiter to hand over.
+         */
+        NightTableResponse: {
+            /** Format: uuid */
+            tableId: string;
+            /** Format: int32 */
+            number: number;
+            /** Format: int32 */
+            capacity: number;
+            location: null | string;
+            /** Format: double */
+            budget: number;
+            /** Format: double */
+            spent: number;
+            accessCode: string;
+        };
+        /** @description One drink, as the phone asks for it. No price: the venue's menu sets it. */
+        OrderLineRequestBody: {
+            /** Format: uuid */
+            productId: string;
+            /** Format: int32 */
+            quantity: number;
+            note: null | string;
+        };
+        /**
+         * @description How the customer is paying, as the checkout sends it.
+         * @enum {string}
+         */
+        PaymentMethodName: "Digital" | "Cash" | "VipBalance";
+        ProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number;
+            detail?: null | string;
+            instance?: null | string;
+        };
+        /** @description Where the picture ended up. The listing shows it from here on. */
+        ProductImageResponse: {
+            imageUrl: string;
+        };
+        ProductResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: null | string;
+            imageUrl: null | string;
+            /** Format: double */
+            price: number;
+            /** Format: int32 */
+            stock: number;
+            /** Format: uuid */
+            categoryId: string;
+            isAvailable: boolean;
+            isSoldOut: boolean;
+            isActive: boolean;
+            audit: components["schemas"]["AuditResponse"];
+            isCombo: boolean;
+            components: components["schemas"]["ComboPartResponse"][];
+        };
+        /** @description What the administration screen posts to define a promotion. */
+        PromotionRequest: {
+            name: string;
+            /** Format: int32 */
+            discountPercent: number;
+            days: null | number[];
+            /** Format: time */
+            startsAt: string;
+            /** Format: time */
+            endsAt: string;
+            productIds: null | string[];
+        };
+        PromotionResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int32 */
+            discountPercent: number;
+            days: number[];
+            /** Format: time */
+            startsAt: string;
+            /** Format: time */
+            endsAt: string;
+            productIds: string[];
+            isActive: boolean;
+            audit: components["schemas"]["AuditResponse"];
+        };
+        /** @description What it sends to give somebody the name people read. Blank takes it away. */
+        RenameStaffUserRequest: {
+            displayName: null | string;
+        };
+        /** @description What a combo is made of from now on. Orders already confirmed keep what they had. */
+        ReplaceComboComponentsRequest: {
+            components: components["schemas"]["ComboPartRequest"][];
+        };
+        /** @description What it sends to hand somebody a new password. */
+        ResetStaffUserPasswordRequest: {
+            password: string;
+        };
+        /** @description What was paid with one method. Every method has a row, even at zero. */
+        SalesByMethodResponse: {
+            method: components["schemas"]["PaymentMethodName"];
+            /** Format: int32 */
+            orders: number;
+            /** Format: double */
+            amount: number;
+        };
+        /** @description Whose order a scan found, and what it did with it. */
+        ScannedOrderResponse: {
+            code: string;
+            customerName: string;
+            outcome: components["schemas"]["ScanOutcomeName"];
+        };
+        /**
+         * @description What a scan at the bar did, or why it did nothing.
+         * @enum {string}
+         */
+        ScanOutcomeName: "Delivered" | "NotReadyYet" | "AlreadyDelivered";
+        /** @description What the bar's camera or reader read off the customer's phone. */
+        ScanRequest: {
+            read: null | string;
+        };
+        /**
+         * @description A staff member's role, as the contract names it.
+         * @enum {string}
+         */
+        StaffRoleName: "Administrator" | "Kds" | "Waiter" | "Cashier";
+        StaffUserResponse: {
+            /** Format: uuid */
+            id: string;
+            username: string;
+            displayName: null | string;
+            role: components["schemas"]["StaffRoleName"];
+            isActive: boolean;
+            audit: components["schemas"]["AuditResponse"];
+        };
+        /** @description How long a stage took, in whole seconds. Null until some order has been through it. */
+        StageTimesResponse: {
+            /** Format: int32 */
+            averageSeconds: null | number;
+            /** Format: int32 */
+            worstTenthSeconds: null | number;
+        };
+        StampCardResponse: {
+            isActive: boolean;
+            /** Format: int32 */
+            stampsForReward: number;
+            /** Format: uuid */
+            rewardProductId: null | string;
+            rewardName: null | string;
+            /** Format: int32 */
+            stamps: number;
+            canRedeem: boolean;
+        };
+        StampCardRuleRequest: {
+            /** Format: int32 */
+            stampsForReward: number;
+            /** Format: uuid */
+            rewardProductId: string;
+            isActive: boolean;
+        };
+        StampCardRuleResponse: {
+            /** Format: int32 */
+            stampsForReward: number;
+            /** Format: uuid */
+            rewardProductId: string;
+            isActive: boolean;
+            audit: components["schemas"]["AuditResponse"];
+        };
+        TableResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            number: number;
+            /** Format: int32 */
+            capacity: number;
+            location: null | string;
+            isActive: boolean;
+            audit: components["schemas"]["AuditResponse"];
+        };
+        /** @description What the phone gets back once the order is the waiter's. */
+        TakenTableResponse: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: int32 */
+            tableNumber: number;
+            waiterName: string;
+            /** Format: date-time */
+            takenAt: string;
+        };
+        /**
+         * @description One of the most ordered products, with the name and what it billed as it
+         *     was ordered, beside what its bars were loaded with that night.
+         */
+        TopProductResponse: {
+            /** Format: uuid */
+            productId: string;
+            name: string;
+            /** Format: int32 */
+            units: number;
+            /** Format: double */
+            billed: number;
+            /** Format: int32 */
+            loaded: number;
+            soldOut: boolean;
+        };
+        /** @description One drink of the order, as the tracking screen draws it. */
+        TrackedOrderItemResponse: {
+            productName: string;
+            /** Format: int32 */
+            quantity: number;
+            note: null | string;
+            isReward: boolean;
+        };
+        /** @description Where an order is, and which bar to pick it up at. */
+        TrackedOrderResponse: {
+            code: string;
+            customerName: string;
+            status: components["schemas"]["CustomerOrderStatus"];
+            /** Format: double */
+            total: number;
+            /** Format: date-time */
+            paidAt: null | string;
+            barName: null | string;
+            items: components["schemas"]["TrackedOrderItemResponse"][];
+            /** Format: int32 */
+            tableNumber: null | number;
+            waiterName: null | string;
+            /** Format: double */
+            savings: number;
+        };
+        /** @description What the night's own screen saves: the whole form, as on creation. */
+        UpdateNightRequest: {
+            name: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            crewIds: string[];
+            tables?: null | components["schemas"]["NightTableRequestBody"][];
+        };
+        /**
+         * @description A product's name, description, price and category. Stock, picture and
+         *     availability each have their own action.
+         */
+        UpdateProductRequest: {
+            name: string;
+            description: null | string;
+            /** Format: double */
+            price: number;
+            /** Format: uuid */
+            categoryId: string;
+        };
+        /** @description What the edit screen puts. No number: it is what the orders placed from the table say. */
+        UpdateTableRequest: {
+            /** Format: int32 */
+            capacity: number;
+            location: null | string;
+        };
+        /** @description What the menu shows at the top for a VIP table: its number and what it has left to spend. */
+        VipTableAccessResponse: {
+            /** Format: int32 */
+            tableNumber: number;
+            /** Format: double */
+            balance: number;
+        };
+        /** @description One drink on a table's order, as the waiter's phone reads it. */
+        WaiterOrderItemResponse: {
+            productName: string;
+            /** Format: int32 */
+            quantity: number;
+            note: null | string;
+        };
+        /**
+         * @description One table's order that is ready to be carried. `TakenByName` is null
+         *     while nobody has it; `TakenByMe` says whether it is the caller.
+         */
+        WaiterTableResponse: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: int32 */
+            tableNumber: number;
+            customerName: string;
+            /** Format: date-time */
+            readyAt: null | string;
+            takenByName: null | string;
+            takenByMe: boolean;
+            /** Format: date-time */
+            takenAt: null | string;
+            items: components["schemas"]["WaiterOrderItemResponse"][];
+        };
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  Login: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['LoginRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['LoginResponse'];
-        };
-      };
-      /** @description Unauthorized */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetMenu: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        venueSlug: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['MenuResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ConfirmOrder: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        venueSlug: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ConfirmOrderRequest'];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ConfirmedOrderResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  FollowOrder: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        venueSlug: string;
-        code: string;
-        token: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TrackedOrderResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  CancelMyOrder: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        venueSlug: string;
-        code: string;
-        token: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  FindVipTable: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        venueSlug: string;
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['VipTableAccessResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetStampCard: {
-    parameters: {
-      query?: never;
-      header?: {
-        'X-Stamp-Card'?: string;
-      };
-      path: {
-        venueSlug: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StampCardResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetKdsQueue: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['KdsQueueOrderResponse'][];
-        };
-      };
-    };
-  };
-  GetKdsStation: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['KdsStationResponse'];
-        };
-      };
-    };
-  };
-  ScanOrder: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ScanRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ScannedOrderResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ScanAtTheTill: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CashierScanRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CashierOrderResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetMyCollections: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CashierOrderResponse'][];
-        };
-      };
-    };
-  };
-  GetVipDeliveries: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CashierVipDeliveryResponse'][];
-        };
-      };
-    };
-  };
-  ListStaffUsers: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StaffUserResponse'][];
-        };
-      };
-    };
-  };
-  CreateStaffUser: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateStaffUserRequest'];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StaffUserResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ChangeStaffUserRole: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ChangeStaffUserRoleRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StaffUserResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  RenameStaffUser: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RenameStaffUserRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StaffUserResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ResetStaffUserPassword: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ResetStaffUserPasswordRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StaffUserResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  DeactivateStaffUser: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StaffUserResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ReactivateStaffUser: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StaffUserResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ListNights: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightResponse'][];
-        };
-      };
-    };
-  };
-  CreateNight: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateNightRequest'];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetNight: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  UpdateNight: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateNightRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetNightStock: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightStockResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetNightTables: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightTableResponse'][];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  RegenerateNightTableCode: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-        tableId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightTableCodeResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetNightMetrics: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightMetricsResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  AdjustNightStock: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-        kdsId: string;
-        productId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['AdjustNightStockRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['NightStockResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ListCategories: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CategoryResponse'][];
-        };
-      };
-    };
-  };
-  CreateCategory: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateCategoryRequest'];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CategoryResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ListTables: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TableResponse'][];
-        };
-      };
-    };
-  };
-  CreateTable: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateTableRequest'];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TableResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  UpdateTable: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateTableRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TableResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  DeactivateTable: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TableResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ReactivateTable: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TableResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ListWaiterTables: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['WaiterTableResponse'][];
-        };
-      };
-    };
-  };
-  TakeTableOrder: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        orderId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['TakenTableResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  DeliverTableOrder: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        orderId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ListProducts: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'][];
-        };
-      };
-    };
-  };
-  CreateProduct: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateProductRequest'];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  CreateCombo: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['CreateComboRequest'];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ReplaceComboComponents: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['ReplaceComboComponentsRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  MarkProductUnavailable: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  MarkProductAvailable: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  UpdateProduct: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['UpdateProductRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  AdjustProductStock: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['AdjustProductStockRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  DeactivateProduct: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  UploadProductImage: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'multipart/form-data': {
-          image?: components['schemas']['IFormFile'];
-        };
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProductImageResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Payload Too Large */
-      413: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Unsupported Media Type */
-      415: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ListPromotions: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PromotionResponse'][];
-        };
-      };
-    };
-  };
-  CreatePromotion: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PromotionRequest'];
-      };
-    };
-    responses: {
-      /** @description Created */
-      201: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PromotionResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  UpdatePromotion: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['PromotionRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PromotionResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ActivatePromotion: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PromotionResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  DeactivatePromotion: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['PromotionResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetStampCardRule: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StampCardRuleResponse'];
-        };
-      };
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  SaveStampCardRule: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['StampCardRuleRequest'];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['StampCardRuleResponse'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  StartPreparingOrder: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ReturnOrderToQueue: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  MarkOrderReady: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  ReturnOrderToPreparation: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  DeliverOrder: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  UndoOrderDelivery: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  GetOrdersAwaitingPayment: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CashierOrderResponse'][];
-        };
-      };
-    };
-  };
-  FindOrderAtTheTill: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['CashierOrderResponse'];
-        };
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  CollectCashPayment: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
-  CancelAtTheTill: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        code: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description No Content */
-      204: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Not Found */
-      404: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-      /** @description Conflict */
-      409: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/problem+json': components['schemas']['ProblemDetails'];
-        };
-      };
-    };
-  };
+    Login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMenu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venueSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MenuResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ConfirmOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venueSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmedOrderResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    FollowOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venueSlug: string;
+                code: string;
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackedOrderResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CancelMyOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venueSlug: string;
+                code: string;
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    FindVipTable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                venueSlug: string;
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VipTableAccessResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetStampCard: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Stamp-Card"?: string;
+            };
+            path: {
+                venueSlug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StampCardResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetKdsQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KdsQueueOrderResponse"][];
+                };
+            };
+        };
+    };
+    GetKdsStation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KdsStationResponse"];
+                };
+            };
+        };
+    };
+    ScanOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScanRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScannedOrderResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ScanAtTheTill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CashierScanRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashierOrderResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetMyCollections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashierOrderResponse"][];
+                };
+            };
+        };
+    };
+    GetVipDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashierVipDeliveryResponse"][];
+                };
+            };
+        };
+    };
+    ListStaffUsers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserResponse"][];
+                };
+            };
+        };
+    };
+    CreateStaffUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateStaffUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ChangeStaffUserRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeStaffUserRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RenameStaffUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameStaffUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ResetStaffUserPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetStaffUserPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeactivateStaffUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReactivateStaffUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffUserResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListNights: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightResponse"][];
+                };
+            };
+        };
+    };
+    CreateNight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNightRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetNight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateNight: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNightRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetNightStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightStockResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetNightTables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightTableResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RegenerateNightTableCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                tableId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightTableCodeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetNightMetrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightMetricsResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdjustNightStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                kdsId: string;
+                productId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustNightStockRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NightStockResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"][];
+                };
+            };
+        };
+    };
+    CreateCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCategoryRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListTables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponse"][];
+                };
+            };
+        };
+    };
+    CreateTable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTableRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateTable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTableRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeactivateTable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReactivateTable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListWaiterTables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaiterTableResponse"][];
+                };
+            };
+        };
+    };
+    TakeTableOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakenTableResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeliverTableOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListProducts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"][];
+                };
+            };
+        };
+    };
+    CreateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateCombo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateComboRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReplaceComboComponents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceComboComponentsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MarkProductUnavailable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MarkProductAvailable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProductRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdjustProductStock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustProductStockRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeactivateProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UploadProductImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    image?: components["schemas"]["IFormFile"];
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductImageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListPromotions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionResponse"][];
+                };
+            };
+        };
+    };
+    CreatePromotion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdatePromotion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromotionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ActivatePromotion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeactivatePromotion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromotionResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetStampCardRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StampCardRuleResponse"];
+                };
+            };
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SaveStampCardRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StampCardRuleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StampCardRuleResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    StartPreparingOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReturnOrderToQueue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MarkOrderReady: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReturnOrderToPreparation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeliverOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UndoOrderDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MarkOrderPriority: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MarkOrderNotPriority: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetOrdersAwaitingPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashierOrderResponse"][];
+                };
+            };
+        };
+    };
+    FindOrderAtTheTill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashierOrderResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CollectCashPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CancelAtTheTill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
 }

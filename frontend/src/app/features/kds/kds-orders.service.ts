@@ -38,6 +38,12 @@ export function deliverUrl(code: string): string {
 export function undoDeliveryUrl(code: string): string {
   return `${KDS_ORDERS_URL}/${encodeURIComponent(code)}/undo-delivery`;
 }
+export function markNotPriorityUrl(code: string): string {
+  return `${KDS_ORDERS_URL}/${encodeURIComponent(code)}/mark-not-priority`;
+}
+export function markPriorityUrl(code: string): string {
+  return `${KDS_ORDERS_URL}/${encodeURIComponent(code)}/mark-priority`;
+}
 
 /**
  * US-16: what the bar does to an order. Nothing comes back: the board learns
@@ -50,6 +56,12 @@ export class KdsOrdersService {
   /** The board's "Preparar". Several chosen together are several calls to this. */
   startPreparing(code: string): Observable<void> {
     return this.http.post<void>(startPreparingUrl(code), {});
+  }
+  markNotPriority(code: string): Observable<void> {
+    return this.http.post<void>(markNotPriorityUrl(code), {});
+  }
+  markPriority(code: string): Observable<void> {
+    return this.http.post<void>(markPriorityUrl(code), {});
   }
 
   returnToQueue(code: string): Observable<void> {

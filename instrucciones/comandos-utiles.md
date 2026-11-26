@@ -137,10 +137,30 @@ dotnet ef migrations add AddOrderRating \
   **sólo** lo que esperás y el `Down()` lo inverso. Si aparece otra tabla, frená.
 - **Cómo se aplica:** sola, la próxima vez que levantás la API.
 
+### `dotnet ef database update <MigraciónAnterior>` (con los mismos `--project` y `--startup-project`)
+
+```bash
+dotnet ef database update AddStampCards \
+  --project backend/src/DrinkIt.Infrastructure \
+  --startup-project backend/src/DrinkIt.Api
+```
+
+- **Para qué:** **deshacer en la base** una migración que **ya se aplicó**. Le pasás el nombre de la
+  migración **anterior** a la tuya, y EF corre el `Down()` de todas las que vienen después.
+- **Cuándo:** levantaste la API (o sea, se aplicó) y querés sacar la migración. Es el paso **antes**
+  del `remove`.
+- **Ojo:** cortá la API antes, y no borres los archivos de la migración todavía: el `Down()` vive
+  ahí adentro. Sin argumento (`dotnet ef database update`) hace lo contrario: aplica todo lo
+  pendiente.
+
 ### `dotnet ef migrations remove` (con los mismos `--project` y `--startup-project`)
-- **Para qué:** **borrar la última migración** generada.
-- **Cuándo:** te equivocaste (nombre de columna mal, faltó una propiedad) y **todavía no levantaste la
-  API**, o sea, no se aplicó. Corregís y la generás de nuevo.
+- **Para qué:** **borrar la última migración** generada (sus dos archivos) y dejar el snapshot como
+  estaba.
+- **Cuándo:** te equivocaste (nombre de columna mal, faltó una propiedad, salió vacía). Si **no** se
+  aplicó, corrélo directo. Si **ya se aplicó**, primero el `database update <MigraciónAnterior>` de
+  arriba: si no, falla.
+- Borra **sólo la última**: para sacar dos, corrélo dos veces.
+- La receta completa, en orden, está en `estudio/13-modelo-de-datos.md` §5.
 
 ### `dotnet ef migrations list` (con los mismos `--project` y `--startup-project`)
 - **Para qué:** listar las migraciones y ver cuáles están aplicadas (las pendientes dicen `(Pending)`).

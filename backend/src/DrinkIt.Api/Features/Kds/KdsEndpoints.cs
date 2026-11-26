@@ -1,3 +1,4 @@
+
 using DrinkIt.Api.Common;
 using DrinkIt.Application.Common;
 using DrinkIt.Application.Kds;
@@ -21,6 +22,7 @@ public sealed record KdsQueueOrderResponse(
     DateTimeOffset PaidAt,
     DateTimeOffset? LastModifiedAt,
     bool IsForTable,
+    bool IsPriority,
     IReadOnlyList<KdsQueueOrderItemResponse> OrderItems,
     int? TableNumber);
 
@@ -32,6 +34,7 @@ public sealed record KdsStationResponse(string Name);
 
 /// <summary>Whose order a scan found, and what it did with it.</summary>
 public sealed record ScannedOrderResponse(string Code, string CustomerName, ScanOutcomeName Outcome);
+public sealed record OrderResponse(bool IsPriority);
 
 internal static class KdsEndpoints
 {
@@ -128,6 +131,22 @@ internal static class KdsEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+        orders
+            .MapPost("/mark-priority", MarkOrderPriorityAsync)
+            .WithName("MarkOrderPriority")
+            .WithSummary("Makes an order a priority")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+        orders
+            .MapPost("/mark-not-priority", MarkOrderNotPriorityAsync)
+            .WithName("MarkOrderNotPriority")
+            .WithSummary("Makes an order not apriority")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return endpoints;
     }
@@ -167,6 +186,28 @@ internal static class KdsEndpoints
         UndoDeliveryHandler handler,
         CancellationToken cancellationToken) =>
         Answer(await handler.HandleAsync(code, cancellationToken));
+    internal static async Task<IResult> MarkOrderPriorityAsync(
+        string code,
+        MarkOrderPriorityHandler handler,
+        CancellationToken cancellationToken)
+    {
+
+        Result<Order> result = await handler.HandleAsync(code, cancellationToken);
+        if (!result.IsSuccess) return Rejected(result.Error!);
+        Order order = result.Value;
+        return TypedResults.Ok(new OrderResponse(order.IsPriority));
+    }
+
+    internal static async Task<IResult> MarkOrderNotPriorityAsync(
+            string code,
+            MarkOrderPriorityHandler handler,
+            CancellationToken cancellationToken)
+    {
+        Result<Order> result = await handler.HandleAsync(code, cancellationToken);
+        if (!result.IsSuccess) return Rejected(result.Error!);
+        Order order = result.Value;
+        return TypedResults.Ok(new OrderResponse(order.IsPriority));
+    }
 
     /// <summary>
     /// "Not ready yet" and "already delivered" are answers, not failures: the
@@ -229,6 +270,7 @@ internal static class KdsEndpoints
                 order.PaidAt,
                 order.LastModifiedAt,
                 order.IsForTable,
+                order.IsPriority,
                 [.. order.OrderItems.Select(item => new KdsQueueOrderItemResponse(
                     item.ProductName,
                     item.Quantity,

@@ -1,9 +1,9 @@
 import { DestroyRef, Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
-import { KdsOrdersService } from './kds-orders.service';
-import { ProblemTypes } from '../../core/api/problem-types';
 import { problemTypeOf } from '../../core/api/problem-type-of';
+import { ProblemTypes } from '../../core/api/problem-types';
+import { KdsOrdersService } from './kds-orders.service';
 
 /** How long "Entregado A-0066 · Deshacer" stays on screen after a delivery (US-18). */
 export const UNDO_OFFER_MS = new InjectionToken<number>('UNDO_OFFER_MS', {
@@ -77,7 +77,12 @@ export class KdsOrderActions {
   startPreparing(code: string): void {
     this.act(code, this.kdsOrders.startPreparing(code), 'take');
   }
-
+  markNotPriority(code: string): void {
+    this.act(code, this.kdsOrders.markNotPriority(code), 'take');
+  }
+  markPriority(code: string): void {
+    this.act(code, this.kdsOrders.markPriority(code), 'take');
+  }
   returnToQueue(code: string): void {
     this.act(code, this.kdsOrders.returnToQueue(code), 'return');
   }

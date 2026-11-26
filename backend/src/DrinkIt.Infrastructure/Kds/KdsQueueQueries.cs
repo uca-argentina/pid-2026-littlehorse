@@ -36,6 +36,7 @@ internal sealed class KdsQueueQueries(DrinkItDbContext context, ICurrentStaffUse
                 order.LastModifiedAt,
                 order.Method,
                 order.TableNumber,
+                order.IsPriority,
                 OrderItems = order.Items
                     .Select(item => new KdsQueueOrderItem(
                         item.ProductName,
@@ -55,6 +56,7 @@ internal sealed class KdsQueueQueries(DrinkItDbContext context, ICurrentStaffUse
                 order.PaidAt!.Value,
                 order.LastModifiedAt,
                 order.Method!.Value.IsForTable(),
+                order.IsPriority,
                 order.OrderItems,
                 order.TableNumber))
             .ToList();

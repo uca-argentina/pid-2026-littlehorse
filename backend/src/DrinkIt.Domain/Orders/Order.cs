@@ -66,6 +66,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
         Code = code;
         TrackingToken = trackingToken;
         Status = OrderStatus.Cart;
+        IsPriority = false;
     }
 
     public Guid Id { get; }
@@ -108,6 +109,7 @@ public sealed class Order : AuditStamps, IBelongsToVenue
     /// bar, the waiter and the customer read ("Mesa 5"), for good.
     /// </summary>
     public int? TableNumber { get; private set; }
+    public bool IsPriority { get; private set; }
 
     /// <summary>Who the bar calls for it.</summary>
     public string CustomerName { get; }
@@ -251,6 +253,8 @@ public sealed class Order : AuditStamps, IBelongsToVenue
 
         return order;
     }
+    public void MakePriority() => IsPriority = true;
+    public void MakeNotPriority() => IsPriority = false;
 
     /// <summary>
     /// US-41: ordered with the code of a VIP table, so it is carried to it

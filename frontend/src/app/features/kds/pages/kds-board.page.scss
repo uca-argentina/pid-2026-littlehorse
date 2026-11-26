@@ -104,6 +104,48 @@
     display: none;
   }
 }
+.switch-cell {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.sw {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  min-height: var(--dk-tap-min);
+  padding: 0;
+  border: none;
+  border-radius: var(--dk-radius-pill);
+  background: none;
+}
+
+// La pista. Va detrás y centrada, para que el área táctil del botón sea más
+// alta que el dibujo sin estirarlo.
+.sw::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 52px;
+  height: 30px;
+  transform: translateY(-50%);
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-accent);
+}
+
+.sw-knob {
+  position: relative;
+  margin-left: 25px;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--dk-radius-pill);
+  background: var(--dk-on-accent);
+  transition: margin-left 120ms ease;
+}
 
 .card {
   // What the choose button's stretched area is measured against.

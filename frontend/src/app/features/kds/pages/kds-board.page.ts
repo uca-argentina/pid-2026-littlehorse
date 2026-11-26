@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import {
   Component,
@@ -9,7 +10,6 @@ import {
   linkedSignal,
   signal,
 } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { problemTypeOf } from '../../../core/api/problem-type-of';
 import { ProblemTypes } from '../../../core/api/problem-types';
@@ -21,8 +21,8 @@ import type { AgeBand } from '../kds-age';
 import { ageBandFor, ageLabelFor } from '../kds-age';
 import { byTimeInColumn, minutesInColumn, readyShelf } from '../kds-board-view';
 import { KdsOrderActions } from '../kds-order-actions';
-import { KDS_QUEUE_URL, KDS_STATION_URL } from '../kds-queue';
 import type { KdsOrderStatus, KdsQueueOrder, KdsStation } from '../kds-queue';
+import { KDS_QUEUE_URL, KDS_STATION_URL } from '../kds-queue';
 
 /** How often the clock ticks to re-read every card's age, independent of any SignalR message. */
 const AGE_TICK_MS = 15_000;
@@ -438,7 +438,23 @@ export class KdsBoardPage {
   protected take(order: KdsQueueOrder): void {
     this.actions.startPreparing(order.code);
   }
+  protected toggleAvailability(row: KdsQueueOrder): void {
+    // The template disables it too. Repeated here because a disabled button is
+    // a rule about a pointer, and this is the rule about the product.
 
+    const request = row.isPriority
+      ? this.actions.markNotPriority(row.code)
+      : this.actions.markPriority(row.code);
+
+    //request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    //  next: () => {
+    //    this.queue.reload();
+    //  },
+    //});
+  }
+  protected makePriority(order: KdsQueueOrder): void {
+    this.actions.startPreparing(order.code);
+  }
   /**
    * One request per order, never one combined: each is taken on its own, and
    * one that fails leaves the rest taken (US-16, criterion 2).

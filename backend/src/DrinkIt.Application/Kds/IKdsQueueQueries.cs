@@ -29,6 +29,7 @@ public sealed record KdsQueueOrder(
     DateTimeOffset PaidAt,
     DateTimeOffset? LastModifiedAt,
     bool IsForTable,
+    bool IsPriority,
     IReadOnlyList<KdsQueueOrderItem> OrderItems,
     int? TableNumber = null);
 

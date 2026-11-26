@@ -57,6 +57,7 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasOne<Table>().WithMany().HasForeignKey(order => order.TableId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(order => order.PaidAt);
         builder.Property(order => order.Method);
+        builder.Property(order => order.IsPriority);
         // For the metrics of US-47; null on every order from before US-36.
         builder.Property(order => order.PreparationStartedAt);
         builder.Property(order => order.ReadyAt);
