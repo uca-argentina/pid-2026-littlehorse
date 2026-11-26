@@ -949,7 +949,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/kds/orders/{code}/make-priority": {
+    "/kds/orders/{code}/mark-priority": {
         parameters: {
             query?: never;
             header?: never;
@@ -966,7 +966,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/kds/orders/{code}/make-not-priority": {
+    "/kds/orders/{code}/mark-not-priority": {
         parameters: {
             query?: never;
             header?: never;
@@ -1643,6 +1643,7 @@ export interface components {
             total: number;
             /** Format: date-time */
             paidAt: null | string;
+            isPriority: boolean;
             barName: null | string;
             items: components["schemas"]["TrackedOrderItemResponse"][];
             /** Format: int32 */

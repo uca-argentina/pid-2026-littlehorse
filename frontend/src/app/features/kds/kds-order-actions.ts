@@ -16,7 +16,8 @@ export const UNDO_OFFER_MS = new InjectionToken<number>('UNDO_OFFER_MS', {
  * screen says it, in Spanish, like every other text the bar reads.
  */
 export interface ActionFailure {
-  readonly action: 'take' | 'return' | 'ready' | 'backToPreparation' | 'deliver' | 'undo';
+  readonly action:
+    'take' | 'return' | 'ready' | 'backToPreparation' | 'priority' | 'deliver' | 'undo';
   readonly code: string;
   /**
    * Another tablet moved it in the same instant and its move stands: trying
@@ -78,10 +79,10 @@ export class KdsOrderActions {
     this.act(code, this.kdsOrders.startPreparing(code), 'take');
   }
   markNotPriority(code: string): void {
-    this.act(code, this.kdsOrders.markNotPriority(code), 'take');
+    this.act(code, this.kdsOrders.markNotPriority(code), 'priority');
   }
   markPriority(code: string): void {
-    this.act(code, this.kdsOrders.markPriority(code), 'take');
+    this.act(code, this.kdsOrders.markPriority(code), 'priority');
   }
   returnToQueue(code: string): void {
     this.act(code, this.kdsOrders.returnToQueue(code), 'return');

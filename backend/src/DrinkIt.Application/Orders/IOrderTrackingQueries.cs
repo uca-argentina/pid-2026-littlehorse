@@ -21,6 +21,7 @@ public sealed record TrackedOrder(
     OrderStatus Status,
     decimal Total,
     DateTimeOffset? PaidAt,
+    bool IsPriority,
     string? BarName,
     IReadOnlyList<TrackedOrderItem> Items,
     int? TableNumber = null,

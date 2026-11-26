@@ -13,9 +13,9 @@ public sealed class MarkOrderNotPriorityHandler(IOrderRepository orders)
 {
     public async Task<Result<Order>> HandleAsync(string code, CancellationToken cancellationToken)
     {
-        if (!TrackingToken.TryParse(code?.Trim(), out TrackingToken? token)) return KdsErrors.UnknownCode;
+        if (!OrderCode.TryParse(code, out OrderCode? parsed)) return KdsErrors.OrderNotFound;
 
-        Order? order = await orders.GetForUpdateAsync(token!, cancellationToken);
+        Order? order = await orders.GetForUpdateAsync(parsed!, cancellationToken);
 
         if (order is null) return KdsErrors.UnknownCode;
 

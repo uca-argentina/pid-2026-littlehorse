@@ -15,10 +15,9 @@ public sealed class MarkOrderPriorityHandler(IOrderRepository orders)
     public async Task<Result<Order>> HandleAsync(string code, CancellationToken cancellationToken)
     {
         // Nothing read is nothing found: a body without it is not worth a 400.
-        if (!TrackingToken.TryParse(code?.Trim(), out TrackingToken? token)) return KdsErrors.UnknownCode;
+        if (!OrderCode.TryParse(code, out OrderCode? parsed)) return KdsErrors.OrderNotFound;
 
-        Order? order = await orders.GetForUpdateAsync(token!, cancellationToken);
-
+        Order? order = await orders.GetForUpdateAsync(parsed!, cancellationToken);
         if (order is null) return KdsErrors.UnknownCode;
         // Another bar's order (US-36). One with no bar yet — cash waiting at the
         // till — is not another bar's: it is not ready, which the switch says.

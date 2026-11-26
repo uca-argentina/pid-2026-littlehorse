@@ -24,6 +24,7 @@ public sealed record TrackedOrderResponse(
     CustomerOrderStatus Status,
     decimal Total,
     DateTimeOffset? PaidAt,
+    bool IsPriority,
     string? BarName,
     IReadOnlyList<TrackedOrderItemResponse> Items,
     int? TableNumber,
@@ -92,6 +93,7 @@ internal static class OrderTrackingEndpoint
             found.Status.ToCustomerStatus(),
             found.Total,
             found.PaidAt,
+            found.IsPriority,
             found.BarName,
             [.. found.Items.Select(item =>
                 new TrackedOrderItemResponse(item.ProductName, item.Quantity, item.Note, item.IsReward))],
